@@ -40,7 +40,7 @@ struct RootView: View {
                 .tabItem { Label("Dashboard", systemImage: "square.grid.2x2.fill") }
                 .tag(Tab.dashboard)
 
-            PlaceholderView(title: "Schedule", icon: "calendar")
+            ScheduleView()
                 .tabItem { Label("Schedule", systemImage: "calendar") }
                 .tag(Tab.schedule)
 

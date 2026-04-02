@@ -15,11 +15,21 @@ struct ClientsView: View {
     private let allJobs     = MockData.makeJobs()
     private let allInvoices = MockData.makeInvoices()
 
-    private var clients: [Client] { clientsStore.clients }
+    /// Live list from Supabase when present; otherwise mock clients so the screen is reviewable without SQL.
+    private var displayClients: [Client] {
+        let stored = clientsStore.clients
+        if !stored.isEmpty { return stored }
+        if clientsStore.isLoading { return [] }
+        return MockData.clients
+    }
+
+    private var isShowingSampleClients: Bool {
+        clientsStore.clients.isEmpty && !clientsStore.isLoading
+    }
 
     private var filtered: [Client] {
-        guard !search.isEmpty else { return clients }
-        return clients.filter {
+        guard !search.isEmpty else { return displayClients }
+        return displayClients.filter {
             $0.name.localizedCaseInsensitiveContains(search) ||
             $0.address.localizedCaseInsensitiveContains(search) ||
             $0.city.localizedCaseInsensitiveContains(search)
@@ -92,15 +102,14 @@ struct ClientsView: View {
                     .foregroundStyle(Color.sweeplyTextSub.opacity(0.6))
                     .tracking(1.5)
                 Text("Clients")
-                    .font(Font.custom("BricolageGrotesque-Bold", size: 28))
-                    .foregroundStyle(Color.primary)
-                    .tracking(-0.5)
+                    .font(.system(size: 28, weight: .semibold))
+                    .foregroundStyle(Color.sweeplyNavy)
                 HStack(spacing: 6) {
                     Rectangle()
                         .fill(Color.primary.opacity(0.2))
                         .frame(width: 20, height: 2)
                         .clipShape(Capsule())
-                    Text("\(clients.count) total clients")
+                    Text("\(displayClients.count) total clients")
                         .font(.system(size: 13))
                         .foregroundStyle(Color.sweeplyTextSub)
                 }
@@ -114,6 +123,16 @@ struct ClientsView: View {
                         .font(.system(size: 11))
                         .foregroundStyle(Color.sweeplyDestructive)
                         .padding(.top, 4)
+                }
+                if isShowingSampleClients {
+                    Text("Sample data")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(Color.sweeplyAccent)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(Color.sweeplyAccent.opacity(0.12))
+                        .clipShape(Capsule())
+                        .padding(.top, 6)
                 }
             }
             Spacer()
