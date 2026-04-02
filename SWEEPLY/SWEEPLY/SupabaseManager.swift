@@ -1,7 +1,7 @@
 import Foundation
 import Supabase
 
-/// Loads `SupabaseConfig.plist` from the app bundle (copy from `SupabaseConfig.example.plist`, add URL + anon key from Project Settings → API).
+/// Loads `SupabaseConfig.plist` from the app bundle (`SUPABASE_URL`, `SUPABASE_ANON_KEY`).
 enum SupabaseManager {
     private static let config: (url: URL, anonKey: String)? = {
         guard let plistURL = Bundle.main.url(forResource: "SupabaseConfig", withExtension: "plist"),
