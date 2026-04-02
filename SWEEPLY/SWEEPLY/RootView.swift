@@ -54,7 +54,7 @@ struct RootView: View {
                     .tabItem { Label("Finances", systemImage: "chart.line.uptrend.xyaxis") }
                     .tag(Tab.finances)
 
-                PlaceholderView(title: "Business", icon: "building.2.fill")
+                BusinessView()
                     .tabItem { Label("Business", systemImage: "building.2.fill") }
                     .tag(Tab.business)
             }
@@ -112,29 +112,6 @@ struct RootView: View {
 
             UITabBar.appearance().standardAppearance   = appearance
             UITabBar.appearance().scrollEdgeAppearance = appearance
-        }
-    }
-}
-
-// MARK: - Placeholder for unbuilt screens
-struct PlaceholderView: View {
-    let title: String
-    let icon: String
-
-    var body: some View {
-        ZStack {
-            Color.sweeplyBackground.ignoresSafeArea()
-            VStack(spacing: Spacing.base) {
-                Image(systemName: icon)
-                    .font(.system(size: 40))
-                    .foregroundStyle(Color.sweeplyTextSub.opacity(0.4))
-                Text(title)
-                    .font(.system(size: 20, weight: .semibold))
-                    .foregroundStyle(Color.sweeplyTextSub.opacity(0.5))
-                Text("Coming soon")
-                    .font(.system(size: 14))
-                    .foregroundStyle(Color.sweeplyTextSub.opacity(0.35))
-            }
         }
     }
 }
