@@ -483,7 +483,7 @@ struct DashboardView: View {
     private static func statusDotColor(for status: JobStatus) -> Color {
         switch status {
         case .completed:   return Color.sweeplySuccess
-        case .inProgress:  return Color(red: 0.4, green: 0.45, blue: 0.95)
+        case .inProgress:  return Color.sweeplyAccent
         case .scheduled:   return Color.sweeplyTextSub.opacity(0.5)
         case .cancelled:   return Color.sweeplyDestructive
         }
@@ -862,7 +862,7 @@ struct JobRowView: View {
     private var statusColor: Color {
         switch job.status {
         case .scheduled:  return Color.sweeplyAccent
-        case .inProgress: return Color(red: 0.4, green: 0.45, blue: 0.95)
+        case .inProgress: return Color.sweeplyAccent
         case .completed:  return Color.sweeplySuccess
         case .cancelled:  return Color.sweeplyTextSub
         }
@@ -915,7 +915,7 @@ struct StatusBadge: View {
     private var color: Color {
         switch status {
         case .scheduled:  return Color.sweeplyAccent
-        case .inProgress: return Color(red: 0.4, green: 0.45, blue: 0.95)
+        case .inProgress: return Color.sweeplyAccent
         case .completed:  return Color.sweeplySuccess
         case .cancelled:  return Color.sweeplyTextSub
         }
@@ -927,11 +927,11 @@ struct InvoiceStatusBadge: View {
 
     var body: some View {
         Text(status.rawValue)
-            .font(.system(size: 10, weight: .semibold))
+            .font(.system(size: 10, weight: .medium))
             .foregroundStyle(color)
-            .padding(.horizontal, 7)
-            .padding(.vertical, 3)
-            .background(color.opacity(0.12))
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2)
+            .background(color.opacity(0.09))
             .clipShape(Capsule())
     }
 

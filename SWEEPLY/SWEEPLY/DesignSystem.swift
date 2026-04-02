@@ -1,16 +1,26 @@
 import SwiftUI
 
 // MARK: - Brand Colors
+/// Restrained, professional palette — muted tones, no loud accent colors.
 extension Color {
-    static let sweeplyAccent      = Color(red: 0.976, green: 0.635, blue: 0.063) // amber #F9A110
-    static let sweeplyNavy        = Color(red: 0.070, green: 0.090, blue: 0.140) // deep navy
-    static let sweeplyBackground  = Color(red: 0.945, green: 0.948, blue: 0.958) // cool off-white
-    static let sweeplySuccess     = Color(red: 0.086, green: 0.639, blue: 0.290) // green
-    static let sweeplyWarning     = Color(red: 0.976, green: 0.635, blue: 0.063) // amber (same as accent)
-    static let sweeplyDestructive = Color(red: 0.859, green: 0.157, blue: 0.141) // red
-    static let sweeplyTextSub     = Color(red: 0.450, green: 0.478, blue: 0.545) // muted text
-    static let sweeplySurface     = Color.white
-    static let sweeplyBorder      = Color(red: 0.880, green: 0.882, blue: 0.900)
+    /// Primary interactive / selection (muted blue-slate)
+    static let sweeplyAccent = Color(red: 0.32, green: 0.40, blue: 0.48)
+    /// Chrome surfaces: tab bar, avatars, strong emphasis
+    static let sweeplyNavy = Color(red: 0.12, green: 0.13, blue: 0.15)
+    /// Page background (warm neutral)
+    static let sweeplyBackground = Color(red: 0.96, green: 0.96, blue: 0.95)
+    /// Positive / settled (muted sage)
+    static let sweeplySuccess = Color(red: 0.38, green: 0.48, blue: 0.42)
+    /// Attention / pending (dusty ochre — not traffic-light amber)
+    static let sweeplyWarning = Color(red: 0.52, green: 0.45, blue: 0.38)
+    /// Critical / overdue (muted brick)
+    static let sweeplyDestructive = Color(red: 0.52, green: 0.36, blue: 0.36)
+    /// Secondary labels
+    static let sweeplyTextSub = Color(red: 0.45, green: 0.45, blue: 0.46)
+    /// Cards and sheets
+    static let sweeplySurface = Color.white
+    /// Hairlines and dividers
+    static let sweeplyBorder = Color(red: 0.88, green: 0.88, blue: 0.87)
 }
 
 // MARK: - Typography

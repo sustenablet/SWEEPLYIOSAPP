@@ -280,7 +280,7 @@ private struct DetailJobRow: View {
     private var statusColor: Color {
         switch job.status {
         case .scheduled:  return Color.sweeplyAccent
-        case .inProgress: return Color(red: 0.4, green: 0.45, blue: 0.95)
+        case .inProgress: return Color.sweeplyAccent
         case .completed:  return Color.sweeplySuccess
         case .cancelled:  return Color.sweeplyTextSub
         }

@@ -18,8 +18,6 @@ struct FinancesView: View {
         case overdue = "Overdue"
     }
 
-    // MARK: - Computed
-
     private var totalCollected: Double {
         invoices.filter { $0.status == .paid }.reduce(0) { $0 + $1.amount }
     }
@@ -42,7 +40,7 @@ struct FinancesView: View {
         selectedPeriod == .week ? MockData.weeklyRevenue : MockData.monthlyRevenue
     }
     private var chartMax: Double {
-        chartData.map { $0.amount }.max() ?? 1
+        max(chartData.map { $0.amount }.max() ?? 1, 1)
     }
     private var filteredInvoices: [Invoice] {
         let sorted = invoices.sorted { a, b in
@@ -72,341 +70,284 @@ struct FinancesView: View {
         }
     }
 
-    // MARK: - Body
-
     var body: some View {
         ScrollView {
-            VStack(spacing: 20) {
-                headerSection
-                kpiStrip
-                revenueChartCard
-                financialSummaryRow
-                invoicesSection
+            VStack(alignment: .leading, spacing: 28) {
+                summaryBlock
+                chartSection
+                secondaryMetrics
+                invoicesBlock
             }
             .padding(.horizontal, 20)
-            .padding(.bottom, 32)
+            .padding(.bottom, 36)
             .opacity(appeared ? 1 : 0)
-            .offset(y: appeared ? 0 : 8)
+            .offset(y: appeared ? 0 : 6)
             .onAppear {
-                withAnimation(.easeOut(duration: 0.3)) { appeared = true }
+                withAnimation(.easeOut(duration: 0.25)) { appeared = true }
             }
         }
         .background(Color.sweeplyBackground.ignoresSafeArea())
     }
 
-    // MARK: - Header
+    // MARK: - Summary
 
-    private var headerSection: some View {
-        HStack(alignment: .center) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text("Finances")
-                    .font(Font.custom("BricolageGrotesque-Bold", size: 22))
-                    .foregroundStyle(Color.primary)
-                Text("Revenue, invoices & payment tracking")
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundStyle(Color.sweeplyTextSub)
-            }
-            Spacer()
-            Button {} label: {
-                HStack(spacing: 5) {
-                    Image(systemName: "plus")
-                        .font(.system(size: 12, weight: .bold))
-                    Text("Invoice")
-                        .font(.system(size: 13, weight: .semibold))
-                }
-                .foregroundStyle(Color.sweeplyNavy)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 8)
-                .background(Color.sweeplyAccent)
-                .clipShape(Capsule())
-            }
-            .buttonStyle(.plain)
-        }
-        .padding(.top, 16)
-    }
-
-    // MARK: - KPI Strip
-
-    private var kpiStrip: some View {
-        HStack(spacing: 10) {
-            FinanceKPITile(
-                label: "Collected",
-                value: totalCollected.currency,
-                accent: Color.sweeplySuccess,
-                icon: "checkmark.circle.fill"
-            )
-            FinanceKPITile(
-                label: "Outstanding",
-                value: totalOutstanding.currency,
-                accent: Color.sweeplyWarning,
-                icon: "clock.fill"
-            )
-            FinanceKPITile(
-                label: "Overdue",
-                value: totalOverdue.currency,
-                accent: Color.sweeplyDestructive,
-                icon: "exclamationmark.circle.fill"
-            )
-        }
-    }
-
-    // MARK: - Revenue Chart Card
-
-    private var revenueChartCard: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            HStack(alignment: .firstTextBaseline) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Revenue")
-                        .font(.system(size: 15, weight: .semibold))
-                    Text(totalCollected.currency + " collected")
-                        .font(.system(size: 11, weight: .medium))
+    private var summaryBlock: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Finances")
+                        .font(.system(size: 28, weight: .semibold, design: .default))
+                        .foregroundStyle(Color.sweeplyNavy)
+                    Text("Overview")
+                        .font(.system(size: 13, weight: .regular))
                         .foregroundStyle(Color.sweeplyTextSub)
                 }
+                Spacer(minLength: 12)
+                Button(action: {}) {
+                    Image(systemName: "plus.circle.fill")
+                        .font(.system(size: 28))
+                        .symbolRenderingMode(.hierarchical)
+                        .foregroundStyle(Color.sweeplyAccent)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("New invoice")
+            }
+            .padding(.top, 8)
+
+            VStack(alignment: .leading, spacing: 16) {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Collected")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(Color.sweeplyTextSub)
+                    Text(totalCollected.currency)
+                        .font(.system(size: 34, weight: .semibold, design: .rounded))
+                        .foregroundStyle(Color.sweeplyNavy)
+                        .monospacedDigit()
+                }
+
+                Rectangle()
+                    .fill(Color.sweeplyBorder)
+                    .frame(height: 1)
+
+                HStack(alignment: .top, spacing: 24) {
+                    minimalStatColumn(title: "Outstanding", value: totalOutstanding.currency)
+                    minimalStatColumn(title: "Overdue", value: totalOverdue.currency)
+                }
+            }
+            .padding(20)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color.sweeplySurface)
+            .clipShape(RoundedRectangle(cornerRadius: Radius.md, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: Radius.md, style: .continuous)
+                    .stroke(Color.sweeplyBorder, lineWidth: 1)
+            )
+        }
+    }
+
+    private func minimalStatColumn(title: String, value: String) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title)
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(Color.sweeplyTextSub)
+            Text(value)
+                .font(.system(size: 16, weight: .semibold, design: .rounded))
+                .foregroundStyle(Color.sweeplyNavy)
+                .monospacedDigit()
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    // MARK: - Chart
+
+    private var chartSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                Text("Cash flow")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(Color.sweeplyNavy)
                 Spacer()
-                HStack(spacing: 0) {
-                    ForEach(ChartPeriod.allCases, id: \.self) { period in
-                        Button(period.rawValue) {
-                            withAnimation(.easeInOut(duration: 0.2)) { selectedPeriod = period }
-                        }
-                        .font(.system(size: 11, weight: selectedPeriod == period ? .semibold : .medium))
-                        .foregroundStyle(selectedPeriod == period ? Color.sweeplyNavy : Color.sweeplyTextSub)
-                        .padding(.horizontal, 11)
-                        .padding(.vertical, 5)
-                        .background(selectedPeriod == period ? Color.sweeplyAccent : Color.clear)
-                        .clipShape(Capsule())
+                Picker("", selection: $selectedPeriod) {
+                    ForEach(ChartPeriod.allCases, id: \.self) { p in
+                        Text(p.rawValue).tag(p)
                     }
                 }
-                .padding(3)
-                .background(Color.sweeplyBackground)
-                .clipShape(Capsule())
+                .pickerStyle(.segmented)
+                .frame(maxWidth: 200)
             }
 
             BarChartView(data: chartData, maxValue: chartMax)
-                .frame(height: 110)
-                .animation(.easeInOut(duration: 0.3), value: selectedPeriod)
+                .frame(height: 120)
+                .animation(.easeInOut(duration: 0.25), value: selectedPeriod)
         }
-        .padding(16)
+        .padding(20)
         .background(Color.sweeplySurface)
-        .clipShape(RoundedRectangle(cornerRadius: 12))
-        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.sweeplyBorder, lineWidth: 1))
+        .clipShape(RoundedRectangle(cornerRadius: Radius.md, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: Radius.md, style: .continuous)
+                .stroke(Color.sweeplyBorder, lineWidth: 1)
+        )
     }
 
-    // MARK: - Financial Summary Row
+    // MARK: - Secondary metrics
 
-    private var financialSummaryRow: some View {
-        HStack(spacing: 10) {
-            FinSummaryTile(label: "Avg Invoice", value: avgInvoiceValue.currency, mono: true)
-            FinSummaryTile(label: "Collection Rate", value: "\(collectionRate)%", mono: true)
-            FinSummaryTile(label: "Total Invoices", value: "\(invoices.count)", mono: false)
+    private var secondaryMetrics: some View {
+        HStack(spacing: 0) {
+            compactMetric(title: "Avg. invoice", value: avgInvoiceValue.currency)
+            divider
+            compactMetric(title: "Collection", value: "\(collectionRate)%")
+            divider
+            compactMetric(title: "Invoices", value: "\(invoices.count)", isCount: true)
         }
+        .padding(.vertical, 16)
+        .padding(.horizontal, 12)
+        .background(Color.sweeplySurface)
+        .clipShape(RoundedRectangle(cornerRadius: Radius.md, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: Radius.md, style: .continuous)
+                .stroke(Color.sweeplyBorder, lineWidth: 1)
+        )
     }
 
-    // MARK: - Invoices Section
+    private var divider: some View {
+        Rectangle()
+            .fill(Color.sweeplyBorder)
+            .frame(width: 1)
+            .padding(.vertical, 4)
+    }
 
-    private var invoicesSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
+    private func compactMetric(title: String, value: String, isCount: Bool = false) -> some View {
+        VStack(spacing: 4) {
+            Text(title)
+                .font(.system(size: 10, weight: .medium))
+                .foregroundStyle(Color.sweeplyTextSub)
+                .multilineTextAlignment(.center)
+            Text(value)
+                .font(.system(size: isCount ? 17 : 15, weight: .semibold, design: isCount ? .default : .rounded))
+                .foregroundStyle(Color.sweeplyNavy)
+                .monospacedDigit()
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    // MARK: - Invoices
+
+    private var invoicesBlock: some View {
+        VStack(alignment: .leading, spacing: 16) {
             HStack {
                 Text("Invoices")
                     .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(Color.sweeplyNavy)
                 Spacer()
                 if selectedFilter != .all {
-                    Text("\(filteredInvoices.count) of \(invoices.count)")
-                        .font(.system(size: 12, weight: .medium))
+                    Text("\(filteredInvoices.count) shown")
+                        .font(.system(size: 12, weight: .regular))
                         .foregroundStyle(Color.sweeplyTextSub)
                 }
             }
 
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 8) {
+                HStack(spacing: 0) {
                     ForEach(InvoiceFilter.allCases, id: \.self) { filter in
-                        InvoiceFilterChip(
-                            label: filter.rawValue,
-                            count: count(for: filter),
-                            isSelected: selectedFilter == filter
-                        ) {
-                            withAnimation(.easeInOut(duration: 0.15)) { selectedFilter = filter }
-                        }
+                        filterTab(filter)
                     }
                 }
-                .padding(.horizontal, 1)
             }
 
             if filteredInvoices.isEmpty {
-                emptyInvoicesState
+                emptyState
             } else {
                 VStack(spacing: 0) {
                     ForEach(Array(filteredInvoices.enumerated()), id: \.element.id) { idx, invoice in
-                        FullInvoiceRow(invoice: invoice, invoices: $invoices)
+                        MinimalInvoiceRow(invoice: invoice, invoices: $invoices)
                         if idx < filteredInvoices.count - 1 {
-                            Divider().padding(.leading, 32)
+                            Divider()
+                                .background(Color.sweeplyBorder)
                         }
                     }
                 }
                 .background(Color.sweeplySurface)
-                .clipShape(RoundedRectangle(cornerRadius: 12))
-                .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.sweeplyBorder, lineWidth: 1))
+                .clipShape(RoundedRectangle(cornerRadius: Radius.md, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: Radius.md, style: .continuous)
+                        .stroke(Color.sweeplyBorder, lineWidth: 1)
+                )
             }
         }
     }
 
-    private var emptyInvoicesState: some View {
-        VStack(spacing: 10) {
-            Image(systemName: "doc.text")
-                .font(.system(size: 36))
-                .foregroundStyle(Color.sweeplyTextSub.opacity(0.35))
-            Text("No invoices here")
-                .font(.system(size: 15, weight: .semibold))
+    private func filterTab(_ filter: InvoiceFilter) -> some View {
+        let selected = selectedFilter == filter
+        return Button {
+            withAnimation(.easeInOut(duration: 0.2)) { selectedFilter = filter }
+        } label: {
+            VStack(spacing: 8) {
+                HStack(spacing: 6) {
+                    Text(filter.rawValue)
+                        .font(.system(size: 13, weight: selected ? .semibold : .regular))
+                    Text("\(count(for: filter))")
+                        .font(.system(size: 12, weight: .medium, design: .rounded))
+                        .foregroundStyle(Color.sweeplyTextSub)
+                        .monospacedDigit()
+                }
+                .foregroundStyle(selected ? Color.sweeplyNavy : Color.sweeplyTextSub)
+                Rectangle()
+                    .fill(selected ? Color.sweeplyAccent : Color.clear)
+                    .frame(height: 2)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 6)
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var emptyState: some View {
+        VStack(spacing: 12) {
+            Text("No invoices")
+                .font(.system(size: 15, weight: .medium))
                 .foregroundStyle(Color.sweeplyTextSub)
-            Text("Create an invoice to start tracking your payments")
+            Text("Invoices you add will appear here.")
                 .font(.system(size: 13))
-                .foregroundStyle(Color.sweeplyTextSub.opacity(0.7))
+                .foregroundStyle(Color.sweeplyTextSub.opacity(0.85))
                 .multilineTextAlignment(.center)
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 40)
-        .padding(.horizontal, 24)
+        .padding(.vertical, 36)
         .background(Color.sweeplySurface)
-        .clipShape(RoundedRectangle(cornerRadius: 12))
-        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.sweeplyBorder, lineWidth: 1))
-    }
-}
-
-// MARK: - KPI Tile
-
-private struct FinanceKPITile: View {
-    let label: String
-    let value: String
-    let accent: Color
-    let icon: String
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Image(systemName: icon)
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(accent)
-            Text(value)
-                .font(.system(size: 15, weight: .bold, design: .monospaced))
-                .foregroundStyle(Color.primary)
-                .minimumScaleFactor(0.65)
-                .lineLimit(1)
-            Text(label.uppercased())
-                .font(.system(size: 9, weight: .semibold))
-                .foregroundStyle(Color.sweeplyTextSub)
-                .tracking(0.5)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(14)
-        .background(Color.sweeplySurface)
-        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .clipShape(RoundedRectangle(cornerRadius: Radius.md, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(accent.opacity(0.25), lineWidth: 1)
+            RoundedRectangle(cornerRadius: Radius.md, style: .continuous)
+                .stroke(Color.sweeplyBorder, lineWidth: 1)
         )
     }
 }
 
-// MARK: - Summary Tile
-
-private struct FinSummaryTile: View {
-    let label: String
-    let value: String
-    let mono: Bool
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(label)
-                .font(.system(size: 10, weight: .medium))
-                .foregroundStyle(Color.sweeplyTextSub)
-                .tracking(0.2)
-                .lineLimit(1)
-                .minimumScaleFactor(0.8)
-            Text(value)
-                .font(.system(size: 18, weight: .bold, design: mono ? .monospaced : .default))
-                .foregroundStyle(Color.sweeplyAccent)
-                .minimumScaleFactor(0.75)
-                .lineLimit(1)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(14)
-        .background(Color.sweeplyBackground)
-        .clipShape(RoundedRectangle(cornerRadius: 12))
-    }
-}
-
-// MARK: - Filter Chip
-
-private struct InvoiceFilterChip: View {
-    let label: String
-    let count: Int
-    let isSelected: Bool
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            HStack(spacing: 5) {
-                Text(label)
-                    .font(.system(size: 13, weight: isSelected ? .semibold : .medium))
-                Text("\(count)")
-                    .font(.system(size: 11, weight: .semibold, design: .monospaced))
-                    .foregroundStyle(isSelected ? Color.sweeplyNavy.opacity(0.6) : Color.sweeplyTextSub.opacity(0.6))
-                    .padding(.horizontal, 5)
-                    .padding(.vertical, 1)
-                    .background(
-                        isSelected
-                        ? Color.sweeplyNavy.opacity(0.1)
-                        : Color.sweeplyBorder.opacity(0.6)
-                    )
-                    .clipShape(Capsule())
-            }
-            .foregroundStyle(isSelected ? Color.sweeplyNavy : Color.sweeplyTextSub)
-            .padding(.horizontal, 14)
-            .padding(.vertical, 8)
-            .background(isSelected ? Color.sweeplyAccent : Color.sweeplySurface)
-            .clipShape(Capsule())
-            .overlay(
-                Capsule().stroke(isSelected ? Color.clear : Color.sweeplyBorder, lineWidth: 1)
-            )
-        }
-        .buttonStyle(.plain)
-    }
-}
-
-// MARK: - Bar Chart
+// MARK: - Bar chart (monochrome)
 
 private struct BarChartView: View {
     let data: [WeeklyRevenue]
     let maxValue: Double
 
+    private let barColor = Color.sweeplyNavy.opacity(0.78)
+    private let emptyBar = Color.sweeplyBorder.opacity(0.85)
+
     var body: some View {
         GeometryReader { geo in
-            HStack(alignment: .bottom, spacing: 6) {
+            let labelHeight: CGFloat = 16
+            HStack(alignment: .bottom, spacing: 8) {
                 ForEach(data) { entry in
                     let barHeight = entry.amount > 0
-                        ? max(6, CGFloat(entry.amount / maxValue) * (geo.size.height - 20))
-                        : 4
-                    VStack(spacing: 4) {
+                        ? max(4, CGFloat(entry.amount / maxValue) * (geo.size.height - labelHeight - 6))
+                        : 3
+                    VStack(spacing: 6) {
                         Spacer(minLength: 0)
-                        ZStack(alignment: .top) {
-                            RoundedRectangle(cornerRadius: 5)
-                                .fill(
-                                    entry.amount > 0
-                                    ? LinearGradient(
-                                        colors: [Color.sweeplyAccent, Color.sweeplyAccent.opacity(0.6)],
-                                        startPoint: .top,
-                                        endPoint: .bottom
-                                      )
-                                    : LinearGradient(
-                                        colors: [Color.sweeplyBorder.opacity(0.4), Color.sweeplyBorder.opacity(0.4)],
-                                        startPoint: .top,
-                                        endPoint: .bottom
-                                      )
-                                )
-                                .frame(height: barHeight)
-                        }
+                        RoundedRectangle(cornerRadius: 3, style: .continuous)
+                            .fill(entry.amount > 0 ? barColor : emptyBar)
+                            .frame(height: barHeight)
                         Text(entry.day)
                             .font(.system(size: 10, weight: .medium))
                             .foregroundStyle(Color.sweeplyTextSub)
-                            .frame(height: 14)
+                            .frame(height: labelHeight)
                     }
                 }
             }
@@ -415,19 +356,11 @@ private struct BarChartView: View {
     }
 }
 
-// MARK: - Full Invoice Row
+// MARK: - Invoice row
 
-private struct FullInvoiceRow: View {
+private struct MinimalInvoiceRow: View {
     let invoice: Invoice
     @Binding var invoices: [Invoice]
-
-    private var statusAccent: Color {
-        switch invoice.status {
-        case .paid:    return Color.sweeplySuccess
-        case .unpaid:  return Color.sweeplyWarning
-        case .overdue: return Color.sweeplyDestructive
-        }
-    }
 
     private var dueDateLabel: String {
         let f = DateFormatter()
@@ -436,74 +369,64 @@ private struct FullInvoiceRow: View {
         switch invoice.status {
         case .paid:    return "Paid \(ds)"
         case .unpaid:  return "Due \(ds)"
-        case .overdue: return "Overdue · \(ds)"
+        case .overdue: return "Due \(ds)"
         }
     }
 
     var body: some View {
-        HStack(spacing: 12) {
-            // Status accent bar
-            RoundedRectangle(cornerRadius: 2)
-                .fill(statusAccent)
-                .frame(width: 3, height: 42)
-
-            // Content
-            VStack(alignment: .leading, spacing: 4) {
+        HStack(alignment: .center, spacing: 14) {
+            VStack(alignment: .leading, spacing: 6) {
                 HStack(alignment: .firstTextBaseline) {
                     Text(invoice.clientName)
-                        .font(.system(size: 14, weight: .semibold))
+                        .font(.system(size: 15, weight: .medium))
+                        .foregroundStyle(Color.sweeplyNavy)
                         .lineLimit(1)
-                    Spacer()
+                    Spacer(minLength: 8)
                     Text(invoice.amount.currency)
-                        .font(.system(size: 15, weight: .bold, design: .monospaced))
+                        .font(.system(size: 15, weight: .semibold, design: .rounded))
+                        .foregroundStyle(Color.sweeplyNavy)
+                        .monospacedDigit()
                 }
-                HStack(spacing: 6) {
+                HStack(spacing: 8) {
                     Text(invoice.invoiceNumber)
-                        .font(.system(size: 11, weight: .medium, design: .monospaced))
+                        .font(.system(size: 11, weight: .regular, design: .monospaced))
                         .foregroundStyle(Color.sweeplyTextSub)
                     Text("·")
-                        .font(.system(size: 11))
                         .foregroundStyle(Color.sweeplyBorder)
                     Text(dueDateLabel)
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(
-                            invoice.status == .overdue
-                            ? Color.sweeplyDestructive
-                            : Color.sweeplyTextSub
-                        )
-                    Spacer()
+                        .font(.system(size: 11, weight: .regular))
+                        .foregroundStyle(Color.sweeplyTextSub)
+                    Spacer(minLength: 8)
                     InvoiceStatusBadge(status: invoice.status)
                 }
             }
 
-            // Action menu
             Menu {
                 if invoice.status != .paid {
                     Button { markPaid() } label: {
-                        Label("Mark as Paid", systemImage: "checkmark.circle.fill")
+                        Label("Mark as paid", systemImage: "checkmark.circle")
                     }
                     Button {} label: {
-                        Label("Send Reminder", systemImage: "bell.fill")
+                        Label("Send reminder", systemImage: "bell")
                     }
                     Divider()
                 }
                 Button {} label: {
-                    Label("View Details", systemImage: "doc.text")
+                    Label("View details", systemImage: "doc.text")
                 }
                 Button(role: .destructive) {} label: {
-                    Label("Delete Invoice", systemImage: "trash")
+                    Label("Delete", systemImage: "trash")
                 }
             } label: {
                 Image(systemName: "ellipsis")
-                    .font(.system(size: 14, weight: .medium))
+                    .font(.system(size: 15, weight: .medium))
                     .foregroundStyle(Color.sweeplyTextSub)
-                    .frame(width: 28, height: 28)
-                    .background(Color.sweeplyBackground)
-                    .clipShape(Circle())
+                    .frame(width: 32, height: 32)
+                    .contentShape(Rectangle())
             }
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 12)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 14)
     }
 
     private func markPaid() {
