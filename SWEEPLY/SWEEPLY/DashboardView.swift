@@ -449,7 +449,7 @@ struct DashboardView: View {
                 } else {
                     VStack(spacing: 0) {
                         ForEach(Array(outstandingInvoicesTop.enumerated()), id: \.element.id) { idx, invoice in
-                            InvoiceRow(invoice: invoice)
+                            InvoiceRow(invoice: invoice, invoices: $invoices)
                             if idx < outstandingInvoicesTop.count - 1 {
                                 Divider()
                             }
@@ -472,7 +472,7 @@ struct DashboardView: View {
     }
 
     // MARK: - Small building blocks
-    private func durationString(_ hours: Double) -> String {
+    private static func durationString(_ hours: Double) -> String {
         if hours == 1 { return "1h" }
         if hours == floor(hours) { return "\(Int(hours))h" }
         let h = Int(hours)
@@ -480,7 +480,7 @@ struct DashboardView: View {
         return h > 0 ? "\(h)h \(m)m" : "\(m)m"
     }
 
-    private func statusDotColor(for status: JobStatus) -> Color {
+    private static func statusDotColor(for status: JobStatus) -> Color {
         switch status {
         case .completed:   return Color.sweeplySuccess
         case .inProgress:  return Color(red: 0.4, green: 0.45, blue: 0.95)
@@ -643,7 +643,7 @@ struct DashboardView: View {
                     .frame(width: 36, alignment: .trailing)
 
                     Circle()
-                        .fill(statusDotColor(for: job.status))
+                        .fill(DashboardView.statusDotColor(for: job.status))
                         .frame(width: 7, height: 7)
 
                     VStack(alignment: .leading, spacing: 2) {
@@ -658,7 +658,7 @@ struct DashboardView: View {
                         }
 
                         HStack(spacing: 0) {
-                            Text("\(job.serviceType.rawValue) · \(durationString(job.duration)) · \(job.address)")
+                            Text("\(job.serviceType.rawValue) · \(DashboardView.durationString(job.duration)) · \(job.address)")
                                 .font(.system(size: 12))
                                 .foregroundStyle(Color.sweeplyTextSub)
                                 .lineLimit(1)

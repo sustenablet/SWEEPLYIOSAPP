@@ -100,4 +100,37 @@ enum MockData {
         WeeklyRevenue(day: "Sat", amount: 320),
         WeeklyRevenue(day: "Sun", amount: 0),
     ]
+
+    static let monthlyRevenue: [WeeklyRevenue] = [
+        WeeklyRevenue(day: "W1", amount: 1240),
+        WeeklyRevenue(day: "W2", amount: 1860),
+        WeeklyRevenue(day: "W3", amount: 980),
+        WeeklyRevenue(day: "W4", amount: 1520),
+    ]
+
+    static func makeAllInvoices() -> [Invoice] {
+        let base = makeInvoices()
+        let c = clients
+        let cal = Calendar.current
+        let today = Date()
+
+        let extra: [Invoice] = [
+            Invoice(id: UUID(), clientId: c[1].id, clientName: c[1].name,
+                    amount: 280, status: .paid,
+                    createdAt: cal.date(byAdding: .day, value: -28, to: today)!,
+                    dueDate:   cal.date(byAdding: .day, value: -21, to: today)!,
+                    invoiceNumber: "INV-0038"),
+            Invoice(id: UUID(), clientId: c[2].id, clientName: c[2].name,
+                    amount: 160, status: .unpaid,
+                    createdAt: cal.date(byAdding: .day, value: -2, to: today)!,
+                    dueDate:   cal.date(byAdding: .day, value: 12, to: today)!,
+                    invoiceNumber: "INV-0044"),
+            Invoice(id: UUID(), clientId: c[4].id, clientName: c[4].name,
+                    amount: 480, status: .overdue,
+                    createdAt: cal.date(byAdding: .day, value: -30, to: today)!,
+                    dueDate:   cal.date(byAdding: .day, value: -16, to: today)!,
+                    invoiceNumber: "INV-0037"),
+        ]
+        return base + extra
+    }
 }

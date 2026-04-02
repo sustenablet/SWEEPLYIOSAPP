@@ -79,8 +79,7 @@ struct ClientsView: View {
                     .foregroundStyle(Color.sweeplyTextSub.opacity(0.6))
                     .tracking(1.5)
                 Text("Clients")
-                    .font(Font.custom("BricolageGrotesque-Bold", size: 28)
-                          .fallback(.system(size: 28, weight: .bold)))
+                    .font(Font.custom("BricolageGrotesque-Bold", size: 28))
                     .foregroundStyle(Color.primary)
                     .tracking(-0.5)
                 HStack(spacing: 6) {
@@ -519,11 +518,3 @@ struct ClientFormSheet: View {
     ClientsView()
 }
 
-// MARK: - Font Fallback Helper
-extension Font {
-    static func custom(_ name: String, size: CGFloat) -> Font {
-        Font.custom(name, size: size)
-    }
-
-    func fallback(_ fallback: Font) -> Font { self }
-}

@@ -4,7 +4,7 @@ struct RootView: View {
     @State private var selectedTab: Tab = .dashboard
 
     enum Tab {
-        case dashboard, schedule, clients, invoices, finances
+        case dashboard, schedule, clients, finances, business
     }
 
     var body: some View {
@@ -21,13 +21,13 @@ struct RootView: View {
                 .tabItem { Label("Clients", systemImage: "person.2.fill") }
                 .tag(Tab.clients)
 
-            PlaceholderView(title: "Invoices", icon: "doc.text.fill")
-                .tabItem { Label("Invoices", systemImage: "doc.text.fill") }
-                .tag(Tab.invoices)
-
-            PlaceholderView(title: "Finances", icon: "chart.line.uptrend.xyaxis")
+            FinancesView()
                 .tabItem { Label("Finances", systemImage: "chart.line.uptrend.xyaxis") }
                 .tag(Tab.finances)
+
+            PlaceholderView(title: "Business", icon: "building.2.fill")
+                .tabItem { Label("Business", systemImage: "building.2.fill") }
+                .tag(Tab.business)
         }
         .tint(Color.sweeplyAccent)
         .onAppear {
