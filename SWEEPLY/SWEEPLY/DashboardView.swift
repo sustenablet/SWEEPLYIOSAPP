@@ -1,6 +1,9 @@
 import SwiftUI
 
 struct DashboardView: View {
+    @Environment(AppSession.self) private var session
+    @Environment(ClientsStore.self) private var clientsStore
+
     @State private var jobs: [Job] = MockData.makeJobs()
     @State private var invoices: [Invoice] = MockData.makeInvoices()
 
@@ -55,7 +58,7 @@ struct DashboardView: View {
             .sorted { $0.date < $1.date }
     }
 
-    private var totalClients: Int { MockData.clients.count }
+    private var totalClients: Int { clientsStore.clients.count }
 
     private var upcomingJobsCount: Int {
         jobs.filter { $0.status == .scheduled }.count
@@ -158,7 +161,10 @@ struct DashboardView: View {
             titleVisibility: .hidden
         ) {
             Button("Settings") { showProfileDialog = false }
-            Button("Sign Out", role: .destructive) { showProfileDialog = false }
+            Button("Sign Out", role: .destructive) {
+                showProfileDialog = false
+                Task { await session.signOut() }
+            }
         } message: {
             VStack(alignment: .leading, spacing: 2) {
                 Text(profile.fullName).font(.system(size: 14, weight: .semibold))
@@ -957,4 +963,6 @@ extension Double {
 
 #Preview {
     DashboardView()
+        .environment(AppSession())
+        .environment(ClientsStore())
 }

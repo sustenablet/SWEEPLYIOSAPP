@@ -9,23 +9,48 @@ final class AppSession {
     var userId: UUID?
     var lastAuthError: String?
 
+    /// Becomes true after the first auth state is resolved (session or no session).
+    var hasResolvedInitialSession: Bool = false
+
     private var authTask: Task<Void, Never>?
 
     init() {
-        guard let client = SupabaseManager.shared else {
+        guard SupabaseManager.shared != nil else {
             lastAuthError = "Supabase is not configured."
+            hasResolvedInitialSession = true
             return
         }
-        authTask = Task { await observeAuth(client: client) }
-        Task { await refreshSession(client: client) }
+        authTask = Task { await observeAuth() }
+        Task { await refreshSession() }
     }
 
     deinit {
         authTask?.cancel()
     }
 
+    func signIn(email: String, password: String) async {
+        guard let client = SupabaseManager.shared else { return }
+        lastAuthError = nil
+        do {
+            _ = try await client.auth.signIn(email: email, password: password)
+        } catch {
+            lastAuthError = error.localizedDescription
+        }
+    }
+
+    func signUp(email: String, password: String) async {
+        guard let client = SupabaseManager.shared else { return }
+        lastAuthError = nil
+        do {
+            _ = try await client.auth.signUp(email: email, password: password)
+        } catch {
+            lastAuthError = error.localizedDescription
+        }
+    }
+
     func signOut() async {
         guard let client = SupabaseManager.shared else { return }
+        lastAuthError = nil
         do {
             try await client.auth.signOut()
         } catch {
@@ -33,7 +58,11 @@ final class AppSession {
         }
     }
 
-    private func refreshSession(client: SupabaseClient) async {
+    private func refreshSession() async {
+        guard let client = SupabaseManager.shared else {
+            hasResolvedInitialSession = true
+            return
+        }
         do {
             let session = try await client.auth.session
             apply(session: session)
@@ -41,9 +70,11 @@ final class AppSession {
             isAuthenticated = false
             userId = nil
         }
+        hasResolvedInitialSession = true
     }
 
-    private func observeAuth(client: SupabaseClient) async {
+    private func observeAuth() async {
+        guard let client = SupabaseManager.shared else { return }
         for await (event, session) in client.auth.authStateChanges {
             switch event {
             case .initialSession, .signedIn, .tokenRefreshed, .userUpdated:
@@ -58,6 +89,7 @@ final class AppSession {
             @unknown default:
                 break
             }
+            hasResolvedInitialSession = true
         }
     }
 

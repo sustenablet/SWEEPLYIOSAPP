@@ -3,7 +3,9 @@ import SwiftUI
 // MARK: - Clients List View
 
 struct ClientsView: View {
-    @State private var clients: [Client] = MockData.clients
+    @Environment(ClientsStore.self) private var clientsStore
+    @Environment(AppSession.self) private var session
+
     @State private var search = ""
     @State private var showAddSheet = false
     @State private var editingClient: Client? = nil
@@ -12,6 +14,8 @@ struct ClientsView: View {
 
     private let allJobs     = MockData.makeJobs()
     private let allInvoices = MockData.makeInvoices()
+
+    private var clients: [Client] { clientsStore.clients }
 
     private var filtered: [Client] {
         guard !search.isEmpty else { return clients }
@@ -41,15 +45,22 @@ struct ClientsView: View {
             }
             .background(Color.sweeplyBackground.ignoresSafeArea())
             .navigationBarHidden(true)
+            .refreshable {
+                await clientsStore.load(isAuthenticated: session.isAuthenticated)
+            }
         }
         .opacity(appeared ? 1 : 0)
         .offset(y: appeared ? 0 : 8)
         .onAppear {
             withAnimation(.easeOut(duration: 0.3)) { appeared = true }
         }
+        .task {
+            await clientsStore.load(isAuthenticated: session.isAuthenticated)
+        }
         .sheet(isPresented: $showAddSheet) {
             ClientFormSheet(
-                clients: $clients,
+                clientsStore: clientsStore,
+                userId: session.userId,
                 editingClient: editingClient,
                 onDismiss: { showAddSheet = false }
             )
@@ -61,8 +72,10 @@ struct ClientsView: View {
         ) {
             Button("Delete", role: .destructive) {
                 if let t = deleteTarget {
-                    withAnimation { clients.removeAll { $0.id == t.id } }
-                    deleteTarget = nil
+                    Task {
+                        _ = await clientsStore.delete(id: t.id)
+                        await MainActor.run { deleteTarget = nil }
+                    }
                 }
             }
         } message: {
@@ -90,6 +103,17 @@ struct ClientsView: View {
                     Text("\(clients.count) total clients")
                         .font(.system(size: 13))
                         .foregroundStyle(Color.sweeplyTextSub)
+                }
+                if clientsStore.isLoading {
+                    ProgressView()
+                        .scaleEffect(0.85)
+                        .padding(.top, 4)
+                }
+                if let err = clientsStore.lastError, !err.isEmpty {
+                    Text(err)
+                        .font(.system(size: 11))
+                        .foregroundStyle(Color.sweeplyDestructive)
+                        .padding(.top, 4)
                 }
             }
             Spacer()
@@ -304,7 +328,8 @@ private struct ClientInfoRow: View {
 // MARK: - Client Form Sheet
 
 struct ClientFormSheet: View {
-    @Binding var clients: [Client]
+    let clientsStore: ClientsStore
+    let userId: UUID?
     let editingClient: Client?
     let onDismiss: () -> Void
 
@@ -319,9 +344,11 @@ struct ClientFormSheet: View {
     @State private var zip = ""
     @State private var entryInstructions = ""
     @State private var notes = ""
+    @State private var isSaving = false
 
-    init(clients: Binding<[Client]>, editingClient: Client?, onDismiss: @escaping () -> Void) {
-        self._clients = clients
+    init(clientsStore: ClientsStore, userId: UUID?, editingClient: Client?, onDismiss: @escaping () -> Void) {
+        self.clientsStore = clientsStore
+        self.userId = userId
         self.editingClient = editingClient
         self.onDismiss = onDismiss
 
@@ -430,31 +457,38 @@ struct ClientFormSheet: View {
                         .foregroundStyle(Color.sweeplyTextSub)
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(editingClient == nil ? "Save" : "Update") { saveClient() }
+                    Button(editingClient == nil ? "Save" : "Update") {
+                        Task { await saveClient() }
+                    }
                         .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(isValid ? Color.sweeplyNavy : Color.sweeplyTextSub)
-                        .disabled(!isValid)
+                        .foregroundStyle(isValid && !isSaving ? Color.sweeplyNavy : Color.sweeplyTextSub)
+                        .disabled(!isValid || isSaving)
                 }
             }
         }
     }
 
-    private func saveClient() {
+    private func saveClient() async {
         let fullName = "\(firstName.trimmingCharacters(in: .whitespaces)) \(lastName.trimmingCharacters(in: .whitespaces))".trimmingCharacters(in: .whitespaces)
-        if let existing = editingClient,
-           let idx = clients.firstIndex(where: { $0.id == existing.id }) {
-            clients[idx].name               = fullName
-            clients[idx].email              = email
-            clients[idx].phone              = phone
-            clients[idx].preferredService   = preferredService
-            clients[idx].address            = street
-            clients[idx].city               = city
-            clients[idx].state              = state
-            clients[idx].zip                = zip
-            clients[idx].entryInstructions  = entryInstructions
-            clients[idx].notes              = notes
+        isSaving = true
+        defer { isSaving = false }
+
+        if let existing = editingClient {
+            var updated = existing
+            updated.name = fullName
+            updated.email = email
+            updated.phone = phone
+            updated.preferredService = preferredService
+            updated.address = street
+            updated.city = city
+            updated.state = state
+            updated.zip = zip
+            updated.entryInstructions = entryInstructions
+            updated.notes = notes
+            let ok = await clientsStore.update(updated)
+            if ok { onDismiss() }
         } else {
-            clients.append(Client(
+            let newClient = Client(
                 id: UUID(),
                 name: fullName,
                 email: email,
@@ -466,9 +500,11 @@ struct ClientFormSheet: View {
                 preferredService: preferredService,
                 entryInstructions: entryInstructions,
                 notes: notes
-            ))
+            )
+            let uid = userId ?? UUID()
+            let ok = await clientsStore.insert(newClient, userId: uid)
+            if ok { onDismiss() }
         }
-        onDismiss()
     }
 
     // MARK: - Form Helpers
@@ -516,5 +552,7 @@ struct ClientFormSheet: View {
 
 #Preview {
     ClientsView()
+        .environment(AppSession())
+        .environment(ClientsStore())
 }
 
