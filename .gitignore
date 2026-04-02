@@ -26,6 +26,7 @@ Carthage/Build/
 .LSOverride
 
 # Credentials & secrets
+SWEEPLY/SWEEPLY/SupabaseConfig.plist
 *.pem
 *.p12
 *.mobileprovision
