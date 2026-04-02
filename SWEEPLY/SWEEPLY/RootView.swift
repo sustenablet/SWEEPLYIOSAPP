@@ -60,23 +60,28 @@ struct RootView: View {
             }
             .tint(Color.sweeplyAccent)
 
-            Button {
-                showQuickAdd = true
-            } label: {
-                Image(systemName: "plus")
-                    .font(.system(size: 24, weight: .semibold))
-                    .foregroundStyle(.white)
-                    .frame(width: 56, height: 56)
-                    .background(Color.sweeplyNavy)
-                    .clipShape(Circle())
-                    .shadow(color: .black.opacity(0.22), radius: 10, x: 0, y: 4)
+            if selectedTab == .dashboard {
+                Button {
+                    showQuickAdd = true
+                } label: {
+                    Image(systemName: "plus")
+                        .font(.system(size: 24, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .frame(width: 56, height: 56)
+                        .background(Color.sweeplyNavy)
+                        .clipShape(Circle())
+                        .shadow(color: .black.opacity(0.22), radius: 10, x: 0, y: 4)
+                }
+                .buttonStyle(.plain)
+                .padding(.trailing, 20)
+                .padding(.bottom, 72)
+                .accessibilityLabel("Quick actions")
             }
-            .buttonStyle(.plain)
-            .padding(.trailing, 20)
-            .padding(.bottom, 72)
-            .accessibilityLabel("Quick add")
         }
-        .confirmationDialog("Create", isPresented: $showQuickAdd, titleVisibility: .visible) {
+        .confirmationDialog("Quick actions", isPresented: $showQuickAdd, titleVisibility: .visible) {
+            Button("New invoice") {
+                selectedTab = .finances
+            }
             Button("New job") {
                 selectedTab = .schedule
             }
@@ -85,7 +90,7 @@ struct RootView: View {
             }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("Choose what to add")
+            Text("Create something new")
         }
         .onAppear {
             let appearance = UITabBarAppearance()
