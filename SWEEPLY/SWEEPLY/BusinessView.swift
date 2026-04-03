@@ -8,17 +8,20 @@ struct BusinessView: View {
     @Environment(ProfileStore.self)  private var profileStore
 
     @State private var appeared = false
+    @State private var serviceEditorState: ServiceCatalogEditorState?
+    @State private var catalogFeedbackMessage: String?
+    @State private var selectedSnapshotSlide = 0
 
     private var profile: UserProfile {
         profileStore.profile ?? MockData.profile
     }
 
     private var businessJobs: [Job] {
-        jobsStore.jobs.isEmpty ? MockData.makeJobs() : jobsStore.jobs
+        jobsStore.jobs
     }
 
     private var businessInvoices: [Invoice] {
-        invoicesStore.invoices.isEmpty ? MockData.makeAllInvoices() : invoicesStore.invoices
+        invoicesStore.invoices
     }
 
     private var totalRevenue: Double {
@@ -68,8 +71,8 @@ struct BusinessView: View {
         let grouped = Dictionary(grouping: monthlyJobs, by: \.serviceType)
         let total = max(monthlyJobs.count, 1)
 
-        return ServiceType.allCases.compactMap { service in
-            let count = grouped[service]?.count ?? 0
+        return grouped.compactMap { service, jobs in
+            let count = jobs.count
             guard count > 0 else { return nil }
             return (service.rawValue, Double(count) / Double(total), count)
         }
@@ -95,6 +98,10 @@ struct BusinessView: View {
         }
     }
 
+    private var catalogServices: [BusinessService] {
+        profile.settings.hydratedServiceCatalog
+    }
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 28) {
@@ -107,38 +114,89 @@ struct BusinessView: View {
                 .padding(.top, 16)
 
                 // 1. Performance KPIs
-                HStack(spacing: 12) {
-                    KPIBlock(title: "Active Clients", value: "\(activeClientsCount)", icon: "person.2.fill")
-                    KPIBlock(title: "Jobs This Month", value: "\(monthlyJobs.count)", icon: "briefcase.fill")
-                    KPIBlock(title: "Collected", value: totalRevenue.currency, icon: "dollarsign.circle.fill")
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 12) {
+                        KPIBlock(title: "Active Clients", value: "\(activeClientsCount)", icon: "person.2.fill")
+                        KPIBlock(title: "Jobs This Month", value: "\(monthlyJobs.count)", icon: "briefcase.fill")
+                        KPIBlock(title: "Collected", value: totalRevenue.currency, icon: "dollarsign.circle.fill")
+                        KPIBlock(title: "Scheduled", value: "\(upcomingJobs.count)", icon: "calendar")
+                        KPIBlock(title: "Outstanding", value: outstandingRevenue.currency, icon: "exclamationmark.triangle.fill")
+                    }
+                    .padding(.horizontal, 20)
                 }
+                .padding(.horizontal, -20)
 
                 // 2. Snapshot
                 SectionCard {
                     VStack(alignment: .leading, spacing: 14) {
                         CardHeader(title: "Business Snapshot", subtitle: "How the operation is moving this month", action: nil)
-                        Divider()
 
-                        snapshotRow(
-                            title: "Completed Jobs",
-                            value: "\(completedJobsThisMonth)",
-                            detail: "\(monthlyJobs.count - completedJobsThisMonth) still in flight",
-                            accent: .sweeplyAccent
-                        )
-                        Divider()
-                        snapshotRow(
-                            title: "Average Ticket",
-                            value: averageTicket.currency,
-                            detail: "Based on completed visits this month",
-                            accent: .sweeplyNavy
-                        )
-                        Divider()
-                        snapshotRow(
-                            title: "Outstanding",
-                            value: outstandingRevenue.currency,
-                            detail: "Open invoices waiting to be collected",
-                            accent: .sweeplyWarning
-                        )
+                        TabView(selection: $selectedSnapshotSlide) {
+                            // Slide 1
+                            VStack(alignment: .leading, spacing: 14) {
+                                Divider()
+                                snapshotRow(
+                                    title: "Completed Jobs",
+                                    value: "\(completedJobsThisMonth)",
+                                    detail: "\(monthlyJobs.count - completedJobsThisMonth) still in flight",
+                                    accent: .sweeplyAccent
+                                )
+                                Divider()
+                                snapshotRow(
+                                    title: "Average Ticket",
+                                    value: averageTicket.currency,
+                                    detail: "Based on completed visits this month",
+                                    accent: .sweeplyNavy
+                                )
+                                Divider()
+                                snapshotRow(
+                                    title: "Outstanding",
+                                    value: outstandingRevenue.currency,
+                                    detail: "Open invoices waiting to be collected",
+                                    accent: .sweeplyWarning
+                                )
+                            }
+                            .tag(0)
+
+                            // Slide 2
+                            VStack(alignment: .leading, spacing: 14) {
+                                VStack(alignment: .leading, spacing: 10) {
+                                    Text("Growth Activity")
+                                        .font(.system(size: 15, weight: .bold))
+                                        .foregroundStyle(Color.sweeplyNavy)
+                                    HStack {
+                                        Text("\(activeClientsCount)")
+                                            .font(.system(size: 38, weight: .bold, design: .rounded))
+                                        Spacer()
+                                        Image(systemName: "chart.line.uptrend.xyaxis")
+                                            .font(.system(size: 32))
+                                            .foregroundStyle(Color.sweeplyAccent)
+                                    }
+                                    Text("Active clients placing orders this month. Keep building your recurring base!")
+                                        .font(.system(size: 13))
+                                        .foregroundStyle(Color.sweeplyTextSub)
+                                }
+                                .padding(16)
+                                .background(Color.sweeplyAccent.opacity(0.1))
+                                .clipShape(RoundedRectangle(cornerRadius: 14))
+                                Spacer()
+                            }
+                            .padding(.top, 12)
+                            .tag(1)
+                        }
+                        .tabViewStyle(.page(indexDisplayMode: .never))
+                        .frame(height: 220)
+
+                        HStack(spacing: 8) {
+                            Spacer()
+                            ForEach(0..<2, id: \.self) { index in
+                                Capsule()
+                                    .fill(index == selectedSnapshotSlide ? Color.sweeplyNavy : Color.sweeplyBorder.opacity(0.8))
+                                    .frame(width: index == selectedSnapshotSlide ? 18 : 8, height: 8)
+                                    .animation(.easeInOut(duration: 0.2), value: selectedSnapshotSlide)
+                            }
+                            Spacer()
+                        }
                     }
                 }
 
@@ -249,6 +307,8 @@ struct BusinessView: View {
                         }
                     }
                 }
+
+                serviceCatalogSection
             }
             .padding(.horizontal, 20)
             .padding(.bottom, 40)
@@ -258,6 +318,11 @@ struct BusinessView: View {
         .background(Color.sweeplyBackground.ignoresSafeArea())
         .onAppear {
             withAnimation(.easeOut(duration: 0.3)) { appeared = true }
+        }
+        .sheet(item: $serviceEditorState) { editorState in
+            ServiceCatalogEditorSheet(state: editorState) { result in
+                Task { await saveCatalogChange(from: result) }
+            }
         }
     }
 
@@ -322,6 +387,95 @@ struct BusinessView: View {
         .padding(.vertical, 24)
     }
 
+    private var serviceCatalogSection: some View {
+        SectionCard {
+            VStack(alignment: .leading, spacing: 14) {
+                HStack(alignment: .center) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Service Catalog")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundStyle(Color.sweeplyNavy)
+                        Text("Manage the services and prices used in client and job forms.")
+                            .font(.system(size: 12))
+                            .foregroundStyle(Color.sweeplyTextSub)
+                    }
+                    Spacer()
+                    Button {
+                        serviceEditorState = ServiceCatalogEditorState()
+                    } label: {
+                        Label("Add", systemImage: "plus")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(Color.sweeplyNavy)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 7)
+                            .background(Color.sweeplyBackground)
+                            .clipShape(Capsule())
+                    }
+                }
+
+                if let catalogFeedbackMessage {
+                    Text(catalogFeedbackMessage)
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(Color.sweeplyTextSub)
+                }
+
+                if catalogServices.isEmpty {
+                    overviewEmptyState(
+                        icon: "tray",
+                        title: "No services yet",
+                        message: "Create a service here and it will appear in new client and new job pickers."
+                    )
+                } else {
+                    VStack(spacing: 10) {
+                        ForEach(catalogServices) { service in
+                            ServiceCatalogRow(
+                                service: service,
+                                onEdit: { serviceEditorState = ServiceCatalogEditorState(service: service) },
+                                onDelete: { Task { await deleteCatalogService(service.id) } }
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private func saveCatalogChange(from editorState: ServiceCatalogEditorState) async {
+        guard let userId = session.userId else {
+            catalogFeedbackMessage = "No authenticated session was found."
+            return
+        }
+
+        var updatedProfile = profileStore.profile ?? profile
+        var services = updatedProfile.settings.hydratedServiceCatalog
+        let name = editorState.name.trimmingCharacters(in: .whitespacesAndNewlines)
+        let price = Double(editorState.priceText) ?? 0
+
+        if let serviceID = editorState.serviceID,
+           let index = services.firstIndex(where: { $0.id == serviceID }) {
+            services[index].name = name
+            services[index].price = price
+        } else {
+            services.append(BusinessService(name: name, price: price))
+        }
+
+        updatedProfile.settings.services = services
+        let success = await profileStore.save(updatedProfile, userId: userId)
+        catalogFeedbackMessage = success ? "Catalog saved." : (profileStore.lastError ?? "Unable to save catalog changes.")
+    }
+
+    private func deleteCatalogService(_ id: UUID) async {
+        guard let userId = session.userId else {
+            catalogFeedbackMessage = "No authenticated session was found."
+            return
+        }
+
+        var updatedProfile = profileStore.profile ?? profile
+        updatedProfile.settings.services = updatedProfile.settings.hydratedServiceCatalog.filter { $0.id != id }
+        let success = await profileStore.save(updatedProfile, userId: userId)
+        catalogFeedbackMessage = success ? "Catalog saved." : (profileStore.lastError ?? "Unable to save catalog changes.")
+    }
+
     private func durationLabel(for duration: Double) -> String {
         if duration == floor(duration) {
             return "\(Int(duration))h"
@@ -337,21 +491,33 @@ private struct KPIBlock: View {
     let value: String
     let icon: String
     var body: some View {
-        SectionCard {
-            VStack(alignment: .leading, spacing: 8) {
-                Image(systemName: icon)
-                    .font(.system(size: 14))
-                    .foregroundStyle(Color.sweeplyTextSub)
+        VStack(alignment: .leading, spacing: 14) {
+            HStack {
+                ZStack {
+                    Circle()
+                        .fill(Color.sweeplyNavy.opacity(0.1))
+                        .frame(width: 32, height: 32)
+                    Image(systemName: icon)
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(Color.sweeplyNavy)
+                }
+                Spacer()
+            }
+            VStack(alignment: .leading, spacing: 4) {
                 Text(value)
-                    .font(.system(size: 20, weight: .bold, design: .rounded))
+                    .font(.system(size: 24, weight: .bold, design: .rounded))
                     .foregroundStyle(Color.sweeplyNavy)
                 Text(title)
-                    .font(.system(size: 10, weight: .semibold))
+                    .font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(Color.sweeplyTextSub)
                     .lineLimit(1)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
         }
+        .padding(16)
+        .frame(width: 140, alignment: .leading)
+        .background(Color.sweeplySurface)
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(Color.sweeplyBorder, lineWidth: 1))
     }
 }
 

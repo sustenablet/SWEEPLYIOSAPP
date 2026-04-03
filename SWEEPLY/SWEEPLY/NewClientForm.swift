@@ -22,9 +22,25 @@ struct NewClientForm: View {
     @State private var notes = ""
     @State private var isSaving = false
 
-    private var availableServiceTypes: [ServiceType] {
-        let settings = profileStore.profile?.settings ?? MockData.profile.settings
-        return settings.availableServiceTypes
+    private var fallbackSettings: AppSettings {
+        var settings = AppSettings()
+        settings.services = AppSettings.defaultServiceCatalog
+        return settings
+    }
+
+    private var serviceCatalog: [BusinessService] {
+        let settings = profileStore.profile?.settings ?? fallbackSettings
+        return settings.hydratedServiceCatalog
+    }
+
+    private var preferredServiceLabel: String {
+        guard let preferredService else { return "Select Service..." }
+        if let service = serviceCatalog.first(where: {
+            $0.name.trimmingCharacters(in: .whitespacesAndNewlines).caseInsensitiveCompare(preferredService.rawValue) == .orderedSame
+        }) {
+            return "\(service.name) · \(service.price.currency)"
+        }
+        return preferredService.rawValue
     }
 
     var body: some View {
@@ -60,12 +76,14 @@ struct NewClientForm: View {
                             Text("Preferred Service").font(.system(size: 12)).foregroundStyle(Color.sweeplyTextSub)
                             Menu {
                                 Button("None") { preferredService = nil }
-                                ForEach(availableServiceTypes, id: \.self) { type in
-                                    Button(type.rawValue) { preferredService = type }
+                                ForEach(serviceCatalog) { service in
+                                    Button("\(service.name) · \(service.price.currency)") {
+                                        preferredService = ServiceType(rawValue: service.name)
+                                    }
                                 }
                             } label: {
                                 HStack {
-                                    Text(preferredService?.rawValue ?? "Select Service...")
+                                    Text(preferredServiceLabel)
                                         .foregroundStyle(preferredService == nil ? Color.sweeplyTextSub : .primary)
                                     Spacer()
                                     Image(systemName: "chevron.down").font(.system(size: 12))
@@ -147,9 +165,9 @@ struct NewClientForm: View {
     }
 
     private func saveClient() async {
+        guard let userId = session.userId else { return }
         isSaving = true
         let fullName = "\(firstName.trimmingCharacters(in: .whitespaces)) \(lastName.trimmingCharacters(in: .whitespaces))".trimmingCharacters(in: .whitespaces)
-        let fallbackUserId = session.userId ?? MockData.profile.id
         
         if let existing = editingClient {
             var updated = existing
@@ -178,7 +196,7 @@ struct NewClientForm: View {
                 entryInstructions: entryInstructions,
                 notes: notes
             )
-            _ = await clientsStore.insert(newClient, userId: fallbackUserId)
+            _ = await clientsStore.insert(newClient, userId: userId)
         }
         
         isSaving = false

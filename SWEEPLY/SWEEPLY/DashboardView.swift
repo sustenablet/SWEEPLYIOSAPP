@@ -10,6 +10,7 @@ struct DashboardView: View {
     @State private var appeared = false
     @State private var showProfileMenu = false
     @State private var showSettings = false
+    @State private var showNotifications = false
     @State private var showPlaybook = true
     @State private var playbookDone: [Bool] = [true, false, false, false]
     @State private var healthStats: HealthStats? = nil
@@ -19,6 +20,25 @@ struct DashboardView: View {
     
     private var profile: UserProfile {
         profileStore.profile ?? MockData.profile
+    }
+
+    private var notificationsCount: Int {
+        var count = 0
+
+        if overdueInvoicesCount > 0 {
+            count += 1
+        }
+
+        if !todayJobs.isEmpty {
+            count += 1
+        }
+
+        if profile.businessName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
+            profile.phone.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            count += 1
+        }
+
+        return count
     }
 
     private var initials: String {
@@ -189,6 +209,9 @@ struct DashboardView: View {
                 .presentationDetents([.height(280)])
                 .presentationDragIndicator(.visible)
         }
+        .sheet(isPresented: $showNotifications) {
+            NotificationsView()
+        }
         .fullScreenCover(isPresented: $showSettings) {
             SettingsView()
         }
@@ -203,7 +226,7 @@ struct DashboardView: View {
             subtitle: "Good morning, \(profile.fullName.split(separator: " ").first ?? "")"
         ) {
             HStack(spacing: 12) {
-                Button { /* action */ } label: {
+                Button { showNotifications = true } label: {
                     Image(systemName: "bell")
                         .font(.system(size: 18, weight: .semibold))
                         .foregroundStyle(Color.sweeplyNavy)
@@ -215,10 +238,12 @@ struct DashboardView: View {
                                 .stroke(Color.sweeplyBorder, lineWidth: 1)
                         )
                         .overlay(alignment: .topTrailing) {
-                            Circle()
-                                .fill(Color.sweeplyDestructive)
-                                .frame(width: 8, height: 8)
-                                .offset(x: 2, y: -2)
+                            if notificationsCount > 0 {
+                                Circle()
+                                    .fill(Color.sweeplyDestructive)
+                                    .frame(width: 8, height: 8)
+                                    .offset(x: 2, y: -2)
+                            }
                         }
                 }
                 .buttonStyle(.plain)
@@ -477,17 +502,7 @@ struct DashboardHealthSlide: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack(alignment: .top) {
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(card.iconColor.opacity(0.12))
-                    .frame(width: 44, height: 44)
-                    .overlay(
-                        Image(systemName: card.icon)
-                            .font(.system(size: 18, weight: .semibold))
-                            .foregroundStyle(card.iconColor)
-                    )
-
                 Spacer()
-
                 TrendBadge(value: card.trend, isPositive: card.isPositive)
             }
 

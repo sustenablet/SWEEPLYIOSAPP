@@ -16,7 +16,8 @@ final class JobsStore {
 
     func load(isAuthenticated: Bool) async {
         guard let client = SupabaseManager.shared else {
-            jobs = MockData.makeJobs()
+            jobs = []
+            lastError = "Supabase is not configured."
             return
         }
         guard isAuthenticated else {

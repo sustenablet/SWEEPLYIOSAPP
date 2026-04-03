@@ -10,15 +10,14 @@ struct ClientDetailView: View {
 
     private var client: Client? {
         clientsStore.clients.first(where: { $0.id == clientId })
-            ?? MockData.clients.first(where: { $0.id == clientId })
     }
 
     private var sourceJobs: [Job] {
-        jobsStore.jobs.isEmpty ? MockData.makeJobs() : jobsStore.jobs
+        jobsStore.jobs
     }
 
     private var sourceInvoices: [Invoice] {
-        invoicesStore.invoices.isEmpty ? MockData.makeAllInvoices() : invoicesStore.invoices
+        invoicesStore.invoices
     }
 
     private var clientJobs: [Job] {

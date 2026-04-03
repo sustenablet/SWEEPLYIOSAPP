@@ -18,14 +18,30 @@ struct NewJobForm: View {
     @State private var showEndDatePicker = false
     @State private var isSaving = false
 
+    private var fallbackSettings: AppSettings {
+        var settings = AppSettings()
+        settings.services = AppSettings.defaultServiceCatalog
+        settings.defaultRate = 120
+        settings.defaultDuration = 2
+        return settings
+    }
+
     private var serviceCatalog: [BusinessService] {
-        let settings = profileStore.profile?.settings ?? MockData.profile.settings
+        let settings = profileStore.profile?.settings ?? fallbackSettings
         return settings.hydratedServiceCatalog
     }
 
-    private var availableServiceTypes: [ServiceType] {
-        let settings = profileStore.profile?.settings ?? MockData.profile.settings
-        return settings.availableServiceTypes
+    private var selectedServiceLabel: String {
+        if let service = selectedService {
+            return "\(service.name) · \(service.price.currency)"
+        }
+        return serviceType.rawValue
+    }
+
+    private var selectedService: BusinessService? {
+        serviceCatalog.first {
+            $0.name.trimmingCharacters(in: .whitespacesAndNewlines).caseInsensitiveCompare(serviceType.rawValue) == .orderedSame
+        }
     }
 
     var body: some View {
@@ -69,15 +85,15 @@ struct NewJobForm: View {
                         VStack(alignment: .leading, spacing: 8) {
                             Text("SERVICE").font(.system(size: 10, weight: .bold)).foregroundStyle(Color.sweeplyTextSub)
                             Menu {
-                                ForEach(availableServiceTypes, id: \.self) { type in
-                                    Button(type.rawValue) { 
-                                        serviceType = type 
+                                ForEach(serviceCatalog) { service in
+                                    Button("\(service.name) · \(service.price.currency)") {
+                                        serviceType = ServiceType(rawValue: service.name) ?? .custom(service.name)
                                         applyPricingHierarchy()
                                     }
                                 }
                             } label: {
                                 HStack {
-                                    Text(serviceType.rawValue)
+                                    Text(selectedServiceLabel)
                                     Spacer()
                                     Image(systemName: "chevron.down").font(.system(size: 12))
                                 }
@@ -188,6 +204,9 @@ struct NewJobForm: View {
         }
         .background(Color.sweeplySurface)
         .onAppear {
+            if selectedService == nil, let firstService = serviceCatalog.first {
+                serviceType = ServiceType(rawValue: firstService.name) ?? .custom(firstService.name)
+            }
             applyPricingHierarchy()
         }
     }
@@ -197,11 +216,11 @@ struct NewJobForm: View {
     }
 
     private func applyPricingHierarchy() {
-        let settings = profileStore.profile?.settings ?? MockData.profile.settings
+        let settings = profileStore.profile?.settings ?? fallbackSettings
         
         // 1. Search in Catalog
-        if let service = serviceCatalog.first(where: { $0.name.lowercased() == serviceType.rawValue.lowercased() }) {
-            price = "\(Int(service.price))"
+        if let service = selectedService {
+            price = service.price == floor(service.price) ? "\(Int(service.price))" : String(format: "%.2f", service.price)
             duration = "\(Int(settings.defaultDuration > 0 ? settings.defaultDuration : 2))"
         } else {
             // 2. Business Default
@@ -212,11 +231,8 @@ struct NewJobForm: View {
     }
 
     private func saveJob() async {
-        guard let client = selectedClient else { return }
+        guard let client = selectedClient, let userId = session.userId else { return }
         isSaving = true
-
-        let profile = profileStore.profile ?? MockData.profile
-        let userId = session.userId ?? profile.id
         
         let finalPrice = Double(price) ?? 120.0
         let finalDuration = Double(duration) ?? 2.0

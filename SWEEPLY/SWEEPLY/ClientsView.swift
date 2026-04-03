@@ -13,23 +13,9 @@ struct ClientsView: View {
     @State private var deleteTarget: Client? = nil
     @State private var appeared = false
 
-    /// Live list from Supabase when present; otherwise mock clients so the screen is reviewable without SQL.
-    private var displayClients: [Client] {
-        let stored = clientsStore.clients
-        if !stored.isEmpty { return stored }
-        if clientsStore.isLoading { return [] }
-        return MockData.clients
-    }
+    private var displayClients: [Client] { clientsStore.clients }
 
-    private var displayJobs: [Job] {
-        let stored = jobsStore.jobs
-        if !stored.isEmpty { return stored }
-        return MockData.makeJobs()
-    }
-
-    private var isShowingSampleClients: Bool {
-        clientsStore.clients.isEmpty && !clientsStore.isLoading
-    }
+    private var displayJobs: [Job] { jobsStore.jobs }
 
     private var filtered: [Client] {
         guard !search.isEmpty else { return displayClients }
@@ -106,7 +92,7 @@ struct ClientsView: View {
                 }
             }
 
-            if clientsStore.isLoading || (clientsStore.lastError?.isEmpty == false) || isShowingSampleClients {
+            if clientsStore.isLoading || (clientsStore.lastError?.isEmpty == false) {
                 HStack(spacing: 8) {
                     if clientsStore.isLoading {
                         ProgressView()
@@ -116,9 +102,6 @@ struct ClientsView: View {
                     if let err = clientsStore.lastError, !err.isEmpty {
                         Text(err)
                             .foregroundStyle(Color.sweeplyDestructive)
-                    } else if isShowingSampleClients {
-                        Text("Sample data")
-                            .foregroundStyle(Color.sweeplyAccent)
                     }
                 }
                 .font(.system(size: 11, weight: .medium))

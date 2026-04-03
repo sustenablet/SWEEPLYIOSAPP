@@ -1,4 +1,5 @@
 import SwiftUI
+import Supabase
 
 struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
@@ -8,10 +9,47 @@ struct SettingsView: View {
     @State private var selectedTab: SettingsTab = .profile
     @State private var isSaving = false
     @State private var localProfile: UserProfile = MockData.profile
+    @State private var baselineProfile: UserProfile = MockData.profile
     @State private var showDeleteConfirmation = false
+    @State private var feedbackMessage: String?
+    @State private var feedbackStyle: SettingsFeedbackStyle = .info
+    @State private var serviceEditorState: ServiceCatalogEditorState?
 
     private var serviceCatalogBinding: Binding<[BusinessService]> {
         $localProfile.settings.services
+    }
+
+    private var hydratedServices: [BusinessService] {
+        localProfile.settings.hydratedServiceCatalog
+    }
+
+    private var canSave: Bool {
+        !isSaving && validationMessage == nil && hasUnsavedChanges
+    }
+
+    private var hasUnsavedChanges: Bool {
+        profilesMatch(normalizedProfile(localProfile), normalizedProfile(baselineProfile)) == false
+    }
+
+    private var validationMessage: String? {
+        if localProfile.fullName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return "Full name is required."
+        }
+
+        if localProfile.businessName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return "Business name is required."
+        }
+
+        let email = localProfile.email.trimmingCharacters(in: .whitespacesAndNewlines)
+        if email.isEmpty || !email.contains("@") {
+            return "Enter a valid email address."
+        }
+
+        if localProfile.settings.services.contains(where: { $0.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }) {
+            return "Each service needs a name."
+        }
+
+        return nil
     }
     
     enum SettingsTab: String, CaseIterable {
@@ -50,6 +88,12 @@ struct SettingsView: View {
                 
                 ScrollView {
                     VStack(spacing: 24) {
+                        if let feedbackMessage {
+                            feedbackBanner(message: feedbackMessage, style: feedbackStyle)
+                        } else if let validationMessage {
+                            feedbackBanner(message: validationMessage, style: .warning)
+                        }
+
                         switch selectedTab {
                         case .profile:
                             profileSection
@@ -79,15 +123,15 @@ struct SettingsView: View {
                     }
                     .font(.system(size: 14, weight: .bold))
                     .foregroundStyle(Color.sweeplyNavy)
-                    .disabled(isSaving)
+                    .disabled(!canSave)
                 }
             }
             .onAppear {
-                if let p = profileStore.profile {
-                    localProfile = p
-                }
-                if localProfile.settings.services.isEmpty {
-                    localProfile.settings.services = AppSettings.defaultServiceCatalog
+                hydrateLocalProfile()
+            }
+            .sheet(item: $serviceEditorState) { editorState in
+                ServiceCatalogEditorSheet(state: editorState) { result in
+                    upsertService(from: result)
                 }
             }
         }
@@ -128,31 +172,42 @@ struct SettingsView: View {
             SectionCard {
                 VStack(alignment: .leading, spacing: 16) {
                     HStack {
-                        Text("SERVICE CATALOG").font(.system(size: 10, weight: .bold)).foregroundStyle(Color.sweeplyTextSub)
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("SERVICE CATALOG").font(.system(size: 10, weight: .bold)).foregroundStyle(Color.sweeplyTextSub)
+                            Text("This list powers service pickers in new clients and new jobs.")
+                                .font(.system(size: 12))
+                                .foregroundStyle(Color.sweeplyTextSub)
+                        }
                         Spacer()
-                        Button { addService() } label: {
-                            Image(systemName: "plus.circle.fill").foregroundStyle(Color.sweeplyNavy)
+                        Button { presentNewServiceEditor() } label: {
+                            Label("Add Service", systemImage: "plus")
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundStyle(Color.sweeplyNavy)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 8)
+                                .background(Color.sweeplyNavy.opacity(0.08))
+                                .clipShape(Capsule())
                         }
                     }
-                    
-                    ForEach(serviceCatalogBinding) { $service in
-                        HStack(spacing: 12) {
-                            TextField("Service Name", text: $service.name)
-                                .font(.system(size: 14, weight: .medium))
-                            Spacer()
-                            TextField("0", value: $service.price, format: .number)
-                                .keyboardType(.decimalPad)
-                                .multilineTextAlignment(.trailing)
-                                .font(.system(size: 14, weight: .bold, design: .monospaced))
-                                .frame(width: 60)
-                            
-                            Button { removeService(service.id) } label: {
-                                Image(systemName: "minus.circle").foregroundStyle(Color.sweeplyDestructive)
+
+                    if hydratedServices.isEmpty {
+                        Text("Add your first service to start pricing jobs from your business catalog.")
+                            .font(.system(size: 13))
+                            .foregroundStyle(Color.sweeplyTextSub)
+                            .padding(16)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(Color.sweeplyBackground)
+                            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    } else {
+                        VStack(spacing: 12) {
+                            ForEach(hydratedServices) { service in
+                                ServiceCatalogRow(
+                                    service: service,
+                                    onEdit: { presentEditServiceEditor(service) },
+                                    onDelete: { removeService(service.id) }
+                                )
                             }
                         }
-                        .padding(10)
-                        .background(Color.sweeplyBackground)
-                        .clipShape(RoundedRectangle(cornerRadius: 8))
                     }
                 }
             }
@@ -236,7 +291,10 @@ struct SettingsView: View {
             .padding(.top, 24)
         }
         .confirmationDialog("Delete Account?", isPresented: $showDeleteConfirmation) {
-            Button("Permanently Delete", role: .destructive) { /* handle delete */ }
+            Button("Permanently Delete", role: .destructive) {
+                feedbackStyle = .warning
+                feedbackMessage = "Account deletion is not self-serve yet. Contact support before removing your workspace."
+            }
         } message: {
             Text("This action cannot be undone. All your business data will be lost.")
         }
@@ -244,25 +302,195 @@ struct SettingsView: View {
     
     // MARK: - Actions
     
-    private func addService() {
-        let new = BusinessService(name: "New Service", price: 150)
-        localProfile.settings.services.append(new)
+    private func presentNewServiceEditor() {
+        serviceEditorState = ServiceCatalogEditorState()
+    }
+
+    private func presentEditServiceEditor(_ service: BusinessService) {
+        serviceEditorState = ServiceCatalogEditorState(service: service)
+    }
+
+    private func upsertService(from editorState: ServiceCatalogEditorState) {
+        let name = editorState.name.trimmingCharacters(in: .whitespacesAndNewlines)
+        let price = Double(editorState.priceText) ?? 0
+
+        if let serviceID = editorState.serviceID,
+           let index = localProfile.settings.services.firstIndex(where: { $0.id == serviceID }) {
+            localProfile.settings.services[index].name = name
+            localProfile.settings.services[index].price = price
+        } else {
+            localProfile.settings.services.append(
+                BusinessService(name: name, price: price)
+            )
+        }
+        feedbackMessage = nil
     }
     
     private func removeService(_ id: UUID) {
         localProfile.settings.services.removeAll { $0.id == id }
+        feedbackMessage = nil
     }
     
     private func resetPassword() {
-        // Trigger supabase reset flow
+        let email = localProfile.email.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !email.isEmpty else {
+            feedbackStyle = .warning
+            feedbackMessage = "Add your email address before requesting a password reset."
+            selectedTab = .profile
+            return
+        }
+
+        guard let client = SupabaseManager.shared else {
+            feedbackStyle = .warning
+            feedbackMessage = "Supabase is not configured, so password reset is unavailable."
+            return
+        }
+
+        Task {
+            do {
+                try await client.auth.resetPasswordForEmail(email)
+                feedbackStyle = .success
+                feedbackMessage = "Password reset email sent to \(email)."
+            } catch {
+                feedbackStyle = .error
+                feedbackMessage = error.localizedDescription
+            }
+        }
     }
     
     private func saveChanges() async {
-        guard let uid = session.userId else { return }
+        guard let uid = session.userId else {
+            feedbackStyle = .error
+            feedbackMessage = "No authenticated session was found."
+            return
+        }
+
+        guard validationMessage == nil else {
+            feedbackStyle = .warning
+            feedbackMessage = validationMessage
+            return
+        }
+
         isSaving = true
+        feedbackMessage = nil
         let success = await profileStore.save(localProfile, userId: uid)
         isSaving = false
-        if success { dismiss() }
+        if success {
+            baselineProfile = normalizedProfile(localProfile)
+            feedbackStyle = .success
+            feedbackMessage = "Settings saved."
+        } else {
+            feedbackStyle = .error
+            feedbackMessage = profileStore.lastError ?? "Unable to save your settings right now."
+        }
+    }
+
+    private func hydrateLocalProfile() {
+        if let profile = profileStore.profile {
+            localProfile = profile
+        }
+
+        if localProfile.settings.services.isEmpty {
+            localProfile.settings.services = AppSettings.defaultServiceCatalog
+        }
+
+        localProfile = normalizedProfile(localProfile)
+        baselineProfile = localProfile
+    }
+
+    private func normalizedProfile(_ profile: UserProfile) -> UserProfile {
+        var normalized = profile
+        normalized.fullName = profile.fullName.trimmingCharacters(in: .whitespacesAndNewlines)
+        normalized.businessName = profile.businessName.trimmingCharacters(in: .whitespacesAndNewlines)
+        normalized.email = profile.email.trimmingCharacters(in: .whitespacesAndNewlines)
+        normalized.phone = profile.phone.trimmingCharacters(in: .whitespacesAndNewlines)
+        normalized.settings.street = profile.settings.street.trimmingCharacters(in: .whitespacesAndNewlines)
+        normalized.settings.city = profile.settings.city.trimmingCharacters(in: .whitespacesAndNewlines)
+        normalized.settings.state = profile.settings.state.trimmingCharacters(in: .whitespacesAndNewlines)
+        normalized.settings.zip = profile.settings.zip.trimmingCharacters(in: .whitespacesAndNewlines)
+        normalized.settings.services = profile.settings.services.map {
+            BusinessService(id: $0.id, name: $0.name.trimmingCharacters(in: .whitespacesAndNewlines), price: $0.price)
+        }
+        return normalized
+    }
+
+    private func profilesMatch(_ lhs: UserProfile, _ rhs: UserProfile) -> Bool {
+        lhs.fullName == rhs.fullName &&
+        lhs.businessName == rhs.businessName &&
+        lhs.email == rhs.email &&
+        lhs.phone == rhs.phone &&
+        lhs.settings.street == rhs.settings.street &&
+        lhs.settings.city == rhs.settings.city &&
+        lhs.settings.state == rhs.settings.state &&
+        lhs.settings.zip == rhs.settings.zip &&
+        lhs.settings.defaultRate == rhs.settings.defaultRate &&
+        lhs.settings.defaultDuration == rhs.settings.defaultDuration &&
+        lhs.settings.darkMode == rhs.settings.darkMode &&
+        lhs.settings.services.count == rhs.settings.services.count &&
+        zip(lhs.settings.services, rhs.settings.services).allSatisfy { left, right in
+            left.id == right.id &&
+            left.name == right.name &&
+            left.price == right.price
+        }
+    }
+
+    @ViewBuilder
+    private func feedbackBanner(message: String, style: SettingsFeedbackStyle) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: style.iconName)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(style.accentColor)
+
+            Text(message)
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(Color.sweeplyNavy)
+
+            Spacer()
+        }
+        .padding(14)
+        .background(style.backgroundColor)
+        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(style.accentColor.opacity(0.18), lineWidth: 1)
+        )
+    }
+}
+
+private enum SettingsFeedbackStyle {
+    case info
+    case success
+    case warning
+    case error
+
+    var iconName: String {
+        switch self {
+        case .info:
+            return "info.circle.fill"
+        case .success:
+            return "checkmark.circle.fill"
+        case .warning:
+            return "exclamationmark.triangle.fill"
+        case .error:
+            return "xmark.octagon.fill"
+        }
+    }
+
+    var accentColor: Color {
+        switch self {
+        case .info:
+            return .sweeplyNavy
+        case .success:
+            return .sweeplyAccent
+        case .warning:
+            return .sweeplyWarning
+        case .error:
+            return .sweeplyDestructive
+        }
+    }
+
+    var backgroundColor: Color {
+        accentColor.opacity(0.10)
     }
 }
 

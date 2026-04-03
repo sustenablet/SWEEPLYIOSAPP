@@ -1,10 +1,16 @@
 import SwiftUI
 
 struct FinancesView: View {
-    @State private var invoices: [Invoice] = MockData.makeAllInvoices()
+    @Environment(InvoicesStore.self) private var invoicesStore
+    @Environment(AppSession.self) private var session
+
     @State private var selectedPeriod: ChartPeriod = .week
     @State private var selectedFilter: InvoiceFilter = .all
     @State private var appeared = false
+
+    private var invoices: [Invoice] {
+        invoicesStore.invoices
+    }
 
     enum ChartPeriod: String, CaseIterable {
         case week = "Week"
@@ -37,7 +43,7 @@ struct FinancesView: View {
         return invoices.reduce(0) { $0 + $1.amount } / Double(invoices.count)
     }
     private var chartData: [WeeklyRevenue] {
-        selectedPeriod == .week ? MockData.weeklyRevenue : MockData.monthlyRevenue
+        selectedPeriod == .week ? weeklyChartData : monthlyChartData
     }
     private var chartMax: Double {
         max(chartData.map { $0.amount }.max() ?? 1, 1)
@@ -70,6 +76,39 @@ struct FinancesView: View {
         }
     }
 
+    private var weeklyChartData: [WeeklyRevenue] {
+        let calendar = Calendar.current
+        let interval = calendar.dateInterval(of: .weekOfYear, for: Date()) ?? DateInterval(start: Date(), end: Date())
+        let formatter = DateFormatter()
+        formatter.dateFormat = "EEE"
+
+        return (0..<7).compactMap { offset in
+            guard let date = calendar.date(byAdding: .day, value: offset, to: interval.start) else { return nil }
+            let amount = invoices
+                .filter { invoice in
+                    calendar.isDate(invoice.createdAt, inSameDayAs: date) && invoice.status == .paid
+                }
+                .reduce(0) { $0 + $1.amount }
+            return WeeklyRevenue(day: formatter.string(from: date), amount: amount)
+        }
+    }
+
+    private var monthlyChartData: [WeeklyRevenue] {
+        let calendar = Calendar.current
+        let monthInterval = calendar.dateInterval(of: .month, for: Date()) ?? DateInterval(start: Date(), end: Date())
+
+        return (0..<4).map { index in
+            let weekStart = calendar.date(byAdding: .day, value: index * 7, to: monthInterval.start) ?? monthInterval.start
+            let weekEnd = calendar.date(byAdding: .day, value: 7, to: weekStart) ?? weekStart
+            let amount = invoices
+                .filter { invoice in
+                    invoice.createdAt >= weekStart && invoice.createdAt < weekEnd && invoice.status == .paid
+                }
+                .reduce(0) { $0 + $1.amount }
+            return WeeklyRevenue(day: "W\(index + 1)", amount: amount)
+        }
+    }
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 28) {
@@ -87,6 +126,9 @@ struct FinancesView: View {
             }
         }
         .background(Color.sweeplyBackground.ignoresSafeArea())
+        .refreshable {
+            await invoicesStore.load(isAuthenticated: session.isAuthenticated)
+        }
     }
 
     // MARK: - Summary
@@ -96,11 +138,17 @@ struct FinancesView: View {
             PageHeader(
                 eyebrow: nil,
                 title: "Finances",
-                subtitle: "Overview"
+                subtitle: invoicesStore.lastError?.isEmpty == false ? "Invoice sync issue" : "Overview"
             ) {
                 HeaderIconButton(systemName: "plus", foregroundColor: .white, backgroundColor: .sweeplyNavy) {}
             }
             .padding(.top, 8)
+
+            if let error = invoicesStore.lastError, !error.isEmpty {
+                Text(error)
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(Color.sweeplyDestructive)
+            }
 
             SectionCard {
                 VStack(alignment: .leading, spacing: 16) {
@@ -231,7 +279,7 @@ struct FinancesView: View {
                 SectionCard {
                     VStack(spacing: 0) {
                         ForEach(Array(filteredInvoices.enumerated()), id: \.element.id) { idx, invoice in
-                            MinimalInvoiceRow(invoice: invoice, invoices: $invoices)
+                            MinimalInvoiceRow(invoice: invoice, invoicesStore: invoicesStore)
                             if idx < filteredInvoices.count - 1 {
                                 Divider()
                             }
@@ -323,7 +371,7 @@ private struct BarChartView: View {
 
 private struct MinimalInvoiceRow: View {
     let invoice: Invoice
-    @Binding var invoices: [Invoice]
+    let invoicesStore: InvoicesStore
 
     private var dueDateLabel: String {
         let f = DateFormatter()
@@ -366,7 +414,7 @@ private struct MinimalInvoiceRow: View {
 
             Menu {
                 if invoice.status != .paid {
-                    Button { markPaid() } label: {
+                    Button { Task { await invoicesStore.markPaid(id: invoice.id) } } label: {
                         Label("Mark as paid", systemImage: "checkmark.circle")
                     }
                     Button {} label: {
@@ -392,13 +440,6 @@ private struct MinimalInvoiceRow: View {
         .padding(.vertical, 14)
     }
 
-    private func markPaid() {
-        if let idx = invoices.firstIndex(where: { $0.id == invoice.id }) {
-            withAnimation(.easeInOut(duration: 0.2)) {
-                invoices[idx].status = .paid
-            }
-        }
-    }
 }
 
 #Preview {

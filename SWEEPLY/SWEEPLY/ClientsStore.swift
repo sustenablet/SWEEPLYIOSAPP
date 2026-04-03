@@ -16,7 +16,8 @@ final class ClientsStore {
 
     func load(isAuthenticated: Bool) async {
         guard let client = SupabaseManager.shared else {
-            clients = MockData.clients
+            clients = []
+            lastError = "Supabase is not configured."
             return
         }
         guard isAuthenticated else {

@@ -16,7 +16,8 @@ final class InvoicesStore {
 
     func load(isAuthenticated: Bool) async {
         guard let client = SupabaseManager.shared else {
-            invoices = MockData.makeAllInvoices()
+            invoices = []
+            lastError = "Supabase is not configured."
             return
         }
         guard isAuthenticated else {

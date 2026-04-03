@@ -15,12 +15,65 @@ enum InvoiceStatus: String, CaseIterable, Codable {
     case overdue = "Overdue"
 }
 
-enum ServiceType: String, CaseIterable, Codable {
-    case standard    = "Standard Clean"
-    case deep        = "Deep Clean"
-    case moveInOut   = "Move In/Out"
-    case postConstruction = "Post Construction"
-    case office      = "Office Clean"
+enum ServiceType: RawRepresentable, Hashable, CaseIterable, Codable {
+    case standard
+    case deep
+    case moveInOut
+    case postConstruction
+    case office
+    case custom(String)
+
+    static var allCases: [ServiceType] {
+        [.standard, .deep, .moveInOut, .postConstruction, .office]
+    }
+
+    init?(rawValue: String) {
+        let trimmed = rawValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.isEmpty == false else { return nil }
+
+        switch trimmed {
+        case "Standard Clean":
+            self = .standard
+        case "Deep Clean":
+            self = .deep
+        case "Move In/Out":
+            self = .moveInOut
+        case "Post Construction":
+            self = .postConstruction
+        case "Office Clean":
+            self = .office
+        default:
+            self = .custom(trimmed)
+        }
+    }
+
+    var rawValue: String {
+        switch self {
+        case .standard:
+            return "Standard Clean"
+        case .deep:
+            return "Deep Clean"
+        case .moveInOut:
+            return "Move In/Out"
+        case .postConstruction:
+            return "Post Construction"
+        case .office:
+            return "Office Clean"
+        case .custom(let name):
+            return name
+        }
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let value = try container.decode(String.self)
+        self = ServiceType(rawValue: value) ?? .custom(value)
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(rawValue)
+    }
 }
 
 // MARK: - Models
@@ -51,7 +104,9 @@ struct AppSettings: Codable {
         BusinessService(name: ServiceType.deep.rawValue, price: 280),
         BusinessService(name: ServiceType.moveInOut.rawValue, price: 320),
         BusinessService(name: ServiceType.postConstruction.rawValue, price: 380),
-        BusinessService(name: ServiceType.office.rawValue, price: 350)
+        BusinessService(name: ServiceType.office.rawValue, price: 350),
+        BusinessService(name: "Clean Windows", price: 40),
+        BusinessService(name: "Do Laundry", price: 30)
     ]
 
     var hydratedServiceCatalog: [BusinessService] {
@@ -61,6 +116,13 @@ struct AppSettings: Codable {
     var availableServiceTypes: [ServiceType] {
         let mapped = hydratedServiceCatalog.compactMap { ServiceType(rawValue: $0.name) }
         return mapped.isEmpty ? ServiceType.allCases : mapped
+    }
+
+    func service(for serviceType: ServiceType?) -> BusinessService? {
+        guard let serviceType else { return nil }
+        return hydratedServiceCatalog.first {
+            $0.name.trimmingCharacters(in: .whitespacesAndNewlines).caseInsensitiveCompare(serviceType.rawValue) == .orderedSame
+        }
     }
 }
 
