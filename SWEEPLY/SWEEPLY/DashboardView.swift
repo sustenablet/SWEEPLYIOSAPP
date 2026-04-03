@@ -6,6 +6,7 @@ struct DashboardView: View {
     @Environment(JobsStore.self) private var jobsStore
     @Environment(InvoicesStore.self) private var invoicesStore
     @Environment(ProfileStore.self) private var profileStore
+    @Environment(NotificationsStore.self) private var notificationsStore
 
     @State private var appeared = false
     @State private var showProfileMenu = false
@@ -23,22 +24,7 @@ struct DashboardView: View {
     }
 
     private var notificationsCount: Int {
-        var count = 0
-
-        if overdueInvoicesCount > 0 {
-            count += 1
-        }
-
-        if !todayJobs.isEmpty {
-            count += 1
-        }
-
-        if profile.businessName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
-            profile.phone.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            count += 1
-        }
-
-        return count
+        notificationsStore.notifications.filter { !$0.isRead }.count
     }
 
     private var initials: String {
@@ -197,6 +183,7 @@ struct DashboardView: View {
             .onAppear {
                 withAnimation(.easeOut(duration: 0.3)) { appeared = true }
                 Task {
+                    await notificationsStore.load(isAuthenticated: session.isAuthenticated, userId: session.userId)
                     if let uid = session.userId {
                         healthStats = await jobsStore.fetchHealthStats(userId: uid)
                     }

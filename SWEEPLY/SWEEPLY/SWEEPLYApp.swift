@@ -8,6 +8,7 @@ struct SWEEPLYApp: App {
     @State private var jobsStore     = JobsStore()
     @State private var invoicesStore = InvoicesStore()
     @State private var profileStore  = ProfileStore()
+    @State private var notificationsStore = NotificationsStore()
 
     var body: some Scene {
         WindowGroup {
@@ -17,6 +18,7 @@ struct SWEEPLYApp: App {
                 .environment(jobsStore)
                 .environment(invoicesStore)
                 .environment(profileStore)
+                .environment(notificationsStore)
                 .onOpenURL { url in
                     SupabaseManager.shared?.auth.handle(url)
                 }

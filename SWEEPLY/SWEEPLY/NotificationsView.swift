@@ -5,98 +5,16 @@ struct NotificationsView: View {
     @Environment(ClientsStore.self) private var clientsStore
     @Environment(JobsStore.self) private var jobsStore
     @Environment(InvoicesStore.self) private var invoicesStore
-    @Environment(ProfileStore.self) private var profileStore
+    @Environment(NotificationsStore.self) private var notificationsStore
+    @Environment(AppSession.self) private var session
 
     private var profile: UserProfile? {
         profileStore.profile
     }
 
     private var notifications: [AppNotification] {
-        let calendar = Calendar.current
-        let now = Date()
-        let startOfToday = calendar.startOfDay(for: now)
-        let endOfToday = calendar.date(byAdding: .day, value: 1, to: startOfToday) ?? now
-
-        let todayJobs = jobsStore.jobs
-            .filter { $0.date >= startOfToday && $0.date < endOfToday }
-            .sorted { $0.date < $1.date }
-
-        let overdueInvoices = invoicesStore.invoices
-            .filter { $0.status == .overdue }
-            .sorted { $0.dueDate < $1.dueDate }
-
-        let upcomingInvoices = invoicesStore.invoices
-            .filter { $0.status == .unpaid && $0.dueDate >= startOfToday }
-            .sorted { $0.dueDate < $1.dueDate }
-            .prefix(2)
-
-        let needsBusinessProfile = profile.map {
-            $0.businessName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
-            $0.phone.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        } ?? false
-
-        var items: [AppNotification] = []
-
-        if !todayJobs.isEmpty {
-            let firstJob = todayJobs[0]
-            items.append(
-                AppNotification(
-                    title: "Today's route is live",
-                    message: "\(todayJobs.count) job\(todayJobs.count == 1 ? "" : "s") scheduled. First stop: \(firstJob.clientName) at \(firstJob.date.formatted(date: .omitted, time: .shortened)).",
-                    kind: .schedule,
-                    timestamp: firstJob.date
-                )
-            )
-        }
-
-        if !overdueInvoices.isEmpty {
-            let balance = overdueInvoices.reduce(0) { $0 + $1.amount }
-            items.append(
-                AppNotification(
-                    title: "Overdue invoices need follow-up",
-                    message: "\(overdueInvoices.count) overdue invoice\(overdueInvoices.count == 1 ? "" : "s") totaling \(balance.currency).",
-                    kind: .billing,
-                    timestamp: overdueInvoices[0].dueDate
-                )
-            )
-        }
-
-        for invoice in upcomingInvoices {
-            items.append(
-                AppNotification(
-                    title: "Invoice due soon",
-                    message: "\(invoice.clientName) invoice \(invoice.invoiceNumber) is due \(invoice.dueDate.formatted(date: .abbreviated, time: .omitted)).",
-                    kind: .billing,
-                    timestamp: invoice.dueDate
-                )
-            )
-        }
-
-        if needsBusinessProfile {
-            items.append(
-                AppNotification(
-                    title: "Finish your business profile",
-                    message: "Add your business name and phone number in Settings so clients see complete business details.",
-                    kind: .profile,
-                    timestamp: now
-                )
-            )
-        }
-
-        if clientsStore.clients.isEmpty {
-            items.append(
-                AppNotification(
-                    title: "Add your first client",
-                    message: "You are connected, but your client list is still empty. Start by creating your first customer record.",
-                    kind: .system,
-                    timestamp: now
-                )
-            )
-        }
-
-        return items.sorted { $0.timestamp > $1.timestamp }
+        notificationsStore.notifications
     }
-
     var body: some View {
         NavigationStack {
             ScrollView {
@@ -109,6 +27,11 @@ struct NotificationsView: View {
                         VStack(spacing: 12) {
                             ForEach(notifications) { notification in
                                 NotificationCard(notification: notification)
+                                    .onTapGesture {
+                                        Task {
+                                            await notificationsStore.markAsRead(id: notification.id, isAuthenticated: session.isAuthenticated)
+                                        }
+                                    }
                             }
                         }
                     }
@@ -121,9 +44,12 @@ struct NotificationsView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Done") { dismiss() }
+                    Button("Close") { dismiss() }
                         .foregroundStyle(Color.sweeplyNavy)
                 }
+            }
+            .refreshable {
+                await notificationsStore.load(isAuthenticated: session.isAuthenticated, userId: session.userId)
             }
         }
     }
@@ -174,20 +100,6 @@ struct NotificationsView: View {
     }
 }
 
-private struct AppNotification: Identifiable {
-    enum Kind {
-        case schedule
-        case billing
-        case profile
-        case system
-    }
-
-    let id = UUID()
-    let title: String
-    let message: String
-    let kind: Kind
-    let timestamp: Date
-}
 
 private struct NotificationCard: View {
     let notification: AppNotification
@@ -209,6 +121,12 @@ private struct NotificationCard: View {
                         Text(notification.title)
                             .font(.system(size: 15, weight: .semibold))
                             .foregroundStyle(Color.sweeplyNavy)
+                        if !notification.isRead {
+                            Circle()
+                                .fill(Color.sweeplyDestructive)
+                                .frame(width: 6, height: 6)
+                                .padding(.top, 4)
+                        }
                         Spacer()
                         Text(notification.timestamp.formatted(.relative(presentation: .named)))
                             .font(.system(size: 11, weight: .medium))
@@ -222,6 +140,7 @@ private struct NotificationCard: View {
                 }
             }
         }
+        .opacity(notification.isRead ? 0.6 : 1.0)
     }
 
     private var iconName: String {

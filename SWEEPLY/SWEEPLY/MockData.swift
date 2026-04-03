@@ -144,4 +144,23 @@ enum MockData {
         ]
         return base + extra
     }
+
+    static let notifications: [AppNotification] = [
+        AppNotification(
+            id: UUID(),
+            title: "Today's route is live",
+            message: "Jobs scheduled for today are ready.",
+            kind: .schedule,
+            timestamp: Date(),
+            isRead: false
+        ),
+        AppNotification(
+            id: UUID(),
+            title: "Welcome to Sweeply",
+            message: "Finish your profile setup in Settings.",
+            kind: .system,
+            timestamp: Date().addingTimeInterval(-86400),
+            isRead: true
+        )
+    ]
 }
