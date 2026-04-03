@@ -9,6 +9,7 @@ struct RootView: View {
 
     @State private var selectedTab: Tab = .dashboard
     @State private var showNewJob = false
+    @State private var showNewClient = false
     @State private var showQuickAdd = false
 
     enum Tab {
@@ -59,10 +60,17 @@ struct RootView: View {
             }
             .tint(Color.sweeplyAccent)
 
-            FABView(selectedTab: $selectedTab, onNewJob: { showNewJob = true })
+            FABView(
+                selectedTab: $selectedTab, 
+                onNewJob: { showNewJob = true },
+                onNewClient: { showNewClient = true }
+            )
         }
         .sheet(isPresented: $showNewJob) {
             NewJobForm()
+        }
+        .sheet(isPresented: $showNewClient) {
+            NewClientForm()
         }
 
         .task(id: session.isAuthenticated) {

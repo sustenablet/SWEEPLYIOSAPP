@@ -4,10 +4,11 @@ struct FABView: View {
     @State private var isExpanded = false
     @Binding var selectedTab: RootView.Tab
     var onNewJob: () -> Void
+    var onNewClient: () -> Void
     
     let actions: [(label: String, icon: String, tab: RootView.Tab?)] = [
         ("New Invoice", "doc.badge.plus", .finances),
-        ("New Client", "person.badge.plus", .clients),
+        ("New Client", "person.badge.plus", nil),
         ("New Job", "briefcase.fill", nil),
     ]
     
@@ -37,6 +38,8 @@ struct FABView: View {
                                 selectedTab = tab
                             } else if action.label == "New Job" {
                                 onNewJob()
+                            } else if action.label == "New Client" {
+                                onNewClient()
                             }
                         }
                         .transition(.asymmetric(
