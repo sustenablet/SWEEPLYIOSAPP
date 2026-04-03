@@ -10,7 +10,8 @@ struct DashboardView: View {
     @State private var appeared = false
     @State private var showProfileMenu = false
     @State private var showPlaybook = true
-    @State private var playbookDone: [Bool] = [true, false, false, false] // Mock: first step done
+    @State private var playbookDone: [Bool] = [true, false, false, false]
+    @State private var healthStats: HealthStats? = nil
 
     // MARK: - Derived Properties
     
@@ -115,6 +116,11 @@ struct DashboardView: View {
             .offset(y: appeared ? 0 : 8)
             .onAppear {
                 withAnimation(.easeOut(duration: 0.3)) { appeared = true }
+                Task {
+                    if let uid = session.userId {
+                        healthStats = await jobsStore.fetchHealthStats(userId: uid)
+                    }
+                }
             }
         }
         .background(Color.sweeplyBackground.ignoresSafeArea())
@@ -247,9 +253,25 @@ struct DashboardView: View {
             VStack(alignment: .leading, spacing: 12) {
                 CardHeader(title: "Business Health", subtitle: "Weekly insights", action: { /* View All */ })
                 Divider()
-                HealthRow(icon: "dollarsign", iconColor: .sweeplyAccent, title: "Job Value", subtitle: "This week's jobs", value: weekEarned.currency, trend: "+18%", isPositive: true)
+                HealthRow(
+                    icon: "dollarsign",
+                    iconColor: .sweeplyAccent,
+                    title: "Job Value",
+                    subtitle: "This week's jobs",
+                    value: (healthStats?.revenue ?? weekEarned).currency,
+                    trend: healthStats?.revenue_trend ?? "+18%",
+                    isPositive: healthStats?.is_rev_positive ?? true
+                )
                 Divider()
-                HealthRow(icon: "calendar", iconColor: .sweeplyNavy, title: "Visits", subtitle: "Scheduled visits", value: "\(jobsStore.jobs.filter { Calendar.current.isDate($0.date, equalTo: Date(), toGranularity: .weekOfYear) }.count)", trend: "+5%", isPositive: true)
+                HealthRow(
+                    icon: "calendar",
+                    iconColor: .sweeplyNavy,
+                    title: "Visits",
+                    subtitle: "Scheduled visits",
+                    value: "\(healthStats?.job_count ?? jobsStore.jobs.filter { Calendar.current.isDate($0.date, equalTo: Date(), toGranularity: .weekOfYear) }.count)",
+                    trend: healthStats?.job_trend ?? "+5%",
+                    isPositive: healthStats?.is_job_positive ?? true
+                )
             }
         }
     }

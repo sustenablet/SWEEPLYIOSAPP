@@ -166,6 +166,31 @@ final class JobsStore {
             return false
         }
     }
+
+    func fetchHealthStats(userId: UUID) async -> HealthStats? {
+        guard let client = SupabaseManager.shared else { return nil }
+        do {
+            let res: HealthStats = try await client
+                .rpc("get_business_health_stats", params: ["user_id_param": userId])
+                .execute()
+                .value
+            return res
+        } catch {
+            print("Error fetching health stats: \(error)")
+            return nil
+        }
+    }
+}
+
+// MARK: - Models
+
+struct HealthStats: Decodable {
+    let revenue: Double
+    let revenue_trend: String
+    let job_count: Int
+    let job_trend: String
+    let is_rev_positive: Bool
+    let is_job_positive: Bool
 }
 
 // MARK: - DTOs
