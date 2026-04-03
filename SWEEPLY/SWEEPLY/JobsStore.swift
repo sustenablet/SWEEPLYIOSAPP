@@ -180,6 +180,93 @@ final class JobsStore {
             return nil
         }
     }
+
+    func insertRecurring(rule: RecurrenceRule, clientName: String, address: String) async -> Bool {
+        guard let client = SupabaseManager.shared else { return false }
+        lastError = nil
+        do {
+            // 1. Insert the Rule
+            let ruleRow = RecurrenceRuleRowInsert(
+                user_id: rule.userId,
+                client_id: rule.clientId,
+                service_type: rule.serviceType.rawValue,
+                frequency: rule.frequency.rawValue,
+                interval_days: rule.intervalDays,
+                start_date: rule.startDate,
+                end_date: rule.endDate,
+                price: rule.price,
+                duration_hours: rule.durationHours
+            )
+            
+            let insertedRule: RecurrenceRuleRow = try await client
+                .from("recurrence_rules")
+                .insert(ruleRow)
+                .select()
+                .single()
+                .execute()
+                .value
+            
+            // 2. Generate first 8 instances
+            let dates = generateRecurringDates(
+                start: rule.startDate,
+                frequency: rule.frequency,
+                interval: rule.intervalDays,
+                endDate: rule.endDate,
+                count: 8
+            )
+            
+            let jobRows = dates.map { date in
+                JobRowInsert(
+                    userId: rule.userId,
+                    clientId: rule.clientId,
+                    clientName: clientName,
+                    serviceType: rule.serviceType.rawValue,
+                    scheduledAt: date,
+                    durationHours: rule.durationHours,
+                    price: rule.price,
+                    status: JobStatus.scheduled.rawValue,
+                    address: address,
+                    isRecurring: true,
+                    recurrence_rule_id: insertedRule.id
+                )
+            }
+            
+            try await client
+                .from("jobs")
+                .insert(jobRows)
+                .execute()
+            
+            await load(isAuthenticated: true)
+            return true
+        } catch {
+            lastError = error.localizedDescription
+            return false
+        }
+    }
+
+    private func generateRecurringDates(start: Date, frequency: RecurrenceFrequency, interval: Int, endDate: Date?, count: Int) -> [Date] {
+        var dates: [Date] = [start]
+        let calendar = Calendar.current
+        let limit = endDate ?? calendar.date(byAdding: .day, value: 365, to: start) ?? start
+        
+        for i in 1..<count {
+            let nextDate: Date?
+            switch frequency {
+            case .once: return [start]
+            case .weekly:   nextDate = calendar.date(byAdding: .weekOfYear, value: i, to: start)
+            case .biweekly: nextDate = calendar.date(byAdding: .weekOfYear, value: i * 2, to: start)
+            case .monthly:  nextDate = calendar.date(byAdding: .month, value: i, to: start)
+            case .custom:   nextDate = calendar.date(byAdding: .day, value: i * interval, to: start)
+            }
+            
+            if let d = nextDate, d <= limit {
+                dates.append(d)
+            } else {
+                break
+            }
+        }
+        return dates
+    }
 }
 
 // MARK: - Models
@@ -196,17 +283,9 @@ struct HealthStats: Decodable {
 // MARK: - DTOs
 
 private struct JobRow: Decodable {
-    let id: UUID
-    let userId: UUID
-    let clientId: UUID
-    let clientName: String
-    let serviceType: String
-    let scheduledAt: Date
-    let durationHours: Double
-    let price: Double
-    let status: String
     let address: String
     let isRecurring: Bool
+    let recurrence_rule_id: UUID?
 
     enum CodingKeys: String, CodingKey {
         case id, address, price, status
@@ -217,6 +296,7 @@ private struct JobRow: Decodable {
         case scheduledAt  = "scheduled_at"
         case durationHours = "duration_hours"
         case isRecurring  = "is_recurring"
+        case recurrence_rule_id
     }
 
     func toJob() -> Job {
@@ -230,22 +310,15 @@ private struct JobRow: Decodable {
             price: price,
             status: JobStatus(rawValue: status) ?? .scheduled,
             address: address,
-            isRecurring: isRecurring
+            isRecurring: isRecurring,
+            recurrenceRuleId: recurrence_rule_id
         )
     }
 }
 
-private struct JobRowInsert: Encodable {
-    let userId: UUID
-    let clientId: UUID
-    let clientName: String
-    let serviceType: String
-    let scheduledAt: Date
-    let durationHours: Double
-    let price: Double
-    let status: String
     let address: String
     let isRecurring: Bool
+    let recurrence_rule_id: UUID?
 
     enum CodingKeys: String, CodingKey {
         case address, price, status
@@ -256,6 +329,7 @@ private struct JobRowInsert: Encodable {
         case scheduledAt   = "scheduled_at"
         case durationHours = "duration_hours"
         case isRecurring   = "is_recurring"
+        case recurrence_rule_id
     }
 }
 
@@ -269,6 +343,7 @@ private struct JobRowPatch: Encodable {
     let status: String
     let address: String
     let isRecurring: Bool
+    let recurrence_rule_id: UUID?
 
     enum CodingKeys: String, CodingKey {
         case address, price, status
@@ -278,9 +353,26 @@ private struct JobRowPatch: Encodable {
         case scheduledAt   = "scheduled_at"
         case durationHours = "duration_hours"
         case isRecurring   = "is_recurring"
+        case recurrence_rule_id
     }
 }
 
 private struct JobStatusPatch: Encodable {
     let status: String
+}
+
+private struct RecurrenceRuleRow: Decodable {
+    let id: UUID
+}
+
+private struct RecurrenceRuleRowInsert: Encodable {
+    let user_id: UUID
+    let client_id: UUID
+    let service_type: String
+    let frequency: String
+    let interval_days: Int
+    let start_date: Date
+    let end_date: Date?
+    let price: Double
+    let duration_hours: Double
 }

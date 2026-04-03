@@ -67,17 +67,39 @@ struct Client: Identifiable {
     var notes: String
 }
 
-struct Job: Identifiable {
+struct Job: Identifiable, Codable {
     let id: UUID
     var clientId: UUID
     var clientName: String
     var serviceType: ServiceType
     var date: Date
-    var duration: Double    // hours
+    var duration: Double
     var price: Double
     var status: JobStatus
     var address: String
     var isRecurring: Bool
+    var recurrenceRuleId: UUID? = nil
+}
+
+struct RecurrenceRule: Identifiable, Codable {
+    let id: UUID
+    let userId: UUID
+    var clientId: UUID
+    var serviceType: ServiceType
+    var frequency: RecurrenceFrequency
+    var intervalDays: Int
+    var startDate: Date
+    var endDate: Date?
+    var price: Double
+    var durationHours: Double
+}
+
+enum RecurrenceFrequency: String, Codable, CaseIterable {
+    case once      = "once"
+    case weekly    = "weekly"
+    case biweekly  = "biweekly"
+    case monthly   = "monthly"
+    case custom    = "custom"
 }
 
 struct Invoice: Identifiable {
