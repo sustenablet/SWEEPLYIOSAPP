@@ -93,23 +93,12 @@ struct FinancesView: View {
 
     private var summaryBlock: some View {
         VStack(alignment: .leading, spacing: 20) {
-            HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Finances")
-                        .font(.system(size: 28, weight: .semibold))
-                        .foregroundStyle(Color.sweeplyNavy)
-                    Text("Overview")
-                        .font(.system(size: 13))
-                        .foregroundStyle(Color.sweeplyTextSub)
-                }
-                Spacer()
-                Button(action: {}) {
-                    Image(systemName: "plus.circle.fill")
-                        .font(.system(size: 28))
-                        .symbolRenderingMode(.hierarchical)
-                        .foregroundStyle(Color.sweeplyAccent)
-                }
-                .buttonStyle(.plain)
+            PageHeader(
+                eyebrow: nil,
+                title: "Finances",
+                subtitle: "Overview"
+            ) {
+                HeaderIconButton(systemName: "plus", foregroundColor: .white, backgroundColor: .sweeplyNavy) {}
             }
             .padding(.top, 8)
 

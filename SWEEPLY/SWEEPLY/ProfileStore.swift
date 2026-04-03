@@ -42,7 +42,7 @@ final class ProfileStore {
                 businessName: "",
                 email: "",
                 phone: "",
-                settings: AppSettings()
+                settings: defaultedSettings(AppSettings())
             )
             lastError = nil // not a hard error
         }
@@ -103,9 +103,9 @@ private struct ProfileRow: Decodable {
         let settings: AppSettings
         if let jsonString = settings_json,
            let data = jsonString.data(using: .utf8) {
-            settings = (try? JSONDecoder().decode(AppSettings.self, from: data)) ?? AppSettings()
+            settings = defaultedSettings((try? JSONDecoder().decode(AppSettings.self, from: data)) ?? AppSettings())
         } else {
-            settings = AppSettings()
+            settings = defaultedSettings(AppSettings())
         }
         
         return UserProfile(
@@ -117,6 +117,14 @@ private struct ProfileRow: Decodable {
             settings: settings
         )
     }
+}
+
+private func defaultedSettings(_ settings: AppSettings) -> AppSettings {
+    var updated = settings
+    if updated.services.isEmpty {
+        updated.services = AppSettings.defaultServiceCatalog
+    }
+    return updated
 }
 
 private struct ProfileRowUpsert: Encodable {

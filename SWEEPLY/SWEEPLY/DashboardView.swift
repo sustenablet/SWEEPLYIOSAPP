@@ -13,6 +13,7 @@ struct DashboardView: View {
     @State private var showPlaybook = true
     @State private var playbookDone: [Bool] = [true, false, false, false]
     @State private var healthStats: HealthStats? = nil
+    @State private var selectedHealthSlide = 0
 
     // MARK: - Derived Properties
     
@@ -67,6 +68,64 @@ struct DashboardView: View {
                 if b.status == .overdue && a.status != .overdue { return false }
                 return a.dueDate < b.dueDate
             }
+    }
+
+    private var currentWeekJobs: [Job] {
+        let calendar = Calendar.current
+        return jobsStore.jobs.filter { calendar.isDate($0.date, equalTo: Date(), toGranularity: .weekOfYear) }
+    }
+
+    private var activeClientsThisWeek: Int {
+        Set(currentWeekJobs.map(\.clientId)).count
+    }
+
+    private var overdueInvoicesCount: Int {
+        invoicesStore.invoices.filter { $0.status == .overdue }.count
+    }
+
+    private var healthCards: [DashboardHealthCardModel] {
+        [
+            DashboardHealthCardModel(
+                title: "Revenue Pulse",
+                subtitle: SupabaseManager.isConfigured && session.isAuthenticated ? "Weekly revenue from Supabase-backed jobs" : "Weekly revenue from local store data",
+                value: (healthStats?.revenue ?? weekEarned).currency,
+                trend: healthStats?.revenue_trend ?? "+18%",
+                isPositive: healthStats?.is_rev_positive ?? true,
+                icon: "dollarsign",
+                iconColor: .sweeplyAccent,
+                footnote: "\(completedCount) completed jobs this week"
+            ),
+            DashboardHealthCardModel(
+                title: "Visit Load",
+                subtitle: SupabaseManager.isConfigured && session.isAuthenticated ? "Weekly visit count from health RPC" : "Weekly scheduled visit count from local store",
+                value: "\(healthStats?.job_count ?? currentWeekJobs.count)",
+                trend: healthStats?.job_trend ?? "+5%",
+                isPositive: healthStats?.is_job_positive ?? true,
+                icon: "calendar",
+                iconColor: .sweeplyNavy,
+                footnote: "\(todayJobs.count) jobs on today’s board"
+            ),
+            DashboardHealthCardModel(
+                title: "Collections",
+                subtitle: "Open invoice balance that still needs attention",
+                value: outstandingTotal.currency,
+                trend: overdueInvoicesCount == 0 ? "On track" : "\(overdueInvoicesCount) overdue",
+                isPositive: overdueInvoicesCount == 0,
+                icon: "creditcard",
+                iconColor: overdueInvoicesCount == 0 ? .sweeplyAccent : .sweeplyDestructive,
+                footnote: "\(ongoingInvoices.count) invoices still open"
+            ),
+            DashboardHealthCardModel(
+                title: "Client Activity",
+                subtitle: "Unique clients touched by this week’s scheduled work",
+                value: "\(activeClientsThisWeek)",
+                trend: activeClientsThisWeek > 0 ? "Active week" : "No activity",
+                isPositive: activeClientsThisWeek > 0,
+                icon: "person.2",
+                iconColor: .blue,
+                footnote: "\(clientsStore.clients.count) total clients in the system"
+            )
+        ]
     }
 
     var body: some View {
@@ -138,32 +197,37 @@ struct DashboardView: View {
     // MARK: - Original Layout Essence Components
 
     private var headerRow: some View {
-        HStack(alignment: .center) {
-            VStack(alignment: .leading, spacing: 3) {
-                Text(longDate)
-                    .font(.system(size: 17, weight: .semibold))
-                    .foregroundStyle(Color.primary)
-                Text("Good morning, \(profile.fullName.split(separator: " ").first ?? "")")
-                    .font(.system(size: 13))
-                    .foregroundStyle(Color.sweeplyTextSub)
-            }
-            Spacer()
+        PageHeader(
+            eyebrow: nil,
+            title: longDate,
+            subtitle: "Good morning, \(profile.fullName.split(separator: " ").first ?? "")"
+        ) {
             HStack(spacing: 12) {
                 Button { /* action */ } label: {
                     Image(systemName: "bell")
-                        .font(.system(size: 20))
-                        .foregroundStyle(Color.primary)
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundStyle(Color.sweeplyNavy)
+                        .frame(width: 40, height: 40)
+                        .background(Color.sweeplySurface)
+                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                .stroke(Color.sweeplyBorder, lineWidth: 1)
+                        )
                         .overlay(alignment: .topTrailing) {
-                            Circle().fill(Color.sweeplyDestructive).frame(width: 8, height: 8).offset(x: 2, y: -2)
+                            Circle()
+                                .fill(Color.sweeplyDestructive)
+                                .frame(width: 8, height: 8)
+                                .offset(x: 2, y: -2)
                         }
                 }
                 .buttonStyle(.plain)
 
                 Button { showProfileMenu = true } label: {
                     ZStack {
-                        Circle()
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
                             .fill(Color.sweeplyNavy)
-                            .frame(width: 36, height: 36)
+                            .frame(width: 40, height: 40)
                         Text(initials)
                             .font(.system(size: 13, weight: .bold))
                             .foregroundStyle(.white)
@@ -248,28 +312,31 @@ struct DashboardView: View {
 
     private var businessHealthSection: some View {
         SectionCard {
-            VStack(alignment: .leading, spacing: 12) {
-                CardHeader(title: "Business Health", subtitle: "Weekly insights", action: { /* View All */ })
-                Divider()
-                HealthRow(
-                    icon: "dollarsign",
-                    iconColor: .sweeplyAccent,
-                    title: "Job Value",
-                    subtitle: "This week's jobs",
-                    value: (healthStats?.revenue ?? weekEarned).currency,
-                    trend: healthStats?.revenue_trend ?? "+18%",
-                    isPositive: healthStats?.is_rev_positive ?? true
-                )
-                Divider()
-                HealthRow(
-                    icon: "calendar",
-                    iconColor: .sweeplyNavy,
-                    title: "Visits",
-                    subtitle: "Scheduled visits",
-                    value: "\(healthStats?.job_count ?? jobsStore.jobs.filter { Calendar.current.isDate($0.date, equalTo: Date(), toGranularity: .weekOfYear) }.count)",
-                    trend: healthStats?.job_trend ?? "+5%",
-                    isPositive: healthStats?.is_job_positive ?? true
-                )
+            VStack(alignment: .leading, spacing: 16) {
+                CardHeader(title: "Business Health", subtitle: "Swipe through your operating metrics", action: nil)
+
+                TabView(selection: $selectedHealthSlide) {
+                    ForEach(Array(healthCards.enumerated()), id: \.offset) { index, card in
+                        DashboardHealthSlide(card: card)
+                            .tag(index)
+                            .padding(.vertical, 2)
+                    }
+                }
+                .tabViewStyle(.page(indexDisplayMode: .never))
+                .frame(height: 178)
+
+                HStack(spacing: 8) {
+                    ForEach(healthCards.indices, id: \.self) { index in
+                        Capsule()
+                            .fill(index == selectedHealthSlide ? Color.sweeplyNavy : Color.sweeplyBorder.opacity(0.8))
+                            .frame(width: index == selectedHealthSlide ? 18 : 8, height: 8)
+                            .animation(.easeInOut(duration: 0.2), value: selectedHealthSlide)
+                    }
+                    Spacer()
+                    Text("\(selectedHealthSlide + 1) / \(healthCards.count)")
+                        .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                        .foregroundStyle(Color.sweeplyTextSub)
+                }
             }
         }
     }
@@ -393,22 +460,71 @@ struct DashInvoiceRow: View {
     }
 }
 
-struct HealthRow: View {
-    let icon: String; let iconColor: Color; let title: String; let subtitle: String; let value: String; let trend: String; let isPositive: Bool
+struct DashboardHealthCardModel {
+    let title: String
+    let subtitle: String
+    let value: String
+    let trend: String
+    let isPositive: Bool
+    let icon: String
+    let iconColor: Color
+    let footnote: String
+}
+
+struct DashboardHealthSlide: View {
+    let card: DashboardHealthCardModel
+
     var body: some View {
-        HStack(spacing: 12) {
-            RoundedRectangle(cornerRadius: 8).fill(iconColor.opacity(0.12)).frame(width: 36, height: 36)
-                .overlay(Image(systemName: icon).font(.system(size: 16, weight: .semibold)).foregroundStyle(iconColor))
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title).font(.system(size: 13, weight: .semibold))
-                Text(subtitle).font(.system(size: 11)).foregroundStyle(Color.sweeplyTextSub)
+        VStack(alignment: .leading, spacing: 16) {
+            HStack(alignment: .top) {
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(card.iconColor.opacity(0.12))
+                    .frame(width: 44, height: 44)
+                    .overlay(
+                        Image(systemName: card.icon)
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundStyle(card.iconColor)
+                    )
+
+                Spacer()
+
+                TrendBadge(value: card.trend, isPositive: card.isPositive)
             }
-            Spacer()
-            VStack(alignment: .trailing, spacing: 4) {
-                Text(value).font(.system(size: 15, weight: .bold, design: .monospaced))
-                TrendBadge(value: trend, isPositive: isPositive)
+
+            VStack(alignment: .leading, spacing: 6) {
+                Text(card.title)
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundStyle(Color.sweeplyNavy)
+                Text(card.subtitle)
+                    .font(.system(size: 12))
+                    .foregroundStyle(Color.sweeplyTextSub)
+                    .lineLimit(2)
             }
-        }.padding(.vertical, 4)
+
+            Text(card.value)
+                .font(.system(size: 34, weight: .bold, design: .monospaced))
+                .foregroundStyle(Color.sweeplyNavy)
+                .minimumScaleFactor(0.75)
+                .lineLimit(1)
+
+            Spacer(minLength: 0)
+
+            Text(card.footnote)
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(Color.sweeplyTextSub)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 8)
+                .background(Color.sweeplyBackground)
+                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+        }
+        .padding(18)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .background(Color.sweeplySurface)
+        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(Color.sweeplyBorder, lineWidth: 1)
+        )
     }
 }
 

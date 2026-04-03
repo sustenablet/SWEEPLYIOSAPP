@@ -102,6 +102,10 @@ struct FABActionButton: View {
 #Preview {
     ZStack {
         Color.sweeplyBackground.ignoresSafeArea()
-        FABView(selectedTab: .constant(.dashboard))
+        FABView(
+            selectedTab: .constant(.dashboard),
+            onNewJob: {},
+            onNewClient: {}
+        )
     }
 }

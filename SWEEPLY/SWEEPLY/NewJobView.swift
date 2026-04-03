@@ -2,6 +2,7 @@ import SwiftUI
 
 struct NewJobForm: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(AppSession.self)    private var session
     @Environment(ClientsStore.self)  private var clientsStore
     @Environment(ProfileStore.self)  private var profileStore
     @Environment(JobsStore.self)     private var jobsStore
@@ -16,6 +17,16 @@ struct NewJobForm: View {
     @State private var endDate: Date = Date().addingTimeInterval(86400 * 30)
     @State private var showEndDatePicker = false
     @State private var isSaving = false
+
+    private var serviceCatalog: [BusinessService] {
+        let settings = profileStore.profile?.settings ?? MockData.profile.settings
+        return settings.hydratedServiceCatalog
+    }
+
+    private var availableServiceTypes: [ServiceType] {
+        let settings = profileStore.profile?.settings ?? MockData.profile.settings
+        return settings.availableServiceTypes
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -58,7 +69,7 @@ struct NewJobForm: View {
                         VStack(alignment: .leading, spacing: 8) {
                             Text("SERVICE").font(.system(size: 10, weight: .bold)).foregroundStyle(Color.sweeplyTextSub)
                             Menu {
-                                ForEach(ServiceType.allCases, id: \.self) { type in
+                                ForEach(availableServiceTypes, id: \.self) { type in
                                     Button(type.rawValue) { 
                                         serviceType = type 
                                         applyPricingHierarchy()
@@ -186,27 +197,26 @@ struct NewJobForm: View {
     }
 
     private func applyPricingHierarchy() {
-        guard let p = profileStore.profile else {
-            price = "120"
-            duration = "2"
-            return
-        }
+        let settings = profileStore.profile?.settings ?? MockData.profile.settings
         
         // 1. Search in Catalog
-        if let service = p.settings.services.first(where: { $0.name.lowercased() == serviceType.rawValue.lowercased() }) {
+        if let service = serviceCatalog.first(where: { $0.name.lowercased() == serviceType.rawValue.lowercased() }) {
             price = "\(Int(service.price))"
-            duration = "\(Int(p.settings.defaultDuration))"
+            duration = "\(Int(settings.defaultDuration > 0 ? settings.defaultDuration : 2))"
         } else {
             // 2. Business Default
-            let rate = p.settings.defaultRate > 0 ? p.settings.defaultRate : 120
+            let rate = settings.defaultRate > 0 ? settings.defaultRate : 120
             price = "\(Int(rate))"
-            duration = "\(Int(p.settings.defaultDuration > 0 ? p.settings.defaultDuration : 2))"
+            duration = "\(Int(settings.defaultDuration > 0 ? settings.defaultDuration : 2))"
         }
     }
 
     private func saveJob() async {
-        guard let client = selectedClient, let p = profileStore.profile else { return }
+        guard let client = selectedClient else { return }
         isSaving = true
+
+        let profile = profileStore.profile ?? MockData.profile
+        let userId = session.userId ?? profile.id
         
         let finalPrice = Double(price) ?? 120.0
         let finalDuration = Double(duration) ?? 2.0
@@ -224,11 +234,11 @@ struct NewJobForm: View {
                 address: client.address,
                 isRecurring: false
             )
-            _ = await jobsStore.insert(newJob, userId: p.id)
+            _ = await jobsStore.insert(newJob, userId: userId)
         } else {
             let rule = RecurrenceRule(
                 id: UUID(),
-                userId: p.id,
+                userId: userId,
                 clientId: client.id,
                 serviceType: serviceType,
                 frequency: recurrence,

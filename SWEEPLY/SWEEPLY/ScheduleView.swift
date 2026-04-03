@@ -13,7 +13,6 @@ struct ScheduleView: View {
     @State private var appeared = false
     @State private var viewMode: ScheduleViewMode = .day
     @State private var selectedDay: Date = Calendar.current.startOfDay(for: Date())
-    @State private var weekOffset: Int = 0
     @State private var showFilters = false
     @State private var statusFilter: JobStatus? = nil
     @State private var typeFilter: String = "All"
@@ -53,59 +52,38 @@ struct ScheduleView: View {
                 JobFiltersView(statusFilter: $statusFilter, typeFilter: $typeFilter)
                     .presentationDetents([.medium])
             }
+            .sheet(isPresented: $showMonthPicker) {
+                ScheduleMonthPicker(selectedDay: $selectedDay)
+                    .presentationDetents([.medium])
+            }
         }
-    }
-
-    private func syncWeekOffsetToSelectedDay() {
-        let start = calendar.dateInterval(of: .weekOfYear, for: selectedDay)?.start ?? selectedDay
-        let ref = calendar.dateInterval(of: .weekOfYear, for: Date())?.start ?? Date()
-        let diff = calendar.dateComponents([.weekOfYear], from: ref, to: start).weekOfYear ?? 0
-        weekOffset = diff
     }
 
     // MARK: Top toolbar (month + icons)
 
     private var topToolbar: some View {
-        HStack(alignment: .center) {
-            Button {
-                showMonthPicker = true
-            } label: {
-                HStack(spacing: 6) {
-                    Text(monthTitle)
-                        .font(.system(size: 22, weight: .bold))
-                        .foregroundStyle(Color.sweeplyNavy)
-                    Image(systemName: "chevron.down")
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(Color.sweeplyTextSub)
-                }
-            }
-            .buttonStyle(.plain)
-
-            Spacer()
-
+        PageHeader(
+            eyebrow: "Planner",
+            title: "Schedule",
+            subtitle: monthTitle
+        ) {
             HStack(spacing: 4) {
-                iconToolbarButton("line.3.horizontal.decrease.circle") { showFilters = true }
-                iconToolbarButton("calendar") { viewMode = .month }
+                HeaderIconButton(systemName: "calendar") {
+                    showMonthPicker = true
+                }
+                HeaderIconButton(systemName: "line.3.horizontal.decrease.circle") {
+                    showFilters = true
+                }
             }
         }
         .padding(.horizontal, 16)
-        .padding(.top, 12)
+        .padding(.top, 16)
     }
 
     private var monthTitle: String {
         let f = DateFormatter()
         f.dateFormat = "MMMM"
         return f.string(from: selectedDay)
-    }
-
-    private func iconToolbarButton(_ systemName: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Image(systemName: systemName)
-                .font(.system(size: 20))
-                .foregroundStyle(Color.sweeplyNavy)
-                .frame(width: 40, height: 40)
-        }
-        .buttonStyle(.plain)
     }
 
     // MARK: Day / List / Map segment
@@ -390,6 +368,8 @@ struct CalendarDayCell: View {
     }
 }
 
+private extension ScheduleView {
+
     private func filteredJobsForDate(_ date: Date) -> [Job] {
         jobsStore.jobs
             .filter { calendar.isDate($0.date, inSameDayAs: date) }
@@ -474,8 +454,7 @@ struct CalendarDayCell: View {
     }
 
     private var weekInterval: DateInterval {
-        let anchor = calendar.date(byAdding: .weekOfYear, value: weekOffset, to: Date()) ?? Date()
-        return calendar.dateInterval(of: .weekOfYear, for: anchor)
+        return calendar.dateInterval(of: .weekOfYear, for: selectedDay)
             ?? DateInterval(start: Date(), end: Date())
     }
  
@@ -487,6 +466,43 @@ struct CalendarDayCell: View {
 }
 
 // MARK: - Row Components
+
+private struct ScheduleMonthPicker: View {
+    @Binding var selectedDay: Date
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            PageHeader(
+                eyebrow: "Jump To",
+                title: "Choose Date",
+                subtitle: "Move the schedule to another week or month"
+            ) {
+                Button("Done") {
+                    dismiss()
+                }
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(Color.sweeplyAccent)
+            }
+
+            DatePicker(
+                "Selected Date",
+                selection: $selectedDay,
+                displayedComponents: .date
+            )
+            .datePickerStyle(.graphical)
+            .labelsHidden()
+
+            Button("Jump to Today") {
+                selectedDay = Calendar.current.startOfDay(for: Date())
+            }
+            .font(.system(size: 14, weight: .semibold))
+            .foregroundStyle(Color.sweeplyNavy)
+        }
+        .padding(20)
+        .background(Color.sweeplyBackground.ignoresSafeArea())
+    }
+}
 
 private struct ScheduleJobRow: View {
     let job: Job

@@ -2,20 +2,20 @@ import Foundation
 
 // MARK: - Enums
 
-enum JobStatus: String, CaseIterable {
+enum JobStatus: String, CaseIterable, Codable {
     case scheduled   = "Scheduled"
     case inProgress  = "In Progress"
     case completed   = "Completed"
     case cancelled   = "Cancelled"
 }
 
-enum InvoiceStatus: String, CaseIterable {
+enum InvoiceStatus: String, CaseIterable, Codable {
     case paid    = "Paid"
     case unpaid  = "Unpaid"
     case overdue = "Overdue"
 }
 
-enum ServiceType: String, CaseIterable {
+enum ServiceType: String, CaseIterable, Codable {
     case standard    = "Standard Clean"
     case deep        = "Deep Clean"
     case moveInOut   = "Move In/Out"
@@ -45,6 +45,23 @@ struct AppSettings: Codable {
     var taxRate: Double = 0
     var paymentTerms: Int = 14
     var darkMode: Bool = false
+
+    static let defaultServiceCatalog: [BusinessService] = [
+        BusinessService(name: ServiceType.standard.rawValue, price: 150),
+        BusinessService(name: ServiceType.deep.rawValue, price: 280),
+        BusinessService(name: ServiceType.moveInOut.rawValue, price: 320),
+        BusinessService(name: ServiceType.postConstruction.rawValue, price: 380),
+        BusinessService(name: ServiceType.office.rawValue, price: 350)
+    ]
+
+    var hydratedServiceCatalog: [BusinessService] {
+        services.isEmpty ? Self.defaultServiceCatalog : services
+    }
+
+    var availableServiceTypes: [ServiceType] {
+        let mapped = hydratedServiceCatalog.compactMap { ServiceType(rawValue: $0.name) }
+        return mapped.isEmpty ? ServiceType.allCases : mapped
+    }
 }
 
 struct BusinessService: Identifiable, Codable {

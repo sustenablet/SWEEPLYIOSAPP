@@ -3,6 +3,7 @@ import SwiftUI
 struct NewClientForm: View {
     @Environment(\.dismiss)         private var dismiss
     @Environment(ClientsStore.self) private var clientsStore
+    @Environment(ProfileStore.self) private var profileStore
     @Environment(AppSession.self)    private var session
 
     // Edit mode
@@ -20,6 +21,11 @@ struct NewClientForm: View {
     @State private var entryInstructions = ""
     @State private var notes = ""
     @State private var isSaving = false
+
+    private var availableServiceTypes: [ServiceType] {
+        let settings = profileStore.profile?.settings ?? MockData.profile.settings
+        return settings.availableServiceTypes
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -54,7 +60,7 @@ struct NewClientForm: View {
                             Text("Preferred Service").font(.system(size: 12)).foregroundStyle(Color.sweeplyTextSub)
                             Menu {
                                 Button("None") { preferredService = nil }
-                                ForEach(ServiceType.allCases, id: \.self) { type in
+                                ForEach(availableServiceTypes, id: \.self) { type in
                                     Button(type.rawValue) { preferredService = type }
                                 }
                             } label: {
@@ -141,9 +147,9 @@ struct NewClientForm: View {
     }
 
     private func saveClient() async {
-        guard let uid = session.userId else { return }
         isSaving = true
         let fullName = "\(firstName.trimmingCharacters(in: .whitespaces)) \(lastName.trimmingCharacters(in: .whitespaces))".trimmingCharacters(in: .whitespaces)
+        let fallbackUserId = session.userId ?? MockData.profile.id
         
         if let existing = editingClient {
             var updated = existing
@@ -172,7 +178,7 @@ struct NewClientForm: View {
                 entryInstructions: entryInstructions,
                 notes: notes
             )
-            _ = await clientsStore.insert(newClient, userId: uid)
+            _ = await clientsStore.insert(newClient, userId: fallbackUserId)
         }
         
         isSaving = false

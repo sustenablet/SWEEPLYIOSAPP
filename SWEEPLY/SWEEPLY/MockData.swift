@@ -14,11 +14,7 @@ enum MockData {
             city: "Miami",
             state: "FL",
             zip: "33139",
-            services: [
-                BusinessService(name: "Standard Clean", price: 150),
-                BusinessService(name: "Deep Clean", price: 280),
-                BusinessService(name: "Office/Commercial", price: 350)
-            ],
+            services: AppSettings.defaultServiceCatalog,
             defaultRate: 150,
             defaultDuration: 2.0,
             taxRate: 7.0,

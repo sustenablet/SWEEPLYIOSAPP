@@ -60,7 +60,8 @@ final class JobsStore {
                 price: job.price,
                 status: job.status.rawValue,
                 address: job.address,
-                isRecurring: job.isRecurring
+                isRecurring: job.isRecurring,
+                recurrence_rule_id: job.recurrenceRuleId
             )
             let inserted: JobRow = try await client
                 .from("jobs")
@@ -97,7 +98,8 @@ final class JobsStore {
                 price: job.price,
                 status: job.status.rawValue,
                 address: job.address,
-                isRecurring: job.isRecurring
+                isRecurring: job.isRecurring,
+                recurrence_rule_id: job.recurrenceRuleId
             )
             let refreshed: JobRow = try await client
                 .from("jobs")
@@ -283,6 +285,15 @@ struct HealthStats: Decodable {
 // MARK: - DTOs
 
 private struct JobRow: Decodable {
+    let id: UUID
+    let userId: UUID
+    let clientId: UUID
+    let clientName: String
+    let serviceType: String
+    let scheduledAt: Date
+    let durationHours: Double
+    let price: Double
+    let status: String
     let address: String
     let isRecurring: Bool
     let recurrence_rule_id: UUID?
@@ -316,23 +327,6 @@ private struct JobRow: Decodable {
     }
 }
 
-    let address: String
-    let isRecurring: Bool
-    let recurrence_rule_id: UUID?
-
-    enum CodingKeys: String, CodingKey {
-        case address, price, status
-        case userId        = "user_id"
-        case clientId      = "client_id"
-        case clientName    = "client_name"
-        case serviceType   = "service_type"
-        case scheduledAt   = "scheduled_at"
-        case durationHours = "duration_hours"
-        case isRecurring   = "is_recurring"
-        case recurrence_rule_id
-    }
-}
-
 private struct JobRowPatch: Encodable {
     let clientId: UUID
     let clientName: String
@@ -347,6 +341,32 @@ private struct JobRowPatch: Encodable {
 
     enum CodingKeys: String, CodingKey {
         case address, price, status
+        case clientId      = "client_id"
+        case clientName    = "client_name"
+        case serviceType   = "service_type"
+        case scheduledAt   = "scheduled_at"
+        case durationHours = "duration_hours"
+        case isRecurring   = "is_recurring"
+        case recurrence_rule_id
+    }
+}
+
+private struct JobRowInsert: Encodable {
+    let userId: UUID
+    let clientId: UUID
+    let clientName: String
+    let serviceType: String
+    let scheduledAt: Date
+    let durationHours: Double
+    let price: Double
+    let status: String
+    let address: String
+    let isRecurring: Bool
+    let recurrence_rule_id: UUID?
+
+    enum CodingKeys: String, CodingKey {
+        case address, price, status
+        case userId        = "user_id"
         case clientId      = "client_id"
         case clientName    = "client_name"
         case serviceType   = "service_type"

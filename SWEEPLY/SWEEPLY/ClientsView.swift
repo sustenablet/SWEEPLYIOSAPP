@@ -4,6 +4,7 @@ import SwiftUI
 
 struct ClientsView: View {
     @Environment(ClientsStore.self) private var clientsStore
+    @Environment(JobsStore.self) private var jobsStore
     @Environment(AppSession.self) private var session
 
     @State private var search = ""
@@ -12,15 +13,18 @@ struct ClientsView: View {
     @State private var deleteTarget: Client? = nil
     @State private var appeared = false
 
-    private let allJobs     = MockData.makeJobs()
-    private let allInvoices = MockData.makeInvoices()
-
     /// Live list from Supabase when present; otherwise mock clients so the screen is reviewable without SQL.
     private var displayClients: [Client] {
         let stored = clientsStore.clients
         if !stored.isEmpty { return stored }
         if clientsStore.isLoading { return [] }
         return MockData.clients
+    }
+
+    private var displayJobs: [Job] {
+        let stored = jobsStore.jobs
+        if !stored.isEmpty { return stored }
+        return MockData.makeJobs()
     }
 
     private var isShowingSampleClients: Bool {
@@ -37,7 +41,7 @@ struct ClientsView: View {
     }
 
     private func jobCount(for client: Client) -> Int {
-        allJobs.filter { $0.clientId == client.id }.count
+        displayJobs.filter { $0.clientId == client.id }.count
     }
 
     var body: some View {
@@ -90,59 +94,35 @@ struct ClientsView: View {
 
     // MARK: - Header
     private var headerSection: some View {
-        HStack(alignment: .top) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("DIRECTORY")
-                    .font(.system(size: 10, weight: .bold))
-                    .foregroundStyle(Color.sweeplyTextSub.opacity(0.6))
-                    .tracking(1.5)
-                Text("Clients")
-                    .font(.system(size: 28, weight: .semibold))
-                    .foregroundStyle(Color.sweeplyNavy)
-                HStack(spacing: 6) {
-                    Rectangle()
-                        .fill(Color.primary.opacity(0.2))
-                        .frame(width: 20, height: 2)
-                        .clipShape(Capsule())
-                    Text("\(displayClients.count) total clients")
-                        .font(.system(size: 13))
-                        .foregroundStyle(Color.sweeplyTextSub)
-                }
-                if clientsStore.isLoading {
-                    ProgressView()
-                        .scaleEffect(0.85)
-                        .padding(.top, 4)
-                }
-                if let err = clientsStore.lastError, !err.isEmpty {
-                    Text(err)
-                        .font(.system(size: 11))
-                        .foregroundStyle(Color.sweeplyDestructive)
-                        .padding(.top, 4)
-                }
-                if isShowingSampleClients {
-                    Text("Sample data")
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(Color.sweeplyAccent)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(Color.sweeplyAccent.opacity(0.12))
-                        .clipShape(Capsule())
-                        .padding(.top, 6)
+        VStack(alignment: .leading, spacing: 10) {
+            PageHeader(
+                eyebrow: "Directory",
+                title: "Clients",
+                subtitle: "\(displayClients.count) total clients"
+            ) {
+                HeaderIconButton(systemName: "plus", foregroundColor: .white, backgroundColor: .sweeplyNavy) {
+                    editingClient = nil
+                    showAddSheet = true
                 }
             }
-            Spacer()
-            Button {
-                editingClient = nil
-                showAddSheet = true
-            } label: {
-                Image(systemName: "plus")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(.white)
-                    .frame(width: 36, height: 36)
-                    .background(Color.sweeplyNavy)
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
+
+            if clientsStore.isLoading || (clientsStore.lastError?.isEmpty == false) || isShowingSampleClients {
+                HStack(spacing: 8) {
+                    if clientsStore.isLoading {
+                        ProgressView()
+                            .scaleEffect(0.8)
+                    }
+
+                    if let err = clientsStore.lastError, !err.isEmpty {
+                        Text(err)
+                            .foregroundStyle(Color.sweeplyDestructive)
+                    } else if isShowingSampleClients {
+                        Text("Sample data")
+                            .foregroundStyle(Color.sweeplyAccent)
+                    }
+                }
+                .font(.system(size: 11, weight: .medium))
             }
-            .padding(.top, 4)
         }
         .padding(.horizontal, 20)
         .padding(.top, 20)
@@ -179,9 +159,7 @@ struct ClientsView: View {
                 ForEach(filtered) { client in
                     NavigationLink(
                         destination: ClientDetailView(
-                            client: client,
-                            allJobs: allJobs,
-                            allInvoices: allInvoices
+                            clientId: client.id
                         )
                     ) {
                         ClientCard(
@@ -342,4 +320,3 @@ private struct ClientInfoRow: View {
         .environment(AppSession())
         .environment(ClientsStore())
 }
-

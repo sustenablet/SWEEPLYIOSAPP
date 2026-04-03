@@ -1,18 +1,32 @@
 import SwiftUI
 
 struct ClientDetailView: View {
-    let client: Client
-    let allJobs: [Job]
-    let allInvoices: [Invoice]
-
     @Environment(\.dismiss) private var dismiss
+    @Environment(ClientsStore.self) private var clientsStore
+    @Environment(JobsStore.self) private var jobsStore
+    @Environment(InvoicesStore.self) private var invoicesStore
+
+    let clientId: UUID
+
+    private var client: Client? {
+        clientsStore.clients.first(where: { $0.id == clientId })
+            ?? MockData.clients.first(where: { $0.id == clientId })
+    }
+
+    private var sourceJobs: [Job] {
+        jobsStore.jobs.isEmpty ? MockData.makeJobs() : jobsStore.jobs
+    }
+
+    private var sourceInvoices: [Invoice] {
+        invoicesStore.invoices.isEmpty ? MockData.makeAllInvoices() : invoicesStore.invoices
+    }
 
     private var clientJobs: [Job] {
-        allJobs.filter { $0.clientId == client.id }.sorted { $0.date > $1.date }
+        sourceJobs.filter { $0.clientId == clientId }.sorted { $0.date > $1.date }
     }
 
     private var clientInvoices: [Invoice] {
-        allInvoices.filter { $0.clientId == client.id }.sorted { $0.createdAt > $1.createdAt }
+        sourceInvoices.filter { $0.clientId == clientId }.sorted { $0.createdAt > $1.createdAt }
     }
 
     private var totalRevenue: Double {
@@ -24,28 +38,52 @@ struct ClientDetailView: View {
     }
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: 20) {
-                profileHeader
-                statsRow
-                if !client.entryInstructions.isEmpty || !client.notes.isEmpty {
-                    notesCard
+        Group {
+            if let client {
+                ScrollView {
+                    VStack(spacing: 20) {
+                        profileHeader(client: client)
+                        statsRow
+                        if !client.entryInstructions.isEmpty || !client.notes.isEmpty {
+                            notesCard(client: client)
+                        }
+                        jobsSection
+                        invoicesSection
+                        Spacer(minLength: 40)
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.top, 16)
+                    .padding(.bottom, 20)
                 }
-                jobsSection
-                invoicesSection
-                Spacer(minLength: 40)
+                .background(Color.sweeplyBackground.ignoresSafeArea())
+                .navigationBarTitleDisplayMode(.inline)
+                .navigationTitle(client.name)
+            } else {
+                VStack(spacing: 16) {
+                    Image(systemName: "person.crop.circle.badge.exclamationmark")
+                        .font(.system(size: 42))
+                        .foregroundStyle(Color.sweeplyTextSub.opacity(0.5))
+                    Text("Client not found")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundStyle(Color.sweeplyNavy)
+                    Button("Go Back") {
+                        dismiss()
+                    }
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 18)
+                    .padding(.vertical, 10)
+                    .background(Color.sweeplyNavy)
+                    .clipShape(Capsule())
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(Color.sweeplyBackground.ignoresSafeArea())
             }
-            .padding(.horizontal, 20)
-            .padding(.top, 16)
-            .padding(.bottom, 20)
         }
-        .background(Color.sweeplyBackground.ignoresSafeArea())
-        .navigationBarTitleDisplayMode(.inline)
-        .navigationTitle(client.name)
     }
 
     // MARK: - Profile Header
-    private var profileHeader: some View {
+    private func profileHeader(client: Client) -> some View {
         VStack(spacing: 20) {
             // Avatar & Basic Info
             HStack(spacing: 16) {
@@ -115,18 +153,21 @@ struct ClientDetailView: View {
     }
 
     private func callClient() {
+        guard let client else { return }
         if let url = URL(string: "tel://\(client.phone.filter { $0.isNumber })") {
             UIApplication.shared.open(url)
         }
     }
 
     private func emailClient() {
+        guard let client else { return }
         if let url = URL(string: "mailto:\(client.email)") {
             UIApplication.shared.open(url)
         }
     }
 
     private func navigateClient() {
+        guard let client else { return }
         let addr = "\(client.address), \(client.city), \(client.state) \(client.zip)".addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
         if let url = URL(string: "http://maps.apple.com/?daddr=\(addr)") {
             UIApplication.shared.open(url)
@@ -156,7 +197,7 @@ struct ClientDetailView: View {
     }
 
     // MARK: - Notes Card
-    private var notesCard: some View {
+    private func notesCard(client: Client) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             if !client.entryInstructions.isEmpty {
                 NoteRow(icon: "key.fill", label: "Entry Instructions", text: client.entryInstructions)
@@ -430,10 +471,9 @@ private struct DetailInvoiceRow: View {
 
 #Preview {
     NavigationStack {
-        ClientDetailView(
-            client: MockData.clients[0],
-            allJobs: MockData.makeJobs(),
-            allInvoices: MockData.makeInvoices()
-        )
+        ClientDetailView(clientId: MockData.clients[0].id)
     }
+    .environment(ClientsStore())
+    .environment(JobsStore())
+    .environment(InvoicesStore())
 }

@@ -9,6 +9,10 @@ struct SettingsView: View {
     @State private var isSaving = false
     @State private var localProfile: UserProfile = MockData.profile
     @State private var showDeleteConfirmation = false
+
+    private var serviceCatalogBinding: Binding<[BusinessService]> {
+        $localProfile.settings.services
+    }
     
     enum SettingsTab: String, CaseIterable {
         case profile = "Profile"
@@ -82,6 +86,9 @@ struct SettingsView: View {
                 if let p = profileStore.profile {
                     localProfile = p
                 }
+                if localProfile.settings.services.isEmpty {
+                    localProfile.settings.services = AppSettings.defaultServiceCatalog
+                }
             }
         }
     }
@@ -128,28 +135,24 @@ struct SettingsView: View {
                         }
                     }
                     
-                    if localProfile.settings.services.isEmpty {
-                        Text("No services defined").font(.system(size: 13)).foregroundStyle(Color.sweeplyTextSub).padding(.vertical, 4)
-                    } else {
-                        ForEach($localProfile.settings.services) { $service in
-                            HStack(spacing: 12) {
-                                TextField("Service Name", text: $service.name)
-                                    .font(.system(size: 14, weight: .medium))
-                                Spacer()
-                                TextField("0", value: $service.price, format: .number)
-                                    .keyboardType(.decimalPad)
-                                    .multilineTextAlignment(.trailing)
-                                    .font(.system(size: 14, weight: .bold, design: .monospaced))
-                                    .frame(width: 60)
-                                
-                                Button { removeService(service.id) } label: {
-                                    Image(systemName: "minus.circle").foregroundStyle(Color.sweeplyDestructive)
-                                }
+                    ForEach(serviceCatalogBinding) { $service in
+                        HStack(spacing: 12) {
+                            TextField("Service Name", text: $service.name)
+                                .font(.system(size: 14, weight: .medium))
+                            Spacer()
+                            TextField("0", value: $service.price, format: .number)
+                                .keyboardType(.decimalPad)
+                                .multilineTextAlignment(.trailing)
+                                .font(.system(size: 14, weight: .bold, design: .monospaced))
+                                .frame(width: 60)
+                            
+                            Button { removeService(service.id) } label: {
+                                Image(systemName: "minus.circle").foregroundStyle(Color.sweeplyDestructive)
                             }
-                            .padding(10)
-                            .background(Color.sweeplyBackground)
-                            .clipShape(RoundedRectangle(cornerRadius: 8))
                         }
+                        .padding(10)
+                        .background(Color.sweeplyBackground)
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
                     }
                 }
             }
