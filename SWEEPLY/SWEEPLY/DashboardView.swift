@@ -9,6 +9,7 @@ struct DashboardView: View {
 
     @State private var appeared = false
     @State private var showProfileMenu = false
+    @State private var showSettings = false
     @State private var showPlaybook = true
     @State private var playbookDone: [Bool] = [true, false, false, false]
     @State private var healthStats: HealthStats? = nil
@@ -124,13 +125,13 @@ struct DashboardView: View {
             }
         }
         .background(Color.sweeplyBackground.ignoresSafeArea())
-        .confirmationDialog("", isPresented: $showProfileMenu, titleVisibility: .hidden) {
-            Button("Settings") { /* Navigate to settings */ }
-            Button("Sign Out", role: .destructive) {
-                Task { await session.signOut() }
-            }
-        } message: {
-            Text("\(profile.fullName) · \(profile.businessName)")
+        .sheet(isPresented: $showProfileMenu) {
+            ProfileMenuView(showSettings: $showSettings)
+                .presentationDetents([.height(280)])
+                .presentationDragIndicator(.visible)
+        }
+        .fullScreenCover(isPresented: $showSettings) {
+            SettingsView()
         }
     }
 
@@ -461,11 +462,75 @@ struct PlaybookRow: View {
     }
 }
 
-#Preview {
-    DashboardView()
-        .environment(AppSession())
-        .environment(ClientsStore())
-        .environment(JobsStore())
-        .environment(InvoicesStore())
-        .environment(ProfileStore())
+struct ProfileMenuView: View {
+    @Environment(AppSession.self) private var session
+    @Environment(ProfileStore.self) private var profileStore
+    @Environment(\.dismiss) private var dismiss
+    @Binding var showSettings: Bool
+    
+    private var profile: UserProfile { profileStore.profile ?? MockData.profile }
+    
+    var body: some View {
+        VStack(spacing: 0) {
+            // Profile Info
+            VStack(spacing: 12) {
+                ZStack {
+                    Circle().fill(Color.sweeplyNavy).frame(width: 60, height: 60)
+                    Text(initials).font(.system(size: 20, weight: .bold)).foregroundStyle(.white)
+                }
+                
+                VStack(spacing: 2) {
+                    Text(profile.fullName).font(.system(size: 18, weight: .bold))
+                    Text(profile.businessName).font(.system(size: 13)).foregroundStyle(Color.sweeplyTextSub)
+                }
+            }
+            .padding(.top, 24)
+            .padding(.bottom, 24)
+            
+            Divider()
+            
+            // Actions
+            VStack(spacing: 0) {
+                Button {
+                    dismiss()
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                        showSettings = true
+                    }
+                } label: {
+                    HStack(spacing: 12) {
+                        Image(systemName: "gearshape.fill")
+                        Text("Settings")
+                        Spacer()
+                        Image(systemName: "chevron.right").font(.system(size: 12)).foregroundStyle(Color.sweeplyBorder)
+                    }
+                    .font(.system(size: 16, weight: .medium))
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 14)
+                }
+                .buttonStyle(.plain)
+                
+                Divider().padding(.leading, 52)
+                
+                Button {
+                    Task { await session.signOut(); dismiss() }
+                } label: {
+                    HStack(spacing: 12) {
+                        Image(systemName: "rectangle.portrait.and.arrow.right")
+                        Text("Sign Out")
+                        Spacer()
+                    }
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundStyle(Color.sweeplyDestructive)
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 14)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .background(Color.sweeplySurface)
+    }
+    
+    private var initials: String {
+        profile.fullName.split(separator: " ").compactMap { $0.first }.map { String($0) }.joined()
+    }
 }
