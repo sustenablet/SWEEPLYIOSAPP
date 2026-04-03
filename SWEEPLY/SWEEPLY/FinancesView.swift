@@ -96,13 +96,13 @@ struct FinancesView: View {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Finances")
-                        .font(.system(size: 28, weight: .semibold, design: .default))
+                        .font(.system(size: 28, weight: .semibold))
                         .foregroundStyle(Color.sweeplyNavy)
                     Text("Overview")
-                        .font(.system(size: 13, weight: .regular))
+                        .font(.system(size: 13))
                         .foregroundStyle(Color.sweeplyTextSub)
                 }
-                Spacer(minLength: 12)
+                Spacer()
                 Button(action: {}) {
                     Image(systemName: "plus.circle.fill")
                         .font(.system(size: 28))
@@ -110,38 +110,29 @@ struct FinancesView: View {
                         .foregroundStyle(Color.sweeplyAccent)
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel("New invoice")
             }
             .padding(.top, 8)
 
-            VStack(alignment: .leading, spacing: 16) {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("Collected")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundStyle(Color.sweeplyTextSub)
-                    Text(totalCollected.currency)
-                        .font(.system(size: 34, weight: .semibold, design: .rounded))
-                        .foregroundStyle(Color.sweeplyNavy)
-                        .monospacedDigit()
-                }
+            SectionCard {
+                VStack(alignment: .leading, spacing: 16) {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Collected")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundStyle(Color.sweeplyTextSub)
+                        Text(totalCollected.currency)
+                            .font(.system(size: 34, weight: .semibold, design: .rounded))
+                            .foregroundStyle(Color.sweeplyNavy)
+                            .monospacedDigit()
+                    }
 
-                Rectangle()
-                    .fill(Color.sweeplyBorder)
-                    .frame(height: 1)
+                    Divider()
 
-                HStack(alignment: .top, spacing: 24) {
-                    minimalStatColumn(title: "Outstanding", value: totalOutstanding.currency)
-                    minimalStatColumn(title: "Overdue", value: totalOverdue.currency)
+                    HStack(spacing: 24) {
+                        minimalStatColumn(title: "Outstanding", value: totalOutstanding.currency)
+                        minimalStatColumn(title: "Overdue", value: totalOverdue.currency)
+                    }
                 }
             }
-            .padding(20)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color.sweeplySurface)
-            .clipShape(RoundedRectangle(cornerRadius: Radius.md, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: Radius.md, style: .continuous)
-                    .stroke(Color.sweeplyBorder, lineWidth: 1)
-            )
         }
     }
 
@@ -161,52 +152,43 @@ struct FinancesView: View {
     // MARK: - Chart
 
     private var chartSection: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack {
-                Text("Cash flow")
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(Color.sweeplyNavy)
-                Spacer()
-                Picker("", selection: $selectedPeriod) {
-                    ForEach(ChartPeriod.allCases, id: \.self) { p in
-                        Text(p.rawValue).tag(p)
+        SectionCard {
+            VStack(alignment: .leading, spacing: 16) {
+                HStack {
+                    Text("Cash flow")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(Color.sweeplyNavy)
+                    Spacer()
+                    Picker("", selection: $selectedPeriod) {
+                        ForEach(ChartPeriod.allCases, id: \.self) { p in
+                            Text(p.rawValue).tag(p)
+                        }
                     }
+                    .pickerStyle(.segmented)
+                    .frame(maxWidth: 160)
                 }
-                .pickerStyle(.segmented)
-                .frame(maxWidth: 200)
-            }
 
-            BarChartView(data: chartData, maxValue: chartMax)
-                .frame(height: 120)
-                .animation(.easeInOut(duration: 0.25), value: selectedPeriod)
+                BarChartView(data: chartData, maxValue: chartMax)
+                    .frame(height: 120)
+                    .animation(.easeInOut(duration: 0.25), value: selectedPeriod)
+            }
         }
-        .padding(20)
-        .background(Color.sweeplySurface)
-        .clipShape(RoundedRectangle(cornerRadius: Radius.md, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: Radius.md, style: .continuous)
-                .stroke(Color.sweeplyBorder, lineWidth: 1)
-        )
     }
 
     // MARK: - Secondary metrics
 
     private var secondaryMetrics: some View {
-        HStack(spacing: 0) {
-            compactMetric(title: "Avg. invoice", value: avgInvoiceValue.currency)
-            divider
-            compactMetric(title: "Collection", value: "\(collectionRate)%")
-            divider
-            compactMetric(title: "Invoices", value: "\(invoices.count)", isCount: true)
+        SectionCard {
+            HStack(spacing: 0) {
+                compactMetric(title: "Avg. invoice", value: avgInvoiceValue.currency)
+                divider
+                compactMetric(title: "Collection", value: "\(collectionRate)%")
+                divider
+                compactMetric(title: "Invoices", value: "\(invoices.count)", isCount: true)
+            }
+            .padding(.vertical, 0)
+            .padding(.horizontal, 0)
         }
-        .padding(.vertical, 16)
-        .padding(.horizontal, 12)
-        .background(Color.sweeplySurface)
-        .clipShape(RoundedRectangle(cornerRadius: Radius.md, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: Radius.md, style: .continuous)
-                .stroke(Color.sweeplyBorder, lineWidth: 1)
-        )
     }
 
     private var divider: some View {
@@ -241,7 +223,7 @@ struct FinancesView: View {
                 Spacer()
                 if selectedFilter != .all {
                     Text("\(filteredInvoices.count) shown")
-                        .font(.system(size: 12, weight: .regular))
+                        .font(.system(size: 12))
                         .foregroundStyle(Color.sweeplyTextSub)
                 }
             }
@@ -257,21 +239,17 @@ struct FinancesView: View {
             if filteredInvoices.isEmpty {
                 emptyState
             } else {
-                VStack(spacing: 0) {
-                    ForEach(Array(filteredInvoices.enumerated()), id: \.element.id) { idx, invoice in
-                        MinimalInvoiceRow(invoice: invoice, invoices: $invoices)
-                        if idx < filteredInvoices.count - 1 {
-                            Divider()
-                                .background(Color.sweeplyBorder)
+                SectionCard {
+                    VStack(spacing: 0) {
+                        ForEach(Array(filteredInvoices.enumerated()), id: \.element.id) { idx, invoice in
+                            MinimalInvoiceRow(invoice: invoice, invoices: $invoices)
+                            if idx < filteredInvoices.count - 1 {
+                                Divider()
+                            }
                         }
                     }
+                    .padding(-16) // full bleed in SectionCard
                 }
-                .background(Color.sweeplySurface)
-                .clipShape(RoundedRectangle(cornerRadius: Radius.md, style: .continuous))
-                .overlay(
-                    RoundedRectangle(cornerRadius: Radius.md, style: .continuous)
-                        .stroke(Color.sweeplyBorder, lineWidth: 1)
-                )
             }
         }
     }
@@ -302,23 +280,19 @@ struct FinancesView: View {
     }
 
     private var emptyState: some View {
-        VStack(spacing: 12) {
-            Text("No invoices")
-                .font(.system(size: 15, weight: .medium))
-                .foregroundStyle(Color.sweeplyTextSub)
-            Text("Invoices you add will appear here.")
-                .font(.system(size: 13))
-                .foregroundStyle(Color.sweeplyTextSub.opacity(0.85))
-                .multilineTextAlignment(.center)
+        SectionCard {
+            VStack(spacing: 12) {
+                Text("No invoices")
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundStyle(Color.sweeplyTextSub)
+                Text("Invoices you add will appear here.")
+                    .font(.system(size: 13))
+                    .foregroundStyle(Color.sweeplyTextSub.opacity(0.85))
+                    .multilineTextAlignment(.center)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 24)
         }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 36)
-        .background(Color.sweeplySurface)
-        .clipShape(RoundedRectangle(cornerRadius: Radius.md, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: Radius.md, style: .continuous)
-                .stroke(Color.sweeplyBorder, lineWidth: 1)
-        )
     }
 }
 

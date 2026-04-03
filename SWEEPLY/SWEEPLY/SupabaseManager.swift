@@ -21,7 +21,16 @@ enum SupabaseManager {
 
     static let shared: SupabaseClient? = {
         guard let config else { return nil }
-        return SupabaseClient(supabaseURL: config.url, supabaseKey: config.anonKey)
+        let options = SupabaseClientOptions(
+            auth: SupabaseClientOptions.AuthOptions(
+                redirectToURL: URL(string: "sweeply://auth-callback")
+            )
+        )
+        return SupabaseClient(
+            supabaseURL: config.url,
+            supabaseKey: config.anonKey,
+            options: options
+        )
     }()
 
     static var isConfigured: Bool { shared != nil }

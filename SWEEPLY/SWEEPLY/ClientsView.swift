@@ -247,81 +247,75 @@ private struct ClientCard: View {
     let onDelete: () -> Void
 
     var body: some View {
-        VStack(spacing: 0) {
-            // Top row
-            HStack(alignment: .top, spacing: 12) {
-                // Avatar
-                ZStack {
-                    RoundedRectangle(cornerRadius: 10)
-                        .fill(Color.sweeplyNavy)
-                        .frame(width: 40, height: 40)
-                    Text(String(client.name.prefix(1)).uppercased())
-                        .font(.system(size: 16, weight: .bold))
-                        .foregroundStyle(.white)
-                }
-
-                // Name + notes
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(client.name)
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(Color.primary)
-                    if !client.notes.isEmpty {
-                        Text(client.notes)
-                            .font(.system(size: 12))
-                            .foregroundStyle(Color.sweeplyTextSub)
-                            .lineLimit(1)
+        SectionCard {
+            VStack(spacing: 0) {
+                // Top row
+                HStack(alignment: .top, spacing: 12) {
+                    // Avatar
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 10)
+                            .fill(Color.sweeplyNavy)
+                            .frame(width: 40, height: 40)
+                        Text(String(client.name.prefix(1)).uppercased())
+                            .font(.system(size: 16, weight: .bold))
+                            .foregroundStyle(.white)
                     }
-                }
 
-                Spacer()
-
-                // Job count + menu
-                HStack(spacing: 8) {
-                    Text("\(jobCount) jobs")
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(Color.sweeplyTextSub)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(Color.sweeplyBackground)
-                        .clipShape(Capsule())
-
-                    Menu {
-                        Button { onEdit() } label: {
-                            Label("Edit Client", systemImage: "pencil")
+                    // Name + notes
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(client.name)
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(Color.primary)
+                        if !client.notes.isEmpty {
+                            Text(client.notes)
+                                .font(.system(size: 12))
+                                .foregroundStyle(Color.sweeplyTextSub)
+                                .lineLimit(1)
                         }
-                        Button(role: .destructive) { onDelete() } label: {
-                            Label("Delete Client", systemImage: "trash")
-                        }
-                    } label: {
-                        Image(systemName: "ellipsis")
-                            .font(.system(size: 14))
-                            .foregroundStyle(Color.sweeplyTextSub)
-                            .frame(width: 28, height: 28)
                     }
-                }
-            }
 
-            // Contact details
-            if !client.address.isEmpty || !client.phone.isEmpty || !client.email.isEmpty {
-                VStack(alignment: .leading, spacing: 5) {
-                    if !client.address.isEmpty {
-                        ClientInfoRow(icon: "mappin", text: "\(client.address), \(client.city), \(client.state)")
-                    }
-                    if !client.phone.isEmpty {
-                        ClientInfoRow(icon: "phone", text: client.phone)
-                    }
-                    if !client.email.isEmpty {
-                        ClientInfoRow(icon: "envelope", text: client.email)
+                    Spacer()
+
+                    // Job count + menu
+                    HStack(spacing: 8) {
+                        Text("\(jobCount) jobs")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(Color.sweeplyTextSub)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(Color.sweeplyBackground)
+                            .clipShape(Capsule())
+
+                        Menu {
+                            Button { onEdit() } label: { Label("Edit Client", systemImage: "pencil") }
+                            Button(role: .destructive) { onDelete() } label: { Label("Delete Client", systemImage: "trash") }
+                        } label: {
+                            Image(systemName: "ellipsis")
+                                .font(.system(size: 14))
+                                .foregroundStyle(Color.sweeplyTextSub)
+                                .frame(width: 28, height: 28)
+                        }
                     }
                 }
-                .padding(.top, 10)
-                .padding(.leading, 52) // align with name column
+
+                // Contact details
+                if !client.address.isEmpty || !client.phone.isEmpty || !client.email.isEmpty {
+                    VStack(alignment: .leading, spacing: 5) {
+                        if !client.address.isEmpty {
+                            ClientInfoRow(icon: "mappin", text: "\(client.address), \(client.city)")
+                        }
+                        if !client.phone.isEmpty {
+                            ClientInfoRow(icon: "phone", text: client.phone)
+                        }
+                        if !client.email.isEmpty {
+                            ClientInfoRow(icon: "envelope", text: client.email)
+                        }
+                    }
+                    .padding(.top, 10)
+                    .padding(.leading, 52)
+                }
             }
         }
-        .padding(14)
-        .background(Color.sweeplySurface)
-        .clipShape(RoundedRectangle(cornerRadius: 12))
-        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.sweeplyBorder, lineWidth: 1))
         .contentShape(Rectangle())
     }
 }
@@ -528,18 +522,12 @@ struct ClientFormSheet: View {
 
     // MARK: - Form Helpers
     @ViewBuilder
-    private func formSection<Content: View>(_ title: String, @ViewBuilder content: () -> Content) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 8) {
-                Text(title.uppercased())
-                    .font(.system(size: 10, weight: .bold))
-                    .foregroundStyle(Color.sweeplyTextSub.opacity(0.6))
-                    .tracking(1.2)
-                Rectangle()
-                    .fill(Color.sweeplyBorder)
-                    .frame(height: 1)
+    private func formSection<Content: View>(_ title: String, @ViewBuilder content: @escaping () -> Content) -> some View {
+        SectionCard {
+            VStack(alignment: .leading, spacing: 14) {
+                CardHeader(title: title, action: nil)
+                content()
             }
-            content()
         }
     }
 

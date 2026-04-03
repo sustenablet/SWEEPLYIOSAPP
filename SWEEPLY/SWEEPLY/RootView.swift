@@ -57,38 +57,9 @@ struct RootView: View {
             }
             .tint(Color.sweeplyAccent)
 
-            if selectedTab == .dashboard {
-                Button {
-                    showQuickAdd = true
-                } label: {
-                    Image(systemName: "plus")
-                        .font(.system(size: 24, weight: .semibold))
-                        .foregroundStyle(.white)
-                        .frame(width: 56, height: 56)
-                        .background(Color.sweeplyNavy)
-                        .clipShape(Circle())
-                        .shadow(color: .black.opacity(0.22), radius: 10, x: 0, y: 4)
-                }
-                .buttonStyle(.plain)
-                .padding(.trailing, 20)
-                .padding(.bottom, 72)
-                .accessibilityLabel("Quick actions")
-            }
+            FABView(selectedTab: $selectedTab)
         }
-        .confirmationDialog("Quick actions", isPresented: $showQuickAdd, titleVisibility: .visible) {
-            Button("New invoice") {
-                selectedTab = .finances
-            }
-            Button("New job") {
-                selectedTab = .schedule
-            }
-            Button("New client") {
-                selectedTab = .clients
-            }
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text("Create something new")
-        }
+
         .task(id: session.isAuthenticated) {
             async let j: () = jobsStore.load(isAuthenticated: session.isAuthenticated)
             async let i: () = invoicesStore.load(isAuthenticated: session.isAuthenticated)

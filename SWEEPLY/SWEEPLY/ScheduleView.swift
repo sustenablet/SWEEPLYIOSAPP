@@ -424,26 +424,22 @@ struct ScheduleView: View {
     }
 
     private var scheduleEmptyState: some View {
-        VStack(spacing: 12) {
-            Image(systemName: "calendar.badge.clock")
-                .font(.system(size: 36))
-                .foregroundStyle(Color.sweeplyTextSub.opacity(0.45))
-            Text("Nothing scheduled")
-                .font(.system(size: 15, weight: .semibold))
-                .foregroundStyle(Color.sweeplyTextSub)
-            Text("Jobs you add will show up here.")
-                .font(.system(size: 13))
-                .foregroundStyle(Color.sweeplyTextSub.opacity(0.8))
-                .multilineTextAlignment(.center)
+        SectionCard {
+            VStack(spacing: 12) {
+                Image(systemName: "calendar.badge.clock")
+                    .font(.system(size: 36))
+                    .foregroundStyle(Color.sweeplyTextSub.opacity(0.45))
+                Text("Nothing scheduled")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(Color.sweeplyTextSub)
+                Text("Jobs you add will show up here.")
+                    .font(.system(size: 13))
+                    .foregroundStyle(Color.sweeplyTextSub.opacity(0.8))
+                    .multilineTextAlignment(.center)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 24)
         }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 36)
-        .background(Color.sweeplySurface)
-        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .stroke(Color.sweeplyBorder, lineWidth: 1)
-        )
     }
 }
 
@@ -504,46 +500,41 @@ private struct ScheduleJobRow: View {
     let job: Job
 
     var body: some View {
-        HStack(spacing: 14) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(timeRange)
-                    .font(.system(size: 13, weight: .semibold, design: .rounded))
-                    .foregroundStyle(Color.sweeplyNavy)
-                    .monospacedDigit()
-                Text("\(durationText) · \(job.price.currency)")
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundStyle(Color.sweeplyTextSub)
-            }
-            .frame(width: 100, alignment: .leading)
-
-            VStack(alignment: .leading, spacing: 4) {
-                Text(job.clientName)
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(Color.primary)
-                    .lineLimit(1)
-                Text(job.serviceType.rawValue)
-                    .font(.system(size: 12))
-                    .foregroundStyle(Color.sweeplyTextSub)
-                    .lineLimit(1)
-                if !job.address.isEmpty {
-                    Text(job.address)
-                        .font(.system(size: 11))
-                        .foregroundStyle(Color.sweeplyTextSub.opacity(0.9))
-                        .lineLimit(1)
+        SectionCard {
+            HStack(spacing: 14) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(timeRange)
+                        .font(.system(size: 13, weight: .semibold, design: .rounded))
+                        .foregroundStyle(Color.sweeplyNavy)
+                        .monospacedDigit()
+                    Text("\(durationText) · \(job.price.currency)")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(Color.sweeplyTextSub)
                 }
+                .frame(width: 90, alignment: .leading)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(job.clientName)
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(Color.primary)
+                        .lineLimit(1)
+                    Text(job.serviceType.rawValue)
+                        .font(.system(size: 12))
+                        .foregroundStyle(Color.sweeplyTextSub)
+                        .lineLimit(1)
+                    if !job.address.isEmpty {
+                        Text(job.address)
+                            .font(.system(size: 11))
+                            .foregroundStyle(Color.sweeplyTextSub.opacity(0.9))
+                            .lineLimit(1)
+                    }
+                }
+
+                Spacer(minLength: 8)
+
+                StatusBadge(status: job.status)
             }
-
-            Spacer(minLength: 8)
-
-            StatusBadge(status: job.status)
         }
-        .padding(14)
-        .background(Color.sweeplySurface)
-        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .stroke(Color.sweeplyBorder, lineWidth: 1)
-        )
     }
 
     private var timeRange: String {
@@ -596,29 +587,23 @@ struct ScheduleJobDetailView: View {
     }
 
     private func detailRow(icon: String, title: String, value: String) -> some View {
-        HStack(alignment: .top, spacing: 12) {
-            Image(systemName: icon)
-                .font(.system(size: 16))
-                .foregroundStyle(Color.sweeplyAccent)
-                .frame(width: 24)
-            VStack(alignment: .leading, spacing: 4) {
-                Text(title.uppercased())
-                    .font(.system(size: 10, weight: .bold))
-                    .foregroundStyle(Color.sweeplyTextSub.opacity(0.7))
-                    .tracking(0.8)
-                Text(value)
-                    .font(.system(size: 15, weight: .medium))
-                    .foregroundStyle(Color.primary)
+        SectionCard {
+            HStack(alignment: .top, spacing: 12) {
+                Image(systemName: icon)
+                    .font(.system(size: 16))
+                    .foregroundStyle(Color.sweeplyAccent)
+                    .frame(width: 24)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(title.uppercased())
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundStyle(Color.sweeplyTextSub.opacity(0.7))
+                        .tracking(0.8)
+                    Text(value)
+                        .font(.system(size: 15, weight: .medium))
+                        .foregroundStyle(Color.primary)
+                }
             }
         }
-        .padding(14)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.sweeplySurface)
-        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .stroke(Color.sweeplyBorder, lineWidth: 1)
-        )
     }
 }
 

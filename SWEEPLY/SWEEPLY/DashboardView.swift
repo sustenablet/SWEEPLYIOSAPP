@@ -3,17 +3,20 @@ import SwiftUI
 struct DashboardView: View {
     @Environment(AppSession.self) private var session
     @Environment(ClientsStore.self) private var clientsStore
+    @Environment(JobsStore.self) private var jobsStore
+    @Environment(InvoicesStore.self) private var invoicesStore
+    @Environment(ProfileStore.self) private var profileStore
 
-    @State private var jobs: [Job]         = MockData.makeJobs()
-    @State private var invoices: [Invoice] = MockData.makeInvoices()
-
-    private let profile = MockData.profile
-    @State private var appeared        = false
+    @State private var appeared = false
     @State private var showProfileMenu = false
-    @State private var showPlaybook    = true
-    @State private var playbookDone: [Bool] = Array(repeating: false, count: 4)
+    @State private var showPlaybook = true
+    @State private var playbookDone: [Bool] = [true, false, false, false] // Mock: first step done
 
-    // MARK: - Derived
+    // MARK: - Derived Properties
+    
+    private var profile: UserProfile {
+        profileStore.profile ?? MockData.profile
+    }
 
     private var initials: String {
         profile.fullName
@@ -23,48 +26,39 @@ struct DashboardView: View {
             .joined()
     }
 
-    private var weekInterval: DateInterval {
-        Calendar.current.dateInterval(of: .weekOfYear, for: Date())
-            ?? DateInterval(start: Date(), end: Date().addingTimeInterval(86400 * 7))
+    private var longDate: String {
+        let f = DateFormatter()
+        f.dateFormat = "EEEE, MMMM d"
+        return f.string(from: Date())
     }
 
     private var todayJobs: [Job] {
-        let cal   = Calendar.current
+        let cal = Calendar.current
         let start = cal.startOfDay(for: Date())
-        let end   = cal.date(byAdding: .day, value: 1, to: start)!
-        return jobs.filter { $0.date >= start && $0.date < end }.sorted { $0.date < $1.date }
+        let end = cal.date(byAdding: .day, value: 1, to: start)!
+        return jobsStore.jobs.filter { $0.date >= start && $0.date < end }.sorted { $0.date < $1.date }
+    }
+
+    private var completedCount: Int {
+        let cal = Calendar.current
+        let start = cal.dateInterval(of: .weekOfYear, for: Date())?.start ?? Date()
+        return jobsStore.jobs.filter { $0.date >= start && $0.status == .completed }.count
     }
 
     private var weekEarned: Double {
-        jobs
-            .filter { $0.date >= weekInterval.start && $0.date < weekInterval.end && $0.status == .completed }
+        let cal = Calendar.current
+        let start = cal.dateInterval(of: .weekOfYear, for: Date())?.start ?? Date()
+        return jobsStore.jobs
+            .filter { $0.date >= start && $0.status == .completed }
             .reduce(0) { $0 + $1.price }
     }
 
-    private var weekJobsDone: Int {
-        jobs.filter { $0.date >= weekInterval.start && $0.date < weekInterval.end && $0.status == .completed }.count
-    }
-
-    private var totalClients: Int { max(clientsStore.clients.count, MockData.clients.count) }
-
-    private var scheduledCount: Int { jobs.filter { $0.status == .scheduled }.count }
-
-    private var todayRemaining: Int {
-        let cal   = Calendar.current
-        let start = cal.startOfDay(for: Date())
-        let end   = cal.date(byAdding: .day, value: 1, to: start)!
-        return jobs.filter {
-            $0.date >= start && $0.date < end &&
-            ($0.status == .scheduled || $0.status == .inProgress)
-        }.count
-    }
-
     private var outstandingTotal: Double {
-        invoices.filter { $0.status != .paid }.reduce(0) { $0 + $1.amount }
+        invoicesStore.invoices.filter { $0.status != .paid }.reduce(0) { $0 + $1.amount }
     }
 
-    private var outstandingInvoices: [Invoice] {
-        invoices
+    private var ongoingInvoices: [Invoice] {
+        invoicesStore.invoices
             .filter { $0.status != .paid }
             .sorted { a, b in
                 if a.status == .overdue && b.status != .overdue { return true }
@@ -73,21 +67,9 @@ struct DashboardView: View {
             }
     }
 
-    private var allPlaybookDone: Bool { playbookDone.allSatisfy { $0 } }
-    private var playbookDoneCount: Int { playbookDone.filter { $0 }.count }
-
-    private var longDate: String {
-        let f = DateFormatter()
-        f.dateFormat = "EEEE, MMMM d"
-        return f.string(from: Date())
-    }
-
-    // MARK: - Body
-
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
-
                 // ── Header ───────────────────────────────────────
                 headerRow
                     .padding(.horizontal, 20)
@@ -96,51 +78,48 @@ struct DashboardView: View {
 
                 Divider()
 
-                // ── Revenue hero ─────────────────────────────────
+                // ── Revenue Hero ─────────────────────────────────
                 revenueHero
                     .padding(.horizontal, 20)
                     .padding(.vertical, 24)
 
                 Divider()
 
-                // ── 4-column stats strip ─────────────────────────
+                // ── Stats Strip ──────────────────────────────────
                 statsStrip
                     .padding(.vertical, 20)
 
                 Divider()
 
-                // ── Get started checklist ────────────────────────
-                if showPlaybook && !allPlaybookDone {
-                    playbookSection
-                        .padding(.horizontal, 20)
-                        .padding(.vertical, 24)
-                    Divider()
-                }
+                // ── Sub-sections with spacing ────────────────────
+                VStack(spacing: 20) {
+                    // ── Getting Started checklist ────────────────
+                    if showPlaybook && !playbookDone.allSatisfy({ $0 }) {
+                        DashboardPlaybook(playbookDone: $playbookDone, showPlaybook: $showPlaybook)
+                    }
 
-                // ── Today's schedule ─────────────────────────────
-                scheduleSection
-                    .padding(.horizontal, 20)
-                    .padding(.top, 24)
-                    .padding(.bottom, 24)
+                    // ── Today's Schedule ─────────────────────────
+                    todayScheduleSection
 
-                // ── Outstanding invoices ──────────────────────────
-                if !outstandingInvoices.isEmpty {
-                    Divider()
-                    outstandingSection
-                        .padding(.horizontal, 20)
-                        .padding(.top, 24)
-                        .padding(.bottom, 40)
+                    // ── Business Health ──────────────────────────
+                    businessHealthSection
+
+                    // ── Outstanding Invoices ─────────────────────
+                    outstandingInvoicesSection
                 }
+                .padding(.horizontal, 20)
+                .padding(.top, 24)
+                .padding(.bottom, 100)
             }
             .opacity(appeared ? 1 : 0)
-            .offset(y: appeared ? 0 : 6)
+            .offset(y: appeared ? 0 : 8)
             .onAppear {
-                withAnimation(.easeOut(duration: 0.25)) { appeared = true }
+                withAnimation(.easeOut(duration: 0.3)) { appeared = true }
             }
         }
         .background(Color.sweeplyBackground.ignoresSafeArea())
         .confirmationDialog("", isPresented: $showProfileMenu, titleVisibility: .hidden) {
-            Button("Settings") {}
+            Button("Settings") { /* Navigate to settings */ }
             Button("Sign Out", role: .destructive) {
                 Task { await session.signOut() }
             }
@@ -149,7 +128,7 @@ struct DashboardView: View {
         }
     }
 
-    // MARK: - Header
+    // MARK: - Original Layout Essence Components
 
     private var headerRow: some View {
         HStack(alignment: .center) {
@@ -157,26 +136,36 @@ struct DashboardView: View {
                 Text(longDate)
                     .font(.system(size: 17, weight: .semibold))
                     .foregroundStyle(Color.primary)
-                Text(profile.businessName)
+                Text("Good morning, \(profile.fullName.split(separator: " ").first ?? "")")
                     .font(.system(size: 13))
                     .foregroundStyle(Color.sweeplyTextSub)
             }
             Spacer()
-            Button { showProfileMenu = true } label: {
-                ZStack {
-                    Circle()
-                        .fill(Color.sweeplyNavy)
-                        .frame(width: 36, height: 36)
-                    Text(initials)
-                        .font(.system(size: 13, weight: .bold))
-                        .foregroundStyle(.white)
+            HStack(spacing: 12) {
+                Button { /* action */ } label: {
+                    Image(systemName: "bell")
+                        .font(.system(size: 20))
+                        .foregroundStyle(Color.primary)
+                        .overlay(alignment: .topTrailing) {
+                            Circle().fill(Color.sweeplyDestructive).frame(width: 8, height: 8).offset(x: 2, y: -2)
+                        }
                 }
+                .buttonStyle(.plain)
+
+                Button { showProfileMenu = true } label: {
+                    ZStack {
+                        Circle()
+                            .fill(Color.sweeplyNavy)
+                            .frame(width: 36, height: 36)
+                        Text(initials)
+                            .font(.system(size: 13, weight: .bold))
+                            .foregroundStyle(.white)
+                    }
+                }
+                .buttonStyle(.plain)
             }
-            .buttonStyle(.plain)
         }
     }
-
-    // MARK: - Revenue Hero
 
     private var revenueHero: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -190,8 +179,8 @@ struct DashboardView: View {
                 .foregroundStyle(Color.primary)
                 .tracking(-1.5)
 
-            if weekJobsDone > 0 {
-                Text("\(weekJobsDone) job\(weekJobsDone == 1 ? "" : "s") completed")
+            if completedCount > 0 {
+                Text("\(completedCount) job\(completedCount == 1 ? "" : "s") completed")
                     .font(.system(size: 13))
                     .foregroundStyle(Color.sweeplyTextSub)
             } else {
@@ -202,15 +191,13 @@ struct DashboardView: View {
         }
     }
 
-    // MARK: - Stats Strip
-
     private var statsStrip: some View {
         HStack(spacing: 0) {
-            StatColumn(value: "\(totalClients)", label: "Clients")
+            StatColumn(value: "\(clientsStore.clients.count)", label: "Clients")
             stripDivider
-            StatColumn(value: "\(scheduledCount)", label: "Scheduled")
+            StatColumn(value: "\(jobsStore.jobs.filter { $0.status == .scheduled }.count)", label: "Scheduled")
             stripDivider
-            StatColumn(value: "\(todayRemaining)", label: "Today")
+            StatColumn(value: "\(todayJobs.filter { $0.status == .scheduled || $0.status == .inProgress}.count)", label: "Remaining")
             stripDivider
             StatColumn(value: outstandingTotal.currency, label: "Outstanding")
         }
@@ -223,318 +210,223 @@ struct DashboardView: View {
             .padding(.vertical, 6)
     }
 
-    // MARK: - Playbook
+    // MARK: - Premium Wrapper Sections
 
-    private var playbookSection: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack {
-                sectionLabel("GET STARTED")
-                Spacer()
-                Text("\(playbookDoneCount) of 4")
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundStyle(Color.sweeplyTextSub)
-                Button {
-                    withAnimation(.easeOut(duration: 0.2)) { showPlaybook = false }
-                } label: {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundStyle(Color.sweeplyTextSub)
-                }
-                .buttonStyle(.plain)
-                .padding(.leading, 12)
-            }
-
-            VStack(spacing: 14) {
-                playbookRow(0, "Add your first client")
-                playbookRow(1, "Schedule your first job")
-                playbookRow(2, "Send your first invoice")
-                playbookRow(3, "Complete your business profile")
-            }
-        }
-    }
-
-    @ViewBuilder
-    private func playbookRow(_ index: Int, _ title: String) -> some View {
-        let done = playbookDone[index]
-        Button {
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                playbookDone[index].toggle()
-            }
-        } label: {
-            HStack(spacing: 12) {
-                ZStack {
-                    Circle()
-                        .strokeBorder(done ? Color.sweeplyAccent : Color.sweeplyBorder, lineWidth: 1.5)
-                        .frame(width: 20, height: 20)
-                    if done {
-                        Circle()
-                            .fill(Color.sweeplyAccent)
-                            .frame(width: 20, height: 20)
-                        Image(systemName: "checkmark")
-                            .font(.system(size: 10, weight: .bold))
-                            .foregroundStyle(.white)
+    private var todayScheduleSection: some View {
+        SectionCard {
+            VStack(alignment: .leading, spacing: 14) {
+                CardHeader(title: "Today's Schedule", action: { /* View All */ })
+                
+                if todayJobs.isEmpty {
+                    VStack(spacing: 8) {
+                        Image(systemName: "calendar.badge.exclamationmark")
+                            .font(.system(size: 32))
+                            .foregroundStyle(Color.sweeplyTextSub.opacity(0.4))
+                        Text("No jobs scheduled for today")
+                            .font(.system(size: 14))
+                            .foregroundStyle(Color.sweeplyTextSub)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 24)
+                } else {
+            VStack(alignment: .leading, spacing: 0) {
+                ForEach(Array(todayJobs.enumerated()), id: \.element.id) { index, job in
+                    DashJobRow(job: job, jobsStore: jobsStore)
+                    if index < todayJobs.count - 1 {
+                        Divider().padding(.leading, 56)
                     }
                 }
-                Text(title)
-                    .font(.system(size: 14))
-                    .foregroundStyle(done ? Color.sweeplyTextSub : Color.primary)
-                    .strikethrough(done, color: Color.sweeplyTextSub)
             }
-        }
-        .buttonStyle(.plain)
-    }
-
-    // MARK: - Schedule Section
-
-    private var scheduleSection: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            HStack {
-                sectionLabel("TODAY")
-                Spacer()
-                if !todayJobs.isEmpty {
-                    Text("\(todayJobs.count) job\(todayJobs.count == 1 ? "" : "s")")
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(Color.sweeplyTextSub)
                 }
             }
+        }
+    }
 
-            if todayJobs.isEmpty {
-                Text("Nothing scheduled for today.")
-                    .font(.system(size: 14))
-                    .foregroundStyle(Color.sweeplyTextSub)
-                    .padding(.top, 4)
-            } else {
-                VStack(spacing: 0) {
-                    ForEach(Array(todayJobs.enumerated()), id: \.element.id) { idx, job in
-                        DashJobRow(job: job)
-                        if idx < todayJobs.count - 1 {
-                            Divider()
+    private var businessHealthSection: some View {
+        SectionCard {
+            VStack(alignment: .leading, spacing: 12) {
+                CardHeader(title: "Business Health", subtitle: "Weekly insights", action: { /* View All */ })
+                Divider()
+                HealthRow(icon: "dollarsign", iconColor: .sweeplyAccent, title: "Job Value", subtitle: "This week's jobs", value: weekEarned.currency, trend: "+18%", isPositive: true)
+                Divider()
+                HealthRow(icon: "calendar", iconColor: .sweeplyNavy, title: "Visits", subtitle: "Scheduled visits", value: "\(jobsStore.jobs.filter { Calendar.current.isDate($0.date, equalTo: Date(), toGranularity: .weekOfYear) }.count)", trend: "+5%", isPositive: true)
+            }
+        }
+    }
+
+    private var outstandingInvoicesSection: some View {
+        SectionCard {
+            VStack(alignment: .leading, spacing: 14) {
+                CardHeader(title: "Outstanding Invoices", action: { /* View All */ })
+                
+                if ongoingInvoices.isEmpty {
+                    VStack(spacing: 8) {
+                        Image(systemName: "checkmark.seal.fill")
+                            .font(.system(size: 32))
+                            .foregroundStyle(Color.sweeplyAccent.opacity(0.4))
+                        Text("All caught up!")
+                            .font(.system(size: 14))
+                            .foregroundStyle(Color.sweeplyTextSub)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 24)
+                } else {
+                    VStack(spacing: 0) {
+                        ForEach(Array(ongoingInvoices.prefix(3).enumerated()), id: \.element.id) { index, invoice in
+                            DashInvoiceRow(invoice: invoice, invoicesStore: invoicesStore)
+                            if index < min(ongoingInvoices.count, 3) - 1 {
+                                Divider()
+                            }
                         }
                     }
                 }
             }
         }
     }
-
-    // MARK: - Outstanding Section
-
-    private var outstandingSection: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            HStack {
-                sectionLabel("OUTSTANDING")
-                Spacer()
-                Text(outstandingTotal.currency)
-                    .font(.system(size: 11, weight: .semibold, design: .monospaced))
-                    .foregroundStyle(Color.sweeplyTextSub)
-            }
-
-            VStack(spacing: 0) {
-                ForEach(Array(outstandingInvoices.prefix(4).enumerated()), id: \.element.id) { idx, inv in
-                    DashInvoiceRow(invoice: inv)
-                    if idx < min(outstandingInvoices.count, 4) - 1 {
-                        Divider()
-                    }
-                }
-            }
-        }
-    }
-
-    // MARK: - Helpers
-
-    private func sectionLabel(_ text: String) -> some View {
-        Text(text)
-            .font(.system(size: 11, weight: .semibold))
-            .foregroundStyle(Color.sweeplyTextSub)
-            .tracking(0.8)
-    }
 }
 
-// MARK: - Stat Column
+// MARK: - Subviews
 
 private struct StatColumn: View {
     let value: String
     let label: String
-
     var body: some View {
         VStack(spacing: 5) {
-            Text(value)
-                .font(.system(size: 18, weight: .bold, design: .monospaced))
-                .foregroundStyle(Color.primary)
-                .minimumScaleFactor(0.7)
-                .lineLimit(1)
-            Text(label)
-                .font(.system(size: 10, weight: .medium))
-                .foregroundStyle(Color.sweeplyTextSub)
-                .tracking(0.2)
-        }
-        .frame(maxWidth: .infinity)
+            Text(value).font(.system(size: 18, weight: .bold, design: .monospaced))
+            Text(label).font(.system(size: 10, weight: .medium)).foregroundStyle(Color.sweeplyTextSub).tracking(0.2)
+        }.frame(maxWidth: .infinity)
     }
 }
 
-// MARK: - Dashboard Job Row
-
-private struct DashJobRow: View {
+struct DashJobRow: View {
     let job: Job
-
+    let jobsStore: JobsStore
     var body: some View {
-        HStack(spacing: 14) {
-            // Time
+        HStack(spacing: 12) {
             VStack(alignment: .trailing, spacing: 1) {
-                Text(timeStr)
-                    .font(.system(size: 13, weight: .semibold, design: .monospaced))
-                    .foregroundStyle(Color.primary)
-                Text(amPm)
-                    .font(.system(size: 10))
-                    .foregroundStyle(Color.sweeplyTextSub)
-            }
-            .frame(width: 36, alignment: .trailing)
-
-            // Status dot
-            Circle()
-                .fill(dotColor)
-                .frame(width: 6, height: 6)
-
-            // Info
+                Text(timeStr).font(.system(size: 13, weight: .semibold, design: .monospaced))
+                Text(amPm).font(.system(size: 10)).foregroundStyle(Color.sweeplyTextSub)
+            }.frame(width: 36, alignment: .trailing)
+            Circle().fill(statusColor).frame(width: 7, height: 7)
             VStack(alignment: .leading, spacing: 2) {
                 HStack {
-                    Text(job.clientName)
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(Color.primary)
-                        .lineLimit(1)
+                    Text(job.clientName).font(.system(size: 14, weight: .semibold))
                     Spacer()
-                    Text(job.price.currency)
-                        .font(.system(size: 13, weight: .semibold, design: .monospaced))
-                        .foregroundStyle(Color.primary)
+                    Text(job.price.currency).font(.system(size: 13, weight: .semibold, design: .monospaced))
+                    Menu {
+                        Button("Start Job", systemImage: "play.fill") { Task { await jobsStore.updateStatus(id: job.id, status: .inProgress) } }
+                        Button("Mark Complete", systemImage: "checkmark") { Task { await jobsStore.updateStatus(id: job.id, status: .completed) } }
+                        Button("Cancel Job", systemImage: "xmark", role: .destructive) { Task { await jobsStore.updateStatus(id: job.id, status: .cancelled) } }
+                    } label: { Image(systemName: "ellipsis").font(.system(size: 14)).foregroundStyle(Color.sweeplyTextSub).padding(.leading, 8) }
                 }
-                Text("\(job.serviceType.rawValue) · \(durationStr) · \(job.address)")
-                    .font(.system(size: 12))
-                    .foregroundStyle(Color.sweeplyTextSub)
-                    .lineLimit(1)
+                Text("\(job.serviceType.rawValue) · \(durationStr) · \(job.address)").font(.system(size: 12)).foregroundStyle(Color.sweeplyTextSub).lineLimit(1)
             }
-        }
-        .padding(.vertical, 13)
+        }.padding(.vertical, 10)
     }
-
-    private var dotColor: Color {
+    private var timeStr: String { let f = DateFormatter(); f.dateFormat = "h:mm"; return f.string(from: job.date) }
+    private var amPm: String { let f = DateFormatter(); f.dateFormat = "a"; return f.string(from: job.date).uppercased() }
+    private var statusColor: Color {
         switch job.status {
-        case .scheduled:  return Color(white: 0.75)
-        case .inProgress: return Color.sweeplyAccent
         case .completed:  return Color.sweeplyAccent
+        case .inProgress: return Color.blue
+        case .scheduled:  return Color.sweeplyTextSub.opacity(0.5)
         case .cancelled:  return Color.sweeplyDestructive
         }
     }
-    private var timeStr: String {
-        let f = DateFormatter(); f.dateFormat = "h:mm"; return f.string(from: job.date)
-    }
-    private var amPm: String {
-        let f = DateFormatter(); f.dateFormat = "a"; return f.string(from: job.date).uppercased()
-    }
     private var durationStr: String {
-        let h = Int(job.duration)
-        let m = Int((job.duration - Double(h)) * 60)
-        if m == 0 { return "\(h)h" }
-        return h > 0 ? "\(h)h \(m)m" : "\(m)m"
+        let h = Int(job.duration); let m = Int((job.duration - Double(h)) * 60)
+        return h > 0 ? (m > 0 ? "\(h)h \(m)m" : "\(h)h") : "\(m)m"
     }
 }
 
-// MARK: - Dashboard Invoice Row
-
-private struct DashInvoiceRow: View {
+struct DashInvoiceRow: View {
     let invoice: Invoice
-
+    let invoicesStore: InvoicesStore
     var body: some View {
         HStack {
             VStack(alignment: .leading, spacing: 3) {
-                Text(invoice.clientName)
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(Color.primary)
-                Text(dueDateText)
-                    .font(.system(size: 12))
-                    .foregroundStyle(
-                        invoice.status == .overdue ? Color.sweeplyDestructive : Color.sweeplyTextSub
-                    )
+                Text(invoice.clientName).font(.system(size: 14, weight: .semibold))
+                Text("Due \(invoice.dueDate.formatted(date: .abbreviated, time: .omitted))")
+                    .font(.system(size: 12)).foregroundStyle(invoice.status == .overdue ? Color.sweeplyDestructive : Color.sweeplyTextSub)
             }
             Spacer()
-            HStack(spacing: 10) {
-                Text(invoice.amount.currency)
-                    .font(.system(size: 13, weight: .semibold, design: .monospaced))
-                    .foregroundStyle(Color.primary)
+            HStack(spacing: 8) {
+                Text(invoice.amount.currency).font(.system(size: 14, weight: .bold, design: .monospaced))
                 InvoiceStatusBadge(status: invoice.status)
+                Button("Mark Paid") { Task { await invoicesStore.markPaid(id: invoice.id) } }
+                    .font(.system(size: 11, weight: .semibold)).foregroundStyle(.white)
+                    .padding(.horizontal, 10).padding(.vertical, 5).background(Color.sweeplyNavy).clipShape(Capsule())
+            }
+        }.padding(.vertical, 10)
+    }
+}
+
+struct HealthRow: View {
+    let icon: String; let iconColor: Color; let title: String; let subtitle: String; let value: String; let trend: String; let isPositive: Bool
+    var body: some View {
+        HStack(spacing: 12) {
+            RoundedRectangle(cornerRadius: 8).fill(iconColor.opacity(0.12)).frame(width: 36, height: 36)
+                .overlay(Image(systemName: icon).font(.system(size: 16, weight: .semibold)).foregroundStyle(iconColor))
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title).font(.system(size: 13, weight: .semibold))
+                Text(subtitle).font(.system(size: 11)).foregroundStyle(Color.sweeplyTextSub)
+            }
+            Spacer()
+            VStack(alignment: .trailing, spacing: 4) {
+                Text(value).font(.system(size: 15, weight: .bold, design: .monospaced))
+                TrendBadge(value: trend, isPositive: isPositive)
+            }
+        }.padding(.vertical, 4)
+    }
+}
+
+struct TrendBadge: View {
+    let value: String; let isPositive: Bool
+    var body: some View {
+        HStack(spacing: 2) {
+            Image(systemName: isPositive ? "arrow.up" : "arrow.down").font(.system(size: 9, weight: .bold))
+            Text(value).font(.system(size: 10, weight: .semibold))
+        }
+        .foregroundStyle(isPositive ? Color.sweeplyAccent : Color.sweeplyDestructive)
+        .padding(.horizontal, 6).padding(.vertical, 3)
+        .background((isPositive ? Color.sweeplyAccent : Color.sweeplyDestructive).opacity(0.1)).clipShape(Capsule())
+    }
+}
+
+struct DashboardPlaybook: View {
+    @Binding var playbookDone: [Bool]
+    @Binding var showPlaybook: Bool
+    var body: some View {
+        SectionCard {
+            VStack(alignment: .leading, spacing: 16) {
+                HStack {
+                    Text("Get started").font(.system(size: 15, weight: .semibold))
+                    Spacer()
+                    Button { withAnimation { showPlaybook = false } } label: { Image(systemName: "xmark").font(.system(size: 12)).foregroundStyle(Color.sweeplyTextSub) }
+                }
+                VStack(spacing: 12) {
+                    PlaybookRow(title: "Add your first client", icon: "person.badge.plus", isDone: playbookDone[0]) { playbookDone[0].toggle() }
+                    PlaybookRow(title: "Schedule your first job", icon: "calendar.badge.plus", isDone: playbookDone[1]) { playbookDone[1].toggle() }
+                    PlaybookRow(title: "Create your first invoice", icon: "doc.badge.plus", isDone: playbookDone[2]) { playbookDone[2].toggle() }
+                    PlaybookRow(title: "Set up business profile", icon: "building.2", isDone: playbookDone[3]) { playbookDone[3].toggle() }
+                }
+                Text("\(playbookDone.filter { $0 }.count) of 4 complete").font(.system(size: 12)).foregroundStyle(Color.sweeplyTextSub).padding(.top, 4)
             }
         }
-        .padding(.vertical, 13)
-    }
-
-    private var dueDateText: String {
-        let f = DateFormatter(); f.dateFormat = "MMM d"
-        let ds = f.string(from: invoice.dueDate)
-        switch invoice.status {
-        case .overdue: return "Overdue · \(ds)"
-        case .unpaid:  return "Due \(ds)"
-        case .paid:    return "Paid \(ds)"
-        }
     }
 }
 
-// MARK: - Global shared components
-// These are used across multiple screens — keep in DashboardView.swift.
-
-struct InvoiceStatusBadge: View {
-    let status: InvoiceStatus
-
+struct PlaybookRow: View {
+    let title: String; let icon: String; let isDone: Bool; let action: () -> Void
     var body: some View {
-        Text(status.rawValue.uppercased())
-            .font(.system(size: 9, weight: .semibold))
-            .foregroundStyle(labelColor)
-            .tracking(0.4)
-            .padding(.horizontal, 6)
-            .padding(.vertical, 3)
-            .background(labelColor.opacity(0.10))
-            .clipShape(Capsule())
-    }
-
-    private var labelColor: Color {
-        switch status {
-        case .paid:    return Color.sweeplyAccent
-        case .unpaid:  return Color.sweeplyTextSub
-        case .overdue: return Color.sweeplyDestructive
-        }
-    }
-}
-
-struct StatusBadge: View {
-    let status: JobStatus
-
-    var body: some View {
-        Text(status.rawValue.uppercased())
-            .font(.system(size: 9, weight: .semibold))
-            .foregroundStyle(labelColor)
-            .tracking(0.4)
-            .padding(.horizontal, 6)
-            .padding(.vertical, 3)
-            .background(labelColor.opacity(0.10))
-            .clipShape(Capsule())
-    }
-
-    private var labelColor: Color {
-        switch status {
-        case .scheduled:  return Color.sweeplyTextSub
-        case .inProgress: return Color.primary
-        case .completed:  return Color.sweeplyAccent
-        case .cancelled:  return Color.sweeplyDestructive
-        }
-    }
-}
-
-// MARK: - Currency extension
-
-extension Double {
-    var currency: String {
-        let f = NumberFormatter()
-        f.numberStyle           = .currency
-        f.currencyCode          = "USD"
-        f.maximumFractionDigits = 0
-        return f.string(from: NSNumber(value: self)) ?? "$\(Int(self))"
+        Button(action: action) {
+            HStack(spacing: 12) {
+                Image(systemName: isDone ? "checkmark.circle.fill" : "circle").foregroundStyle(isDone ? Color.sweeplyAccent : Color.sweeplyBorder)
+                Text(title).font(.system(size: 14)).foregroundStyle(isDone ? Color.sweeplyTextSub : Color.primary).strikethrough(isDone)
+                Spacer()
+                Image(systemName: icon).font(.system(size: 14)).foregroundStyle(Color.sweeplyTextSub.opacity(0.5))
+            }
+        }.buttonStyle(.plain)
     }
 }
 
@@ -542,4 +434,7 @@ extension Double {
     DashboardView()
         .environment(AppSession())
         .environment(ClientsStore())
+        .environment(JobsStore())
+        .environment(InvoicesStore())
+        .environment(ProfileStore())
 }
