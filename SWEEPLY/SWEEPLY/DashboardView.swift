@@ -81,15 +81,15 @@ struct DashboardView: View {
                 Divider()
 
                 // ── Dashboard Hero (Revenue + Stats Grid) ───────────
-                HStack(alignment: .top, spacing: 20) {
+                HStack(alignment: .bottom, spacing: 20) {
                     revenueHero
                         .frame(maxWidth: .infinity, alignment: .leading)
                     
                     statsGrid
-                        .frame(width: 160)
+                        .frame(width: 140)
                 }
                 .padding(.horizontal, 20)
-                .padding(.vertical, 24)
+                .padding(.bottom, 24)
 
                 Divider()
 
@@ -182,8 +182,8 @@ struct DashboardView: View {
                 .tracking(0.8)
 
             Text(weekEarned.currency)
-                .font(.system(size: 46, weight: .bold, design: .monospaced))
-                .foregroundStyle(Color.primary)
+                .font(.system(size: 42, weight: .bold, design: .monospaced))
+                .foregroundStyle(Color.sweeplyNavy)
                 .tracking(-1.5)
 
             if completedCount > 0 {
@@ -199,11 +199,11 @@ struct DashboardView: View {
     }
 
     private var statsGrid: some View {
-        LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {
+        LazyVGrid(columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)], spacing: 8) {
             DashStatBox(value: "\(clientsStore.clients.count)", label: "Clients")
             DashStatBox(value: "\(jobsStore.jobs.filter { $0.status == .scheduled }.count)", label: "Scheduled")
-            DashStatBox(value: "\(todayJobs.filter { $0.status == .scheduled || $0.status == .inProgress}.count)", label: "Remaining")
-            DashStatBox(value: outstandingTotal.currency, label: "Outstanding")
+            DashStatBox(value: "\(todayJobs.filter { $0.status == .scheduled || $0.status == .inProgress}.count)", label: "Left")
+            DashStatBox(value: outstandingTotal.currency, label: "Due")
         }
     }
 
@@ -471,26 +471,25 @@ struct ProfileMenuView: View {
     private var profile: UserProfile { profileStore.profile ?? MockData.profile }
     
     var body: some View {
-        VStack(spacing: 0) {
-            // Profile Info
-            VStack(spacing: 12) {
+        VStack(spacing: 24) {
+            // Branded Identity Card
+            VStack(spacing: 16) {
                 ZStack {
-                    Circle().fill(Color.sweeplyNavy).frame(width: 60, height: 60)
-                    Text(initials).font(.system(size: 20, weight: .bold)).foregroundStyle(.white)
+                    Circle().fill(Color.sweeplyNavy.gradient).frame(width: 80, height: 80)
+                    Text(initials).font(.system(size: 32, weight: .bold)).foregroundStyle(.white)
                 }
-                
-                VStack(spacing: 2) {
-                    Text(profile.fullName).font(.system(size: 18, weight: .bold))
-                    Text(profile.businessName).font(.system(size: 13)).foregroundStyle(Color.sweeplyTextSub)
+                VStack(spacing: 4) {
+                    Text(profile.fullName).font(.system(size: 20, weight: .bold))
+                    Text(profile.email).font(.system(size: 14)).foregroundStyle(Color.sweeplyTextSub)
+                    Text(profile.businessName).font(.system(size: 14, weight: .semibold)).foregroundStyle(Color.sweeplyAccent).padding(.top, 4)
                 }
             }
-            .padding(.top, 24)
-            .padding(.bottom, 24)
+            .padding(.top, 32)
             
             Divider()
             
             // Actions
-            VStack(spacing: 0) {
+            VStack(spacing: 8) {
                 Button {
                     dismiss()
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
