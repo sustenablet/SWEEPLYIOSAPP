@@ -46,51 +46,91 @@ struct ClientDetailView: View {
 
     // MARK: - Profile Header
     private var profileHeader: some View {
-        VStack(spacing: 14) {
-            // Avatar
-            ZStack {
-                RoundedRectangle(cornerRadius: 20)
-                    .fill(Color.sweeplyNavy)
-                    .frame(width: 72, height: 72)
-                Text(String(client.name.prefix(1)).uppercased())
-                    .font(.system(size: 28, weight: .bold))
-                    .foregroundStyle(.white)
-            }
+        VStack(spacing: 20) {
+            // Avatar & Basic Info
+            HStack(spacing: 16) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 18)
+                        .fill(Color.sweeplyNavy)
+                        .frame(width: 64, height: 64)
+                    Text(String(client.name.prefix(1)).uppercased())
+                        .font(.system(size: 24, weight: .bold))
+                        .foregroundStyle(.white)
+                }
 
-            VStack(spacing: 4) {
-                Text(client.name)
-                    .font(.system(size: 22, weight: .bold))
-                    .foregroundStyle(Color.primary)
-                    .tracking(-0.3)
-
-                if !client.address.isEmpty {
-                    HStack(spacing: 4) {
-                        Image(systemName: "mappin.circle.fill")
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(client.name)
+                        .font(.system(size: 20, weight: .bold))
+                        .foregroundStyle(Color.sweeplyNavy)
+                    
+                    if let service = client.preferredService {
+                        HStack(spacing: 4) {
+                            Image(systemName: "star.fill")
+                                .font(.system(size: 10))
+                                .foregroundStyle(Color.sweeplyAccent)
+                            Text(service.rawValue)
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundStyle(Color.sweeplyTextSub)
+                        }
+                    } else {
+                        Text("No preferred service")
                             .font(.system(size: 12))
-                            .foregroundStyle(Color.sweeplyTextSub)
-                        Text("\(client.address), \(client.city), \(client.state) \(client.zip)")
-                            .font(.system(size: 13))
-                            .foregroundStyle(Color.sweeplyTextSub)
-                            .lineLimit(1)
+                            .foregroundStyle(Color.sweeplyTextSub.opacity(0.6))
                     }
                 }
+                Spacer()
             }
 
-            // Contact chips
-            HStack(spacing: 8) {
+            // Contact Info
+            VStack(alignment: .leading, spacing: 12) {
+                if !client.address.isEmpty {
+                    ContactRow(icon: "mappin.circle.fill", text: "\(client.address), \(client.city)")
+                }
                 if !client.phone.isEmpty {
-                    ContactChip(icon: "phone.fill", label: client.phone)
+                    ContactRow(icon: "phone.fill", text: client.phone)
                 }
                 if !client.email.isEmpty {
-                    ContactChip(icon: "envelope.fill", label: client.email)
+                    ContactRow(icon: "envelope.fill", text: client.email)
+                }
+            }
+            .padding(.top, 4)
+
+            // Quick Actions
+            HStack(spacing: 12) {
+                QuickActionButton(icon: "phone.fill", label: "Call", color: .green) {
+                    callClient()
+                }
+                QuickActionButton(icon: "envelope.fill", label: "Email", color: .blue) {
+                    emailClient()
+                }
+                QuickActionButton(icon: "map.fill", label: "Navigate", color: Color.sweeplyNavy) {
+                    navigateClient()
                 }
             }
         }
-        .frame(maxWidth: .infinity)
-        .padding(20)
+        .padding(24)
         .background(Color.sweeplySurface)
-        .clipShape(RoundedRectangle(cornerRadius: 16))
-        .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.sweeplyBorder, lineWidth: 1))
+        .clipShape(RoundedRectangle(cornerRadius: 20))
+        .overlay(RoundedRectangle(cornerRadius: 20).stroke(Color.sweeplyBorder, lineWidth: 1))
+    }
+
+    private func callClient() {
+        if let url = URL(string: "tel://\(client.phone.filter { $0.isNumber })") {
+            UIApplication.shared.open(url)
+        }
+    }
+
+    private func emailClient() {
+        if let url = URL(string: "mailto:\(client.email)") {
+            UIApplication.shared.open(url)
+        }
+    }
+
+    private func navigateClient() {
+        let addr = "\(client.address), \(client.city), \(client.state) \(client.zip)".addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+        if let url = URL(string: "http://maps.apple.com/?daddr=\(addr)") {
+            UIApplication.shared.open(url)
+        }
     }
 
     // MARK: - Stats Row
@@ -203,23 +243,44 @@ struct ClientDetailView: View {
 
 // MARK: - Sub-components
 
-private struct ContactChip: View {
+private struct QuickActionButton: View {
     let icon: String
     let label: String
+    let color: Color
+    let action: () -> Void
 
     var body: some View {
-        HStack(spacing: 5) {
-            Image(systemName: icon)
-                .font(.system(size: 10))
-            Text(label)
-                .font(.system(size: 12, weight: .medium))
-                .lineLimit(1)
+        Button(action: action) {
+            VStack(spacing: 8) {
+                Image(systemName: icon)
+                    .font(.system(size: 18))
+                Text(label)
+                    .font(.system(size: 11, weight: .bold))
+            }
+            .foregroundStyle(color)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 12)
+            .background(color.opacity(0.1))
+            .clipShape(RoundedRectangle(cornerRadius: 12))
         }
-        .foregroundStyle(Color.sweeplyTextSub)
-        .padding(.horizontal, 10)
-        .padding(.vertical, 6)
-        .background(Color.sweeplyBackground)
-        .clipShape(Capsule())
+        .buttonStyle(.plain)
+    }
+}
+
+private struct ContactRow: View {
+    let icon: String
+    let text: String
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Image(systemName: icon)
+                .font(.system(size: 14))
+                .foregroundStyle(Color.sweeplyTextSub)
+                .frame(width: 20)
+            Text(text)
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(Color.sweeplyNavy)
+        }
     }
 }
 
@@ -271,53 +332,55 @@ private struct NoteRow: View {
 private struct DetailJobRow: View {
     let job: Job
 
-    private var dateString: String {
-        let f = DateFormatter()
-        f.dateFormat = "MMM d, yyyy · h:mm a"
-        return f.string(from: job.date)
+    var body: some View {
+        ZStack(alignment: .leading) {
+            Color.sweeplySurface
+            
+            Rectangle()
+                .fill(statusColor)
+                .frame(width: 4)
+            
+            HStack(spacing: 16) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(job.date.formatted(.dateTime.day().month(.abbreviated)))
+                        .font(.system(size: 14, weight: .bold, design: .monospaced))
+                        .foregroundStyle(Color.sweeplyNavy)
+                    Text(job.date.formatted(.dateTime.hour().minute()))
+                        .font(.system(size: 9))
+                        .foregroundStyle(Color.sweeplyTextSub)
+                }
+                .frame(width: 65, alignment: .leading)
+                
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(job.serviceType.rawValue)
+                        .font(.system(size: 15, weight: .bold))
+                        .foregroundStyle(Color.sweeplyNavy)
+                    
+                    HStack(spacing: 6) {
+                        StatusBadge(status: job.status)
+                    }
+                }
+                
+                Spacer()
+                
+                Text(job.price.currency)
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundStyle(Color.sweeplyNavy)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 14)
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.sweeplyBorder, lineWidth: 1))
     }
 
     private var statusColor: Color {
         switch job.status {
-        case .scheduled:  return Color.sweeplyAccent
-        case .inProgress: return Color.sweeplyAccent
-        case .completed:  return Color.sweeplySuccess
-        case .cancelled:  return Color.sweeplyTextSub
+        case .completed: return Color.sweeplySuccess
+        case .inProgress: return .orange
+        case .scheduled: return Color.sweeplyBorder
+        case .cancelled: return Color.sweeplyDestructive
         }
-    }
-
-    var body: some View {
-        HStack(spacing: 12) {
-            Circle()
-                .fill(statusColor.opacity(0.15))
-                .frame(width: 36, height: 36)
-                .overlay(
-                    Image(systemName: job.status == .completed ? "checkmark" : job.status == .cancelled ? "xmark" : "clock")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(statusColor)
-                )
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(job.serviceType.rawValue)
-                    .font(.system(size: 13, weight: .semibold))
-                Text(dateString)
-                    .font(.system(size: 11))
-                    .foregroundStyle(Color.sweeplyTextSub)
-            }
-            Spacer()
-
-            VStack(alignment: .trailing, spacing: 4) {
-                Text(job.price.currency)
-                    .font(.system(size: 13, weight: .bold, design: .monospaced))
-                Text(job.status.rawValue)
-                    .font(.system(size: 10, weight: .semibold))
-                    .foregroundStyle(statusColor)
-            }
-        }
-        .padding(12)
-        .background(Color.sweeplySurface)
-        .clipShape(RoundedRectangle(cornerRadius: 10))
-        .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.sweeplyBorder, lineWidth: 1))
     }
 }
 
