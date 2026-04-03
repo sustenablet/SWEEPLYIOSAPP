@@ -3,11 +3,12 @@ import SwiftUI
 struct FABView: View {
     @State private var isExpanded = false
     @Binding var selectedTab: RootView.Tab
+    var onNewJob: () -> Void
     
-    let actions: [(label: String, icon: String, tab: RootView.Tab)] = [
+    let actions: [(label: String, icon: String, tab: RootView.Tab?)] = [
         ("New Invoice", "doc.badge.plus", .finances),
         ("New Client", "person.badge.plus", .clients),
-        ("New Job", "briefcase.fill", .schedule),
+        ("New Job", "briefcase.fill", nil),
     ]
     
     var body: some View {
@@ -32,7 +33,11 @@ struct FABView: View {
                             withAnimation(.spring(duration: 0.3)) {
                                 isExpanded = false
                             }
-                            selectedTab = action.tab
+                            if let tab = action.tab {
+                                selectedTab = tab
+                            } else if action.label == "New Job" {
+                                onNewJob()
+                            }
                         }
                         .transition(.asymmetric(
                             insertion: .move(edge: .bottom).combined(with: .opacity),

@@ -5,43 +5,24 @@ import SwiftUI
 enum ScheduleViewMode: String, CaseIterable {
     case day = "Day"
     case list = "List"
-    case map = "Map"
+    case month = "Month"
 }
 
 struct ScheduleView: View {
-    @State private var jobs: [Job] = MockData.makeJobs()
-    @State private var weekOffset: Int = 0
-    @State private var selectedDay: Date = Calendar.current.startOfDay(for: Date())
-    @State private var viewMode: ScheduleViewMode = .day
+    @Environment(JobsStore.self) private var jobsStore
     @State private var appeared = false
+    @State private var viewMode: ScheduleViewMode = .day
+    @State private var selectedDay: Date = Calendar.current.startOfDay(for: Date())
+    @State private var weekOffset: Int = 0
+    @State private var showFilters = false
+    @State private var statusFilter: JobStatus? = nil
+    @State private var typeFilter: String = "All"
     @State private var showMonthPicker = false
 
     private var calendar: Calendar {
         var cal = Calendar.current
         cal.firstWeekday = 1
         return cal
-    }
-
-    private var weekInterval: DateInterval {
-        let anchor = calendar.date(byAdding: .weekOfYear, value: weekOffset, to: Date()) ?? Date()
-        return calendar.dateInterval(of: .weekOfYear, for: anchor)
-            ?? DateInterval(start: Date(), end: Date())
-    }
-
-    private var weekDays: [Date] {
-        (0..<7).compactMap { day in
-            calendar.date(byAdding: .day, value: day, to: weekInterval.start)
-        }
-    }
-
-    private var jobsForSelectedDay: [Job] {
-        jobs
-            .filter { calendar.isDate($0.date, inSameDayAs: selectedDay) }
-            .sorted { $0.date < $1.date }
-    }
-
-    private var resourceFirstName: String {
-        MockData.profile.fullName.split(separator: " ").first.map(String.init) ?? "You"
     }
 
     var body: some View {
@@ -51,64 +32,27 @@ struct ScheduleView: View {
                 modeSegment
                     .padding(.horizontal, 16)
                     .padding(.top, 12)
-                weekStrip
-                    .padding(.horizontal, 16)
-                    .padding(.top, 12)
-                resourceRow
-                    .padding(.horizontal, 16)
-                    .padding(.top, 10)
+                
+                if viewMode == .day {
+                    weekStrip
+                        .padding(.horizontal, 16)
+                        .padding(.top, 12)
+                }
 
                 Group {
                     switch viewMode {
-                    case .day:
-                        dayTimelineScroll
-                    case .list:
-                        listModeScroll
-                    case .map:
-                        mapPlaceholder
+                    case .day:   dayView
+                    case .list:  listView
+                    case .month: monthView
                     }
                 }
             }
             .background(Color.sweeplyBackground.ignoresSafeArea())
             .navigationBarHidden(true)
-        }
-        .opacity(appeared ? 1 : 0)
-        .offset(y: appeared ? 0 : 8)
-        .onAppear {
-            withAnimation(.easeOut(duration: 0.3)) { appeared = true }
-        }
-        .onChange(of: weekOffset) { _, _ in
-            if !weekDays.contains(where: { calendar.isDate($0, inSameDayAs: selectedDay) }) {
-                selectedDay = calendar.startOfDay(for: weekInterval.start)
+            .sheet(isPresented: $showFilters) {
+                JobFiltersView(statusFilter: $statusFilter, typeFilter: $typeFilter)
+                    .presentationDetents([.medium])
             }
-        }
-        .sheet(isPresented: $showMonthPicker) {
-            NavigationStack {
-                VStack(spacing: 16) {
-                    DatePicker(
-                        "Go to",
-                        selection: Binding(
-                            get: { selectedDay },
-                            set: { newVal in
-                                selectedDay = calendar.startOfDay(for: newVal)
-                                syncWeekOffsetToSelectedDay()
-                            }
-                        ),
-                        displayedComponents: [.date]
-                    )
-                    .datePickerStyle(.graphical)
-                    .padding()
-                    Spacer()
-                }
-                .navigationTitle("Choose date")
-                .navigationBarTitleDisplayMode(.inline)
-                .toolbar {
-                    ToolbarItem(placement: .confirmationAction) {
-                        Button("Done") { showMonthPicker = false }
-                    }
-                }
-            }
-            .presentationDetents([.medium, .large])
         }
     }
 
@@ -140,9 +84,8 @@ struct ScheduleView: View {
             Spacer()
 
             HStack(spacing: 4) {
-                iconToolbarButton("calendar") { showMonthPicker = true }
-                iconToolbarButton("line.3.horizontal.decrease.circle") { }
-                iconToolbarButton("wand.and.stars") { }
+                iconToolbarButton("line.3.horizontal.decrease.circle") { showFilters = true }
+                iconToolbarButton("calendar") { viewMode = .month }
             }
         }
         .padding(.horizontal, 16)
@@ -198,6 +141,163 @@ struct ScheduleView: View {
         )
     }
 
+    // MARK: - Day View
+    
+    private var dayView: some View {
+        VStack(spacing: 0) {
+            HStack {
+                Button { moveDate(by: -1) } label: { Image(systemName: "chevron.left") }
+                Spacer()
+                VStack(spacing: 2) {
+                    Text(selectedDay.formatted(.dateTime.weekday(.wide)))
+                        .font(.system(size: 14, weight: .bold))
+                    Text(selectedDay.formatted(.dateTime.day().month()))
+                        .font(.system(size: 11))
+                        .foregroundStyle(Color.sweeplyTextSub)
+                }
+                Spacer()
+                Button { moveDate(by: 1) } label: { Image(systemName: "chevron.right") }
+            }
+            .padding(.horizontal, 24)
+            .padding(.vertical, 12)
+            .background(Color.sweeplySurface)
+            
+            HStack {
+                Text("\(filteredJobsForDate(selectedDay).count) Jobs")
+                Spacer()
+                Text("Total: \(dayRevenue(selectedDay).currency)")
+            }
+            .font(.system(size: 12, weight: .semibold))
+            .foregroundStyle(Color.sweeplyTextSub)
+            .padding(.horizontal, 24)
+            .padding(.vertical, 8)
+
+            ScrollView {
+                VStack(spacing: 12) {
+                    if filteredJobsForDate(selectedDay).isEmpty {
+                        scheduleEmptyState
+                    } else {
+                        ForEach(filteredJobsForDate(selectedDay)) { job in
+                            ScheduleJobRow(job: job)
+                        }
+                    }
+                }
+                .padding(20)
+                .padding(.bottom, 100)
+            }
+        }
+    }
+    
+    private func moveDate(by days: Int) {
+        selectedDay = calendar.date(byAdding: .day, value: days, to: selectedDay) ?? selectedDay
+    }
+    
+    private func dayRevenue(_ date: Date) -> Double {
+        filteredJobsForDate(date).reduce(0) { $0 + $1.price }
+    }
+
+    // MARK: - List View
+    
+    private var listView: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 24) {
+                let futureJobs = jobsStore.jobs
+                    .filter { $0.date >= calendar.startOfDay(for: Date()) }
+                    .filter { applyFilters($0) }
+                    .sorted { $0.date < $1.date }
+                
+                let grouped = Dictionary(grouping: futureJobs) { calendar.startOfDay(for: $0.date) }
+                let sortedDates = grouped.keys.sorted()
+                
+                if futureJobs.isEmpty {
+                    scheduleEmptyState.padding(.top, 40)
+                } else {
+                    ForEach(sortedDates, id: \.self) { date in
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text(date.formatted(.dateTime.month().day().weekday(.wide)))
+                                .font(.system(size: 14, weight: .bold))
+                                .foregroundStyle(Color.sweeplyNavy)
+                                .padding(.leading, 4)
+                            
+                            ForEach(grouped[date] ?? []) { job in
+                                ScheduleJobRow(job: job)
+                            }
+                        }
+                    }
+                }
+            }
+            .padding(20)
+            .padding(.bottom, 100)
+        }
+    }
+
+    // MARK: - Month View
+    
+    private var monthView: some View {
+        VStack(spacing: 0) {
+            DatePicker("", selection: $selectedDay, displayedComponents: .date)
+                .datePickerStyle(.graphical)
+                .padding()
+                .accentColor(Color.sweeplyNavy)
+                .background(Color.sweeplySurface)
+                .clipShape(RoundedRectangle(cornerRadius: 20))
+                .padding(.horizontal, 20)
+                .padding(.top, 12)
+            
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Jobs for \(selectedDay.formatted(.dateTime.day().month()))")
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundStyle(Color.sweeplyNavy)
+                    .padding(.horizontal, 24)
+                    .padding(.top, 20)
+                
+                ScrollView {
+                    VStack(spacing: 12) {
+                        if filteredJobsForDate(selectedDay).isEmpty {
+                            scheduleEmptyState
+                        } else {
+                            ForEach(filteredJobsForDate(selectedDay)) { job in
+                                ScheduleJobRow(job: job)
+                            }
+                        }
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 100)
+                }
+            }
+        }
+    }
+
+    private func filteredJobsForDate(_ date: Date) -> [Job] {
+        jobsStore.jobs
+            .filter { calendar.isDate($0.date, inSameDayAs: date) }
+            .filter { applyFilters($0) }
+            .sorted { $0.date < $1.date }
+    }
+    
+    private func applyFilters(_ job: Job) -> Bool {
+        if let status = statusFilter, job.status != status { return false }
+        if typeFilter == "Recurring" && !job.isRecurring { return false }
+        if typeFilter == "One-time" && job.isRecurring { return false }
+        return true
+    }
+
+    private var scheduleEmptyState: some View {
+        VStack(spacing: 12) {
+            Image(systemName: "calendar.badge.clock")
+                .font(.system(size: 44))
+                .foregroundStyle(Color.sweeplyTextSub.opacity(0.3))
+            Text("Nothing scheduled")
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundStyle(Color.sweeplyTextSub)
+            Text("Jobs you add will show up here.")
+                .font(.system(size: 13))
+                .foregroundStyle(Color.sweeplyTextSub.opacity(0.6))
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 60)
+    }
+
     // MARK: Week strip (green circle selection)
 
     private var weekStrip: some View {
@@ -251,306 +351,121 @@ struct ScheduleView: View {
         return f.string(from: date)
     }
 
-    // MARK: Resource row
-
-    private var resourceRow: some View {
-        HStack {
-            Text(resourceFirstName)
-                .font(.system(size: 16, weight: .bold))
-                .foregroundStyle(Color.sweeplyNavy)
-            Spacer()
-            Text("\(jobsForSelectedDay.count)")
-                .font(.system(size: 13, weight: .semibold, design: .rounded))
-                .foregroundStyle(Color.sweeplyTextSub)
-                .frame(minWidth: 28, minHeight: 28)
-                .background(Color(red: 0.93, green: 0.93, blue: 0.94))
-                .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
-        }
-        .padding(.horizontal, 4)
+    private var weekInterval: DateInterval {
+        let anchor = calendar.date(byAdding: .weekOfYear, value: weekOffset, to: Date()) ?? Date()
+        return calendar.dateInterval(of: .weekOfYear, for: anchor)
+            ?? DateInterval(start: Date(), end: Date())
     }
-
-    // MARK: Day timeline
-
-    /// First hour label (6 AM). Last label is 9 PM (`timelineEndExclusive` - 1).
-    private static let timelineStartHour = 6
-    private static let timelineEndExclusive = 22
-    private static let hourRowHeight: CGFloat = 52
-
-    private var dayTimelineScroll: some View {
-        ScrollView {
-            dayTimelineContent
-                .padding(.horizontal, 16)
-                .padding(.top, 8)
-                .padding(.bottom, 100)
+ 
+    private var weekDays: [Date] {
+        (0..<7).compactMap { day in
+            calendar.date(byAdding: .day, value: day, to: weekInterval.start)
         }
     }
+}
 
-    private var dayTimelineContent: some View {
-        let startH = Self.timelineStartHour
-        let endEx = Self.timelineEndExclusive
-        let hourH = Self.hourRowHeight
-        let hourRange = Array(startH..<endEx)
-        let slotCount = hourRange.count
-        let totalHeight = CGFloat(slotCount) * hourH
+// MARK: - Row Components
 
-        return HStack(alignment: .top, spacing: 0) {
-            VStack(alignment: .trailing, spacing: 0) {
-                ForEach(hourRange, id: \.self) { hour in
-                    Text(hourLabel(hour))
-                        .font(.system(size: 11, weight: .medium, design: .rounded))
+private struct ScheduleJobRow: View {
+    let job: Job
+    @Environment(JobsStore.self) private var jobsStore
+    @State private var showMenu = false
+    @State private var showDeleteConfirm = false
+
+    var body: some View {
+        ZStack(alignment: .leading) {
+            Color.sweeplySurface
+            
+            Rectangle()
+                .fill(statusColor)
+                .frame(width: 4)
+            
+            HStack(spacing: 16) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(job.date.formatted(.dateTime.hour().minute()))
+                        .font(.system(size: 14, weight: .bold, design: .monospaced))
+                        .foregroundStyle(Color.sweeplyNavy)
+                    Text("\(Int(job.duration)) hr")
+                        .font(.system(size: 9))
                         .foregroundStyle(Color.sweeplyTextSub)
-                        .frame(width: 48, height: hourH, alignment: .top)
                 }
-            }
-
-            ZStack(alignment: .topLeading) {
-                ForEach(0..<slotCount, id: \.self) { i in
-                    Rectangle()
-                        .fill(Color.sweeplyBorder.opacity(0.75))
-                        .frame(height: 1)
-                        .offset(y: CGFloat(i) * hourH)
-                }
-
-                if calendar.isDateInToday(selectedDay) {
-                    currentTimeIndicator(
-                        totalHeight: totalHeight,
-                        startHour: startH,
-                        hourHeight: hourH
-                    )
-                }
-
-                ForEach(jobsForSelectedDay) { job in
-                    NavigationLink {
-                        ScheduleJobDetailView(job: job)
-                    } label: {
-                        ScheduleTimelineBlock(job: job, hourHeight: hourH)
-                    }
-                    .buttonStyle(.plain)
-                    .offset(y: jobYOffset(job, startHour: startH, hourHeight: hourH))
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .topLeading)
-            .frame(height: totalHeight, alignment: .top)
-            .clipped()
-        }
-    }
-
-    private func hourLabel(_ hour: Int) -> String {
-        let h12: Int
-        if hour == 0 { h12 = 12 }
-        else if hour > 12 { h12 = hour - 12 }
-        else { h12 = hour }
-        let suffix = hour < 12 ? "AM" : "PM"
-        return "\(h12) \(suffix)"
-    }
-
-    private func jobYOffset(_ job: Job, startHour: Int, hourHeight: CGFloat) -> CGFloat {
-        let start = calendar.startOfDay(for: selectedDay)
-        let comps = calendar.dateComponents([.hour, .minute], from: start, to: job.date)
-        let h = Double(comps.hour ?? 0) + Double(comps.minute ?? 0) / 60.0
-        let fromStart = h - Double(startHour)
-        return CGFloat(max(0, fromStart)) * hourHeight
-    }
-
-    @ViewBuilder
-    private func currentTimeIndicator(totalHeight: CGFloat, startHour: Int, hourHeight: CGFloat) -> some View {
-        let now = Date()
-        if calendar.isDate(now, inSameDayAs: selectedDay) {
-            let start = calendar.startOfDay(for: selectedDay)
-            let comps = calendar.dateComponents([.hour, .minute], from: start, to: now)
-            let h = Double(comps.hour ?? 0) + Double(comps.minute ?? 0) / 60.0
-            let y = CGFloat(h - Double(startHour)) * hourHeight
-            if y >= 0 && y <= totalHeight {
-                HStack(alignment: .center, spacing: 0) {
-                    Circle()
-                        .stroke(Color.blue.opacity(0.9), lineWidth: 2)
-                        .frame(width: 8, height: 8)
-                        .background(Circle().fill(Color.sweeplySurface))
-                    Rectangle()
-                        .fill(Color.blue.opacity(0.85))
-                        .frame(height: 2)
-                }
-                .offset(y: y)
-            }
-        }
-    }
-
-    // MARK: List mode
-
-    private var listModeScroll: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 12) {
-                if jobsForSelectedDay.isEmpty {
-                    scheduleEmptyState
-                } else {
-                    ForEach(jobsForSelectedDay) { job in
-                        NavigationLink {
-                            ScheduleJobDetailView(job: job)
-                        } label: {
-                            ScheduleJobRow(job: job)
+                .frame(width: 65, alignment: .leading)
+                
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(spacing: 4) {
+                        Text(job.clientName)
+                            .font(.system(size: 15, weight: .bold))
+                            .foregroundStyle(Color.sweeplyNavy)
+                        if job.isRecurring {
+                            Image(systemName: "arrow.triangle.2.circlepath")
+                                .font(.system(size: 10, weight: .bold))
+                                .foregroundStyle(Color.sweeplyAccent)
                         }
-                        .buttonStyle(.plain)
+                    }
+                    
+                    HStack(spacing: 6) {
+                        Text(job.serviceType.rawValue)
+                            .font(.system(size: 12))
+                            .foregroundStyle(Color.sweeplyTextSub)
+                        
+                        StatusBadge(status: job.status)
+                    }
+                }
+                
+                Spacer()
+                
+                HStack(spacing: 12) {
+                    Text(job.price.currency)
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundStyle(Color.sweeplyNavy)
+                    
+                    Button { showMenu = true } label: {
+                        Image(systemName: "ellipsis")
+                            .font(.system(size: 14, weight: .bold))
+                            .foregroundStyle(Color.sweeplyBorder)
+                            .frame(width: 24, height: 24)
                     }
                 }
             }
             .padding(.horizontal, 16)
-            .padding(.top, 12)
-            .padding(.bottom, 100)
+            .padding(.vertical, 14)
         }
-    }
-
-    // MARK: Map placeholder
-
-    private var mapPlaceholder: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(Color(red: 0.92, green: 0.92, blue: 0.93))
-            VStack(spacing: 12) {
-                Image(systemName: "map")
-                    .font(.system(size: 40))
-                    .foregroundStyle(Color.sweeplyTextSub.opacity(0.45))
-                Text("Map view")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(Color.sweeplyTextSub)
-                Text("Route planning will appear here.")
-                    .font(.system(size: 13))
-                    .foregroundStyle(Color.sweeplyTextSub.opacity(0.8))
-            }
-            .padding(24)
-        }
-        .padding(.horizontal, 16)
-        .padding(.top, 12)
-        .padding(.bottom, 100)
-    }
-
-    private var scheduleEmptyState: some View {
-        SectionCard {
-            VStack(spacing: 12) {
-                Image(systemName: "calendar.badge.clock")
-                    .font(.system(size: 36))
-                    .foregroundStyle(Color.sweeplyTextSub.opacity(0.45))
-                Text("Nothing scheduled")
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(Color.sweeplyTextSub)
-                Text("Jobs you add will show up here.")
-                    .font(.system(size: 13))
-                    .foregroundStyle(Color.sweeplyTextSub.opacity(0.8))
-                    .multilineTextAlignment(.center)
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 24)
-        }
-    }
-}
-
-// MARK: - Timeline block
-
-private struct ScheduleTimelineBlock: View {
-    let job: Job
-    let hourHeight: CGFloat
-
-    var body: some View {
-        HStack(alignment: .top, spacing: 8) {
-            RoundedRectangle(cornerRadius: 3, style: .continuous)
-                .fill(Color.sweeplySuccess.opacity(0.9))
-                .frame(width: 4)
-
-            VStack(alignment: .leading, spacing: 4) {
-                Text(job.clientName)
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(Color.sweeplyNavy)
-                    .lineLimit(1)
-                Text(job.serviceType.rawValue)
-                    .font(.system(size: 12))
-                    .foregroundStyle(Color.sweeplyTextSub)
-                    .lineLimit(1)
-                Text(timeRange)
-                    .font(.system(size: 11, weight: .medium, design: .rounded))
-                    .foregroundStyle(Color.sweeplyTextSub)
-            }
-            .padding(10)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color.sweeplySurface)
-            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .stroke(Color.sweeplyBorder, lineWidth: 1)
-            )
-        }
-        .frame(height: blockHeight)
-        .padding(.leading, 4)
-    }
-
-    private var blockHeight: CGFloat {
-        max(56, CGFloat(job.duration) * hourHeight)
-    }
-
-    private var timeRange: String {
-        let f = DateFormatter()
-        f.dateFormat = "h:mm a"
-        let start = f.string(from: job.date)
-        let end = f.string(from: job.date.addingTimeInterval(job.duration * 3600))
-        return "\(start) – \(end)"
-    }
-}
-
-// MARK: - Row (list mode)
-
-private struct ScheduleJobRow: View {
-    let job: Job
-
-    var body: some View {
-        SectionCard {
-            HStack(spacing: 14) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(timeRange)
-                        .font(.system(size: 13, weight: .semibold, design: .rounded))
-                        .foregroundStyle(Color.sweeplyNavy)
-                        .monospacedDigit()
-                    Text("\(durationText) · \(job.price.currency)")
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(Color.sweeplyTextSub)
-                }
-                .frame(width: 90, alignment: .leading)
-
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(job.clientName)
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(Color.primary)
-                        .lineLimit(1)
-                    Text(job.serviceType.rawValue)
-                        .font(.system(size: 12))
-                        .foregroundStyle(Color.sweeplyTextSub)
-                        .lineLimit(1)
-                    if !job.address.isEmpty {
-                        Text(job.address)
-                            .font(.system(size: 11))
-                            .foregroundStyle(Color.sweeplyTextSub.opacity(0.9))
-                            .lineLimit(1)
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.sweeplyBorder, lineWidth: 1))
+        .confirmationDialog("Job Actions", isPresented: $showMenu, titleVisibility: .visible) {
+            ForEach(JobStatus.allCases, id: \.self) { status in
+                if job.status != status {
+                    Button("Mark as \(status.rawValue.capitalized)") {
+                        Task { await jobsStore.updateStatus(id: job.id, status: status) }
                     }
                 }
-
-                Spacer(minLength: 8)
-
-                StatusBadge(status: job.status)
             }
+            Button("Delete", role: .destructive) { showDeleteConfirm = true }
+        }
+        .alert("Delete Job?", isPresented: $showDeleteConfirm) {
+            Button("Cancel", role: .cancel) {}
+            Button("Delete", role: .destructive) {
+                Task { await jobsStore.delete(id: job.id) }
+            }
+        } message: {
+            Text("Are you sure you want to delete this job?")
         }
     }
 
-    private var timeRange: String {
-        let f = DateFormatter()
-        f.dateFormat = "h:mm a"
-        let start = f.string(from: job.date)
-        let endDate = job.date.addingTimeInterval(job.duration * 3600)
-        return "\(start) – \(f.string(from: endDate))"
-    }
-
-    private var durationText: String {
-        if job.duration == floor(job.duration) {
-            return "\(Int(job.duration)) hr"
+    private var statusColor: Color {
+        switch job.status {
+        case .completed: return Color.sweeplySuccess
+        case .inProgress: return .orange
+        case .scheduled: return Color.sweeplyBorder
+        case .cancelled: return Color.sweeplyDestructive
         }
-        return String(format: "%.1f hr", job.duration)
     }
+}
+
+#Preview {
+    ScheduleView()
+        .environment(AppSession())
+        .environment(JobsStore())
 }
 
 // MARK: - Detail

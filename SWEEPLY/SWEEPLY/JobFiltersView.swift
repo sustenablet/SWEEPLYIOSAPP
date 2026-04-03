@@ -1,0 +1,147 @@
+import SwiftUI
+
+struct JobFiltersView: View {
+    @Environment(\.dismiss) private var dismiss
+    @Binding var statusFilter: JobStatus?
+    @Binding var typeFilter: String
+    
+    // Internal state to allow "Cancel"
+    @State private var localStatus: JobStatus?
+    @State private var localType: String = "All"
+    
+    var body: some View {
+        VStack(spacing: 0) {
+            // Header
+            HStack {
+                Text("Filters")
+                    .font(.system(size: 20, weight: .bold))
+                Spacer()
+                Button("Clear") {
+                    localStatus = nil
+                    localType = "All"
+                }
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(Color.sweeplyAccent)
+            }
+            .padding(24)
+            
+            ScrollView {
+                VStack(alignment: .leading, spacing: 28) {
+                    // Status Group
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("STATUS")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundStyle(Color.sweeplyTextSub)
+                            .tracking(1.0)
+                        
+                        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
+                            FilterTile(label: "Any", isSelected: localStatus == nil) {
+                                localStatus = nil
+                            }
+                            
+                            ForEach(JobStatus.allCases, id: \.self) { status in
+                                FilterTile(label: status.rawValue.capitalized, isSelected: localStatus == status) {
+                                    localStatus = status
+                                }
+                            }
+                        }
+                    }
+                    
+                    // Job Type Group
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("JOB TYPE")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundStyle(Color.sweeplyTextSub)
+                            .tracking(1.0)
+                        
+                        VStack(spacing: 8) {
+                            TypeRow(label: "All Jobs", icon: "square.grid.2x2", isSelected: localType == "All") {
+                                localType = "All"
+                            }
+                            TypeRow(label: "Recurring", icon: "arrow.triangle.2.circlepath", isSelected: localType == "Recurring") {
+                                localType = "Recurring"
+                            }
+                            TypeRow(label: "One-time", icon: "calendar", isSelected: localType == "One-time") {
+                                localType = "One-time"
+                            }
+                        }
+                    }
+                }
+                .padding(.horizontal, 24)
+            }
+            
+            // Apply Button
+            Button {
+                statusFilter = localStatus
+                typeFilter = localType
+                dismiss()
+            } label: {
+                Text("Apply Filters")
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(Color.sweeplyNavy)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+            }
+            .padding(24)
+        }
+        .background(Color.sweeplySurface)
+        .onAppear {
+            localStatus = statusFilter
+            localType = typeFilter
+        }
+    }
+}
+
+private struct FilterTile: View {
+    let label: String
+    let isSelected: Bool
+    let action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            Text(label)
+                .font(.system(size: 14, weight: isSelected ? .bold : .medium))
+                .foregroundStyle(isSelected ? .white : Color.sweeplyNavy)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 12)
+                .background(isSelected ? Color.sweeplyNavy : Color.sweeplyBackground)
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+                .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.sweeplyBorder, lineWidth: isSelected ? 0 : 1))
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+private struct TypeRow: View {
+    let label: String
+    let icon: String
+    let isSelected: Bool
+    let action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 12) {
+                Image(systemName: icon)
+                    .font(.system(size: 16))
+                    .foregroundStyle(isSelected ? .white : Color.sweeplyNavy)
+                Text(label)
+                    .font(.system(size: 15, weight: isSelected ? .bold : .medium))
+                    .foregroundStyle(isSelected ? .white : Color.sweeplyNavy)
+                Spacer()
+                if isSelected {
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundStyle(.white)
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .background(isSelected ? Color.sweeplyNavy : Color.sweeplyBackground)
+            .clipShape(RoundedRectangle(cornerRadius: 10))
+            .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.sweeplyBorder, lineWidth: isSelected ? 0 : 1))
+        }
+        .buttonStyle(.plain)
+    }
+}

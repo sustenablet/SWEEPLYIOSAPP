@@ -8,6 +8,7 @@ struct RootView: View {
     @Environment(ProfileStore.self)  private var profileStore
 
     @State private var selectedTab: Tab = .dashboard
+    @State private var showNewJob = false
     @State private var showQuickAdd = false
 
     enum Tab {
@@ -58,7 +59,10 @@ struct RootView: View {
             }
             .tint(Color.sweeplyAccent)
 
-            FABView(selectedTab: $selectedTab)
+            FABView(selectedTab: $selectedTab, onNewJob: { showNewJob = true })
+        }
+        .sheet(isPresented: $showNewJob) {
+            NewJobForm()
         }
 
         .task(id: session.isAuthenticated) {
