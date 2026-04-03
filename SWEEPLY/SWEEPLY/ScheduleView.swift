@@ -511,66 +511,71 @@ private struct ScheduleJobRow: View {
     @State private var showDeleteConfirm = false
 
     var body: some View {
-        ZStack(alignment: .leading) {
-            Color.sweeplySurface
-            
-            Rectangle()
-                .fill(statusColor)
-                .frame(width: 4)
-            
-            HStack(spacing: 16) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(job.date.formatted(.dateTime.hour().minute()))
-                        .font(.system(size: 14, weight: .bold, design: .monospaced))
-                        .foregroundStyle(Color.sweeplyNavy)
-                    Text("\(Int(job.duration)) hr")
-                        .font(.system(size: 9))
-                        .foregroundStyle(Color.sweeplyTextSub)
-                }
-                .frame(width: 65, alignment: .leading)
+        NavigationLink(destination: JobDetailView(jobId: job.id)) {
+            ZStack(alignment: .leading) {
+                Color.sweeplySurface
                 
-                VStack(alignment: .leading, spacing: 4) {
-                    HStack(spacing: 4) {
-                        Text(job.clientName)
-                            .font(.system(size: 15, weight: .bold))
+                Rectangle()
+                    .fill(statusColor)
+                    .frame(width: 4)
+                
+                HStack(spacing: 16) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(job.date.formatted(.dateTime.hour().minute()))
+                            .font(.system(size: 14, weight: .bold, design: .monospaced))
                             .foregroundStyle(Color.sweeplyNavy)
-                        if job.isRecurring {
-                            Image(systemName: "arrow.triangle.2.circlepath")
-                                .font(.system(size: 10, weight: .bold))
-                                .foregroundStyle(Color.sweeplyAccent)
+                        Text("\(Int(job.duration)) hr")
+                            .font(.system(size: 9))
+                            .foregroundStyle(Color.sweeplyTextSub)
+                    }
+                    .frame(width: 65, alignment: .leading)
+                    
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack(spacing: 4) {
+                            Text(job.clientName)
+                                .font(.system(size: 15, weight: .bold))
+                                .foregroundStyle(Color.sweeplyNavy)
+                            if job.isRecurring {
+                                Image(systemName: "arrow.triangle.2.circlepath")
+                                    .font(.system(size: 10, weight: .bold))
+                                    .foregroundStyle(Color.sweeplyAccent)
+                            }
+                        }
+                        
+                        HStack(spacing: 6) {
+                            Text(job.serviceType.rawValue)
+                                .font(.system(size: 12))
+                                .foregroundStyle(Color.sweeplyTextSub)
+                            
+                            StatusBadge(status: job.status)
                         }
                     }
                     
-                    HStack(spacing: 6) {
-                        Text(job.serviceType.rawValue)
-                            .font(.system(size: 12))
-                            .foregroundStyle(Color.sweeplyTextSub)
-                        
-                        StatusBadge(status: job.status)
-                    }
-                }
-                
-                Spacer()
-                
-                HStack(spacing: 12) {
-                    Text(job.price.currency)
-                        .font(.system(size: 14, weight: .bold))
-                        .foregroundStyle(Color.sweeplyNavy)
+                    Spacer()
                     
-                    Button { showMenu = true } label: {
-                        Image(systemName: "ellipsis")
+                    HStack(spacing: 12) {
+                        Text(job.price.currency)
+                            .font(.system(size: 14, weight: .bold))
+                            .foregroundStyle(Color.sweeplyNavy)
+                        
+                        // Menu Button removed or changed because the whole row is clickable now.
+                        // Actually, I can keep the menu button inside if it works, or I'll just keep it.
+                        // But wait! Menus inside NavigationLink sometimes steal touches. 
+                        // It's safest to just rely on the DetailView!
+                        Image(systemName: "chevron.right")
                             .font(.system(size: 14, weight: .bold))
                             .foregroundStyle(Color.sweeplyBorder)
                             .frame(width: 24, height: 24)
                     }
                 }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 14)
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 14)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.sweeplyBorder, lineWidth: 1))
         }
-        .clipShape(RoundedRectangle(cornerRadius: 12))
-        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.sweeplyBorder, lineWidth: 1))
-        .confirmationDialog("Job Actions", isPresented: $showMenu, titleVisibility: .visible) {
+        .buttonStyle(.plain)
+        .contextMenu {
             ForEach(JobStatus.allCases, id: \.self) { status in
                 if job.status != status {
                     Button("Mark as \(status.rawValue.capitalized)") {
@@ -606,60 +611,3 @@ private struct ScheduleJobRow: View {
         .environment(JobsStore())
 }
 
-// MARK: - Detail
-
-struct ScheduleJobDetailView: View {
-    let job: Job
-
-    var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text(job.clientName)
-                        .font(.system(size: 22, weight: .semibold))
-                        .foregroundStyle(Color.sweeplyNavy)
-                    StatusBadge(status: job.status)
-                }
-
-                detailRow(icon: "wrench.and.screwdriver", title: "Service", value: job.serviceType.rawValue)
-                detailRow(icon: "clock", title: "Time", value: timeBlock)
-                detailRow(icon: "dollarsign.circle", title: "Price", value: job.price.currency)
-                detailRow(icon: "mappin.and.ellipse", title: "Location", value: job.address.isEmpty ? "—" : job.address)
-                detailRow(icon: "arrow.triangle.2.circlepath", title: "Recurring", value: job.isRecurring ? "Yes" : "No")
-            }
-            .padding(20)
-        }
-        .background(Color.sweeplyBackground.ignoresSafeArea())
-        .navigationBarTitleDisplayMode(.inline)
-    }
-
-    private var timeBlock: String {
-        let f = DateFormatter()
-        f.dateFormat = "EEEE, MMM d · h:mm a"
-        return f.string(from: job.date)
-    }
-
-    private func detailRow(icon: String, title: String, value: String) -> some View {
-        SectionCard {
-            HStack(alignment: .top, spacing: 12) {
-                Image(systemName: icon)
-                    .font(.system(size: 16))
-                    .foregroundStyle(Color.sweeplyAccent)
-                    .frame(width: 24)
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(title.uppercased())
-                        .font(.system(size: 10, weight: .bold))
-                        .foregroundStyle(Color.sweeplyTextSub.opacity(0.7))
-                        .tracking(0.8)
-                    Text(value)
-                        .font(.system(size: 15, weight: .medium))
-                        .foregroundStyle(Color.primary)
-                }
-            }
-        }
-    }
-}
-
-#Preview {
-    ScheduleView()
-}
