@@ -88,3 +88,98 @@ enum Radius {
     static let xl: CGFloat   = 20
     static let full: CGFloat = 999
 }
+
+// MARK: - Shared Formatting
+
+extension Double {
+    var currency: String {
+        Self.currencyFormatter.string(from: NSNumber(value: self)) ?? "$0.00"
+    }
+
+    private static let currencyFormatter: NumberFormatter = {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .currency
+        formatter.locale = .current
+        formatter.maximumFractionDigits = 2
+        formatter.minimumFractionDigits = 2
+        return formatter
+    }()
+}
+
+// MARK: - Shared Badges
+
+struct InvoiceStatusBadge: View {
+    let status: InvoiceStatus
+
+    var body: some View {
+        Text(status.rawValue.uppercased())
+            .font(.system(size: 10, weight: .bold))
+            .foregroundStyle(foregroundColor)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 5)
+            .background(backgroundColor)
+            .clipShape(Capsule())
+    }
+
+    private var foregroundColor: Color {
+        switch status {
+        case .paid:
+            return Color.sweeplyAccent
+        case .unpaid:
+            return Color.sweeplyNavy
+        case .overdue:
+            return Color.sweeplyDestructive
+        }
+    }
+
+    private var backgroundColor: Color {
+        switch status {
+        case .paid:
+            return Color.sweeplyAccent.opacity(0.12)
+        case .unpaid:
+            return Color.sweeplyNavy.opacity(0.10)
+        case .overdue:
+            return Color.sweeplyDestructive.opacity(0.12)
+        }
+    }
+}
+
+struct StatusBadge: View {
+    let status: JobStatus
+
+    var body: some View {
+        Text(status.rawValue.uppercased())
+            .font(.system(size: 10, weight: .bold))
+            .foregroundStyle(foregroundColor)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 5)
+            .background(backgroundColor)
+            .clipShape(Capsule())
+    }
+
+    private var foregroundColor: Color {
+        switch status {
+        case .completed:
+            return Color.sweeplyAccent
+        case .inProgress:
+            return .blue
+        case .scheduled:
+            return Color.sweeplyNavy
+        case .cancelled:
+            return Color.sweeplyDestructive
+        }
+    }
+
+    private var backgroundColor: Color {
+        switch status {
+        case .completed:
+            return Color.sweeplyAccent.opacity(0.12)
+        case .inProgress:
+            return Color.blue.opacity(0.12)
+        case .scheduled:
+            return Color.sweeplyNavy.opacity(0.10)
+        case .cancelled:
+            return Color.sweeplyDestructive.opacity(0.12)
+        }
+    }
+}

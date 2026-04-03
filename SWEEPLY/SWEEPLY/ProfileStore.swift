@@ -41,7 +41,8 @@ final class ProfileStore {
                 fullName: "",
                 businessName: "",
                 email: "",
-                phone: ""
+                phone: "",
+                settings: AppSettings()
             )
             lastError = nil // not a hard error
         }
@@ -54,12 +55,16 @@ final class ProfileStore {
         }
         lastError = nil
         do {
+            let settingsData = try JSONEncoder().encode(updated.settings)
+            let settingsString = String(data: settingsData, encoding: .utf8) ?? "{}"
+            
             let row = ProfileRowUpsert(
                 id: userId,
                 fullName: updated.fullName,
                 businessName: updated.businessName,
                 email: updated.email,
-                phone: updated.phone
+                phone: updated.phone,
+                settings_json: settingsString
             )
             let refreshed: ProfileRow = try await client
                 .from("profiles")
@@ -84,21 +89,32 @@ private struct ProfileRow: Decodable {
     let businessName: String?
     let email: String?
     let phone: String?
+    let settings_json: String?
 
     enum CodingKeys: String, CodingKey {
         case fullName     = "full_name"
         case businessName = "business_name"
         case email
         case phone
+        case settings_json
     }
 
     func toUserProfile(id: UUID) -> UserProfile {
-        UserProfile(
+        let settings: AppSettings
+        if let jsonString = settings_json,
+           let data = jsonString.data(using: .utf8) {
+            settings = (try? JSONDecoder().decode(AppSettings.self, from: data)) ?? AppSettings()
+        } else {
+            settings = AppSettings()
+        }
+        
+        return UserProfile(
             id: id,
             fullName: fullName ?? "",
             businessName: businessName ?? "",
             email: email ?? "",
-            phone: phone ?? ""
+            phone: phone ?? "",
+            settings: settings
         )
     }
 }
@@ -109,6 +125,7 @@ private struct ProfileRowUpsert: Encodable {
     let businessName: String
     let email: String
     let phone: String
+    let settings_json: String
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -116,5 +133,6 @@ private struct ProfileRowUpsert: Encodable {
         case businessName = "business_name"
         case email
         case phone
+        case settings_json
     }
 }

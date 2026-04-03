@@ -8,7 +8,22 @@ enum MockData {
         fullName: "João Leite",
         businessName: "Sweeply Cleaning Co.",
         email: "joao@sweeply.com",
-        phone: "+1 (305) 555-0192"
+        phone: "+1 (305) 555-0192",
+        settings: AppSettings(
+            street: "123 Ocean Drive",
+            city: "Miami",
+            state: "FL",
+            zip: "33139",
+            services: [
+                BusinessService(name: "Standard Clean", price: 150),
+                BusinessService(name: "Deep Clean", price: 280),
+                BusinessService(name: "Office/Commercial", price: 350)
+            ],
+            defaultRate: 150,
+            defaultDuration: 2.0,
+            taxRate: 7.0,
+            paymentTerms: 14
+        )
     )
 
     static let clients: [Client] = [

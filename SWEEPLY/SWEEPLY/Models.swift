@@ -31,6 +31,26 @@ struct UserProfile: Identifiable {
     var businessName: String
     var email: String
     var phone: String
+    var settings: AppSettings
+}
+
+struct AppSettings: Codable {
+    var street: String = ""
+    var city: String = ""
+    var state: String = ""
+    var zip: String = ""
+    var services: [BusinessService] = []
+    var defaultRate: Double = 0
+    var defaultDuration: Double = 2.0
+    var taxRate: Double = 0
+    var paymentTerms: Int = 14
+    var darkMode: Bool = false
+}
+
+struct BusinessService: Identifiable, Codable {
+    var id = UUID()
+    var name: String
+    var price: Double
 }
 
 struct Client: Identifiable {
