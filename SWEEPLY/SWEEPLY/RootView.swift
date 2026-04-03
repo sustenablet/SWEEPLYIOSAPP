@@ -12,27 +12,8 @@ struct RootView: View {
     }
 
     var body: some View {
-        Group {
-            if !session.hasResolvedInitialSession {
-                ZStack {
-                    Color.sweeplyBackground.ignoresSafeArea()
-                    ProgressView()
-                        .tint(Color.sweeplyAccent)
-                }
-            } else if !session.isAuthenticated {
-                AuthView()
-            } else {
-                mainTabs
-            }
-        }
-        .task(id: session.isAuthenticated) {
-            await clientsStore.load(isAuthenticated: session.isAuthenticated)
-        }
-        .onChange(of: session.isAuthenticated) { _, authed in
-            if !authed {
-                clientsStore.clear()
-            }
-        }
+        // Auth is bypassed during UI development — go straight to the main app.
+        mainTabs
     }
 
     private var mainTabs: some View {
