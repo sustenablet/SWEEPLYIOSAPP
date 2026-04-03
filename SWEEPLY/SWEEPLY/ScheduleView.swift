@@ -235,12 +235,7 @@ struct ScheduleView: View {
     
     private var monthView: some View {
         VStack(spacing: 0) {
-            DatePicker("", selection: $selectedDay, displayedComponents: .date)
-                .datePickerStyle(.graphical)
-                .padding()
-                .accentColor(Color.sweeplyNavy)
-                .background(Color.sweeplySurface)
-                .clipShape(RoundedRectangle(cornerRadius: 20))
+            JobberCalendarView(selectedDay: $selectedDay, jobs: jobsStore.jobs)
                 .padding(.horizontal, 20)
                 .padding(.top, 12)
             
@@ -267,6 +262,133 @@ struct ScheduleView: View {
             }
         }
     }
+}
+
+// MARK: - Custom Calendar Components
+
+struct JobberCalendarView: View {
+    @Binding var selectedDay: Date
+    let jobs: [Job]
+    private let calendar = Calendar.current
+    private let daysInWeek = 7
+    
+    var body: some View {
+        VStack(spacing: 20) {
+            // Month/Year and Arrows
+            HStack {
+                Text(monthYearString)
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundStyle(Color.sweeplyNavy)
+                Spacer()
+                HStack(spacing: 20) {
+                    Button { moveMonth(by: -1) } label: { Image(systemName: "chevron.left") }
+                    Button { moveMonth(by: 1) } label: { Image(systemName: "chevron.right") }
+                }
+                .foregroundStyle(Color.sweeplyNavy)
+            }
+            .padding(.horizontal, 10)
+
+            // Days of week labels
+            HStack {
+                ForEach(["S", "M", "T", "W", "T", "F", "S"], id: \.self) { day in
+                    Text(day)
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundStyle(Color.sweeplyTextSub)
+                        .frame(maxWidth: .infinity)
+                }
+            }
+
+            // Days grid
+            let days = daysInMonth()
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: daysInWeek), spacing: 14) {
+                ForEach(days, id: \.self) { date in
+                    if let date = date {
+                        CalendarDayCell(
+                            date: date,
+                            isSelected: calendar.isDate(date, inSameDayAs: selectedDay),
+                            isToday: calendar.isDateInToday(date),
+                            jobs: jobsForDate(date)
+                        )
+                        .onTapGesture { selectedDay = date }
+                    } else {
+                        Color.clear.frame(height: 38)
+                    }
+                }
+            }
+        }
+        .padding(20)
+        .background(Color.sweeplySurface)
+        .clipShape(RoundedRectangle(cornerRadius: 20))
+        .overlay(RoundedRectangle(cornerRadius: 20).stroke(Color.sweeplyBorder, lineWidth: 1))
+    }
+
+    private var monthYearString: String {
+        let f = DateFormatter()
+        f.dateFormat = "MMMM yyyy"
+        return f.string(from: selectedDay)
+    }
+
+    private func moveMonth(by months: Int) {
+        if let newDate = calendar.date(byAdding: .month, value: months, to: selectedDay) {
+            selectedDay = newDate
+        }
+    }
+
+    private func daysInMonth() -> [Date?] {
+        guard let monthRange = calendar.range(of: .day, in: .month, for: selectedDay),
+              let firstOfMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: selectedDay)) else {
+            return []
+        }
+        let weekday = calendar.component(.weekday, from: firstOfMonth)
+        let prefix = Array(repeating: nil as Date?, count: weekday - 1)
+        let monthDays = monthRange.map { day -> Date? in
+            calendar.date(byAdding: .day, value: day - 1, to: firstOfMonth)
+        }
+        return prefix + monthDays
+    }
+
+    private func jobsForDate(_ date: Date) -> [Job] {
+        jobs.filter { calendar.isDate($0.date, inSameDayAs: date) }
+    }
+}
+
+struct CalendarDayCell: View {
+    let date: Date
+    let isSelected: Bool
+    let isToday: Bool
+    let jobs: [Job]
+    private let calendar = Calendar.current
+
+    var body: some View {
+        VStack(spacing: 4) {
+            Text("\(calendar.component(.day, from: date))")
+                .font(.system(size: 14, weight: isSelected ? .bold : .medium))
+                .foregroundStyle(isSelected ? .white : (isToday ? Color.sweeplyAccent : Color.sweeplyNavy))
+                .frame(width: 32, height: 32)
+                .background(isSelected ? Color.sweeplyNavy : (isToday ? Color.sweeplyAccent.opacity(0.1) : Color.clear))
+                .clipShape(Circle())
+
+            HStack(spacing: 3) {
+                ForEach(jobs.prefix(3)) { job in
+                    Circle()
+                        .fill(statusColor(for: job.status))
+                        .frame(width: 4, height: 4)
+                }
+            }
+            .frame(height: 4)
+        }
+        .frame(height: 40)
+    }
+
+    private func statusColor(for status: JobStatus) -> Color {
+        switch status {
+        case .completed: return .green
+        case .inProgress: return .orange
+        case .cancelled: return .red
+        case .scheduled: return Color.sweeplyBorder
+        }
+    }
+}
 
     private func filteredJobsForDate(_ date: Date) -> [Job] {
         jobsStore.jobs
