@@ -1,8 +1,11 @@
 import SwiftUI
 
 struct RootView: View {
-    @Environment(AppSession.self) private var session
-    @Environment(ClientsStore.self) private var clientsStore
+    @Environment(AppSession.self)    private var session
+    @Environment(ClientsStore.self)  private var clientsStore
+    @Environment(JobsStore.self)     private var jobsStore
+    @Environment(InvoicesStore.self) private var invoicesStore
+    @Environment(ProfileStore.self)  private var profileStore
 
     @State private var selectedTab: Tab = .dashboard
     @State private var showQuickAdd = false
@@ -12,8 +15,21 @@ struct RootView: View {
     }
 
     var body: some View {
-        // Auth is bypassed during UI development — go straight to the main app.
-        mainTabs
+        Group {
+            if !SupabaseManager.isConfigured {
+                mainTabs
+            } else if !session.hasResolvedInitialSession {
+                ZStack {
+                    Color.sweeplyBackground.ignoresSafeArea()
+                    ProgressView()
+                        .tint(Color.sweeplyAccent)
+                }
+            } else if session.isAuthenticated {
+                mainTabs
+            } else {
+                AuthView()
+            }
+        }
     }
 
     private var mainTabs: some View {
@@ -72,6 +88,23 @@ struct RootView: View {
             Button("Cancel", role: .cancel) {}
         } message: {
             Text("Create something new")
+        }
+        .task(id: session.isAuthenticated) {
+            async let j: () = jobsStore.load(isAuthenticated: session.isAuthenticated)
+            async let i: () = invoicesStore.load(isAuthenticated: session.isAuthenticated)
+            _ = await (j, i)
+            if session.isAuthenticated, let uid = session.userId {
+                await profileStore.load(userId: uid)
+            }
+            await clientsStore.load(isAuthenticated: session.isAuthenticated)
+        }
+        .onChange(of: session.isAuthenticated) { _, authed in
+            if !authed {
+                clientsStore.clear()
+                jobsStore.clear()
+                invoicesStore.clear()
+                profileStore.clear()
+            }
         }
         .onAppear {
             let appearance = UITabBarAppearance()
