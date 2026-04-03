@@ -501,15 +501,14 @@ struct DashboardHealthSlide: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            HStack(alignment: .top) {
-                Spacer()
-                TrendBadge(value: card.trend, isPositive: card.isPositive)
-            }
-
             VStack(alignment: .leading, spacing: 6) {
-                Text(card.title)
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundStyle(Color.sweeplyNavy)
+                HStack(alignment: .center) {
+                    Text(card.title)
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundStyle(Color.sweeplyNavy)
+                    Spacer()
+                    TrendBadge(value: card.trend, isPositive: card.isPositive)
+                }
                 Text(card.subtitle)
                     .font(.system(size: 12))
                     .foregroundStyle(Color.sweeplyTextSub)
