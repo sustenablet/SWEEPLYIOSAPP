@@ -79,16 +79,16 @@ struct DashboardView: View {
 
                 Divider()
 
-                // ── Revenue Hero ─────────────────────────────────
-                revenueHero
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 24)
-
-                Divider()
-
-                // ── Stats Strip ──────────────────────────────────
-                statsStrip
-                    .padding(.vertical, 20)
+                // ── Dashboard Hero (Revenue + Stats Grid) ───────────
+                HStack(alignment: .top, spacing: 20) {
+                    revenueHero
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    
+                    statsGrid
+                        .frame(width: 160)
+                }
+                .padding(.horizontal, 20)
+                .padding(.vertical, 24)
 
                 Divider()
 
@@ -197,15 +197,12 @@ struct DashboardView: View {
         }
     }
 
-    private var statsStrip: some View {
-        HStack(spacing: 0) {
-            StatColumn(value: "\(clientsStore.clients.count)", label: "Clients")
-            stripDivider
-            StatColumn(value: "\(jobsStore.jobs.filter { $0.status == .scheduled }.count)", label: "Scheduled")
-            stripDivider
-            StatColumn(value: "\(todayJobs.filter { $0.status == .scheduled || $0.status == .inProgress}.count)", label: "Remaining")
-            stripDivider
-            StatColumn(value: outstandingTotal.currency, label: "Outstanding")
+    private var statsGrid: some View {
+        LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {
+            DashStatBox(value: "\(clientsStore.clients.count)", label: "Clients")
+            DashStatBox(value: "\(jobsStore.jobs.filter { $0.status == .scheduled }.count)", label: "Scheduled")
+            DashStatBox(value: "\(todayJobs.filter { $0.status == .scheduled || $0.status == .inProgress}.count)", label: "Remaining")
+            DashStatBox(value: outstandingTotal.currency, label: "Outstanding")
         }
     }
 
@@ -309,14 +306,26 @@ struct DashboardView: View {
 
 // MARK: - Subviews
 
-private struct StatColumn: View {
+private struct DashStatBox: View {
     let value: String
     let label: String
     var body: some View {
-        VStack(spacing: 5) {
-            Text(value).font(.system(size: 18, weight: .bold, design: .monospaced))
-            Text(label).font(.system(size: 10, weight: .medium)).foregroundStyle(Color.sweeplyTextSub).tracking(0.2)
-        }.frame(maxWidth: .infinity)
+        VStack(spacing: 4) {
+            Text(value)
+                .font(.system(size: 14, weight: .bold, design: .monospaced))
+                .foregroundStyle(Color.sweeplyNavy)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+            Text(label)
+                .font(.system(size: 9, weight: .semibold))
+                .foregroundStyle(Color.sweeplyTextSub)
+                .tracking(0.3)
+        }
+        .frame(maxWidth: .infinity)
+        .frame(height: 54)
+        .background(Color.sweeplySurface)
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.sweeplyBorder, lineWidth: 1))
     }
 }
 
