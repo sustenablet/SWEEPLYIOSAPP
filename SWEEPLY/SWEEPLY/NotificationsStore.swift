@@ -77,6 +77,36 @@ final class NotificationsStore {
             print("Failed to mark notification as read: \(error)")
         }
     }
+
+    func markAllAsRead(userId: UUID?) async {
+        for i in notifications.indices {
+            notifications[i].isRead = true
+        }
+        guard let userId = userId, SupabaseManager.isConfigured else { return }
+        do {
+            try await SupabaseManager.client.database
+                .from("notifications")
+                .update(["is_read": true])
+                .eq("user_id", value: userId)
+                .execute()
+        } catch {
+            print("Failed to mark all notifications as read: \(error)")
+        }
+    }
+
+    func delete(id: UUID) async {
+        notifications.removeAll(where: { $0.id == id })
+        guard SupabaseManager.isConfigured else { return }
+        do {
+            try await SupabaseManager.client.database
+                .from("notifications")
+                .delete()
+                .eq("id", value: id)
+                .execute()
+        } catch {
+            print("Failed to delete notification: \(error)")
+        }
+    }
 }
 
 // MARK: - Models

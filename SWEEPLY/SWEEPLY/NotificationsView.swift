@@ -8,28 +8,61 @@ struct NotificationsView: View {
     @Environment(NotificationsStore.self) private var notificationsStore
     @Environment(AppSession.self) private var session
 
+    @State private var filterUnread = false
+
     private var profile: UserProfile? {
         profileStore.profile
     }
 
-    private var notifications: [AppNotification] {
-        notificationsStore.notifications
+    private var unreadCount: Int {
+        notificationsStore.notifications.filter { !$0.isRead }.count
+    }
+
+    private var filteredNotifications: [AppNotification] {
+        if filterUnread {
+            return notificationsStore.notifications.filter { !$0.isRead }
+        }
+        return notificationsStore.notifications
     }
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
-                    if notifications.isEmpty {
-                        emptyState
-                    } else {
-                        summaryCard
+                    summaryCard
 
+                    HStack {
+                        Picker("Filter", selection: $filterUnread) {
+                            Text("All").tag(false)
+                            Text("Unread (\(unreadCount))").tag(true)
+                        }
+                        .pickerStyle(.segmented)
+                        .frame(width: 200)
+                        
+                        Spacer()
+                    }
+
+                    if filteredNotifications.isEmpty {
+                        emptyState
+
+                    } else {
                         VStack(spacing: 12) {
-                            ForEach(notifications) { notification in
+                            ForEach(filteredNotifications) { notification in
                                 NotificationCard(notification: notification)
                                     .onTapGesture {
                                         Task {
                                             await notificationsStore.markAsRead(id: notification.id, isAuthenticated: session.isAuthenticated)
+                                        }
+                                    }
+                                    .contextMenu {
+                                        if !notification.isRead {
+                                            Button("Mark as Read") {
+                                                Task { await notificationsStore.markAsRead(id: notification.id, isAuthenticated: session.isAuthenticated) }
+                                            }
+                                        }
+                                        Button(role: .destructive) {
+                                            Task { await notificationsStore.delete(id: notification.id) }
+                                        } label: {
+                                            Label("Delete", systemImage: "trash")
                                         }
                                     }
                             }
@@ -43,6 +76,15 @@ struct NotificationsView: View {
             .navigationTitle("Notifications")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    if unreadCount > 0 {
+                        Button("Mark all read") { 
+                            Task { await notificationsStore.markAllAsRead(userId: session.userId) }
+                        }
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundStyle(Color.sweeplyNavy)
+                    }
+                }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Close") { dismiss() }
                         .foregroundStyle(Color.sweeplyNavy)
@@ -67,7 +109,7 @@ struct NotificationsView: View {
                 }
 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("\(notifications.count) active update\(notifications.count == 1 ? "" : "s")")
+                    Text("\(unreadCount) active update\(unreadCount == 1 ? "" : "s")")
                         .font(.system(size: 17, weight: .semibold))
                         .foregroundStyle(Color.sweeplyNavy)
                     Text("Billing, scheduling, and account signals from your live app data.")
