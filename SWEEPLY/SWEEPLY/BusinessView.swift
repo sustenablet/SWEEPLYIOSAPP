@@ -1,16 +1,20 @@
 import SwiftUI
 
 struct BusinessView: View {
-    @Environment(AppSession.self) private var session
-
-    private let profile = MockData.profile
+    @Environment(AppSession.self)   private var session
+    @Environment(ProfileStore.self) private var profileStore
 
     @AppStorage("businessRemindersEnabled") private var remindersOn = true
     @AppStorage("businessJobConfirmations") private var jobConfirmationsOn = true
-    @AppStorage("businessMarketingEmails") private var marketingEmailsOn = false
+    @AppStorage("businessMarketingEmails")  private var marketingEmailsOn = false
 
     @State private var appeared = false
     @State private var showSignOutConfirm = false
+    @State private var showEditProfile = false
+
+    private var profile: UserProfile {
+        profileStore.profile ?? MockData.profile
+    }
 
     var body: some View {
         ScrollView {
@@ -41,7 +45,17 @@ struct BusinessView: View {
             }
             Button("Cancel", role: .cancel) {}
         }
+        .sheet(isPresented: $showEditProfile) {
+            EditProfileSheet(profile: profile) { updated in
+                Task {
+                    let uid = session.userId ?? profile.id
+                    await profileStore.save(updated, userId: uid)
+                }
+            }
+        }
     }
+
+    // MARK: - Sections
 
     private var header: some View {
         VStack(alignment: .leading, spacing: 4) {
@@ -61,30 +75,55 @@ struct BusinessView: View {
     }
 
     private var profileCard: some View {
-        HStack(alignment: .top, spacing: 16) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .fill(Color.sweeplyNavy)
-                    .frame(width: 64, height: 64)
-                Text(businessInitials)
-                    .font(.system(size: 22, weight: .bold))
-                    .foregroundStyle(.white)
-            }
+        VStack(spacing: 0) {
+            HStack(alignment: .top, spacing: 16) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .fill(Color.sweeplyNavy)
+                        .frame(width: 64, height: 64)
+                    Text(businessInitials)
+                        .font(.system(size: 22, weight: .bold))
+                        .foregroundStyle(.white)
+                }
 
-            VStack(alignment: .leading, spacing: 6) {
-                Text(profile.businessName)
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundStyle(Color.sweeplyNavy)
-                    .lineLimit(2)
-                Text(profile.fullName)
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundStyle(Color.primary)
-                LabeledValueRow(icon: "envelope", text: profile.email)
-                LabeledValueRow(icon: "phone", text: profile.phone)
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(profile.businessName.isEmpty ? "Your Business" : profile.businessName)
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundStyle(Color.sweeplyNavy)
+                        .lineLimit(2)
+                    Text(profile.fullName.isEmpty ? "Your Name" : profile.fullName)
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundStyle(Color.primary)
+                    if !profile.email.isEmpty {
+                        LabeledValueRow(icon: "envelope", text: profile.email)
+                    }
+                    if !profile.phone.isEmpty {
+                        LabeledValueRow(icon: "phone", text: profile.phone)
+                    }
+                }
+                Spacer(minLength: 0)
             }
-            Spacer(minLength: 0)
+            .padding(18)
+
+            Divider()
+                .background(Color.sweeplyBorder)
+                .padding(.horizontal, 18)
+
+            Button {
+                showEditProfile = true
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "pencil")
+                        .font(.system(size: 13, weight: .semibold))
+                    Text("Edit profile")
+                        .font(.system(size: 14, weight: .semibold))
+                }
+                .foregroundStyle(Color.sweeplyNavy)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 12)
+            }
+            .buttonStyle(.plain)
         }
-        .padding(18)
         .background(Color.sweeplySurface)
         .clipShape(RoundedRectangle(cornerRadius: Radius.md, style: .continuous))
         .overlay(
@@ -94,7 +133,8 @@ struct BusinessView: View {
     }
 
     private var businessInitials: String {
-        let parts = profile.businessName.split(separator: " ")
+        let name = profile.businessName.isEmpty ? profile.fullName : profile.businessName
+        let parts = name.split(separator: " ")
         let letters = parts.prefix(2).compactMap { $0.first }.map(String.init)
         return letters.joined().uppercased()
     }
@@ -149,7 +189,7 @@ struct BusinessView: View {
         .padding(.top, 4)
     }
 
-    // MARK: - Section builder
+    // MARK: - Row builders
 
     private func sectionCard<Content: View>(title: String, @ViewBuilder content: () -> Content) -> some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -229,6 +269,186 @@ struct BusinessView: View {
     }
 }
 
+// MARK: - Edit Profile Sheet
+
+private struct EditProfileSheet: View {
+    @Environment(\.dismiss) private var dismiss
+
+    let profile: UserProfile
+    let onSave: (UserProfile) -> Void
+
+    @State private var fullName: String
+    @State private var businessName: String
+    @State private var email: String
+    @State private var phone: String
+    @State private var isSaving = false
+
+    init(profile: UserProfile, onSave: @escaping (UserProfile) -> Void) {
+        self.profile = profile
+        self.onSave = onSave
+        _fullName     = State(initialValue: profile.fullName)
+        _businessName = State(initialValue: profile.businessName)
+        _email        = State(initialValue: profile.email)
+        _phone        = State(initialValue: profile.phone)
+    }
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: 24) {
+                    avatarBlock
+                    formCard
+                }
+                .padding(.horizontal, 20)
+                .padding(.top, 8)
+                .padding(.bottom, 40)
+            }
+            .background(Color.sweeplyBackground.ignoresSafeArea())
+            .navigationTitle("Edit profile")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                        .foregroundStyle(Color.sweeplyTextSub)
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button {
+                        save()
+                    } label: {
+                        if isSaving {
+                            ProgressView()
+                                .tint(Color.sweeplyNavy)
+                        } else {
+                            Text("Save")
+                                .font(.system(size: 15, weight: .semibold))
+                                .foregroundStyle(Color.sweeplyNavy)
+                        }
+                    }
+                    .disabled(isSaving)
+                }
+            }
+        }
+    }
+
+    // MARK: - Sub-views
+
+    private var avatarBlock: some View {
+        VStack(spacing: 10) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                    .fill(Color.sweeplyNavy)
+                    .frame(width: 80, height: 80)
+                Text(editedInitials)
+                    .font(.system(size: 28, weight: .bold))
+                    .foregroundStyle(.white)
+            }
+            Text("Your initials are generated from your name")
+                .font(.system(size: 12))
+                .foregroundStyle(Color.sweeplyTextSub)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.top, 12)
+    }
+
+    private var formCard: some View {
+        VStack(spacing: 0) {
+            fieldRow(
+                label: "Full name",
+                placeholder: "e.g. Maria Santos",
+                text: $fullName,
+                icon: "person",
+                keyboard: .default
+            )
+            Divider().background(Color.sweeplyBorder).padding(.leading, 48)
+
+            fieldRow(
+                label: "Business name",
+                placeholder: "e.g. Sparkle Clean Co.",
+                text: $businessName,
+                icon: "building.2",
+                keyboard: .default
+            )
+            Divider().background(Color.sweeplyBorder).padding(.leading, 48)
+
+            fieldRow(
+                label: "Email",
+                placeholder: "you@example.com",
+                text: $email,
+                icon: "envelope",
+                keyboard: .emailAddress
+            )
+            Divider().background(Color.sweeplyBorder).padding(.leading, 48)
+
+            fieldRow(
+                label: "Phone",
+                placeholder: "+1 (555) 000-0000",
+                text: $phone,
+                icon: "phone",
+                keyboard: .phonePad
+            )
+        }
+        .background(Color.sweeplySurface)
+        .clipShape(RoundedRectangle(cornerRadius: Radius.md, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: Radius.md, style: .continuous)
+                .stroke(Color.sweeplyBorder, lineWidth: 1)
+        )
+    }
+
+    private func fieldRow(
+        label: String,
+        placeholder: String,
+        text: Binding<String>,
+        icon: String,
+        keyboard: UIKeyboardType
+    ) -> some View {
+        HStack(alignment: .center, spacing: 12) {
+            Image(systemName: icon)
+                .font(.system(size: 15))
+                .foregroundStyle(Color.sweeplyTextSub)
+                .frame(width: 24)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(label)
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(Color.sweeplyTextSub)
+                TextField(placeholder, text: text)
+                    .font(.system(size: 15))
+                    .keyboardType(keyboard)
+                    .autocorrectionDisabled()
+                    .textInputAutocapitalization(keyboard == .emailAddress ? .never : .words)
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 13)
+    }
+
+    // MARK: - Helpers
+
+    private var editedInitials: String {
+        let source = businessName.isEmpty ? fullName : businessName
+        let parts = source.split(separator: " ")
+        let letters = parts.prefix(2).compactMap { $0.first }.map(String.init)
+        return letters.joined().uppercased().isEmpty ? "?" : letters.joined().uppercased()
+    }
+
+    private func save() {
+        isSaving = true
+        let updated = UserProfile(
+            id: profile.id,
+            fullName: fullName.trimmingCharacters(in: .whitespaces),
+            businessName: businessName.trimmingCharacters(in: .whitespaces),
+            email: email.trimmingCharacters(in: .whitespaces),
+            phone: phone.trimmingCharacters(in: .whitespaces)
+        )
+        onSave(updated)
+        isSaving = false
+        dismiss()
+    }
+}
+
+// MARK: - Supporting view
+
 private struct LabeledValueRow: View {
     let icon: String
     let text: String
@@ -249,4 +469,5 @@ private struct LabeledValueRow: View {
 #Preview {
     BusinessView()
         .environment(AppSession())
+        .environment(ProfileStore())
 }
