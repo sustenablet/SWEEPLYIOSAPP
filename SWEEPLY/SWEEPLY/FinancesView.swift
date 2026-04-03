@@ -385,61 +385,54 @@ private struct MinimalInvoiceRow: View {
     }
 
     var body: some View {
-        HStack(alignment: .center, spacing: 14) {
-            VStack(alignment: .leading, spacing: 6) {
-                HStack(alignment: .firstTextBaseline) {
-                    Text(invoice.clientName)
-                        .font(.system(size: 15, weight: .medium))
-                        .foregroundStyle(Color.sweeplyNavy)
-                        .lineLimit(1)
-                    Spacer(minLength: 8)
-                    Text(invoice.amount.currency)
-                        .font(.system(size: 15, weight: .semibold, design: .rounded))
-                        .foregroundStyle(Color.sweeplyNavy)
-                        .monospacedDigit()
+        NavigationLink(destination: InvoiceDetailView(invoiceId: invoice.id)) {
+            HStack(alignment: .center, spacing: 14) {
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack(alignment: .firstTextBaseline) {
+                        Text(invoice.clientName)
+                            .font(.system(size: 15, weight: .medium))
+                            .foregroundStyle(Color.sweeplyNavy)
+                            .lineLimit(1)
+                        Spacer(minLength: 8)
+                        Text(invoice.amount.currency)
+                            .font(.system(size: 15, weight: .semibold, design: .rounded))
+                            .foregroundStyle(Color.sweeplyNavy)
+                            .monospacedDigit()
+                    }
+                    HStack(spacing: 8) {
+                        Text(invoice.invoiceNumber)
+                            .font(.system(size: 11, weight: .regular, design: .monospaced))
+                            .foregroundStyle(Color.sweeplyTextSub)
+                        Text("·")
+                            .foregroundStyle(Color.sweeplyBorder)
+                        Text(dueDateLabel)
+                            .font(.system(size: 11, weight: .regular))
+                            .foregroundStyle(Color.sweeplyTextSub)
+                        Spacer(minLength: 8)
+                        InvoiceStatusBadge(status: invoice.status)
+                    }
                 }
-                HStack(spacing: 8) {
-                    Text(invoice.invoiceNumber)
-                        .font(.system(size: 11, weight: .regular, design: .monospaced))
-                        .foregroundStyle(Color.sweeplyTextSub)
-                    Text("·")
-                        .foregroundStyle(Color.sweeplyBorder)
-                    Text(dueDateLabel)
-                        .font(.system(size: 11, weight: .regular))
-                        .foregroundStyle(Color.sweeplyTextSub)
-                    Spacer(minLength: 8)
-                    InvoiceStatusBadge(status: invoice.status)
+
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(Color.sweeplyBorder)
+                    .frame(width: 32, height: 32)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 14)
+        }
+        .buttonStyle(.plain)
+        .contextMenu {
+            if invoice.status != .paid {
+                Button { Task { await invoicesStore.markPaid(id: invoice.id) } } label: {
+                    Label("Mark as paid", systemImage: "checkmark.circle")
                 }
             }
-
-            Menu {
-                if invoice.status != .paid {
-                    Button { Task { await invoicesStore.markPaid(id: invoice.id) } } label: {
-                        Label("Mark as paid", systemImage: "checkmark.circle")
-                    }
-                    Button {} label: {
-                        Label("Send reminder", systemImage: "bell")
-                    }
-                    Divider()
-                }
-                Button {} label: {
-                    Label("View details", systemImage: "doc.text")
-                }
-                Button(role: .destructive) {} label: {
-                    Label("Delete", systemImage: "trash")
-                }
-            } label: {
-                Image(systemName: "ellipsis")
-                    .font(.system(size: 15, weight: .medium))
-                    .foregroundStyle(Color.sweeplyTextSub)
-                    .frame(width: 32, height: 32)
-                    .contentShape(Rectangle())
+            Button(role: .destructive) {} label: {
+                Label("Delete", systemImage: "trash")
             }
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 14)
     }
-
 }
 
 #Preview {
