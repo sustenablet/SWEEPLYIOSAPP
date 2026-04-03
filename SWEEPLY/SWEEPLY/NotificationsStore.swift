@@ -9,14 +9,14 @@ final class NotificationsStore {
     private var isLoaded = false
 
     func load(isAuthenticated: Bool, userId: UUID?) async {
-        guard isAuthenticated, let userId = userId, SupabaseManager.isConfigured else {
+        guard isAuthenticated, let userId = userId, let client = SupabaseManager.shared else {
             // Load mock notifications if not authenticated/configured
             notifications = MockData.notifications.sorted { $0.timestamp > $1.timestamp }
             return
         }
 
         do {
-            let fetched: [RemoteNotification] = try await SupabaseManager.client.database
+            let fetched: [RemoteNotification] = try await client.database
                 .from("notifications")
                 .select()
                 .eq("user_id", value: userId)
@@ -65,10 +65,10 @@ final class NotificationsStore {
             notifications[idx].isRead = true
         }
 
-        guard isAuthenticated, SupabaseManager.isConfigured else { return }
+        guard isAuthenticated, let client = SupabaseManager.shared else { return }
         
         do {
-            try await SupabaseManager.client.database
+            try await client.database
                 .from("notifications")
                 .update(["is_read": true])
                 .eq("id", value: id)
@@ -82,9 +82,9 @@ final class NotificationsStore {
         for i in notifications.indices {
             notifications[i].isRead = true
         }
-        guard let userId = userId, SupabaseManager.isConfigured else { return }
+        guard let userId = userId, let client = SupabaseManager.shared else { return }
         do {
-            try await SupabaseManager.client.database
+            try await client.database
                 .from("notifications")
                 .update(["is_read": true])
                 .eq("user_id", value: userId)
@@ -96,9 +96,9 @@ final class NotificationsStore {
 
     func delete(id: UUID) async {
         notifications.removeAll(where: { $0.id == id })
-        guard SupabaseManager.isConfigured else { return }
+        guard let client = SupabaseManager.shared else { return }
         do {
-            try await SupabaseManager.client.database
+            try await client.database
                 .from("notifications")
                 .delete()
                 .eq("id", value: id)
