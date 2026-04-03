@@ -5,40 +5,48 @@ struct BusinessView: View {
     @Environment(ClientsStore.self)  private var clientsStore
     @Environment(JobsStore.self)     private var jobsStore
     @Environment(InvoicesStore.self) private var invoicesStore
+    @Environment(ProfileStore.self)  private var profileStore
 
-    private var profile: UserProfile { MockData.profile }
+    @AppStorage("businessRemindersEnabled") private var remindersOn = true
+    @AppStorage("businessJobConfirmations") private var jobConfirmationsOn = true
+    @AppStorage("businessMarketingEmails")  private var marketingEmailsOn = false
 
     @State private var appeared = false
+    @State private var showSignOutConfirm = false
     @State private var showSettings = false
+
+    private var profile: UserProfile {
+        profileStore.profile ?? MockData.profile
+    }
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 28) {
-                // Header (Professional and Bold)
+                // Header
                 VStack(alignment: .leading, spacing: 4) {
                     Text(profile.businessName.uppercased())
-                        .font(.system(size: 11, weight: .bold))
+                        .font(.system(size: 10, weight: .bold))
                         .foregroundStyle(Color.sweeplyTextSub)
                         .tracking(1.4)
-                    Text("Business Overview")
-                        .font(.system(size: 32, weight: .bold))
+                    Text("Operational Overview")
+                        .font(.system(size: 28, weight: .semibold))
                         .foregroundStyle(Color.sweeplyNavy)
                 }
-                .padding(.top, 24)
+                .padding(.top, 16)
 
-                // 1. Performance Overview
+                // 1. Performance KPIs
                 HStack(spacing: 12) {
                     KPIBlock(title: "Total Clients", value: "\(clientsStore.clients.count)", icon: "person.2.fill")
                     KPIBlock(title: "Jobs (Mtd)", value: "48", icon: "briefcase.fill")
                     KPIBlock(title: "Revenue", value: "$12.4k", icon: "dollarsign.circle.fill")
                 }
 
-                // 2. Service Distribution (Internal Growth)
+                // 2. Service Distribution
                 SectionCard {
-                    VStack(alignment: .leading, spacing: 18) {
-                        CardHeader(title: "Service Mix", subtitle: "Breakdown of active contracts", action: nil)
+                    VStack(alignment: .leading, spacing: 16) {
+                        CardHeader(title: "Service Distribution", subtitle: "Most popular offerings", action: nil)
                         
-                        VStack(spacing: 16) {
+                        VStack(spacing: 14) {
                             ServiceMixRow(label: "Standard Clean", percentage: 0.65, count: 31)
                             ServiceMixRow(label: "Deep Clean", percentage: 0.25, count: 12)
                             ServiceMixRow(label: "Office/Commercial", percentage: 0.10, count: 5)
@@ -46,12 +54,12 @@ struct BusinessView: View {
                     }
                 }
 
-                // 3. Top Clients (Visualizing Value)
+                // 3. Top Clients
                 SectionCard {
-                    VStack(alignment: .leading, spacing: 14) {
+                    VStack(alignment: .leading, spacing: 12) {
                         CardHeader(title: "Top Clients", subtitle: "Based on monthly job volume", action: nil)
                         Divider()
-                        ForEach(MockData.clients.prefix(3)) { client in
+                        ForEach(clientsStore.clients.prefix(3)) { client in
                             HStack {
                                 Text(client.name).font(.system(size: 15, weight: .semibold))
                                 Spacer()
@@ -62,51 +70,53 @@ struct BusinessView: View {
                     }
                 }
 
-                // 4. Managed Profile Card
-                SectionCard {
-                    HStack(spacing: 16) {
-                        ZStack {
-                            RoundedRectangle(cornerRadius: 12)
-                                .fill(Color.sweeplyNavy)
-                                .frame(width: 50, height: 50)
-                            Text(businessInitials)
-                                .font(.system(size: 18, weight: .bold))
-                                .foregroundStyle(.white)
+                // 4. Quick Actions (Condensed)
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("PREFERENCES & SUPPORT")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundStyle(Color.sweeplyTextSub)
+                        .tracking(1.2)
+                    
+                    SectionCard {
+                        VStack(spacing: 0) {
+                            NavigationRow(title: "Settings", icon: "gearshape.fill") { showSettings = true }
+                            Divider().padding(.leading, 36)
+                            NavigationRow(title: "Help & Support", icon: "questionmark.circle.fill") { /* Help */ }
                         }
-                        
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(profile.fullName)
-                                .font(.system(size: 16, weight: .semibold))
-                            Text(profile.email)
-                                .font(.system(size: 13))
-                                .foregroundStyle(Color.sweeplyTextSub)
-                        }
-                        Spacer()
-                        Button { showSettings = true } label: {
-                            Text("Edit")
-                                .font(.system(size: 13, weight: .bold))
-                                .foregroundStyle(Color.sweeplyAccent)
-                        }
+                        .padding(-16) // full bleed
                     }
                 }
-                .padding(.bottom, 60) // Extra padding for FAB
+
+                // Sign Out
+                Button(role: .destructive) {
+                    showSignOutConfirm = true
+                } label: {
+                    Text("Sign Out")
+                        .font(.system(size: 15, weight: .semibold))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .background(Color.sweeplySurface)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.sweeplyBorder, lineWidth: 1))
+                }
+                .buttonStyle(.plain)
             }
             .padding(.horizontal, 20)
+            .padding(.bottom, 40)
             .opacity(appeared ? 1 : 0)
             .offset(y: appeared ? 0 : 8)
         }
         .background(Color.sweeplyBackground.ignoresSafeArea())
         .onAppear {
-            withAnimation(.easeOut(duration: 0.35)) { appeared = true }
+            withAnimation(.easeOut(duration: 0.3)) { appeared = true }
+        }
+        .confirmationDialog("Sign out of Sweeply?", isPresented: $showSignOutConfirm, titleVisibility: .visible) {
+            Button("Sign Out", role: .destructive) { Task { await session.signOut() } }
+            Button("Cancel", role: .cancel) {}
         }
         .fullScreenCover(isPresented: $showSettings) {
             SettingsView()
         }
-    }
-
-    private var businessInitials: String {
-        let parts = profile.businessName.split(separator: " ")
-        return parts.prefix(2).compactMap { $0.first }.map(String.init).joined().uppercased()
     }
 }
 
@@ -123,10 +133,10 @@ private struct KPIBlock: View {
                     .font(.system(size: 14))
                     .foregroundStyle(Color.sweeplyTextSub)
                 Text(value)
-                    .font(.system(size: 22, weight: .bold, design: .rounded))
+                    .font(.system(size: 20, weight: .bold, design: .rounded))
                     .foregroundStyle(Color.sweeplyNavy)
                 Text(title)
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(.system(size: 10, weight: .semibold))
                     .foregroundStyle(Color.sweeplyTextSub)
                     .lineLimit(1)
             }
@@ -140,27 +150,49 @@ private struct ServiceMixRow: View {
     let percentage: Double
     let count: Int
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 6) {
             HStack {
-                Text(label).font(.system(size: 14, weight: .medium))
+                Text(label).font(.system(size: 13, weight: .medium))
                 Spacer()
-                Text("\(count) jobs").font(.system(size: 12)).foregroundStyle(Color.sweeplyTextSub)
+                Text("\(count) jobs").font(.system(size: 11)).foregroundStyle(Color.sweeplyTextSub)
             }
             GeometryReader { geo in
                 ZStack(alignment: .leading) {
-                    RoundedRectangle(cornerRadius: 6)
-                        .fill(Color.sweeplyBorder.opacity(0.3))
-                    RoundedRectangle(cornerRadius: 6)
-                        .fill(Color.sweeplyNavy)
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(Color.sweeplyBorder.opacity(0.5))
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(Color.sweeplyNavy.opacity(0.8))
                         .frame(width: geo.size.width * percentage)
                 }
             }
-            .frame(height: 8)
+            .frame(height: 6)
         }
+    }
+}
+
+private struct NavigationRow: View {
+    let title: String
+    let icon: String
+    var action: () -> Void = {}
+    var body: some View {
+        Button(action: action) {
+            HStack {
+                Image(systemName: icon)
+                    .frame(width: 24)
+                    .foregroundStyle(Color.sweeplyNavy.opacity(0.7))
+                Text(title).font(.system(size: 15))
+                Spacer()
+                Image(systemName: "chevron.right").font(.system(size: 12, weight: .semibold)).foregroundStyle(Color.sweeplyBorder)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+        }
+        .buttonStyle(.plain)
     }
 }
 
 #Preview {
     BusinessView()
         .environment(AppSession())
+        .environment(ProfileStore())
 }
