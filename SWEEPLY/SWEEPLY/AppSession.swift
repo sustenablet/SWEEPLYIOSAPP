@@ -24,10 +24,6 @@ final class AppSession {
         Task { await refreshSession() }
     }
 
-    deinit {
-        authTask?.cancel()
-    }
-
     func signIn(email: String, password: String) async {
         guard let client = SupabaseManager.shared else { return }
         lastAuthError = nil

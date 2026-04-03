@@ -4,42 +4,49 @@ import SwiftUI
 //
 // Palette: Warm Linen × Forest Green
 //
-// Background  #F6F5F1  — warm linen; not clinical, not gray
-// Surface     #FFFFFF  — pure white cards stand out from the linen field
-// Navy        #121212  — near-black chrome; tab bar, avatars, dark elements
-// Accent      #1B9966  — forest green; fresh, trusted, money — primary brand color
-// Success     #1B9966  — same green (unified, no split identity)
-// Warning     #CF8B0E  — dark amber; sophisticated, not traffic-light
-// Destructive #C73333  — confident red
-// TextSub     #6F6F6F  — neutral mid-gray
-// Border      #E6E5E2  — warm hairline; barely visible on linen
+// ┌─────────────────────────────────────────────────────────────┐
+// │  Color discipline — read before using any sweeply* color    │
+// │                                                             │
+// │  PRIMARY TEXT → Color.primary (system black)                │
+// │  SECONDARY TEXT → sweeplyTextSub (gray)                     │
+// │  NUMBERS & AMOUNTS → Color.primary — never colored          │
+// │  BACKGROUNDS → sweeplyBackground (pages) / sweeplySurface   │
+// │                                                             │
+// │  sweeplyAccent:      CTA buttons · selected tabs · checkmarks│
+// │  sweeplySuccess:     "Paid" badge only                      │
+// │  sweeplyWarning:     "Unpaid" badge only                    │
+// │  sweeplyDestructive: "Overdue" badge · destructive actions  │
+// │                                                             │
+// │  ⚠️  Never use accent/success/warning on body text,         │
+// │     stat numbers, icons, or decorative elements.            │
+// └─────────────────────────────────────────────────────────────┘
 
 extension Color {
-    /// Forest green — primary brand color, interactive elements, selected states
+    /// Forest green — CTA buttons, selected state, checkmarks, "Paid" badge
     static let sweeplyAccent      = Color(red: 0.106, green: 0.600, blue: 0.400)
 
-    /// Near-black — tab bar, avatar backgrounds, dark emphasis
+    /// Near-black — tab bar, avatar fill, dark UI chrome
     static let sweeplyNavy        = Color(red: 0.071, green: 0.071, blue: 0.071)
 
-    /// Warm linen — page background
+    /// Warm linen — page/scroll background
     static let sweeplyBackground  = Color(red: 0.965, green: 0.961, blue: 0.945)
 
-    /// Forest green — confirmed, paid, completed states (intentionally = accent)
+    /// Forest green — "Paid" confirmed states (= accent, unified)
     static let sweeplySuccess     = Color(red: 0.106, green: 0.600, blue: 0.400)
 
-    /// Dark amber — attention, pending, unpaid
+    /// Dark amber — "Unpaid" badge only
     static let sweeplyWarning     = Color(red: 0.812, green: 0.545, blue: 0.055)
 
-    /// Confident red — overdue, error, destructive
+    /// Confident red — "Overdue" badge, error states, destructive actions
     static let sweeplyDestructive = Color(red: 0.780, green: 0.200, blue: 0.200)
 
-    /// Neutral mid-gray — secondary text, captions, placeholders
+    /// Mid-gray — secondary labels, captions, placeholder text, section headers
     static let sweeplyTextSub     = Color(red: 0.435, green: 0.435, blue: 0.435)
 
-    /// Pure white — cards, sheets, input backgrounds
+    /// Pure white — card and sheet backgrounds
     static let sweeplySurface     = Color.white
 
-    /// Warm hairline — borders, dividers
+    /// Warm hairline — borders, dividers, separators
     static let sweeplyBorder      = Color(red: 0.902, green: 0.898, blue: 0.886)
 }
 
