@@ -10,9 +10,6 @@ struct NotificationsView: View {
 
     @State private var filterUnread = false
 
-    private var profile: UserProfile? {
-        profileStore.profile
-    }
 
     private var unreadCount: Int {
         notificationsStore.notifications.filter { !$0.isRead }.count
