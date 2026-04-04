@@ -144,6 +144,8 @@ struct Client: Identifiable {
     var preferredService: ServiceType?
     var entryInstructions: String
     var notes: String
+    var latitude: Double?
+    var longitude: Double?
 }
 
 struct Job: Identifiable, Codable {

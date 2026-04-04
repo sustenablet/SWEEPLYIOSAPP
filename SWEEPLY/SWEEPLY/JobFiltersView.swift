@@ -4,10 +4,12 @@ struct JobFiltersView: View {
     @Environment(\.dismiss) private var dismiss
     @Binding var statusFilter: JobStatus?
     @Binding var typeFilter: String
+    @Binding var enabledViewModes: Set<ScheduleViewMode>
     
     // Internal state to allow "Cancel"
     @State private var localStatus: JobStatus?
     @State private var localType: String = "All"
+    @State private var localViewModes: Set<ScheduleViewMode> = []
     
     var body: some View {
         VStack(spacing: 0) {
@@ -19,6 +21,7 @@ struct JobFiltersView: View {
                 Button("Clear") {
                     localStatus = nil
                     localType = "All"
+                    localViewModes = Set(ScheduleViewMode.allCases)
                 }
                 .font(.system(size: 14, weight: .semibold))
                 .foregroundStyle(Color.sweeplyAccent)
@@ -66,6 +69,30 @@ struct JobFiltersView: View {
                             }
                         }
                     }
+                    
+                    // View Modes Group
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("VIEW MODES")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundStyle(Color.sweeplyTextSub)
+                            .tracking(1.0)
+                        
+                        VStack(spacing: 8) {
+                            ForEach(ScheduleViewMode.allCases, id: \.self) { mode in
+                                ViewModeRow(
+                                    label: mode.rawValue,
+                                    icon: iconFor(mode: mode),
+                                    isSelected: localViewModes.contains(mode)
+                                ) {
+                                    if localViewModes.contains(mode) {
+                                        localViewModes.remove(mode)
+                                    } else {
+                                        localViewModes.insert(mode)
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
                 .padding(.horizontal, 24)
             }
@@ -74,6 +101,7 @@ struct JobFiltersView: View {
             Button {
                 statusFilter = localStatus
                 typeFilter = localType
+                enabledViewModes = localViewModes
                 dismiss()
             } label: {
                 Text("Apply Filters")
@@ -90,6 +118,16 @@ struct JobFiltersView: View {
         .onAppear {
             localStatus = statusFilter
             localType = typeFilter
+            localViewModes = enabledViewModes
+        }
+    }
+    
+    private func iconFor(mode: ScheduleViewMode) -> String {
+        switch mode {
+        case .day: return "calendar"
+        case .list: return "list.bullet"
+        case .month: return "calendar.badge.month"
+        case .map: return "map"
         }
     }
 }
@@ -115,6 +153,38 @@ private struct FilterTile: View {
 }
 
 private struct TypeRow: View {
+    let label: String
+    let icon: String
+    let isSelected: Bool
+    let action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 12) {
+                Image(systemName: icon)
+                    .font(.system(size: 16))
+                    .foregroundStyle(isSelected ? .white : Color.sweeplyNavy)
+                Text(label)
+                    .font(.system(size: 15, weight: isSelected ? .bold : .medium))
+                    .foregroundStyle(isSelected ? .white : Color.sweeplyNavy)
+                Spacer()
+                if isSelected {
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundStyle(.white)
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .background(isSelected ? Color.sweeplyNavy : Color.sweeplyBackground)
+            .clipShape(RoundedRectangle(cornerRadius: 10))
+            .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.sweeplyBorder, lineWidth: isSelected ? 0 : 1))
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+private struct ViewModeRow: View {
     let label: String
     let icon: String
     let isSelected: Bool

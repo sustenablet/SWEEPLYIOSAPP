@@ -157,7 +157,7 @@ struct DashboardView: View {
                 .padding(.bottom, 24)
 
                 // ── Sub-sections with spacing ────────────────────
-                VStack(spacing: 20) {
+                VStack(spacing: 12) {
                     // ── Getting Started checklist ────────────────
                     if showPlaybook && !playbookDone.allSatisfy({ $0 }) {
                         DashboardPlaybook(playbookDone: $playbookDone, showPlaybook: $showPlaybook)

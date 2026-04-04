@@ -1,15 +1,18 @@
 import SwiftUI
+import MapKit
 
-// MARK: - Schedule (Jobber-style day / list / map)
+// MARK: - Schedule (Jobber-style day / list / map / map)
 
 enum ScheduleViewMode: String, CaseIterable {
     case day = "Day"
     case list = "List"
     case month = "Month"
+    case map = "Map"
 }
 
 struct ScheduleView: View {
     @Environment(JobsStore.self) private var jobsStore
+    @Environment(ClientsStore.self) private var clientsStore
     @State private var appeared = false
     @State private var viewMode: ScheduleViewMode = .day
     @State private var selectedDay: Date = Calendar.current.startOfDay(for: Date())
@@ -17,6 +20,11 @@ struct ScheduleView: View {
     @State private var statusFilter: JobStatus? = nil
     @State private var typeFilter: String = "All"
     @State private var showMonthPicker = false
+    @State private var enabledViewModes: Set<ScheduleViewMode> = [.day, .list, .month]
+    
+    private var visibleViewModes: [ScheduleViewMode] {
+        ScheduleViewMode.allCases.filter { enabledViewModes.contains($0) }
+    }
 
     private var calendar: Calendar {
         var cal = Calendar.current
@@ -43,14 +51,15 @@ struct ScheduleView: View {
                     case .day:   dayView
                     case .list:  listView
                     case .month: monthView
+                    case .map:   mapView
                     }
                 }
             }
             .background(Color.sweeplyBackground.ignoresSafeArea())
             .navigationBarHidden(true)
             .sheet(isPresented: $showFilters) {
-                JobFiltersView(statusFilter: $statusFilter, typeFilter: $typeFilter)
-                    .presentationDetents([.medium])
+                JobFiltersView(statusFilter: $statusFilter, typeFilter: $typeFilter, enabledViewModes: $enabledViewModes)
+                    .presentationDetents([.medium, .large])
             }
             .sheet(isPresented: $showMonthPicker) {
                 ScheduleMonthPicker(selectedDay: $selectedDay)
@@ -63,7 +72,7 @@ struct ScheduleView: View {
 
     private var topToolbar: some View {
         PageHeader(
-            eyebrow: "Planner",
+            eyebrow: nil,
             title: "Schedule",
             subtitle: monthTitle
         ) {
@@ -90,7 +99,7 @@ struct ScheduleView: View {
 
     private var modeSegment: some View {
         HStack(spacing: 4) {
-            ForEach(ScheduleViewMode.allCases, id: \.self) { mode in
+            ForEach(visibleViewModes, id: \.self) { mode in
                 Button {
                     withAnimation(.easeInOut(duration: 0.2)) { viewMode = mode }
                 } label: {
@@ -117,6 +126,59 @@ struct ScheduleView: View {
             RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .fill(Color(red: 0.93, green: 0.93, blue: 0.94))
         )
+    }
+
+    // MARK: - Map View
+    
+    private var mapView: some View {
+        VStack(spacing: 0) {
+            if jobsStore.jobs.isEmpty {
+                scheduleEmptyState
+            } else {
+                Map {
+                    ForEach(jobsStore.jobs) { job in
+                        if let client = clientsStore.clients.first(where: { $0.id == job.clientId }) {
+                            Annotation(job.clientName, coordinate: CLLocationCoordinate2D(latitude: client.latitude ?? 0, longitude: client.longitude ?? 0)) {
+                                ZStack {
+                                    Circle()
+                                        .fill(statusColor(for: job.status))
+                                        .frame(width: 12, height: 12)
+                                    Circle()
+                                        .stroke(.white, lineWidth: 2)
+                                        .frame(width: 16, height: 16)
+                                }
+                            }
+                        }
+                    }
+                }
+                .mapStyle(.standard(elevation: .realistic, pointsOfInterest: .including([.school, .park])))
+                .ignoresSafeArea(edges: .bottom)
+                
+                VStack {
+                    Spacer()
+                    HStack {
+                        Text("\(jobsStore.jobs.count) jobs on map")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .background(Color.sweeplyNavy.opacity(0.9))
+                            .clipShape(Capsule())
+                        Spacer()
+                    }
+                    .padding(.bottom, 20)
+                }
+            }
+        }
+    }
+    
+    private func statusColor(for status: JobStatus) -> Color {
+        switch status {
+        case .completed: return .sweeplyAccent
+        case .inProgress: return .blue
+        case .scheduled: return .gray
+        case .cancelled: return .red
+        }
     }
 
     // MARK: - Day View
