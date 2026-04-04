@@ -323,6 +323,8 @@ private struct NotificationRow: View {
             }
         }
 
+    }
+
     private var kindColor: Color {
         switch notification.kind {
         case .schedule:
