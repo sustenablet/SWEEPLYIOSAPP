@@ -5,35 +5,52 @@ struct NotificationsView: View {
     @Environment(NotificationsStore.self) private var notificationsStore
     @Environment(AppSession.self) private var session
 
-    @State private var showDeleteAll = false
+    @State private var selectedTab: NotificationTab = .all
     
+    enum NotificationTab: String, CaseIterable {
+        case all = "All"
+        case unread = "Unread"
+        case schedule = "Schedule"
+        case billing = "Billing"
+    }
+
     private var unreadCount: Int {
         notificationsStore.notifications.filter { !$0.isRead }.count
     }
 
+    private var filteredNotifications: [AppNotification] {
+        switch selectedTab {
+        case .all:
+            return notificationsStore.notifications
+        case .unread:
+            return notificationsStore.notifications.filter { !$0.isRead }
+        case .schedule:
+            return notificationsStore.notifications.filter { $0.kind == .schedule }
+        case .billing:
+            return notificationsStore.notifications.filter { $0.kind == .billing }
+        }
+    }
+    
     private var sortedNotifications: [AppNotification] {
-        notificationsStore.notifications.sorted { $0.timestamp > $1.timestamp }
+        filteredNotifications.sorted { $0.timestamp > $1.timestamp }
     }
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
-                    // Header Stats
-                    if !notificationsStore.notifications.isEmpty {
-                        statsHeader
-                    }
-
-                    // Notifications List
-                    if notificationsStore.notifications.isEmpty {
-                        emptyState
-                    } else {
-                        notificationsList
-                    }
+            VStack(spacing: 0) {
+                // Tab Selector
+                tabSelector
+                    .padding(.top, 8)
+                    .padding(.bottom, 16)
+                
+                Divider()
+                
+                // Content
+                if sortedNotifications.isEmpty {
+                    emptyState
+                } else {
+                    notificationsList
                 }
-                .padding(.horizontal, 20)
-                .padding(.top, 16)
-                .padding(.bottom, 100)
             }
             .background(Color.sweeplyBackground.ignoresSafeArea())
             .navigationTitle("Notifications")
@@ -41,13 +58,15 @@ struct NotificationsView: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     if unreadCount > 0 {
-                        Button("Mark all read") { 
+                        Button {
                             Task { 
                                 await notificationsStore.markAllAsRead(userId: session.userId) 
                             }
+                        } label: {
+                            Text("Clear")
+                                .font(.system(size: 14, weight: .medium))
+                                .foregroundStyle(Color.sweeplyNavy)
                         }
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundStyle(Color.sweeplyNavy)
                     }
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
@@ -63,118 +82,129 @@ struct NotificationsView: View {
             .refreshable {
                 await notificationsStore.load(isAuthenticated: session.isAuthenticated, userId: session.userId)
             }
-            .confirmationDialog("Delete All Notifications", isPresented: $showDeleteAll, titleVisibility: .visible) {
-                Button("Delete All", role: .destructive) {
-                    Task {
-                        for notification in notificationsStore.notifications {
-                            await notificationsStore.delete(id: notification.id)
-                        }
-                    }
-                }
-                Button("Cancel", role: .cancel) {}
-            } message: {
-                Text("This will remove all notifications. This action cannot be undone.")
-            }
         }
     }
 
-    // MARK: - Stats Header
+    // MARK: - Tab Selector
 
-    private var statsHeader: some View {
-        SectionCard {
-            HStack(spacing: 16) {
-                // Unread count
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("\(unreadCount)")
-                        .font(.system(size: 28, weight: .bold, design: .monospaced))
-                        .foregroundStyle(Color.sweeplyNavy)
-                    Text("unread")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundStyle(Color.sweeplyTextSub)
-                }
-                
-                Rectangle()
-                    .fill(Color.sweeplyBorder)
-                    .frame(width: 1, height: 40)
-                
-                // Total count
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("\(notificationsStore.notifications.count)")
-                        .font(.system(size: 28, weight: .bold, design: .monospaced))
-                        .foregroundStyle(Color.sweeplyNavy)
-                    Text("total")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundStyle(Color.sweeplyTextSub)
-                }
-                
-                Spacer()
-                
-                // Bell icon
-                ZStack {
-                    Circle()
-                        .fill(Color.sweeplyNavy.opacity(0.1))
-                        .frame(width: 48, height: 48)
-                    Image(systemName: "bell.fill")
-                        .font(.system(size: 20, weight: .semibold))
-                        .foregroundStyle(Color.sweeplyNavy)
+    private var tabSelector: some View {
+        HStack(spacing: 4) {
+            ForEach(NotificationTab.allCases, id: \.self) { tab in
+                Button {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        selectedTab = tab
+                    }
+                } label: {
+                    Text(tabLabel(tab))
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(selectedTab == tab ? .white : Color.sweeplyTextSub)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 8)
+                        .background(selectedTab == tab ? Color.sweeplyNavy : Color.clear)
+                        .clipShape(Capsule())
                 }
             }
+        }
+        .padding(6)
+        .background(Color.sweeplySurface)
+        .clipShape(Capsule())
+        .overlay(Capsule().stroke(Color.sweeplyBorder, lineWidth: 1))
+        .padding(.horizontal, 20)
+    }
+    
+    private func tabLabel(_ tab: NotificationTab) -> String {
+        switch tab {
+        case .all:
+            return "All"
+        case .unread:
+            return unreadCount > 0 ? "Unread (\(unreadCount))" : "Unread"
+        case .schedule:
+            return "Schedule"
+        case .billing:
+            return "Billing"
         }
     }
 
     // MARK: - Notifications List
 
     private var notificationsList: some View {
-        VStack(spacing: 12) {
-            ForEach(sortedNotifications) { notification in
-                NotificationRow(
-                    notification: notification,
-                    onMarkRead: {
-                        Task {
-                            await notificationsStore.markAsRead(
-                                id: notification.id,
-                                isAuthenticated: session.isAuthenticated
-                            )
+        ScrollView {
+            VStack(spacing: 10) {
+                ForEach(sortedNotifications) { notification in
+                    NotificationRow(
+                        notification: notification,
+                        onMarkRead: {
+                            Task {
+                                await notificationsStore.markAsRead(
+                                    id: notification.id,
+                                    isAuthenticated: session.isAuthenticated
+                                )
+                            }
+                        },
+                        onDelete: {
+                            Task {
+                                await notificationsStore.delete(id: notification.id)
+                            }
                         }
-                    },
-                    onDelete: {
-                        Task {
-                            await notificationsStore.delete(id: notification.id)
-                        }
-                    }
-                )
+                    )
+                }
             }
+            .padding(.horizontal, 20)
+            .padding(.vertical, 16)
+            .padding(.bottom, 100)
         }
     }
 
     // MARK: - Empty State
 
     private var emptyState: some View {
-        SectionCard {
-            VStack(spacing: 16) {
-                ZStack {
-                    Circle()
-                        .fill(Color.sweeplyNavy.opacity(0.08))
-                        .frame(width: 80, height: 80)
-                    Image(systemName: "bell.slash")
-                        .font(.system(size: 32))
-                        .foregroundStyle(Color.sweeplyTextSub.opacity(0.5))
-                }
+        VStack(spacing: 16) {
+            Spacer()
+            
+            Image(systemName: emptyIcon)
+                .font(.system(size: 40, weight: .light))
+                .foregroundStyle(Color.sweeplyTextSub.opacity(0.4))
+            
+            VStack(spacing: 6) {
+                Text(emptyTitle)
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundStyle(Color.sweeplyNavy)
                 
-                VStack(spacing: 6) {
-                    Text("No notifications")
-                        .font(.system(size: 17, weight: .semibold))
-                        .foregroundStyle(Color.sweeplyNavy)
-                    
-                    Text("You're all caught up! Check back later for updates about your jobs, invoices, and account.")
-                        .font(.system(size: 14))
-                        .foregroundStyle(Color.sweeplyTextSub)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, 8)
-                }
+                Text(emptyMessage)
+                    .font(.system(size: 14))
+                    .foregroundStyle(Color.sweeplyTextSub)
+                    .multilineTextAlignment(.center)
             }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 32)
+            
+            Spacer()
+        }
+        .padding(.horizontal, 40)
+    }
+    
+    private var emptyIcon: String {
+        switch selectedTab {
+        case .all: return "bell.slash"
+        case .unread: return "envelope.open"
+        case .schedule: return "calendar.badge.exclamationmark"
+        case .billing: return "creditcard.slash"
+        }
+    }
+    
+    private var emptyTitle: String {
+        switch selectedTab {
+        case .all: return "No notifications"
+        case .unread: return "All caught up"
+        case .schedule: return "No schedule updates"
+        case .billing: return "No billing activity"
+        }
+    }
+    
+    private var emptyMessage: String {
+        switch selectedTab {
+        case .all: return "You're up to date. New notifications will appear here."
+        case .unread: return "You've read everything. Check back later for updates."
+        case .schedule: return "No schedule changes or updates at the moment."
+        case .billing: return "No invoice or payment activity to show."
         }
     }
 }
@@ -187,72 +217,75 @@ private struct NotificationRow: View {
     let onDelete: () -> Void
 
     var body: some View {
-        SectionCard {
-            HStack(alignment: .top, spacing: 14) {
-                // Icon
-                ZStack {
-                    Circle()
-                        .fill(accentColor.opacity(0.12))
-                        .frame(width: 42, height: 42)
-                    Image(systemName: iconName)
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundStyle(accentColor)
+        HStack(alignment: .top, spacing: 14) {
+            // Indicator
+            Rectangle()
+                .fill(kindColor)
+                .frame(width: 3)
+                .frame(maxHeight: .infinity)
+                .padding(.vertical, 2)
+            
+            // Content
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(alignment: .top, spacing: 8) {
+                    Text(notification.title)
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(Color.sweeplyNavy)
+                        .lineLimit(2)
+                        .strikethrough(notification.isRead)
+                        .opacity(notification.isRead ? 0.6 : 1)
+                    
+                    Spacer()
+                    
+                    if !notification.isRead {
+                        Circle()
+                            .fill(Color.sweeplyNavy)
+                            .frame(width: 8, height: 8)
+                    }
                 }
                 
-                // Content
-                VStack(alignment: .leading, spacing: 6) {
-                    HStack(alignment: .top, spacing: 8) {
-                        Text(notification.title)
-                            .font(.system(size: 15, weight: .semibold))
-                            .foregroundStyle(Color.sweeplyNavy)
-                            .lineLimit(2)
-                        
-                        Spacer()
-                        
-                        if !notification.isRead {
-                            Circle()
-                                .fill(Color.sweeplyAccent)
-                                .frame(width: 8, height: 8)
-                        }
-                    }
-                    
-                    Text(notification.message)
-                        .font(.system(size: 13))
+                Text(notification.message)
+                    .font(.system(size: 13))
+                    .foregroundStyle(Color.sweeplyTextSub)
+                    .lineLimit(2)
+                    .opacity(notification.isRead ? 0.6 : 1)
+                
+                HStack {
+                    Text(notification.timestamp.formatted(.relative(presentation: .named)))
+                        .font(.system(size: 11, weight: .medium))
                         .foregroundStyle(Color.sweeplyTextSub)
-                        .lineLimit(2)
                     
-                    HStack {
-                        Text(notification.timestamp.formatted(.relative(presentation: .named)))
-                            .font(.system(size: 11, weight: .medium))
-                            .foregroundStyle(Color.sweeplyTextSub)
-                        
-                        Spacer()
-                        
-                        // Action buttons
-                        HStack(spacing: 16) {
-                            if !notification.isRead {
-                                Button {
-                                    onMarkRead()
-                                } label: {
-                                    Image(systemName: "checkmark.circle")
-                                        .font(.system(size: 16))
-                                        .foregroundStyle(Color.sweeplyTextSub)
-                                }
-                            }
-                            
+                    Spacer()
+                    
+                    HStack(spacing: 14) {
+                        if !notification.isRead {
                             Button {
-                                onDelete()
+                                onMarkRead()
                             } label: {
-                                Image(systemName: "trash")
-                                    .font(.system(size: 16))
-                                    .foregroundStyle(Color.sweeplyDestructive)
+                                Text("Mark read")
+                                    .font(.system(size: 12, weight: .medium))
+                                    .foregroundStyle(Color.sweeplyTextSub)
                             }
+                        }
+                        
+                        Button {
+                            onDelete()
+                        } label: {
+                            Image(systemName: "xmark")
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundStyle(Color.sweeplyTextSub.opacity(0.6))
                         }
                     }
                 }
             }
         }
-        .opacity(notification.isRead ? 0.7 : 1.0)
+        .padding(14)
+        .background(Color.sweeplySurface)
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(Color.sweeplyBorder, lineWidth: 1)
+        )
         .contentShape(Rectangle())
         .onTapGesture {
             if !notification.isRead {
@@ -261,29 +294,16 @@ private struct NotificationRow: View {
         }
     }
 
-    private var iconName: String {
+    private var kindColor: Color {
         switch notification.kind {
         case .schedule:
-            return "calendar"
+            return Color.sweeplyNavy
         case .billing:
-            return "dollarsign.circle"
+            return Color.sweeplyAccent
         case .profile:
-            return "person.circle"
+            return Color.sweeplyNavy.opacity(0.6)
         case .system:
-            return "sparkles"
-        }
-    }
-
-    private var accentColor: Color {
-        switch notification.kind {
-        case .schedule:
-            return .sweeplyNavy
-        case .billing:
-            return .sweeplyAccent
-        case .profile:
-            return .blue
-        case .system:
-            return .purple
+            return Color.sweeplyTextSub.opacity(0.5)
         }
     }
 }
