@@ -146,13 +146,14 @@ struct DashboardView: View {
                 Divider()
 
                 // ── Dashboard Hero (Revenue + Stats Grid) ───────────
-                HStack(alignment: .top, spacing: 20) {
+                HStack(alignment: .center, spacing: 20) {
                     revenueHero
                     
                     statsGrid
                         .frame(width: 140)
                 }
                 .padding(.horizontal, 20)
+                .padding(.vertical, 8)
                 .padding(.bottom, 24)
 
                 Divider()
