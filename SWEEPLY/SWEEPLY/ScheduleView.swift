@@ -20,7 +20,7 @@ struct ScheduleView: View {
     @State private var statusFilter: JobStatus? = nil
     @State private var typeFilter: String = "All"
     @State private var showMonthPicker = false
-    @State private var enabledViewModes: Set<ScheduleViewMode> = [.day, .list, .month]
+    @State private var enabledViewModes: Set<ScheduleViewMode> = [.day, .list, .month, .map]
     
     private var visibleViewModes: [ScheduleViewMode] {
         ScheduleViewMode.allCases.filter { enabledViewModes.contains($0) }
