@@ -156,8 +156,6 @@ struct DashboardView: View {
                 .padding(.vertical, 12)
                 .padding(.bottom, 24)
 
-                Divider()
-
                 // ── Sub-sections with spacing ────────────────────
                 VStack(spacing: 20) {
                     // ── Getting Started checklist ────────────────
