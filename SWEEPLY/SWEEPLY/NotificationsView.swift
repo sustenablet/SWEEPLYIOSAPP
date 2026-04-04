@@ -301,31 +301,27 @@ private struct NotificationRow: View {
                 onMarkRead()
             }
         }
-        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+        .contextMenu {
+            if notification.isRead {
+                Button {
+                    onMarkUnread()
+                } label: {
+                    Label("Mark as Unread", systemImage: "envelope.badge")
+                }
+            } else {
+                Button {
+                    onMarkRead()
+                } label: {
+                    Label("Mark as Read", systemImage: "checkmark.circle")
+                }
+            }
+            Divider()
             Button(role: .destructive) {
                 onDelete()
             } label: {
                 Label("Delete", systemImage: "trash")
             }
         }
-        .swipeActions(edge: .leading, allowsFullSwipe: true) {
-            if notification.isRead {
-                Button {
-                    onMarkUnread()
-                } label: {
-                    Label("Unread", systemImage: "envelope.badge")
-                }
-                .tint(Color.sweeplyNavy)
-            } else {
-                Button {
-                    onMarkRead()
-                } label: {
-                    Label("Read", systemImage: "checkmark.circle")
-                }
-                .tint(Color.sweeplyAccent)
-            }
-        }
-    }
 
     private var kindColor: Color {
         switch notification.kind {
