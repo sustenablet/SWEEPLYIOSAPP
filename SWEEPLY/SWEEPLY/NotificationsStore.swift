@@ -78,6 +78,24 @@ final class NotificationsStore {
         }
     }
 
+    func markAsUnread(id: UUID, isAuthenticated: Bool) async {
+        if let idx = notifications.firstIndex(where: { $0.id == id }) {
+            notifications[idx].isRead = false
+        }
+
+        guard isAuthenticated, let client = SupabaseManager.shared else { return }
+        
+        do {
+            try await client.database
+                .from("notifications")
+                .update(["is_read": false])
+                .eq("id", value: id)
+                .execute()
+        } catch {
+            print("Failed to mark notification as unread: \(error)")
+        }
+    }
+
     func markAllAsRead(userId: UUID?) async {
         for i in notifications.indices {
             notifications[i].isRead = true

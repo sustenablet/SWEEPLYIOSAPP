@@ -141,6 +141,14 @@ struct NotificationsView: View {
                                 )
                             }
                         },
+                        onMarkUnread: {
+                            Task {
+                                await notificationsStore.markAsUnread(
+                                    id: notification.id,
+                                    isAuthenticated: session.isAuthenticated
+                                )
+                            }
+                        },
                         onDelete: {
                             Task {
                                 await notificationsStore.delete(id: notification.id)
@@ -214,6 +222,7 @@ struct NotificationsView: View {
 private struct NotificationRow: View {
     let notification: AppNotification
     let onMarkRead: () -> Void
+    let onMarkUnread: () -> Void
     let onDelete: () -> Void
 
     var body: some View {
@@ -290,6 +299,30 @@ private struct NotificationRow: View {
         .onTapGesture {
             if !notification.isRead {
                 onMarkRead()
+            }
+        }
+        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+            Button(role: .destructive) {
+                onDelete()
+            } label: {
+                Label("Delete", systemImage: "trash")
+            }
+        }
+        .swipeActions(edge: .leading, allowsFullSwipe: true) {
+            if notification.isRead {
+                Button {
+                    onMarkUnread()
+                } label: {
+                    Label("Unread", systemImage: "envelope.badge")
+                }
+                .tint(Color.sweeplyNavy)
+            } else {
+                Button {
+                    onMarkRead()
+                } label: {
+                    Label("Read", systemImage: "checkmark.circle")
+                }
+                .tint(Color.sweeplyAccent)
             }
         }
     }
