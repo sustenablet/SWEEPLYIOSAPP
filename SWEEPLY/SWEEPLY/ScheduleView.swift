@@ -59,7 +59,7 @@ struct ScheduleView: View {
             .navigationBarHidden(true)
             .sheet(isPresented: $showFilters) {
                 JobFiltersView(statusFilter: $statusFilter, typeFilter: $typeFilter, enabledViewModes: $enabledViewModes)
-                    .presentationDetents([.medium, .large])
+                    .presentationDetents([.large])
             }
             .sheet(isPresented: $showMonthPicker) {
                 ScheduleMonthPicker(selectedDay: $selectedDay)
