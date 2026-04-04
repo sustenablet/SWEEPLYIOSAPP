@@ -153,7 +153,7 @@ struct DashboardView: View {
                         .frame(width: 140)
                 }
                 .padding(.horizontal, 20)
-                .padding(.vertical, 8)
+                .padding(.vertical, 20)
                 .padding(.bottom, 24)
 
                 Divider()
