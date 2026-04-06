@@ -76,6 +76,7 @@ struct OnboardingView: View {
             Spacer()
 
             nextButton(label: "Next", enabled: !businessName.trimmingCharacters(in: .whitespaces).isEmpty) {
+                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                 step = 1
             }
             .padding(.bottom, 48)
@@ -107,6 +108,7 @@ struct OnboardingView: View {
                     ForEach(AppSettings.defaultServiceCatalog) { service in
                         let isSelected = selectedServices.contains(service.name)
                         Button {
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
                             if isSelected { selectedServices.remove(service.name) }
                             else { selectedServices.insert(service.name) }
                         } label: {
@@ -144,6 +146,7 @@ struct OnboardingView: View {
             Spacer()
 
             nextButton(label: "Next", enabled: !selectedServices.isEmpty) {
+                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                 step = 2
             }
             .padding(.bottom, 48)
@@ -233,7 +236,10 @@ struct OnboardingView: View {
             profile.settings.services = chosenServices
 
             await profileStore.save(profile, userId: userId)
-            await MainActor.run { isSaving = false }
+            await MainActor.run {
+                isSaving = false
+                UINotificationFeedbackGenerator().notificationOccurred(.success)
+            }
         }
     }
 }

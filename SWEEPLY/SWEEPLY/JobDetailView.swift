@@ -109,6 +109,7 @@ struct JobDetailView: View {
             HStack(spacing: 12) {
                 if job.status != .completed {
                     Button {
+                        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                         Task { await jobsStore.updateStatus(id: job.id, status: .completed) }
                     } label: {
                         Label("Complete Job", systemImage: "checkmark.circle.fill")
@@ -121,6 +122,7 @@ struct JobDetailView: View {
                     }
                 } else {
                     Button {
+                        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                         Task { await jobsStore.updateStatus(id: job.id, status: .scheduled) }
                     } label: {
                         Label("Re-open Job", systemImage: "arrow.uturn.backward")
@@ -135,6 +137,7 @@ struct JobDetailView: View {
                 }
 
                 Button {
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
                     let addr = job.address.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
                     if let url = URL(string: "http://maps.apple.com/?daddr=\(addr)") {
                         UIApplication.shared.open(url)
@@ -153,6 +156,7 @@ struct JobDetailView: View {
             // Create Invoice — visible once the job is completed
             if job.status == .completed {
                 Button {
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
                     showInvoiceSheet = true
                 } label: {
                     Label("Create Invoice", systemImage: "doc.text.fill")

@@ -13,99 +13,236 @@ struct AuthView: View {
     }
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 24) {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Sweeply")
-                        .font(.system(size: 32, weight: .semibold))
-                        .foregroundStyle(Color.sweeplyNavy)
-                    Text(isSignUp ? "Create an account" : "Sign in to continue")
-                        .font(.system(size: 15))
-                        .foregroundStyle(Color.sweeplyTextSub)
-                }
-                .padding(.top, 24)
+        ZStack(alignment: .bottom) {
+            // Background
+            Color.sweeplyBackground.ignoresSafeArea()
 
-                VStack(alignment: .leading, spacing: 14) {
-                    emailField
-                    passwordField
-                    Text("Use at least 6 characters.")
-                        .font(.system(size: 12))
-                        .foregroundStyle(Color.sweeplyTextSub)
-                }
+            // Brand area (top)
+            VStack(spacing: 0) {
+                Spacer()
+                brandMark
+                Spacer()
+                Spacer()
+            }
 
-                if let err = session.lastAuthError, !err.isEmpty {
+            // Auth card (bottom sheet)
+            authCard
+                .ignoresSafeArea(edges: .bottom)
+        }
+    }
+
+    // MARK: - Brand Mark
+
+    private var brandMark: some View {
+        VStack(spacing: 18) {
+            ZStack {
+                Circle()
+                    .fill(Color.sweeplyAccent.opacity(0.1))
+                    .frame(width: 88, height: 88)
+                Image(systemName: "sparkles")
+                    .font(.system(size: 40, weight: .medium))
+                    .foregroundStyle(Color.sweeplyAccent)
+            }
+
+            VStack(spacing: 6) {
+                Text("Sweeply")
+                    .font(.system(size: 38, weight: .bold))
+                    .tracking(-1.4)
+                    .foregroundStyle(Color.sweeplyNavy)
+
+                Text("Run your cleaning business.")
+                    .font(.system(size: 15, weight: .regular))
+                    .foregroundStyle(Color.sweeplyTextSub)
+            }
+        }
+        .padding(.bottom, 260) // leaves room for the card
+    }
+
+    // MARK: - Auth Card
+
+    private var authCard: some View {
+        VStack(spacing: 0) {
+            // Pull handle
+            Capsule()
+                .fill(Color.sweeplyBorder)
+                .frame(width: 36, height: 4)
+                .padding(.top, 12)
+                .padding(.bottom, 24)
+
+            // Tab switcher
+            tabSwitcher
+                .padding(.horizontal, 24)
+                .padding(.bottom, 28)
+
+            // Fields
+            VStack(spacing: 14) {
+                emailField
+                passwordField
+            }
+            .padding(.horizontal, 24)
+
+            // Error
+            if let err = session.lastAuthError, !err.isEmpty {
+                HStack(spacing: 8) {
+                    Image(systemName: "exclamationmark.circle.fill")
+                        .font(.system(size: 13))
                     Text(err)
                         .font(.system(size: 13))
-                        .foregroundStyle(Color.sweeplyDestructive)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
+                .foregroundStyle(Color.sweeplyDestructive)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 10)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color.sweeplyDestructive.opacity(0.08))
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+                .padding(.horizontal, 24)
+                .padding(.top, 14)
+            }
 
-                Button {
-                    Task { await submit() }
-                } label: {
-                    HStack {
-                        if isSubmitting {
-                            ProgressView()
-                                .tint(.white)
-                        }
-                        Text(isSignUp ? "Create account" : "Sign in")
-                            .font(.system(size: 16, weight: .semibold))
+            // CTA button
+            Button {
+                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                Task { await submit() }
+            } label: {
+                HStack(spacing: 10) {
+                    if isSubmitting {
+                        ProgressView().tint(.white).scaleEffect(0.85)
                     }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 14)
-                    .background(canSubmit && !isSubmitting ? Color.sweeplyNavy : Color.sweeplyTextSub.opacity(0.35))
-                    .foregroundStyle(.white)
-                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    Text(isSignUp ? "Create Account" : "Sign In")
+                        .font(.system(size: 16, weight: .bold))
                 }
-                .disabled(!canSubmit || isSubmitting)
+                .foregroundStyle(.white)
+                .frame(maxWidth: .infinity)
+                .frame(height: 52)
+                .background(canSubmit ? Color.sweeplyNavy : Color.sweeplyNavy.opacity(0.35))
+                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .shadow(color: canSubmit ? Color.sweeplyNavy.opacity(0.2) : .clear, radius: 8, x: 0, y: 4)
+            }
+            .disabled(!canSubmit)
+            .padding(.horizontal, 24)
+            .padding(.top, 22)
+
+            // Forgot password / toggle
+            VStack(spacing: 4) {
+                if !isSignUp {
+                    Button("Forgot password?") {
+                        // placeholder — can wire reset flow here
+                    }
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(Color.sweeplyAccent)
+                    .padding(.top, 6)
+                }
 
                 Button {
-                    isSignUp.toggle()
-                    session.lastAuthError = nil
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        isSignUp.toggle()
+                        session.lastAuthError = nil
+                    }
                 } label: {
-                    Text(isSignUp ? "Already have an account? Sign in" : "Need an account? Sign up")
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundStyle(Color.sweeplyAccent)
-                        .frame(maxWidth: .infinity)
+                    Text(isSignUp ? "Already have an account? Sign in" : "Need an account? Create one")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(Color.sweeplyTextSub)
                 }
                 .padding(.top, 4)
             }
-            .padding(.horizontal, 24)
-            .padding(.bottom, 40)
+            .padding(.bottom, 48)
         }
-        .background(Color.sweeplyBackground.ignoresSafeArea())
+        .background(
+            Color.sweeplyCard
+                .clipShape(RoundedRectangle(cornerRadius: 32, style: .continuous))
+                .ignoresSafeArea(edges: .bottom)
+        )
+        .animation(.easeInOut(duration: 0.2), value: isSignUp)
+        .animation(.easeInOut(duration: 0.15), value: session.lastAuthError)
     }
+
+    // MARK: - Tab Switcher
+
+    private var tabSwitcher: some View {
+        HStack(spacing: 0) {
+            tabPill(label: "Sign In", isActive: !isSignUp) {
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    isSignUp = false
+                    session.lastAuthError = nil
+                }
+            }
+            tabPill(label: "Create Account", isActive: isSignUp) {
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    isSignUp = true
+                    session.lastAuthError = nil
+                }
+            }
+        }
+    }
+
+    private func tabPill(label: String, isActive: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            VStack(spacing: 6) {
+                Text(label)
+                    .font(.system(size: 14, weight: isActive ? .bold : .medium))
+                    .foregroundStyle(isActive ? Color.sweeplyNavy : Color.sweeplyTextSub)
+                    .frame(maxWidth: .infinity)
+
+                Rectangle()
+                    .fill(isActive ? Color.sweeplyAccent : Color.clear)
+                    .frame(height: 2)
+                    .clipShape(Capsule())
+            }
+        }
+        .buttonStyle(.plain)
+    }
+
+    // MARK: - Fields
 
     private var emailField: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text("Email")
-                .font(.system(size: 12, weight: .medium))
+                .font(.system(size: 12, weight: .semibold))
                 .foregroundStyle(Color.sweeplyTextSub)
             TextField("you@example.com", text: $email)
                 .textContentType(.emailAddress)
                 .keyboardType(.emailAddress)
                 .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
                 .padding(.horizontal, 14)
-                .padding(.vertical, 12)
-                .background(Color.sweeplySurface)
-                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-                .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).stroke(Color.sweeplyBorder, lineWidth: 1))
+                .padding(.vertical, 13)
+                .background(Color.sweeplyBackground)
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .stroke(Color.sweeplyBorder, lineWidth: 1)
+                )
         }
     }
 
     private var passwordField: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text("Password")
-                .font(.system(size: 12, weight: .medium))
+                .font(.system(size: 12, weight: .semibold))
                 .foregroundStyle(Color.sweeplyTextSub)
             SecureField("••••••••", text: $password)
-                .textContentType(.password)
+                .textContentType(isSignUp ? .newPassword : .password)
                 .padding(.horizontal, 14)
-                .padding(.vertical, 12)
-                .background(Color.sweeplySurface)
-                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-                .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).stroke(Color.sweeplyBorder, lineWidth: 1))
+                .padding(.vertical, 13)
+                .background(Color.sweeplyBackground)
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .stroke(Color.sweeplyBorder, lineWidth: 1)
+                )
+            if isSignUp {
+                Text("Use at least 6 characters.")
+                    .font(.system(size: 11))
+                    .foregroundStyle(Color.sweeplyTextSub.opacity(0.7))
+            }
         }
     }
+
+    // MARK: - Submit
 
     private func submit() async {
         isSubmitting = true
@@ -116,6 +253,11 @@ struct AuthView: View {
             await session.signUp(email: e, password: p)
         } else {
             await session.signIn(email: e, password: p)
+        }
+        if session.lastAuthError == nil || session.lastAuthError?.isEmpty == true {
+            UINotificationFeedbackGenerator().notificationOccurred(.success)
+        } else {
+            UINotificationFeedbackGenerator().notificationOccurred(.error)
         }
     }
 }

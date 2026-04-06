@@ -72,7 +72,10 @@ struct NewJobForm: View {
                             Text("Client *").font(.system(size: 13, weight: .medium)).foregroundStyle(Color.sweeplyTextSub)
                             Menu {
                                 ForEach(clientsStore.clients) { client in
-                                    Button(client.name) { selectedClientId = client.id }
+                                    Button(client.name) {
+                                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                        selectedClientId = client.id
+                                    }
                                 }
                             } label: {
                                 PickerButton(
@@ -88,6 +91,7 @@ struct NewJobForm: View {
                             Menu {
                                 ForEach(serviceCatalog) { service in
                                     Button("\(service.name) · \(service.price.currency)") {
+                                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
                                         serviceType = ServiceType(rawValue: service.name) ?? .custom(service.name)
                                         applyPricingHierarchy()
                                     }
@@ -172,6 +176,7 @@ struct NewJobForm: View {
                         Menu {
                             ForEach(RecurrenceFrequency.allCases, id: \.self) { freq in
                                 Button(freq.rawValue.capitalized) {
+                                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
                                     withAnimation { recurrence = freq }
                                 }
                             }
@@ -318,6 +323,7 @@ struct NewJobForm: View {
         }
         
         isSaving = false
+        UINotificationFeedbackGenerator().notificationOccurred(.success)
         dismiss()
     }
 }

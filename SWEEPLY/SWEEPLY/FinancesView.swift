@@ -294,6 +294,7 @@ struct FinancesView: View {
     private func filterTab(_ filter: InvoiceFilter) -> some View {
         let selected = selectedFilter == filter
         return Button {
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
             withAnimation(.easeInOut(duration: 0.2)) { selectedFilter = filter }
         } label: {
             VStack(spacing: 8) {

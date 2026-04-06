@@ -67,6 +67,7 @@ struct SettingsView: View {
                 HStack(spacing: 4) {
                     ForEach(SettingsTab.allCases, id: \.self) { tab in
                         Button {
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
                             withAnimation(.spring(duration: 0.3)) {
                                 selectedTab = tab
                             }
@@ -120,6 +121,7 @@ struct SettingsView: View {
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(isSaving ? "Saving..." : "Save") {
+                        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                         Task { await saveChanges() }
                     }
                     .font(.system(size: 14, weight: .bold))
@@ -390,9 +392,11 @@ struct SettingsView: View {
             baselineProfile = normalizedProfile(localProfile)
             feedbackStyle = .success
             feedbackMessage = "Settings saved."
+            UINotificationFeedbackGenerator().notificationOccurred(.success)
         } else {
             feedbackStyle = .error
             feedbackMessage = profileStore.lastError ?? "Unable to save your settings right now."
+            UINotificationFeedbackGenerator().notificationOccurred(.error)
         }
     }
 

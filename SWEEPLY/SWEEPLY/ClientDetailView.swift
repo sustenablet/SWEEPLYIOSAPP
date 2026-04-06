@@ -65,6 +65,7 @@ struct ClientDetailView: View {
                     ToolbarItem(placement: .topBarTrailing) {
                         HStack(spacing: 8) {
                             Button("Edit") {
+                                UIImpactFeedbackGenerator(style: .light).impactOccurred()
                                 showEditSheet = true
                             }
                             .font(.system(size: 14, weight: .bold))
@@ -72,15 +73,17 @@ struct ClientDetailView: View {
                             
                             Menu {
                                 Button {
+                                    UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                                     Task { await toggleArchive(client: client) }
                                 } label: {
-                                    Label(client.isActive ? "Archive Client" : "Unarchive Client", 
+                                    Label(client.isActive ? "Archive Client" : "Unarchive Client",
                                           systemImage: client.isActive ? "archivebox" : "archivebox.fill")
                                 }
-                                
+
                                 Divider()
-                                
+
                                 Button(role: .destructive) {
+                                    UIImpactFeedbackGenerator(style: .heavy).impactOccurred()
                                     showDeleteConfirmation = true
                                 } label: {
                                     Label("Delete Client", systemImage: "trash")
@@ -98,6 +101,7 @@ struct ClientDetailView: View {
                 }
                 .confirmationDialog("Delete Client?", isPresented: $showDeleteConfirmation, titleVisibility: .visible) {
                     Button("Delete permanently", role: .destructive) {
+                        UIImpactFeedbackGenerator(style: .heavy).impactOccurred()
                         Task {
                             let success = await clientsStore.delete(id: client.id)
                             if success { dismiss() }
