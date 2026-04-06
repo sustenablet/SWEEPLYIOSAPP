@@ -209,7 +209,10 @@ struct NewInvoiceView: View {
             InvoiceFormSectionHeader(title: "SERVICES")
 
             if lineItems.isEmpty {
-                Button { showingServicePicker = true } label: {
+                Button {
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    showingServicePicker = true
+                } label: {
                     HStack {
                         Image(systemName: "plus.circle.fill")
                             .font(.system(size: 18))
@@ -241,7 +244,10 @@ struct NewInvoiceView: View {
                     }
                 }
 
-                Button { showingServicePicker = true } label: {
+                Button {
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    showingServicePicker = true
+                } label: {
                     HStack(spacing: 6) {
                         Image(systemName: "plus.circle.fill")
                             .foregroundStyle(Color.sweeplyAccent)
@@ -405,8 +411,10 @@ struct NewInvoiceView: View {
             await MainActor.run {
                 isSubmitting = false
                 if success {
+                    UINotificationFeedbackGenerator().notificationOccurred(.success)
                     dismiss()
                 } else {
+                    UINotificationFeedbackGenerator().notificationOccurred(.error)
                     errorMessage = invoicesStore.lastError ?? "Failed to create invoice."
                 }
             }

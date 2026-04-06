@@ -708,6 +708,11 @@ private struct ScheduleJobRow: View {
             ForEach(JobStatus.allCases, id: \.self) { status in
                 if job.status != status {
                     Button("Mark as \(status.rawValue)") {
+                        if status == .completed {
+                            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                        } else {
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        }
                         Task { await jobsStore.updateStatus(id: job.id, status: status) }
                         if status == .completed { showInvoicePrompt = true }
                     }
@@ -718,6 +723,7 @@ private struct ScheduleJobRow: View {
         .alert("Delete Job?", isPresented: $showDeleteConfirm) {
             Button("Cancel", role: .cancel) {}
             Button("Delete", role: .destructive) {
+                UIImpactFeedbackGenerator(style: .heavy).impactOccurred()
                 Task { await jobsStore.delete(id: job.id) }
             }
         } message: {

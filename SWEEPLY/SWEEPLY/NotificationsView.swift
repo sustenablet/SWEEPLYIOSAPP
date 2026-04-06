@@ -279,6 +279,7 @@ private struct NotificationRow: View {
                     HStack(spacing: 14) {
                         if !notification.isRead {
                             Button {
+                                UIImpactFeedbackGenerator(style: .light).impactOccurred()
                                 onMarkRead()
                             } label: {
                                 Text("Mark read")
@@ -308,6 +309,7 @@ private struct NotificationRow: View {
         .contentShape(Rectangle())
         .onTapGesture {
             if !notification.isRead {
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
                 onMarkRead()
             }
         }

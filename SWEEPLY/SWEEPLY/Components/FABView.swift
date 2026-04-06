@@ -32,6 +32,7 @@ struct FABView: View {
                 if isExpanded {
                     ForEach(actions, id: \.label) { action in
                         FABActionButton(label: action.label, icon: action.icon) {
+                            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                             withAnimation(.spring(duration: 0.3)) {
                                 isExpanded = false
                             }
@@ -52,6 +53,7 @@ struct FABView: View {
                 
                 // Main FAB
                 Button {
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
                     withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                         isExpanded.toggle()
                     }

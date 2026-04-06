@@ -127,7 +127,10 @@ struct InvoiceDetailView: View {
         HStack(spacing: 12) {
             if invoice.status != .paid {
                 Button {
-                    Task { await invoicesStore.markPaid(id: invoice.id) }
+                    Task {
+                        await invoicesStore.markPaid(id: invoice.id)
+                        UINotificationFeedbackGenerator().notificationOccurred(.success)
+                    }
                 } label: {
                     Label("Mark Paid", systemImage: "checkmark.circle.fill")
                         .font(.system(size: 14, weight: .bold))
@@ -311,6 +314,7 @@ struct InvoiceDetailView: View {
     // MARK: - Actions
 
     private func deleteInvoice(_ invoice: Invoice) {
+        UIImpactFeedbackGenerator(style: .heavy).impactOccurred()
         isDeleting = true
         Task {
             let _ = await invoicesStore.delete(id: invoice.id)

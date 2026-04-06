@@ -70,6 +70,7 @@ struct ClientsView: View {
         ) {
             Button("Delete", role: .destructive) {
                 if let t = deleteTarget {
+                    UIImpactFeedbackGenerator(style: .heavy).impactOccurred()
                     Task {
                         _ = await clientsStore.delete(id: t.id)
                         await MainActor.run { deleteTarget = nil }
@@ -171,6 +172,7 @@ struct ClientsView: View {
                             },
                             onDelete: { deleteTarget = client },
                             onToggleArchive: {
+                                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                                 Task {
                                     var updated = client
                                     updated.isActive.toggle()
