@@ -1,3 +1,4 @@
+import CoreLocation
 import Foundation
 import Observation
 import Supabase
@@ -75,6 +76,7 @@ final class ClientsStore {
             let mapped = inserted.toClient()
             clients.append(mapped)
             clients.sort { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+            geocodeAndPatch(client: mapped, userId: userId)
             return true
         } catch {
             lastError = error.localizedDescription
@@ -116,10 +118,35 @@ final class ClientsStore {
             if let idx = clients.firstIndex(where: { $0.id == mapped.id }) {
                 clients[idx] = mapped
             }
+            geocodeAndPatch(client: mapped, userId: updated.id)
             return true
         } catch {
             lastError = error.localizedDescription
             return false
+        }
+    }
+
+    private func geocodeAndPatch(client: Client, userId: UUID) {
+        let parts = [client.address, client.city, client.state, client.zip].filter { !$0.isEmpty }
+        let addressString = parts.joined(separator: ", ")
+        guard !addressString.isEmpty else { return }
+        CLGeocoder().geocodeAddressString(addressString) { [weak self] placemarks, _ in
+            guard let self, let location = placemarks?.first?.location else { return }
+            let lat = location.coordinate.latitude
+            let lng = location.coordinate.longitude
+            Task { @MainActor in
+                if let idx = self.clients.firstIndex(where: { $0.id == client.id }) {
+                    self.clients[idx].latitude = lat
+                    self.clients[idx].longitude = lng
+                }
+                guard let supabase = SupabaseManager.shared else { return }
+                let patch = ClientLocationPatch(latitude: lat, longitude: lng)
+                try? await supabase
+                    .from("clients")
+                    .update(patch)
+                    .eq("id", value: client.id)
+                    .execute()
+            }
         }
     }
 
@@ -209,6 +236,11 @@ private struct ClientRowInsert: Encodable {
         case entryInstructions = "entry_instructions"
         case isActive = "is_active"
     }
+}
+
+private struct ClientLocationPatch: Encodable {
+    let latitude: Double
+    let longitude: Double
 }
 
 private struct ClientRowPatch: Encodable {
