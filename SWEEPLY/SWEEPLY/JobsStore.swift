@@ -74,6 +74,7 @@ final class JobsStore {
             let mapped = inserted.toJob()
             jobs.append(mapped)
             jobs.sort { $0.date > $1.date }
+            NotificationManager.shared.scheduleJobReminder(for: mapped)
             return true
         } catch {
             lastError = error.localizedDescription
@@ -114,6 +115,8 @@ final class JobsStore {
             if let idx = jobs.firstIndex(where: { $0.id == mapped.id }) {
                 jobs[idx] = mapped
             }
+            NotificationManager.shared.cancelJobReminders(for: mapped.id)
+            NotificationManager.shared.scheduleJobReminder(for: mapped)
             return true
         } catch {
             lastError = error.localizedDescription
@@ -143,6 +146,9 @@ final class JobsStore {
             if let idx = jobs.firstIndex(where: { $0.id == mapped.id }) {
                 jobs[idx] = mapped
             }
+            if status == .completed || status == .cancelled {
+                NotificationManager.shared.cancelJobReminders(for: id)
+            }
             return true
         } catch {
             lastError = error.localizedDescription
@@ -157,6 +163,7 @@ final class JobsStore {
         }
         lastError = nil
         do {
+            NotificationManager.shared.cancelJobReminders(for: id)
             try await client
                 .from("jobs")
                 .delete()

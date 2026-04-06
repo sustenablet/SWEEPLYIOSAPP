@@ -55,6 +55,33 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
         }
     }
     
+    func scheduleJobReminder(for job: Job) {
+        scheduleAt(hour: 8, minute: 0, dayOffset: -1, job: job, suffix: "dayBefore",
+                   body: "Tomorrow: \(job.serviceType.rawValue) at \(job.clientName)")
+        scheduleAt(hour: 7, minute: 0, dayOffset: 0, job: job, suffix: "morning",
+                   body: "Today: \(job.serviceType.rawValue) at \(job.clientName) — \(job.address)")
+    }
+
+    func cancelJobReminders(for jobId: UUID) {
+        let ids = ["\(jobId)-dayBefore", "\(jobId)-morning"]
+        UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: ids)
+    }
+
+    private func scheduleAt(hour: Int, minute: Int, dayOffset: Int, job: Job, suffix: String, body: String) {
+        guard let triggerDate = Calendar.current.date(byAdding: .day, value: dayOffset, to: job.date) else { return }
+        var components = Calendar.current.dateComponents([.year, .month, .day], from: triggerDate)
+        components.hour = hour
+        components.minute = minute
+        let content = UNMutableNotificationContent()
+        content.title = "Upcoming Job"
+        content.body = body
+        content.sound = .default
+        content.userInfo = ["jobId": job.id.uuidString]
+        let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: false)
+        let request = UNNotificationRequest(identifier: "\(job.id)-\(suffix)", content: content, trigger: trigger)
+        UNUserNotificationCenter.current().add(request, withCompletionHandler: nil)
+    }
+
     // MARK: - UNUserNotificationCenterDelegate
     
     func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification, withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
