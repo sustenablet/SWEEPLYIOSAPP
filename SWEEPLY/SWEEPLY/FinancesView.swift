@@ -25,22 +25,22 @@ struct FinancesView: View {
     }
 
     private var totalCollected: Double {
-        invoices.filter { $0.status == .paid }.reduce(0) { $0 + $1.amount }
+        invoices.filter { $0.status == .paid }.reduce(0) { $0 + $1.total }
     }
     private var totalOutstanding: Double {
-        invoices.filter { $0.status == .unpaid }.reduce(0) { $0 + $1.amount }
+        invoices.filter { $0.status == .unpaid }.reduce(0) { $0 + $1.total }
     }
     private var totalOverdue: Double {
-        invoices.filter { $0.status == .overdue }.reduce(0) { $0 + $1.amount }
+        invoices.filter { $0.status == .overdue }.reduce(0) { $0 + $1.total }
     }
     private var collectionRate: Int {
-        let total = invoices.reduce(0) { $0 + $1.amount }
+        let total = invoices.reduce(0) { $0 + $1.total }
         guard total > 0 else { return 0 }
         return Int((totalCollected / total) * 100)
     }
     private var avgInvoiceValue: Double {
         guard !invoices.isEmpty else { return 0 }
-        return invoices.reduce(0) { $0 + $1.amount } / Double(invoices.count)
+        return invoices.reduce(0) { $0 + $1.total } / Double(invoices.count)
     }
     private var chartData: [WeeklyRevenue] {
         selectedPeriod == .week ? weeklyChartData : monthlyChartData
@@ -88,7 +88,7 @@ struct FinancesView: View {
                 .filter { invoice in
                     calendar.isDate(invoice.createdAt, inSameDayAs: date) && invoice.status == .paid
                 }
-                .reduce(0) { $0 + $1.amount }
+                .reduce(0) { $0 + $1.total }
             return WeeklyRevenue(day: formatter.string(from: date), amount: amount)
         }
     }
@@ -104,7 +104,7 @@ struct FinancesView: View {
                 .filter { invoice in
                     invoice.createdAt >= weekStart && invoice.createdAt < weekEnd && invoice.status == .paid
                 }
-                .reduce(0) { $0 + $1.amount }
+                .reduce(0) { $0 + $1.total }
             return WeeklyRevenue(day: "W\(index + 1)", amount: amount)
         }
     }

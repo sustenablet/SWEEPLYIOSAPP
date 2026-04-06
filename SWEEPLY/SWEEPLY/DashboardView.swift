@@ -63,7 +63,7 @@ struct DashboardView: View {
     }
 
     private var outstandingTotal: Double {
-        invoicesStore.invoices.filter { $0.status != .paid }.reduce(0) { $0 + $1.amount }
+        invoicesStore.invoices.filter { $0.status != .paid }.reduce(0) { $0 + $1.total }
     }
 
     private var ongoingInvoices: [Invoice] {
@@ -460,7 +460,7 @@ struct DashInvoiceRow: View {
             }
             Spacer()
             HStack(spacing: 8) {
-                Text(invoice.amount.currency).font(.system(size: 14, weight: .bold, design: .monospaced))
+                Text(invoice.total.currency).font(.system(size: 14, weight: .bold, design: .monospaced))
                 InvoiceStatusBadge(status: invoice.status)
                 Button("Mark Paid") { Task { await invoicesStore.markPaid(id: invoice.id) } }
                     .font(.system(size: 11, weight: .semibold)).foregroundStyle(.white)

@@ -33,11 +33,11 @@ struct ClientDetailView: View {
     }
 
     private var totalRevenue: Double {
-        clientInvoices.filter { $0.status == .paid }.reduce(0) { $0 + $1.amount }
+        clientInvoices.filter { $0.status == .paid }.reduce(0) { $0 + $1.total }
     }
 
     private var outstanding: Double {
-        clientInvoices.filter { $0.status != .paid }.reduce(0) { $0 + $1.amount }
+        clientInvoices.filter { $0.status != .paid }.reduce(0) { $0 + $1.total }
     }
 
     var body: some View {
@@ -518,7 +518,7 @@ private struct DetailInvoiceRow: View {
             }
             Spacer()
             HStack(spacing: 8) {
-                Text(invoice.amount.currency)
+                Text(invoice.total.currency)
                     .font(.system(size: 13, weight: .bold, design: .monospaced))
                 Text(invoice.status.rawValue)
                     .font(.system(size: 10, weight: .semibold))

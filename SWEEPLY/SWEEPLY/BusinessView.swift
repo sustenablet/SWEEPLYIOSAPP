@@ -27,13 +27,13 @@ struct BusinessView: View {
     private var totalRevenue: Double {
         businessInvoices
             .filter { $0.status == .paid }
-            .reduce(0) { $0 + $1.amount }
+            .reduce(0) { $0 + $1.total }
     }
 
     private var outstandingRevenue: Double {
         businessInvoices
             .filter { $0.status != .paid }
-            .reduce(0) { $0 + $1.amount }
+            .reduce(0) { $0 + $1.total }
     }
 
     private var monthlyJobs: [Job] {
