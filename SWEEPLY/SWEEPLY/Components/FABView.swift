@@ -5,11 +5,12 @@ struct FABView: View {
     @Binding var selectedTab: RootView.Tab
     var onNewJob: () -> Void
     var onNewClient: () -> Void
+    var onNewInvoice: () -> Void
     
-    let actions: [(label: String, icon: String, tab: RootView.Tab?)] = [
-        ("New Invoice", "doc.badge.plus", .finances),
-        ("New Client", "person.badge.plus", nil),
-        ("New Job", "briefcase.fill", nil),
+    let actions: [(label: String, icon: String)] = [
+        ("New Invoice", "doc.badge.plus"),
+        ("New Client", "person.badge.plus"),
+        ("New Job", "briefcase.fill"),
     ]
     
     var body: some View {
@@ -34,12 +35,12 @@ struct FABView: View {
                             withAnimation(.spring(duration: 0.3)) {
                                 isExpanded = false
                             }
-                            if let tab = action.tab {
-                                selectedTab = tab
-                            } else if action.label == "New Job" {
+                            if action.label == "New Job" {
                                 onNewJob()
                             } else if action.label == "New Client" {
                                 onNewClient()
+                            } else if action.label == "New Invoice" {
+                                onNewInvoice()
                             }
                         }
                         .transition(.asymmetric(
@@ -105,7 +106,8 @@ struct FABActionButton: View {
         FABView(
             selectedTab: .constant(.dashboard),
             onNewJob: {},
-            onNewClient: {}
+            onNewClient: {},
+            onNewInvoice: {}
         )
     }
 }

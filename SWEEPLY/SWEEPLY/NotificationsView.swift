@@ -4,6 +4,7 @@ struct NotificationsView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(NotificationsStore.self) private var notificationsStore
     @Environment(AppSession.self) private var session
+    @Environment(NotificationManager.self) private var notificationManager
 
     @State private var selectedTab: NotificationTab = .all
     
@@ -67,6 +68,15 @@ struct NotificationsView: View {
                                 .font(.system(size: 14, weight: .medium))
                                 .foregroundStyle(Color.sweeplyNavy)
                         }
+                    }
+                }
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button {
+                        notificationManager.sendTestNotification()
+                    } label: {
+                        Image(systemName: "bell.badge")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(Color.sweeplyNavy)
                     }
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {

@@ -29,11 +29,4 @@ struct CardHeader: View {
     }
 }
 
-#Preview {
-    VStack {
-        CardHeader(title: "Section Title", subtitle: "Optional Subtitle") { print("Pressed View All") }
-        Divider()
-        CardHeader(title: "Only Title")
-    }
-    .padding()
-}
+

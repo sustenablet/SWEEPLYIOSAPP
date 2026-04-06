@@ -48,7 +48,7 @@ extension Color {
     static let sweeplyDestructive = Color(red: 0.65, green: 0.25, blue: 0.22)
 
     /// Muted Stone – adaptive
-    static let sweeplyTextSub = Color(uiColor: .secondaryLabel)
+    static var sweeplyTextSub: Color { Color(uiColor: .secondaryLabel) }
 
     /// Hairline Slate
     static let sweeplyBorder = Color(uiColor: UIColor { trait in

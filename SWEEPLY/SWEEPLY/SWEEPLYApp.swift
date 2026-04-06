@@ -9,6 +9,7 @@ struct SWEEPLYApp: App {
     @State private var invoicesStore = InvoicesStore()
     @State private var profileStore  = ProfileStore()
     @State private var notificationsStore = NotificationsStore()
+    @State private var notificationManager = NotificationManager.shared
 
     var body: some Scene {
         WindowGroup {
@@ -19,6 +20,10 @@ struct SWEEPLYApp: App {
                 .environment(invoicesStore)
                 .environment(profileStore)
                 .environment(notificationsStore)
+                .environment(notificationManager)
+                .onAppear {
+                    notificationManager.checkAuthorizationStatus()
+                }
                 .onOpenURL { url in
                     SupabaseManager.shared?.auth.handle(url)
                 }

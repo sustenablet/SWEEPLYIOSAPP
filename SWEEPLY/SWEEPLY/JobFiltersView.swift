@@ -9,7 +9,7 @@ struct JobFiltersView: View {
     // Internal state to allow "Cancel"
     @State private var localStatus: JobStatus?
     @State private var localType: String = "All"
-    @State private var localViewModes: Set<ScheduleViewMode> = []
+    @State private var localViewModes: Set<ScheduleViewMode> = [.day, .list, .map]
     
     var body: some View {
         VStack(spacing: 0) {
@@ -21,7 +21,7 @@ struct JobFiltersView: View {
                 Button("Clear") {
                     localStatus = nil
                     localType = "All"
-                    localViewModes = Set(ScheduleViewMode.allCases)
+                    localViewModes = [.day, .list, .map]
                 }
                 .font(.system(size: 14, weight: .semibold))
                 .foregroundStyle(Color.sweeplyAccent)
@@ -29,21 +29,22 @@ struct JobFiltersView: View {
             .padding(24)
             
             ScrollView {
-                VStack(alignment: .leading, spacing: 28) {
+                VStack(alignment: .leading, spacing: 32) {
                     // Status Group
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("STATUS")
-                            .font(.system(size: 11, weight: .bold))
-                            .foregroundStyle(Color.sweeplyTextSub)
-                            .tracking(1.0)
+                    VStack(alignment: .leading, spacing: 16) {
+                        FilterHeader(title: "JOB STATUS", subtitle: "Filter by current job progress")
                         
-                        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
-                            FilterTile(label: "Any", isSelected: localStatus == nil) {
+                        ChipGroup(spacing: 8) {
+                            FilterChip(label: "All Statuses", isSelected: localStatus == nil) {
                                 localStatus = nil
                             }
                             
                             ForEach(JobStatus.allCases, id: \.self) { status in
-                                FilterTile(label: status.rawValue.capitalized, isSelected: localStatus == status) {
+                                FilterChip(
+                                    label: status.rawValue,
+                                    isSelected: localStatus == status,
+                                    color: statusColor(for: status)
+                                ) {
                                     localStatus = status
                                 }
                             }
@@ -51,68 +52,91 @@ struct JobFiltersView: View {
                     }
                     
                     // Job Type Group
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("JOB TYPE")
-                            .font(.system(size: 11, weight: .bold))
-                            .foregroundStyle(Color.sweeplyTextSub)
-                            .tracking(1.0)
+                    VStack(alignment: .leading, spacing: 16) {
+                        FilterHeader(title: "SCHEDULE TYPE", subtitle: "One-time or recurring jobs")
                         
-                        VStack(spacing: 8) {
-                            TypeRow(label: "All Jobs", icon: "square.grid.2x2", isSelected: localType == "All") {
+                        HStack(spacing: 12) {
+                            TypeCard(label: "All", icon: "square.grid.2x2.fill", isSelected: localType == "All") {
                                 localType = "All"
                             }
-                            TypeRow(label: "Recurring", icon: "arrow.triangle.2.circlepath", isSelected: localType == "Recurring") {
+                            TypeCard(label: "Recurring", icon: "arrow.triangle.2.circlepath", isSelected: localType == "Recurring") {
                                 localType = "Recurring"
                             }
-                            TypeRow(label: "One-time", icon: "calendar", isSelected: localType == "One-time") {
+                            TypeCard(label: "One-time", icon: "calendar", isSelected: localType == "One-time") {
                                 localType = "One-time"
                             }
                         }
                     }
                     
                     // View Modes Group
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("VIEW MODES")
-                            .font(.system(size: 11, weight: .bold))
-                            .foregroundStyle(Color.sweeplyTextSub)
-                            .tracking(1.0)
+                    VStack(alignment: .leading, spacing: 16) {
+                         VStack(alignment: .leading, spacing: 4) {
+                            Text("VIEW OPTIONS")
+                                .font(.system(size: 11, weight: .bold))
+                                .foregroundStyle(Color.sweeplyNavy)
+                                .tracking(1.0)
+                            Text("Select which tabs appear in the schedule")
+                                .font(.system(size: 13))
+                                .foregroundStyle(Color.sweeplyTextSub)
+                        }
                         
-                        VStack(spacing: 8) {
+                        VStack(spacing: 1) {
                             ForEach(ScheduleViewMode.allCases, id: \.self) { mode in
-                                ViewModeRow(
+                                ToggleRow(
                                     label: mode.rawValue,
                                     icon: iconFor(mode: mode),
-                                    isSelected: localViewModes.contains(mode)
+                                    isOn: localViewModes.contains(mode)
                                 ) {
                                     if localViewModes.contains(mode) {
-                                        localViewModes.remove(mode)
+                                        if localViewModes.count > 1 { // Prevent disabling all
+                                            localViewModes.remove(mode)
+                                        }
                                     } else {
                                         localViewModes.insert(mode)
                                     }
                                 }
+                                
+                                if mode != ScheduleViewMode.allCases.last {
+                                    Divider().padding(.leading, 44)
+                                }
                             }
                         }
+                        .background(Color.sweeplyBackground.opacity(0.5))
+                        .clipShape(RoundedRectangle(cornerRadius: 16))
+                        .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.sweeplyBorder, lineWidth: 1))
                     }
                 }
                 .padding(.horizontal, 24)
+                .padding(.top, 8)
+                .padding(.bottom, 40)
             }
             
-            // Apply Button
-            Button {
-                statusFilter = localStatus
-                typeFilter = localType
-                enabledViewModes = localViewModes
-                dismiss()
-            } label: {
-                Text("Apply Filters")
-                    .font(.system(size: 16, weight: .bold))
-                    .foregroundStyle(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 14)
-                    .background(Color.sweeplyNavy)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
+            // Footer Actions
+            VStack(spacing: 12) {
+                Button {
+                    statusFilter = localStatus
+                    typeFilter = localType
+                    enabledViewModes = localViewModes
+                    dismiss()
+                } label: {
+                    Text("Apply Changes")
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                        .background(Color.sweeplyNavy)
+                        .clipShape(RoundedRectangle(cornerRadius: 16))
+                        .shadow(color: Color.sweeplyNavy.opacity(0.2), radius: 10, x: 0, y: 5)
+                }
+                
+                Button("Cancel") { dismiss() }
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(Color.sweeplyTextSub)
+                    .padding(.bottom, 8)
             }
             .padding(24)
+            .background(Color.sweeplySurface)
+            .shadow(color: .black.opacity(0.05), radius: 10, x: 0, y: -5)
         }
         .background(Color.sweeplySurface)
         .onAppear {
@@ -127,32 +151,64 @@ struct JobFiltersView: View {
         case .day: return "calendar"
         case .list: return "list.bullet"
         case .month: return "calendar.badge.month"
-        case .map: return "map"
+        case .map: return "map.fill"
+        }
+    }
+
+    private func statusColor(for status: JobStatus) -> Color {
+        switch status {
+        case .completed:  return Color.sweeplyAccent
+        case .inProgress: return .blue
+        case .scheduled:  return Color.sweeplyNavy
+        case .cancelled:  return Color.sweeplyDestructive
         }
     }
 }
 
-private struct FilterTile: View {
+// MARK: - Subviews
+
+private struct FilterHeader: View {
+    let title: String
+    let subtitle: String
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title)
+                .font(.system(size: 11, weight: .bold))
+                .foregroundStyle(Color.sweeplyNavy)
+                .tracking(1.0)
+            Text(subtitle)
+                .font(.system(size: 13))
+                .foregroundStyle(Color.sweeplyTextSub)
+        }
+    }
+}
+
+private struct FilterChip: View {
     let label: String
     let isSelected: Bool
+    var color: Color = Color.sweeplyNavy
     let action: () -> Void
     
     var body: some View {
         Button(action: action) {
             Text(label)
                 .font(.system(size: 14, weight: isSelected ? .bold : .medium))
-                .foregroundStyle(isSelected ? .white : Color.sweeplyNavy)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 12)
-                .background(isSelected ? Color.sweeplyNavy : Color.sweeplyBackground)
-                .clipShape(RoundedRectangle(cornerRadius: 10))
-                .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.sweeplyBorder, lineWidth: isSelected ? 0 : 1))
+                .foregroundStyle(isSelected ? .white : color)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 10)
+                .background(isSelected ? color : Color.sweeplyBackground)
+                .clipShape(Capsule())
+                .overlay(
+                    Capsule()
+                        .stroke(color.opacity(0.2), lineWidth: isSelected ? 0 : 1)
+                )
         }
         .buttonStyle(.plain)
     }
 }
 
-private struct TypeRow: View {
+private struct TypeCard: View {
     let label: String
     let icon: String
     let isSelected: Bool
@@ -160,58 +216,102 @@ private struct TypeRow: View {
     
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 12) {
+            VStack(spacing: 10) {
                 Image(systemName: icon)
-                    .font(.system(size: 16))
-                    .foregroundStyle(isSelected ? .white : Color.sweeplyNavy)
+                    .font(.system(size: 20))
                 Text(label)
-                    .font(.system(size: 15, weight: isSelected ? .bold : .medium))
-                    .foregroundStyle(isSelected ? .white : Color.sweeplyNavy)
-                Spacer()
-                if isSelected {
-                    Image(systemName: "checkmark")
-                        .font(.system(size: 12, weight: .bold))
-                        .foregroundStyle(.white)
-                }
+                    .font(.system(size: 13, weight: .bold))
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 16)
             .background(isSelected ? Color.sweeplyNavy : Color.sweeplyBackground)
-            .clipShape(RoundedRectangle(cornerRadius: 10))
-            .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.sweeplyBorder, lineWidth: isSelected ? 0 : 1))
+            .foregroundStyle(isSelected ? .white : Color.sweeplyNavy)
+            .clipShape(RoundedRectangle(cornerRadius: 16))
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(Color.sweeplyBorder, lineWidth: isSelected ? 0 : 1)
+            )
         }
         .buttonStyle(.plain)
     }
 }
 
-private struct ViewModeRow: View {
+private struct ToggleRow: View {
     let label: String
     let icon: String
-    let isSelected: Bool
+    let isOn: Bool
     let action: () -> Void
     
     var body: some View {
         Button(action: action) {
             HStack(spacing: 12) {
-                Image(systemName: icon)
-                    .font(.system(size: 16))
-                    .foregroundStyle(isSelected ? .white : Color.sweeplyNavy)
-                Text(label)
-                    .font(.system(size: 15, weight: isSelected ? .bold : .medium))
-                    .foregroundStyle(isSelected ? .white : Color.sweeplyNavy)
-                Spacer()
-                if isSelected {
-                    Image(systemName: "checkmark")
-                        .font(.system(size: 12, weight: .bold))
-                        .foregroundStyle(.white)
+                ZStack {
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(Color.sweeplyNavy.opacity(0.05))
+                        .frame(width: 32, height: 32)
+                    Image(systemName: icon)
+                        .font(.system(size: 14))
+                        .foregroundStyle(Color.sweeplyNavy)
                 }
+                
+                Text(label)
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundStyle(Color.primary)
+                
+                Spacer()
+                
+                Image(systemName: isOn ? "checkmark.circle.fill" : "circle")
+                    .font(.system(size: 22))
+                    .foregroundStyle(isOn ? Color.sweeplyAccent : Color.sweeplyBorder)
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
-            .background(isSelected ? Color.sweeplyNavy : Color.sweeplyBackground)
-            .clipShape(RoundedRectangle(cornerRadius: 10))
-            .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.sweeplyBorder, lineWidth: isSelected ? 0 : 1))
+            .background(Color.sweeplySurface)
         }
         .buttonStyle(.plain)
     }
 }
+
+// MARK: - FlowLayout Helper
+private struct FlowLayout: View {
+    let spacing: CGFloat
+    let content: [AnyView]
+    
+    init<Views: View>(spacing: CGFloat = 8, @ViewBuilder content: () -> Views) {
+        self.spacing = spacing
+        // Simplistic approach for this context; in a real app, use a proper FlowLayout implementation
+        // For Brewster-style chips, a simple HStack/VStack combo or a LazyVGrid is often enough.
+        // Here we'll use a LazyVGrid to mimic the flow if multiple lines.
+        self.content = [AnyView(content())]
+    }
+    
+    var body: some View {
+        // Using a Flexible Grid as a proxy for FlowLayout for simplicity in this task
+        LazyVGrid(columns: [GridItem(.adaptive(minimum: 100, maximum: 200), spacing: spacing)], spacing: spacing) {
+            ForEach(0..<content.count, id: \.self) { index in
+                content[index]
+            }
+        }
+    }
+}
+
+// Re-implementing FlowLayout properly for the chips
+private struct ChipGroup<Content: View>: View {
+    let spacing: CGFloat
+    let content: Content
+    
+    init(spacing: CGFloat = 8, @ViewBuilder content: () -> Content) {
+        self.spacing = spacing
+        self.content = content()
+    }
+    
+    var body: some View {
+        // Using HStack for now as we have few statuses. If many, we'd need a real FlowLayout.
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: spacing) {
+                content
+            }
+        }
+    }
+}
+

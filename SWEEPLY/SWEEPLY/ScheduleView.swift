@@ -20,7 +20,9 @@ struct ScheduleView: View {
     @State private var statusFilter: JobStatus? = nil
     @State private var typeFilter: String = "All"
     @State private var showMonthPicker = false
-    @State private var enabledViewModes: Set<ScheduleViewMode> = [.day, .list, .month, .map]
+    @State private var enabledViewModes: Set<ScheduleViewMode> = [.day, .list, .map]
+    @State private var selectedJobId: UUID? = nil
+    @Namespace private var mapSelectionNamespace
     
     private var visibleViewModes: [ScheduleViewMode] {
         ScheduleViewMode.allCases.filter { enabledViewModes.contains($0) }
@@ -131,45 +133,82 @@ struct ScheduleView: View {
     // MARK: - Map View
     
     private var mapView: some View {
-        VStack(spacing: 0) {
-            if jobsStore.jobs.isEmpty {
-                scheduleEmptyState
-            } else {
-                Map {
-                    ForEach(jobsStore.jobs) { job in
-                        if let client = clientsStore.clients.first(where: { $0.id == job.clientId }) {
-                            Annotation(job.clientName, coordinate: CLLocationCoordinate2D(latitude: client.latitude ?? 0, longitude: client.longitude ?? 0)) {
-                                ZStack {
-                                    Circle()
-                                        .fill(statusColor(for: job.status))
-                                        .frame(width: 12, height: 12)
-                                    Circle()
-                                        .stroke(.white, lineWidth: 2)
-                                        .frame(width: 16, height: 16)
+        ZStack(alignment: .bottom) {
+            Map(initialPosition: MapCameraPosition.automatic) {
+                ForEach(jobsStore.jobs) { job in
+                    if let client = clientsStore.clients.first(where: { $0.id == job.clientId }) {
+                        Annotation(job.clientName, coordinate: CLLocationCoordinate2D(latitude: client.latitude ?? 0, longitude: client.longitude ?? 0)) {
+                            MapPinView(
+                                status: job.status,
+                                isSelected: selectedJobId == job.id,
+                                serviceType: job.serviceType
+                            )
+                            .onTapGesture {
+                                withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                                    selectedJobId = job.id
                                 }
                             }
                         }
                     }
                 }
-                .mapStyle(.standard(elevation: .realistic, pointsOfInterest: .including([.school, .park])))
-                .ignoresSafeArea(edges: .bottom)
-                
-                VStack {
+                UserAnnotation()
+            }
+            .mapStyle(.standard(elevation: .realistic, pointsOfInterest: .including([.school, .park, .hospital])))
+            .mapControls {
+                MapCompass()
+                MapScaleView()
+            }
+            .ignoresSafeArea(edges: .bottom)
+            
+            // Map Controls Overlay
+            VStack {
+                HStack {
                     Spacer()
-                    HStack {
-                        Text("\(jobsStore.jobs.count) jobs on map")
-                            .font(.system(size: 12, weight: .medium))
-                            .foregroundStyle(.white)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 6)
-                            .background(Color.sweeplyNavy.opacity(0.9))
-                            .clipShape(Capsule())
-                        Spacer()
+                    VStack(spacing: 12) {
+                        MapActionButton(icon: "location.fill") {
+                            // In a real app, this would use MapProxy to center on user
+                        }
+                        MapActionButton(icon: "scope") {
+                            // Recenter on all jobs
+                        }
                     }
-                    .padding(.bottom, 20)
+                    .padding(.trailing, 16)
+                    .padding(.top, 120)
                 }
+                Spacer()
+            }
+            
+            // Selected Job Card
+            if let selectedJobId = selectedJobId,
+               let job = jobsStore.jobs.first(where: { $0.id == selectedJobId }) {
+                MapJobCard(
+                    job: job,
+                    onDirections: { openDirections(for: job) },
+                    onDetails: { /* Navigation handled via state or proxy if needed */ },
+                    onDismiss: {
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.9)) {
+                            self.selectedJobId = nil
+                        }
+                    }
+                )
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+                .zIndex(10)
+            }
+            
+            if jobsStore.jobs.isEmpty {
+                scheduleEmptyState
+                    .background(Color.sweeplyBackground.opacity(0.8))
             }
         }
+    }
+    
+    private func openDirections(for job: Job) {
+        let lat = clientsStore.clients.first(where: { $0.id == job.clientId })?.latitude ?? 0
+        let lon = clientsStore.clients.first(where: { $0.id == job.clientId })?.longitude ?? 0
+        let coordinate = CLLocationCoordinate2D(latitude: lat, longitude: lon)
+        let mapItem = MKMapItem(placemark: MKPlacemark(coordinate: coordinate))
+        mapItem.name = job.clientName
+        mapItem.openInMaps(launchOptions: [MKLaunchOptionsDirectionsModeKey: MKLaunchOptionsDirectionsModeDriving])
     }
     
     private func statusColor(for status: JobStatus) -> Color {
@@ -534,34 +573,60 @@ private struct ScheduleMonthPicker: View {
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            PageHeader(
-                eyebrow: "Jump To",
-                title: "Choose Date",
-                subtitle: "Move the schedule to another week or month"
-            ) {
+        VStack(spacing: 0) {
+            // Header
+            HStack {
                 Button("Done") {
                     dismiss()
                 }
-                .font(.system(size: 14, weight: .semibold))
+                .font(.system(size: 15, weight: .bold))
+                .foregroundStyle(Color.sweeplyNavy)
+                
+                Spacer()
+                
+                Text("Choose Date")
+                    .font(.system(size: 17, weight: .bold))
+                    .foregroundStyle(Color.sweeplyNavy)
+                
+                Spacer()
+                
+                Button("Today") {
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                        selectedDay = Calendar.current.startOfDay(for: Date())
+                    }
+                }
+                .font(.system(size: 15, weight: .semibold))
                 .foregroundStyle(Color.sweeplyAccent)
             }
+            .padding(.horizontal, 24)
+            .padding(.vertical, 20)
+            .background(Color.sweeplySurface)
+            
+            Divider()
 
-            DatePicker(
-                "Selected Date",
-                selection: $selectedDay,
-                displayedComponents: .date
-            )
-            .datePickerStyle(.graphical)
-            .labelsHidden()
-
-            Button("Jump to Today") {
-                selectedDay = Calendar.current.startOfDay(for: Date())
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: 24) {
+                    DatePicker(
+                        "Selected Date",
+                        selection: $selectedDay,
+                        displayedComponents: .date
+                    )
+                    .datePickerStyle(.graphical)
+                    .tint(Color.sweeplyAccent)
+                    .labelsHidden()
+                    .padding(16)
+                    .background(Color.sweeplySurface)
+                    .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 20, style: .continuous)
+                            .stroke(Color.sweeplyBorder, lineWidth: 1)
+                    )
+                    .padding(.horizontal, 20)
+                    .padding(.top, 24)
+                }
+                .padding(.bottom, 40)
             }
-            .font(.system(size: 14, weight: .semibold))
-            .foregroundStyle(Color.sweeplyNavy)
         }
-        .padding(20)
         .background(Color.sweeplyBackground.ignoresSafeArea())
     }
 }
@@ -666,6 +731,84 @@ private struct ScheduleJobRow: View {
         }
     }
 }
+
+// MARK: - Map Helper Views
+
+struct MapPinView: View {
+    let status: JobStatus
+    let isSelected: Bool
+    let serviceType: ServiceType
+    
+    var body: some View {
+        VStack(spacing: 0) {
+            ZStack {
+                Circle()
+                    .fill(isSelected ? Color.sweeplyNavy : statusColor)
+                    .frame(width: isSelected ? 44 : 36, height: isSelected ? 44 : 36)
+                    .shadow(color: .black.opacity(0.15), radius: 4, x: 0, y: 2)
+                
+                Image(systemName: serviceIcon)
+                    .font(.system(size: isSelected ? 18 : 14, weight: .bold))
+                    .foregroundStyle(.white)
+                
+                Circle()
+                    .stroke(.white, lineWidth: 2)
+                    .frame(width: isSelected ? 48 : 40, height: isSelected ? 48 : 40)
+            }
+            
+            Image(systemName: "triangle.fill")
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .frame(width: 10, height: 10)
+                .rotationEffect(.degrees(180))
+                .foregroundStyle(isSelected ? Color.sweeplyNavy : statusColor)
+                .offset(y: -4)
+        }
+        .scaleEffect(isSelected ? 1.2 : 1.0)
+        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isSelected)
+    }
+    
+    private var statusColor: Color {
+        switch status {
+        case .completed: return Color.sweeplyAccent
+        case .inProgress: return .blue
+        case .scheduled: return Color.sweeplyNavy.opacity(0.6)
+        case .cancelled: return Color.sweeplyDestructive
+        }
+    }
+    
+    private var serviceIcon: String {
+        switch serviceType {
+        case .standard: return "house.fill"
+        case .deep: return "sparkles"
+        case .moveInOut: return "shippingbox.fill"
+        case .postConstruction: return "hammer.fill"
+        case .office: return "building.2.fill"
+        case .custom: return "star.fill"
+        }
+    }
+}
+
+struct MapActionButton: View {
+    let icon: String
+    let action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            Circle()
+                .fill(Color.sweeplySurface)
+                .frame(width: 44, height: 44)
+                .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 4)
+                .overlay(
+                    Image(systemName: icon)
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundStyle(Color.sweeplyNavy)
+                )
+        }
+        .buttonStyle(.plain)
+    }
+}
+
 
 #Preview {
     ScheduleView()

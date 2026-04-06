@@ -10,6 +10,7 @@ struct RootView: View {
     @State private var selectedTab: Tab = .dashboard
     @State private var showNewJob = false
     @State private var showNewClient = false
+    @State private var showNewInvoice = false
     @State private var showQuickAdd = false
 
     enum Tab {
@@ -63,7 +64,8 @@ struct RootView: View {
             FABView(
                 selectedTab: $selectedTab, 
                 onNewJob: { showNewJob = true },
-                onNewClient: { showNewClient = true }
+                onNewClient: { showNewClient = true },
+                onNewInvoice: { showNewInvoice = true }
             )
         }
         .sheet(isPresented: $showNewJob) {
@@ -71,6 +73,9 @@ struct RootView: View {
         }
         .sheet(isPresented: $showNewClient) {
             NewClientForm()
+        }
+        .sheet(isPresented: $showNewInvoice) {
+            NewInvoiceView()
         }
 
         .task(id: session.isAuthenticated) {

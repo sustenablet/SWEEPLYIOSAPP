@@ -12,6 +12,10 @@ struct ClientDetailView: View {
         clientsStore.clients.first(where: { $0.id == clientId })
     }
 
+    @State private var showEditSheet = false
+    @State private var showDeleteConfirmation = false
+    @State private var isArchiving = false
+
     private var sourceJobs: [Job] {
         jobsStore.jobs
     }
@@ -57,6 +61,51 @@ struct ClientDetailView: View {
                 .background(Color.sweeplyBackground.ignoresSafeArea())
                 .navigationBarTitleDisplayMode(.inline)
                 .navigationTitle(client.name)
+                .toolbar {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        HStack(spacing: 8) {
+                            Button("Edit") {
+                                showEditSheet = true
+                            }
+                            .font(.system(size: 14, weight: .bold))
+                            .foregroundStyle(Color.sweeplyNavy)
+                            
+                            Menu {
+                                Button {
+                                    Task { await toggleArchive(client: client) }
+                                } label: {
+                                    Label(client.isActive ? "Archive Client" : "Unarchive Client", 
+                                          systemImage: client.isActive ? "archivebox" : "archivebox.fill")
+                                }
+                                
+                                Divider()
+                                
+                                Button(role: .destructive) {
+                                    showDeleteConfirmation = true
+                                } label: {
+                                    Label("Delete Client", systemImage: "trash")
+                                }
+                            } label: {
+                                Image(systemName: "ellipsis.circle")
+                                    .font(.system(size: 18))
+                                    .foregroundStyle(Color.sweeplyNavy)
+                            }
+                        }
+                    }
+                }
+                .sheet(isPresented: $showEditSheet) {
+                    NewClientForm(editingClient: client)
+                }
+                .confirmationDialog("Delete Client?", isPresented: $showDeleteConfirmation, titleVisibility: .visible) {
+                    Button("Delete permanently", role: .destructive) {
+                        Task {
+                            let success = await clientsStore.delete(id: client.id)
+                            if success { dismiss() }
+                        }
+                    }
+                } message: {
+                    Text("This will permanently remove \(client.name) and all their associated data. This action cannot be undone.")
+                }
             } else {
                 VStack(spacing: 16) {
                     Image(systemName: "person.crop.circle.badge.exclamationmark")
@@ -114,6 +163,20 @@ struct ClientDetailView: View {
                             .font(.system(size: 12))
                             .foregroundStyle(Color.sweeplyTextSub.opacity(0.6))
                     }
+                    
+                    // Status Badge
+                    HStack(spacing: 4) {
+                        Circle()
+                            .fill(client.isActive ? Color.sweeplySuccess : Color.sweeplyTextSub)
+                            .frame(width: 8, height: 8)
+                        Text(client.isActive ? "Active" : "Archived")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundStyle(client.isActive ? Color.sweeplySuccess : Color.sweeplyTextSub)
+                    }
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background((client.isActive ? Color.sweeplySuccess : Color.sweeplyTextSub).opacity(0.1))
+                    .clipShape(Capsule())
                 }
                 Spacer()
             }
@@ -171,6 +234,14 @@ struct ClientDetailView: View {
         if let url = URL(string: "http://maps.apple.com/?daddr=\(addr)") {
             UIApplication.shared.open(url)
         }
+    }
+
+    private func toggleArchive(client: Client) async {
+        var updated = client
+        updated.isActive.toggle()
+        isArchiving = true
+        _ = await clientsStore.update(updated)
+        isArchiving = false
     }
 
     // MARK: - Stats Row

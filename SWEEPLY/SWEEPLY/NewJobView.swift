@@ -48,42 +48,43 @@ struct NewJobForm: View {
         VStack(spacing: 0) {
             // Header
             HStack {
-                Text("New Job")
-                    .font(.system(size: 20, weight: .bold))
                 Spacer()
-                Button("Cancel") { dismiss() }
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(Color.sweeplyTextSub)
+                Text("Schedule a Job")
+                    .font(.system(size: 18, weight: .bold))
+                Spacer()
+                Button { dismiss() } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundStyle(Color.sweeplyNavy.opacity(0.6))
+                }
             }
-            .padding(24)
+            .padding(.horizontal, 24)
+            .padding(.vertical, 20)
             
-            ScrollView {
-                VStack(spacing: 24) {
-                    // 1. Client Choice
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("CLIENT").font(.system(size: 10, weight: .bold)).foregroundStyle(Color.sweeplyTextSub)
-                        Menu {
-                            ForEach(clientsStore.clients) { client in
-                                Button(client.name) { selectedClientId = client.id }
-                            }
-                        } label: {
-                            HStack {
-                                Text(selectedClient?.name ?? "Select Client...")
-                                    .foregroundStyle(selectedClientId == nil ? Color.sweeplyTextSub : .primary)
-                                Spacer()
-                                Image(systemName: "chevron.down").font(.system(size: 12))
-                            }
-                            .padding(.vertical, 12)
-                            .padding(.horizontal, 16)
-                            .background(Color.sweeplyBackground)
-                            .clipShape(RoundedRectangle(cornerRadius: 10))
-                        }
-                    }
-
-                    // 2. Service & Scheduling
-                    HStack(spacing: 16) {
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: 32) {
+                    // 1. Job Details
+                    VStack(alignment: .leading, spacing: 20) {
+                        SectionHeader(title: "JOB DETAILS")
+                        
+                        // Client Selector
                         VStack(alignment: .leading, spacing: 8) {
-                            Text("SERVICE").font(.system(size: 10, weight: .bold)).foregroundStyle(Color.sweeplyTextSub)
+                            Text("Client *").font(.system(size: 13, weight: .medium)).foregroundStyle(Color.sweeplyTextSub)
+                            Menu {
+                                ForEach(clientsStore.clients) { client in
+                                    Button(client.name) { selectedClientId = client.id }
+                                }
+                            } label: {
+                                PickerButton(
+                                    label: selectedClient?.name ?? "Select client",
+                                    isSelected: selectedClientId != nil
+                                )
+                            }
+                        }
+                        
+                        // Service Type Selector
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Service Type *").font(.system(size: 13, weight: .medium)).foregroundStyle(Color.sweeplyTextSub)
                             Menu {
                                 ForEach(serviceCatalog) { service in
                                     Button("\(service.name) · \(service.price.currency)") {
@@ -92,62 +93,95 @@ struct NewJobForm: View {
                                     }
                                 }
                             } label: {
-                                HStack {
-                                    Text(selectedServiceLabel)
-                                    Spacer()
-                                    Image(systemName: "chevron.down").font(.system(size: 12))
-                                }
-                                .padding(.vertical, 12)
-                                .padding(.horizontal, 16)
-                                .background(Color.sweeplyBackground)
-                                .clipShape(RoundedRectangle(cornerRadius: 10))
+                                PickerButton(
+                                    label: selectedServiceLabel,
+                                    isSelected: true
+                                )
                             }
                         }
+                    }
+                    
+                    // 2. Schedule
+                    VStack(alignment: .leading, spacing: 20) {
+                        SectionHeader(title: "SCHEDULE")
                         
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("DATE").font(.system(size: 10, weight: .bold)).foregroundStyle(Color.sweeplyTextSub)
-                            DatePicker("", selection: $date, displayedComponents: .date)
-                                .labelsHidden()
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 4)
-                                .background(Color.sweeplyBackground)
-                                .clipShape(RoundedRectangle(cornerRadius: 10))
+                        HStack(spacing: 16) {
+                            // Date
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("Date *").font(.system(size: 13, weight: .medium)).foregroundStyle(Color.sweeplyTextSub)
+                                DatePicker("", selection: $date, displayedComponents: .date)
+                                    .labelsHidden()
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 8)
+                                    .background(Color.sweeplySurface)
+                                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.sweeplyBorder, lineWidth: 1))
+                            }
+                            
+                            // Time
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("Time *").font(.system(size: 13, weight: .medium)).foregroundStyle(Color.sweeplyTextSub)
+                                DatePicker("", selection: $date, displayedComponents: .hourAndMinute)
+                                    .labelsHidden()
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 8)
+                                    .background(Color.sweeplySurface)
+                                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.sweeplyBorder, lineWidth: 1))
+                            }
                         }
                     }
-
-                    HStack(spacing: 16) {
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("TIME").font(.system(size: 10, weight: .bold)).foregroundStyle(Color.sweeplyTextSub)
-                            DatePicker("", selection: $date, displayedComponents: .hourAndMinute)
-                                .labelsHidden()
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 4)
-                                .background(Color.sweeplyBackground)
-                                .clipShape(RoundedRectangle(cornerRadius: 10))
-                        }
+                    
+                    // 3. Pricing
+                    VStack(alignment: .leading, spacing: 20) {
+                        SectionHeader(title: "PRICING")
                         
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("PRICE ($)").font(.system(size: 10, weight: .bold)).foregroundStyle(Color.sweeplyTextSub)
-                            TextField("0.00", text: $price)
-                                .keyboardType(.decimalPad)
-                                .padding(.vertical, 12)
-                                .padding(.horizontal, 16)
-                                .background(Color.sweeplyBackground)
-                                .clipShape(RoundedRectangle(cornerRadius: 10))
+                        HStack(spacing: 16) {
+                            // Duration
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("Duration (hrs)").font(.system(size: 13, weight: .medium)).foregroundStyle(Color.sweeplyTextSub)
+                                TextField("2", text: $duration)
+                                    .keyboardType(.decimalPad)
+                                    .padding(.horizontal, 16)
+                                    .padding(.vertical, 14)
+                                    .background(Color.sweeplySurface)
+                                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.sweeplyBorder, lineWidth: 1))
+                            }
+                            
+                            // Price
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("Price ($)").font(.system(size: 13, weight: .medium)).foregroundStyle(Color.sweeplyTextSub)
+                                TextField("120.00", text: $price)
+                                    .keyboardType(.decimalPad)
+                                    .padding(.horizontal, 16)
+                                    .padding(.vertical, 14)
+                                    .background(Color.sweeplySurface)
+                                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.sweeplyBorder, lineWidth: 1))
+                            }
                         }
                     }
-
-                    // 3. Recurrence
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("RECURRENCE").font(.system(size: 10, weight: .bold)).foregroundStyle(Color.sweeplyTextSub)
+                    
+                    // 4. Recurrence
+                    VStack(alignment: .leading, spacing: 20) {
+                        SectionHeader(title: "RECURRENCE")
                         
-                        Picker("", selection: $recurrence) {
+                        Menu {
                             ForEach(RecurrenceFrequency.allCases, id: \.self) { freq in
-                                Text(freq.rawValue.capitalized).tag(freq)
+                                Button(freq.rawValue.capitalized) {
+                                    withAnimation { recurrence = freq }
+                                }
                             }
+                        } label: {
+                            PickerButton(
+                                label: recurrence.rawValue.capitalized,
+                                isSelected: true
+                            )
                         }
-                        .pickerStyle(.segmented)
-
+                        
                         if recurrence != .once {
                             VStack(spacing: 16) {
                                 if recurrence == .custom {
@@ -158,8 +192,9 @@ struct NewJobForm: View {
                                             .frame(width: 40)
                                             .multilineTextAlignment(.center)
                                             .padding(6)
-                                            .background(Color.sweeplyBackground)
-                                            .border(Color.sweeplyBorder)
+                                            .background(Color.sweeplySurface)
+                                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                                            .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.sweeplyBorder, lineWidth: 1))
                                         Text("Days").font(.system(size: 14))
                                         Spacer()
                                     }
@@ -177,32 +212,47 @@ struct NewJobForm: View {
                             }
                             .padding(16)
                             .background(Color.sweeplyBackground)
-                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                            .clipShape(RoundedRectangle(cornerRadius: 16))
                         }
                     }
                 }
                 .padding(.horizontal, 24)
+                .padding(.bottom, 40)
             }
-
-            // Save Button
-            Button {
-                Task { await saveJob() }
-            } label: {
-                HStack {
-                    if isSaving { ProgressView().tint(.white).padding(.trailing, 8) }
-                    Text(isSaving ? "Creating..." : "Create Job")
+            
+            // Footer Actions
+            HStack(spacing: 12) {
+                Button("Cancel") { dismiss() }
+                    .font(.system(size: 15, weight: .bold))
+                    .foregroundStyle(Color.sweeplyNavy)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 16)
+                    .background(Color.sweeplySurface)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.sweeplyBorder, lineWidth: 1))
+                
+                Button {
+                    Task { await saveJob() }
+                } label: {
+                    HStack {
+                        if isSaving { ProgressView().tint(.white).padding(.trailing, 8) }
+                        Text(isSaving ? "Scheduling..." : "Schedule Job")
+                    }
+                    .font(.system(size: 15, weight: .bold))
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 16)
+                    .background(selectedClientId == nil || isSaving ? Color.sweeplyNavy.opacity(0.4) : Color.sweeplyNavy)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .shadow(color: Color.sweeplyNavy.opacity(0.15), radius: 8, x: 0, y: 4)
                 }
-                .font(.system(size: 16, weight: .bold))
-                .foregroundStyle(.white)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 14)
-                .background(selectedClientId == nil || isSaving ? Color.sweeplyBorder : Color.sweeplyNavy)
-                .clipShape(RoundedRectangle(cornerRadius: 12))
+                .disabled(selectedClientId == nil || isSaving)
             }
-            .disabled(selectedClientId == nil || isSaving)
             .padding(24)
+            .background(Color.sweeplySurface)
+            .shadow(color: .black.opacity(0.04), radius: 10, x: 0, y: -5)
         }
-        .background(Color.sweeplySurface)
+        .background(Color.sweeplySurface.ignoresSafeArea())
         .onAppear {
             if selectedService == nil, let firstService = serviceCatalog.first {
                 serviceType = ServiceType(rawValue: firstService.name) ?? .custom(firstService.name)
@@ -271,3 +321,45 @@ struct NewJobForm: View {
         dismiss()
     }
 }
+
+// MARK: - Subviews
+
+private struct SectionHeader: View {
+    let title: String
+    
+    var body: some View {
+        HStack(spacing: 12) {
+            Text(title)
+                .font(.system(size: 11, weight: .bold))
+                .foregroundStyle(Color.sweeplyTextSub)
+                .tracking(1.0)
+            
+            Rectangle()
+                .fill(Color.sweeplyBorder)
+                .frame(height: 1)
+        }
+    }
+}
+
+private struct PickerButton: View {
+    let label: String
+    let isSelected: Bool
+    
+    var body: some View {
+        HStack {
+            Text(label)
+                .font(.system(size: 15))
+                .foregroundStyle(isSelected ? Color.primary : Color.sweeplyTextSub)
+            Spacer()
+            Image(systemName: "chevron.down")
+                .font(.system(size: 12, weight: .bold))
+                .foregroundStyle(Color.sweeplyTextSub)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 14)
+        .background(Color.sweeplySurface)
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.sweeplyBorder, lineWidth: 1))
+    }
+}
+

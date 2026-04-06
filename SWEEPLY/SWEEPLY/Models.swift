@@ -146,6 +146,42 @@ struct Client: Identifiable {
     var notes: String
     var latitude: Double?
     var longitude: Double?
+    var isActive: Bool = true
+
+    init(id: UUID, name: String, email: String, phone: String, address: String, city: String, state: String, zip: String, preferredService: ServiceType?, entryInstructions: String, notes: String, latitude: Double? = nil, longitude: Double? = nil, isActive: Bool = true) {
+        self.id = id
+        self.name = name
+        self.email = email
+        self.phone = phone
+        self.address = address
+        self.city = city
+        self.state = state
+        self.zip = zip
+        self.preferredService = preferredService
+        self.entryInstructions = entryInstructions
+        self.notes = notes
+        self.latitude = latitude
+        self.longitude = longitude
+        self.isActive = isActive
+    }
+
+    // Linker compatibility for previous builds
+    init(id: UUID, name: String, email: String, phone: String, address: String, city: String, state: String, zip: String, preferredService: ServiceType?, entryInstructions: String, notes: String, latitude: Double?, longitude: Double?) {
+        self.id = id
+        self.name = name
+        self.email = email
+        self.phone = phone
+        self.address = address
+        self.city = city
+        self.state = state
+        self.zip = zip
+        self.preferredService = preferredService
+        self.entryInstructions = entryInstructions
+        self.notes = notes
+        self.latitude = latitude
+        self.longitude = longitude
+        self.isActive = true
+    }
 }
 
 struct Job: Identifiable, Codable {

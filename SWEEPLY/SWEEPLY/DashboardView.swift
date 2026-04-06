@@ -173,7 +173,7 @@ struct DashboardView: View {
                     outstandingInvoicesSection
                 }
                 .padding(.horizontal, 20)
-                .padding(.top, 24)
+                .padding(.top, 8)
                 .padding(.bottom, 100)
             }
             .opacity(appeared ? 1 : 0)
@@ -520,10 +520,6 @@ struct DashboardHealthSlide: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(Color.sweeplySurface)
         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(Color.sweeplyBorder, lineWidth: 1)
-        )
     }
 }
 

@@ -12,8 +12,11 @@ struct ClientsView: View {
     @State private var editingClient: Client? = nil
     @State private var deleteTarget: Client? = nil
     @State private var appeared = false
+    @State private var showArchived = false
 
-    private var displayClients: [Client] { clientsStore.clients }
+    private var displayClients: [Client] { 
+        clientsStore.clients.filter { $0.isActive || showArchived }
+    }
 
     private var displayJobs: [Job] { jobsStore.jobs }
 
@@ -84,11 +87,25 @@ struct ClientsView: View {
             PageHeader(
                 eyebrow: "Directory",
                 title: "Clients",
-                subtitle: "\(displayClients.count) total clients"
+                subtitle: "\(displayClients.count) \(showArchived ? "total" : "active") clients"
             ) {
-                HeaderIconButton(systemName: "plus", foregroundColor: .white, backgroundColor: .sweeplyNavy) {
-                    editingClient = nil
-                    showAddSheet = true
+                HStack(spacing: 12) {
+                    Button {
+                        withAnimation { showArchived.toggle() }
+                    } label: {
+                        Image(systemName: showArchived ? "archivebox.fill" : "archivebox")
+                            .font(.system(size: 14))
+                            .foregroundStyle(showArchived ? Color.sweeplyAccent : Color.sweeplyNavy)
+                            .frame(width: 38, height: 38)
+                            .background(Color.sweeplySurface)
+                            .clipShape(Circle())
+                            .overlay(Circle().stroke(Color.sweeplyBorder, lineWidth: 1))
+                    }
+
+                    HeaderIconButton(systemName: "plus", foregroundColor: .white, backgroundColor: .sweeplyNavy) {
+                        editingClient = nil
+                        showAddSheet = true
+                    }
                 }
             }
 
@@ -152,7 +169,14 @@ struct ClientsView: View {
                                 editingClient = client
                                 showAddSheet = true
                             },
-                            onDelete: { deleteTarget = client }
+                            onDelete: { deleteTarget = client },
+                            onToggleArchive: {
+                                Task {
+                                    var updated = client
+                                    updated.isActive.toggle()
+                                    _ = await clientsStore.update(updated)
+                                }
+                            }
                         )
                     }
                     .buttonStyle(.plain)
@@ -201,6 +225,7 @@ private struct ClientCard: View {
     let jobCount: Int
     let onEdit: () -> Void
     let onDelete: () -> Void
+    let onToggleArchive: () -> Void
 
     var body: some View {
         SectionCard {
@@ -221,7 +246,19 @@ private struct ClientCard: View {
                     VStack(alignment: .leading, spacing: 2) {
                         Text(client.name)
                             .font(.system(size: 14, weight: .semibold))
-                            .foregroundStyle(Color.primary)
+                            .foregroundStyle(client.isActive ? Color.primary : Color.sweeplyTextSub)
+                        
+                        if !client.isActive {
+                            Text("ARCHIVED")
+                                .font(.system(size: 8, weight: .bold))
+                                .foregroundStyle(Color.sweeplyTextSub)
+                                .padding(.horizontal, 5)
+                                .padding(.vertical, 2)
+                                .background(Color.sweeplyBackground)
+                                .clipShape(Capsule())
+                                .overlay(Capsule().stroke(Color.sweeplyBorder, lineWidth: 1))
+                        }
+
                         if !client.notes.isEmpty {
                             Text(client.notes)
                                 .font(.system(size: 12))
@@ -244,6 +281,16 @@ private struct ClientCard: View {
 
                         Menu {
                             Button { onEdit() } label: { Label("Edit Client", systemImage: "pencil") }
+                            
+                            Button {
+                                onToggleArchive()
+                            } label: {
+                                Label(client.isActive ? "Archive Client" : "Unarchive Client", 
+                                      systemImage: client.isActive ? "archivebox" : "archivebox.fill")
+                            }
+
+                            Divider()
+                            
                             Button(role: .destructive) { onDelete() } label: { Label("Delete Client", systemImage: "trash") }
                         } label: {
                             Image(systemName: "ellipsis")

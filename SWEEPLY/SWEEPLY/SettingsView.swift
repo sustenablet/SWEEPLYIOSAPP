@@ -5,6 +5,7 @@ struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(ProfileStore.self) private var profileStore
     @Environment(AppSession.self) private var session
+    @Environment(NotificationManager.self) private var notificationManager
     
     @State private var selectedTab: SettingsTab = .profile
     @State private var isSaving = false
@@ -255,6 +256,26 @@ struct SettingsView: View {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Dark Mode").font(.system(size: 15, weight: .semibold))
                         Text("Adaptive editorial appearance").font(.system(size: 12)).foregroundStyle(Color.sweeplyTextSub)
+                    }
+                }
+                .tint(Color.sweeplyNavy)
+                
+                Divider()
+                
+                Toggle(isOn: Binding(
+                    get: { notificationManager.isAuthorized },
+                    set: { newValue in
+                        if newValue {
+                            notificationManager.requestAuthorization()
+                        } else {
+                            // Can't "un-request" but we can direct them to settings if needed
+                            // For now, mirroring status is enough
+                        }
+                    }
+                )) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Push Notifications").font(.system(size: 15, weight: .semibold))
+                        Text("Alerts for schedule and billing updates").font(.system(size: 12)).foregroundStyle(Color.sweeplyTextSub)
                     }
                 }
                 .tint(Color.sweeplyNavy)
