@@ -528,6 +528,16 @@ private extension ScheduleView {
                                     .font(.system(size: 11, weight: .semibold))
                                 Text(dayNumber(for: date))
                                     .font(.system(size: 16, weight: .bold))
+                                let jobCount = jobsStore.jobs.filter { Calendar.current.isDate($0.date, inSameDayAs: date) }.count
+                                if jobCount > 0 {
+                                    Circle()
+                                        .fill(isSelected ? Color.white.opacity(0.6) : Color.sweeplyAccent)
+                                        .frame(width: 5, height: 5)
+                                } else {
+                                    Circle()
+                                        .fill(Color.clear)
+                                        .frame(width: 5, height: 5)
+                                }
                             }
                             .frame(width: 44, height: 58)
                             .background(isSelected ? Color.sweeplyNavy : (isToday ? Color.sweeplyAccent.opacity(0.08) : Color.sweeplySurface))
