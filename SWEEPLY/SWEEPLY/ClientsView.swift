@@ -189,34 +189,47 @@ struct ClientsView: View {
     }
 
     private var emptyState: some View {
-        VStack(spacing: 12) {
-            Image(systemName: "person.2")
-                .font(.system(size: 36))
-                .foregroundStyle(Color.sweeplyTextSub.opacity(0.4))
-            Text(search.isEmpty ? "No clients yet" : "No clients found")
-                .font(.system(size: 15, weight: .semibold))
-                .foregroundStyle(Color.sweeplyTextSub)
-            Text(search.isEmpty ? "Add your first client to get started." : "Try a different search term.")
-                .font(.system(size: 13))
-                .foregroundStyle(Color.sweeplyTextSub.opacity(0.7))
-                .multilineTextAlignment(.center)
+        VStack(spacing: 20) {
+            Spacer()
+            ZStack {
+                Circle()
+                    .fill(Color.sweeplyAccent.opacity(0.08))
+                    .frame(width: 88, height: 88)
+                Image(systemName: search.isEmpty ? "person.2.fill" : "magnifyingglass")
+                    .font(.system(size: 36, weight: .medium))
+                    .foregroundStyle(Color.sweeplyAccent.opacity(0.7))
+            }
+            VStack(spacing: 8) {
+                Text(search.isEmpty ? "No clients yet" : "No clients found")
+                    .font(.system(size: 20, weight: .bold))
+                    .foregroundStyle(Color.sweeplyNavy)
+                Text(search.isEmpty
+                     ? "Add your first client to start booking\njobs and sending invoices."
+                     : "No clients match \"\(search)\".\nTry a different name or address.")
+                    .font(.system(size: 14))
+                    .foregroundStyle(Color.sweeplyTextSub)
+                    .multilineTextAlignment(.center)
+                    .lineSpacing(3)
+            }
             if search.isEmpty {
                 Button {
                     editingClient = nil
                     showAddSheet = true
                 } label: {
-                    Text("Add Client")
+                    Text("Add Your First Client")
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundStyle(.white)
-                        .padding(.horizontal, 20)
-                        .padding(.vertical, 10)
+                        .padding(.horizontal, 24)
+                        .padding(.vertical, 12)
                         .background(Color.sweeplyNavy)
                         .clipShape(Capsule())
                 }
+                .padding(.top, 4)
             }
+            Spacer()
         }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 40)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding(.horizontal, 32)
     }
 }
 
