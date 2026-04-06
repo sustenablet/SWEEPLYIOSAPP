@@ -13,6 +13,7 @@ enum ScheduleViewMode: String, CaseIterable {
 struct ScheduleView: View {
     @Environment(JobsStore.self) private var jobsStore
     @Environment(ClientsStore.self) private var clientsStore
+    @Environment(AppSession.self) private var session
     @State private var appeared = false
     @State private var viewMode: ScheduleViewMode = .day
     @State private var selectedDay: Date = Calendar.current.startOfDay(for: Date())
@@ -263,9 +264,12 @@ struct ScheduleView: View {
                 .padding(20)
                 .padding(.bottom, 100)
             }
+            .refreshable {
+                await jobsStore.load(isAuthenticated: session.isAuthenticated)
+            }
         }
     }
-    
+
     private func moveDate(by days: Int) {
         selectedDay = calendar.date(byAdding: .day, value: days, to: selectedDay) ?? selectedDay
     }
@@ -307,6 +311,9 @@ struct ScheduleView: View {
             .padding(20)
             .padding(.bottom, 100)
         }
+        .refreshable {
+            await jobsStore.load(isAuthenticated: session.isAuthenticated)
+        }
     }
 
     // MARK: - Month View
@@ -336,6 +343,9 @@ struct ScheduleView: View {
                     }
                     .padding(.horizontal, 20)
                     .padding(.bottom, 100)
+                }
+                .refreshable {
+                    await jobsStore.load(isAuthenticated: session.isAuthenticated)
                 }
             }
         }
