@@ -252,19 +252,6 @@ struct SettingsView: View {
     private var preferencesSection: some View {
         SectionCard {
             VStack(spacing: 20) {
-                Toggle(isOn: $localProfile.settings.darkMode) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Dark Mode").font(.system(size: 15, weight: .semibold))
-                        Text("Adaptive editorial appearance").font(.system(size: 12)).foregroundStyle(Color.sweeplyTextSub)
-                    }
-                }
-                .tint(Color.sweeplyNavy)
-                .onChange(of: localProfile.settings.darkMode) { _, _ in
-                    Task { await saveChanges() }
-                }
-                
-                Divider()
-                
                 Toggle(isOn: Binding(
                     get: { notificationManager.isAuthorized },
                     set: { newValue in
@@ -449,7 +436,6 @@ struct SettingsView: View {
         lhs.settings.zip == rhs.settings.zip &&
         lhs.settings.defaultRate == rhs.settings.defaultRate &&
         lhs.settings.defaultDuration == rhs.settings.defaultDuration &&
-        lhs.settings.darkMode == rhs.settings.darkMode &&
         lhs.settings.services.count == rhs.settings.services.count &&
         zip(lhs.settings.services, rhs.settings.services).allSatisfy { left, right in
             left.id == right.id &&

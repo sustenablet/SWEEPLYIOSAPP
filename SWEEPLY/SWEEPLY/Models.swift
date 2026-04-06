@@ -97,8 +97,6 @@ struct AppSettings: Codable {
     var defaultDuration: Double = 2.0
     var taxRate: Double = 0
     var paymentTerms: Int = 14
-    var darkMode: Bool = false
-
     static let defaultServiceCatalog: [BusinessService] = [
         BusinessService(name: ServiceType.standard.rawValue, price: 150),
         BusinessService(name: ServiceType.deep.rawValue, price: 280),
