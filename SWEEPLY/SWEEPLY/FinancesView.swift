@@ -394,7 +394,7 @@ private struct MinimalInvoiceRow: View {
                             .foregroundStyle(Color.sweeplyNavy)
                             .lineLimit(1)
                         Spacer(minLength: 8)
-                        Text(invoice.amount.currency)
+                        Text(invoice.total.currency)
                             .font(.system(size: 15, weight: .semibold, design: .rounded))
                             .foregroundStyle(Color.sweeplyNavy)
                             .monospacedDigit()
@@ -428,7 +428,9 @@ private struct MinimalInvoiceRow: View {
                     Label("Mark as paid", systemImage: "checkmark.circle")
                 }
             }
-            Button(role: .destructive) {} label: {
+            Button(role: .destructive) {
+                Task { await invoicesStore.delete(id: invoice.id) }
+            } label: {
                 Label("Delete", systemImage: "trash")
             }
         }

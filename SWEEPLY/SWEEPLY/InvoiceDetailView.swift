@@ -4,6 +4,7 @@ struct InvoiceDetailView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(InvoicesStore.self) private var invoicesStore
     @Environment(ClientsStore.self) private var clientsStore
+    @Environment(AppSession.self) private var session
 
     let invoiceId: UUID
 
@@ -16,21 +17,29 @@ struct InvoiceDetailView: View {
         return clientsStore.clients.first(where: { $0.id == invoice.clientId })
     }
 
-    @State private var showingShareSheet = false
+    @State private var showingEdit = false
+    @State private var showingDeleteConfirm = false
+    @State private var isDeleting = false
 
     var body: some View {
         Group {
             if let invoice {
-                ScrollView {
+                ScrollView(showsIndicators: false) {
                     VStack(alignment: .leading, spacing: 20) {
                         invoiceHeader(invoice: invoice)
                         actionButtons(invoice: invoice)
-                        
+
                         if let client {
                             clientProfileCard(client: client)
                         }
 
+                        if !invoice.lineItems.isEmpty {
+                            lineItemsCard(invoice: invoice)
+                        }
+
                         invoiceDetailsCard(invoice: invoice)
+
+                        deleteButton(invoice: invoice)
 
                         Spacer(minLength: 40)
                     }
@@ -39,6 +48,22 @@ struct InvoiceDetailView: View {
                 .background(Color.sweeplyBackground.ignoresSafeArea())
                 .navigationTitle("Invoice Details")
                 .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .primaryAction) {
+                        Button("Edit") { showingEdit = true }
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundStyle(Color.sweeplyNavy)
+                    }
+                }
+                .sheet(isPresented: $showingEdit) {
+                    EditInvoiceSheet(invoice: invoice)
+                }
+                .alert("Delete Invoice?", isPresented: $showingDeleteConfirm) {
+                    Button("Delete", role: .destructive) { deleteInvoice(invoice) }
+                    Button("Cancel", role: .cancel) {}
+                } message: {
+                    Text("This will permanently delete \(invoice.invoiceNumber). This can't be undone.")
+                }
             } else {
                 VStack(spacing: 16) {
                     Image(systemName: "doc.text.magnifyingglass")
@@ -47,10 +72,8 @@ struct InvoiceDetailView: View {
                     Text("Invoice not found")
                         .font(.system(size: 18, weight: .semibold))
                         .foregroundStyle(Color.sweeplyNavy)
-                    Button("Go Back") {
-                        dismiss()
-                    }
-                    .buttonStyle(.borderedProminent)
+                    Button("Go Back") { dismiss() }
+                        .buttonStyle(.borderedProminent)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .background(Color.sweeplyBackground)
@@ -59,6 +82,7 @@ struct InvoiceDetailView: View {
     }
 
     // MARK: - Header
+
     private func invoiceHeader(invoice: Invoice) -> some View {
         VStack(spacing: 12) {
             HStack(alignment: .top) {
@@ -66,7 +90,7 @@ struct InvoiceDetailView: View {
                     Text(invoice.invoiceNumber)
                         .font(.system(size: 15, weight: .bold, design: .monospaced))
                         .foregroundStyle(Color.sweeplyTextSub)
-                    Text(invoice.amount.currency)
+                    Text(invoice.total.currency)
                         .font(.system(size: 32, weight: .bold, design: .rounded))
                         .foregroundStyle(Color.sweeplyNavy)
                 }
@@ -98,6 +122,7 @@ struct InvoiceDetailView: View {
     }
 
     // MARK: - Action Buttons
+
     private func actionButtons(invoice: Invoice) -> some View {
         HStack(spacing: 12) {
             if invoice.status != .paid {
@@ -113,24 +138,17 @@ struct InvoiceDetailView: View {
                         .clipShape(RoundedRectangle(cornerRadius: 14))
                 }
             } else {
-                Button {
-                    // Reset to unpaid (optional functionality, left as visual state indicator)
-                } label: {
-                    Label("Already Paid", systemImage: "checkmark.seal.fill")
-                        .font(.system(size: 14, weight: .bold))
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
-                        .background(Color.sweeplySurface)
-                        .foregroundStyle(Color.sweeplySuccess)
-                        .clipShape(RoundedRectangle(cornerRadius: 14))
-                        .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.sweeplyBorder, lineWidth: 1))
-                }
-                .disabled(true)
+                Label("Already Paid", systemImage: "checkmark.seal.fill")
+                    .font(.system(size: 14, weight: .bold))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(Color.sweeplySurface)
+                    .foregroundStyle(Color.sweeplySuccess)
+                    .clipShape(RoundedRectangle(cornerRadius: 14))
+                    .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.sweeplyBorder, lineWidth: 1))
             }
-            
-            Button {
-                showingShareSheet = true
-            } label: {
+
+            ShareLink(item: shareText(invoice: invoice)) {
                 Label("Send", systemImage: "paperplane.fill")
                     .font(.system(size: 14, weight: .bold))
                     .frame(maxWidth: .infinity)
@@ -139,24 +157,18 @@ struct InvoiceDetailView: View {
                     .foregroundStyle(.white)
                     .clipShape(RoundedRectangle(cornerRadius: 14))
             }
-            .sheet(isPresented: $showShareSheet) {
-                // Future Implementation: Real PDF generation
-                Text("Sharing Invoice \(invoice.invoiceNumber) for \(invoice.amount.currency)...")
-                    .presentationDetents([.height(200)])
-            }
         }
     }
 
-    @State private var showShareSheet = false
-
     // MARK: - Client Profile Card
+
     private func clientProfileCard(client: Client) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("BILLED TO")
                 .font(.system(size: 11, weight: .bold))
                 .foregroundStyle(Color.sweeplyTextSub)
                 .tracking(1.0)
-            
+
             NavigationLink(destination: ClientDetailView(clientId: client.id)) {
                 SectionCard {
                     HStack(spacing: 14) {
@@ -168,12 +180,12 @@ struct InvoiceDetailView: View {
                                 .font(.system(size: 18, weight: .bold))
                                 .foregroundStyle(Color.sweeplyNavy)
                         }
-                        
+
                         VStack(alignment: .leading, spacing: 4) {
                             Text(client.name)
                                 .font(.system(size: 16, weight: .bold))
                                 .foregroundStyle(Color.sweeplyNavy)
-                            
+
                             HStack(spacing: 4) {
                                 Image(systemName: "envelope.fill")
                                     .font(.system(size: 10))
@@ -182,7 +194,7 @@ struct InvoiceDetailView: View {
                             }
                             .foregroundStyle(Color.sweeplyTextSub)
                         }
-                        
+
                         Spacer()
                         Image(systemName: "chevron.right")
                             .font(.system(size: 14, weight: .semibold))
@@ -194,26 +206,355 @@ struct InvoiceDetailView: View {
         }
     }
 
-    // MARK: - Details Card
+    // MARK: - Line Items Card
+
+    private func lineItemsCard(invoice: Invoice) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("SERVICES")
+                .font(.system(size: 11, weight: .bold))
+                .foregroundStyle(Color.sweeplyTextSub)
+                .tracking(1.0)
+
+            SectionCard {
+                VStack(alignment: .leading, spacing: 0) {
+                    ForEach(invoice.lineItems) { item in
+                        HStack(alignment: .top, spacing: 12) {
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text(item.description)
+                                    .font(.system(size: 14, weight: .medium))
+                                    .foregroundStyle(Color.sweeplyNavy)
+                                Text("\(formatQty(item.quantity)) × \(item.unitPrice.currency)")
+                                    .font(.system(size: 12))
+                                    .foregroundStyle(Color.sweeplyTextSub)
+                            }
+                            Spacer()
+                            Text(item.total.currency)
+                                .font(.system(size: 14, weight: .semibold, design: .monospaced))
+                                .foregroundStyle(Color.sweeplyNavy)
+                        }
+                        .padding(.vertical, 10)
+
+                        if item.id != invoice.lineItems.last?.id {
+                            Divider()
+                        }
+                    }
+
+                    // Total row
+                    Divider().padding(.top, 4)
+
+                    HStack {
+                        Text("TOTAL")
+                            .font(.system(size: 13, weight: .bold))
+                            .foregroundStyle(Color.sweeplyNavy)
+                        Spacer()
+                        Text(invoice.total.currency)
+                            .font(.system(size: 17, weight: .bold, design: .monospaced))
+                            .foregroundStyle(Color.sweeplyNavy)
+                    }
+                    .padding(.top, 10)
+                }
+            }
+        }
+    }
+
+    // MARK: - Invoice Details Card
+
     private func invoiceDetailsCard(invoice: Invoice) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("DOCUMENT DETAILS")
                 .font(.system(size: 11, weight: .bold))
                 .foregroundStyle(Color.sweeplyTextSub)
                 .tracking(1.0)
-            
+
             SectionCard {
                 VStack(alignment: .leading, spacing: 14) {
                     InvoiceInfoRow(icon: "doc.text.fill", title: "Invoice No.", value: invoice.invoiceNumber)
                     Divider()
-                    InvoiceInfoRow(icon: "plus.circle.fill", title: "Issued Date", value: invoice.createdAt.formatted(date: .abbreviated, time: .omitted))
+                    InvoiceInfoRow(icon: "plus.circle.fill", title: "Issued", value: invoice.createdAt.formatted(date: .abbreviated, time: .omitted))
                     Divider()
                     InvoiceInfoRow(icon: "exclamationmark.square.fill", title: "Due Date", value: invoice.dueDate.formatted(date: .abbreviated, time: .omitted))
+
+                    if !invoice.notes.isEmpty {
+                        Divider()
+                        InvoiceInfoRow(icon: "note.text", title: "Notes", value: invoice.notes)
+                    }
                 }
             }
         }
     }
+
+    // MARK: - Delete Button
+
+    private func deleteButton(invoice: Invoice) -> some View {
+        Button {
+            showingDeleteConfirm = true
+        } label: {
+            HStack {
+                if isDeleting {
+                    ProgressView().tint(Color.sweeplyDestructive)
+                } else {
+                    Image(systemName: "trash")
+                    Text("Delete Invoice")
+                }
+            }
+            .font(.system(size: 15, weight: .semibold))
+            .foregroundStyle(Color.sweeplyDestructive)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 14)
+            .background(Color.sweeplyDestructive.opacity(0.08))
+            .clipShape(RoundedRectangle(cornerRadius: 14))
+            .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.sweeplyDestructive.opacity(0.2), lineWidth: 1))
+        }
+        .disabled(isDeleting)
+    }
+
+    // MARK: - Actions
+
+    private func deleteInvoice(_ invoice: Invoice) {
+        isDeleting = true
+        Task {
+            let _ = await invoicesStore.delete(id: invoice.id)
+            await MainActor.run {
+                isDeleting = false
+                dismiss()
+            }
+        }
+    }
+
+    private func shareText(invoice: Invoice) -> String {
+        var lines: [String] = []
+        lines.append("Invoice \(invoice.invoiceNumber)")
+        lines.append("Billed to: \(invoice.clientName)")
+        lines.append("")
+
+        if !invoice.lineItems.isEmpty {
+            lines.append("Services:")
+            for item in invoice.lineItems {
+                lines.append("  \(item.description) × \(formatQty(item.quantity)) = \(item.total.currency)")
+            }
+        }
+
+        lines.append("")
+        lines.append("Total: \(invoice.total.currency)")
+        lines.append("Due: \(invoice.dueDate.formatted(date: .long, time: .omitted))")
+
+        if !invoice.notes.isEmpty {
+            lines.append("")
+            lines.append("Notes: \(invoice.notes)")
+        }
+
+        lines.append("")
+        lines.append("Please make payment by the due date. Thank you!")
+
+        return lines.joined(separator: "\n")
+    }
+
+    private func formatQty(_ v: Double) -> String {
+        v.truncatingRemainder(dividingBy: 1) == 0 ? String(Int(v)) : String(format: "%.1f", v)
+    }
 }
+
+// MARK: - Edit Sheet
+
+private struct EditInvoiceSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @Environment(InvoicesStore.self) private var invoicesStore
+    @Environment(AppSession.self) private var session
+
+    let invoice: Invoice
+
+    @State private var lineItems: [InvoiceLineItem]
+    @State private var dueDate: Date
+    @State private var notes: String
+    @State private var isSubmitting = false
+    @State private var errorMessage: String?
+
+    init(invoice: Invoice) {
+        self.invoice = invoice
+        _lineItems = State(initialValue: invoice.lineItems)
+        _dueDate = State(initialValue: invoice.dueDate)
+        _notes = State(initialValue: invoice.notes)
+    }
+
+    private var subtotal: Double {
+        lineItems.reduce(0) { $0 + $1.total }
+    }
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                Color.sweeplyBackground.ignoresSafeArea()
+
+                ScrollView(showsIndicators: false) {
+                    VStack(spacing: 24) {
+                        if let error = errorMessage {
+                            Text(error)
+                                .font(.system(size: 14, weight: .medium))
+                                .foregroundStyle(.white)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding()
+                                .background(Color.sweeplyDestructive)
+                                .clipShape(RoundedRectangle(cornerRadius: 12))
+                        }
+
+                        // Line items
+                        if !lineItems.isEmpty {
+                            VStack(alignment: .leading, spacing: 12) {
+                                editSectionHeader("SERVICES")
+                                VStack(spacing: 8) {
+                                    ForEach($lineItems) { $item in
+                                        EditLineItemRow(item: $item) {
+                                            lineItems.removeAll { $0.id == item.id }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // Due date
+                        VStack(alignment: .leading, spacing: 12) {
+                            editSectionHeader("PAYMENT")
+                            DatePicker("Due Date", selection: $dueDate, in: Date()..., displayedComponents: .date)
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 12)
+                                .background(Color.sweeplySurface)
+                                .clipShape(RoundedRectangle(cornerRadius: 12))
+                                .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.sweeplyBorder, lineWidth: 1))
+                        }
+
+                        // Notes
+                        VStack(alignment: .leading, spacing: 12) {
+                            editSectionHeader("NOTES")
+                            TextField("Notes (optional)", text: $notes, axis: .vertical)
+                                .font(.system(size: 15))
+                                .lineLimit(3...6)
+                                .padding(16)
+                                .background(Color.sweeplySurface)
+                                .clipShape(RoundedRectangle(cornerRadius: 12))
+                                .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.sweeplyBorder, lineWidth: 1))
+                        }
+                    }
+                    .padding(24)
+                    .padding(.bottom, 100)
+                }
+
+                // Footer
+                VStack(spacing: 0) {
+                    Divider()
+                    HStack(spacing: 16) {
+                        Button("Cancel") { dismiss() }
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundStyle(Color.sweeplyTextSub)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 54)
+                            .background(Color.sweeplySurface)
+                            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                            .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(Color.sweeplyBorder, lineWidth: 1))
+
+                        Button { saveChanges() } label: {
+                            Group {
+                                if isSubmitting { ProgressView().tint(.white) }
+                                else { Text("Save Changes") }
+                            }
+                            .font(.system(size: 16, weight: .bold))
+                            .foregroundStyle(.white)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 54)
+                            .background(Color.sweeplyNavy)
+                            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        }
+                        .disabled(isSubmitting)
+                    }
+                    .padding(20)
+                    .background(Color.sweeplyBackground.ignoresSafeArea(edges: .bottom))
+                }
+                .frame(maxHeight: .infinity, alignment: .bottom)
+            }
+            .navigationTitle("Edit Invoice")
+            .navigationBarTitleDisplayMode(.inline)
+            .navigationBarHidden(false)
+        }
+    }
+
+    private func editSectionHeader(_ title: String) -> some View {
+        HStack(spacing: 12) {
+            Text(title)
+                .font(.system(size: 11, weight: .bold))
+                .foregroundStyle(Color.sweeplyTextSub)
+                .tracking(1.0)
+            Rectangle().fill(Color.sweeplyBorder).frame(height: 1)
+        }
+    }
+
+    private func saveChanges() {
+        guard let userId = session.userId else { return }
+        isSubmitting = true
+        errorMessage = nil
+
+        var updated = invoice
+        updated.lineItems = lineItems
+        updated.amount = subtotal
+        updated.dueDate = dueDate
+        updated.notes = notes
+
+        Task {
+            let success = await invoicesStore.update(updated, userId: userId)
+            await MainActor.run {
+                isSubmitting = false
+                if success { dismiss() }
+                else { errorMessage = invoicesStore.lastError ?? "Failed to save changes." }
+            }
+        }
+    }
+}
+
+// MARK: - Edit Line Item Row (simplified for edit sheet)
+
+private struct EditLineItemRow: View {
+    @Binding var item: InvoiceLineItem
+    let onDelete: () -> Void
+
+    @State private var priceString: String = ""
+
+    var body: some View {
+        HStack(spacing: 12) {
+            TextField("Description", text: $item.description)
+                .font(.system(size: 14, weight: .medium))
+                .foregroundStyle(Color.sweeplyNavy)
+
+            Spacer()
+
+            HStack(spacing: 2) {
+                Text("$").font(.system(size: 13)).foregroundStyle(Color.sweeplyTextSub)
+                TextField("0.00", text: $priceString)
+                    .keyboardType(.decimalPad)
+                    .font(.system(size: 14, design: .monospaced))
+                    .foregroundStyle(Color.sweeplyNavy)
+                    .frame(width: 70)
+                    .multilineTextAlignment(.trailing)
+                    .onChange(of: priceString) { _, newValue in
+                        if let v = Double(newValue) { item.unitPrice = v }
+                    }
+            }
+
+            Button(action: onDelete) {
+                Image(systemName: "minus.circle.fill")
+                    .font(.system(size: 20))
+                    .foregroundStyle(Color.sweeplyDestructive.opacity(0.7))
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 14)
+        .background(Color.sweeplySurface)
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.sweeplyBorder, lineWidth: 1))
+        .onAppear {
+            priceString = item.unitPrice > 0 ? String(format: "%.2f", item.unitPrice) : ""
+        }
+    }
+}
+
+// MARK: - Shared
 
 private struct InvoiceInfoRow: View {
     let icon: String
@@ -227,7 +568,7 @@ private struct InvoiceInfoRow: View {
                 .foregroundStyle(Color.sweeplyAccent)
                 .frame(width: 20)
                 .padding(.top, 2)
-            
+
             VStack(alignment: .leading, spacing: 4) {
                 Text(title)
                     .font(.system(size: 12, weight: .semibold))

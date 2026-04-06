@@ -109,7 +109,7 @@ struct BusinessView: View {
                 PageHeader(
                     eyebrow: profile.businessName.isEmpty ? "Business" : profile.businessName.uppercased(),
                     title: "Operational Overview",
-                    subtitle: "Preferences, performance, and support"
+                    subtitle: nil
                 )
                 .padding(.top, 16)
 

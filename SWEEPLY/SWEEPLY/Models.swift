@@ -219,15 +219,32 @@ enum RecurrenceFrequency: String, Codable, CaseIterable {
     case custom    = "custom"
 }
 
+struct InvoiceLineItem: Identifiable, Codable {
+    var id = UUID()
+    var description: String
+    var quantity: Double
+    var unitPrice: Double
+
+    var total: Double { quantity * unitPrice }
+}
+
 struct Invoice: Identifiable {
     let id: UUID
     var clientId: UUID
     var clientName: String
-    var amount: Double
+    var amount: Double          // always equals subtotal; kept for backward compat with all views
     var status: InvoiceStatus
     var createdAt: Date
     var dueDate: Date
     var invoiceNumber: String
+    var notes: String = ""
+    var lineItems: [InvoiceLineItem] = []
+
+    var subtotal: Double {
+        lineItems.isEmpty ? amount : lineItems.reduce(0) { $0 + $1.total }
+    }
+
+    var total: Double { subtotal }
 }
 
 struct WeeklyRevenue: Identifiable {

@@ -50,14 +50,17 @@ final class InvoicesStore {
         }
         lastError = nil
         do {
+            let lineItemsJSON = (try? JSONEncoder().encode(invoice.lineItems)).flatMap { String(data: $0, encoding: .utf8) }
             let row = InvoiceRowInsert(
                 userId: userId,
                 clientId: invoice.clientId,
                 clientName: invoice.clientName,
-                amount: invoice.amount,
+                amount: invoice.subtotal,
                 status: invoice.status.rawValue,
                 dueDate: invoice.dueDate,
-                invoiceNumber: invoice.invoiceNumber
+                invoiceNumber: invoice.invoiceNumber,
+                notes: invoice.notes.isEmpty ? nil : invoice.notes,
+                lineItems: lineItemsJSON
             )
             let inserted: InvoiceRow = try await client
                 .from("invoices")
@@ -67,6 +70,40 @@ final class InvoicesStore {
                 .execute()
                 .value
             invoices.insert(inserted.toInvoice(), at: 0)
+            return true
+        } catch {
+            lastError = error.localizedDescription
+            return false
+        }
+    }
+
+    func update(_ invoice: Invoice, userId: UUID) async -> Bool {
+        guard let client = SupabaseManager.shared else {
+            if let idx = invoices.firstIndex(where: { $0.id == invoice.id }) {
+                invoices[idx] = invoice
+            }
+            return true
+        }
+        lastError = nil
+        do {
+            let lineItemsJSON = (try? JSONEncoder().encode(invoice.lineItems)).flatMap { String(data: $0, encoding: .utf8) }
+            let patch = InvoiceUpdatePatch(
+                amount: invoice.subtotal,
+                dueDate: invoice.dueDate,
+                notes: invoice.notes.isEmpty ? nil : invoice.notes,
+                lineItems: lineItemsJSON
+            )
+            let refreshed: InvoiceRow = try await client
+                .from("invoices")
+                .update(patch)
+                .eq("id", value: invoice.id)
+                .select()
+                .single()
+                .execute()
+                .value
+            if let idx = invoices.firstIndex(where: { $0.id == invoice.id }) {
+                invoices[idx] = refreshed.toInvoice()
+            }
             return true
         } catch {
             lastError = error.localizedDescription
@@ -146,19 +183,26 @@ private struct InvoiceRow: Decodable {
     let createdAt: Date
     let dueDate: Date
     let invoiceNumber: String
+    let notes: String?
+    let lineItems: String?      // JSON-encoded [InvoiceLineItem]
 
     enum CodingKeys: String, CodingKey {
-        case id, amount, status
+        case id, amount, status, notes
         case userId        = "user_id"
         case clientId      = "client_id"
         case clientName    = "client_name"
         case createdAt     = "created_at"
         case dueDate       = "due_date"
         case invoiceNumber = "invoice_number"
+        case lineItems     = "line_items"
     }
 
     func toInvoice() -> Invoice {
-        Invoice(
+        let items: [InvoiceLineItem] = {
+            guard let json = lineItems, let data = json.data(using: .utf8) else { return [] }
+            return (try? JSONDecoder().decode([InvoiceLineItem].self, from: data)) ?? []
+        }()
+        return Invoice(
             id: id,
             clientId: clientId,
             clientName: clientName,
@@ -166,7 +210,9 @@ private struct InvoiceRow: Decodable {
             status: InvoiceStatus(rawValue: status) ?? .unpaid,
             createdAt: createdAt,
             dueDate: dueDate,
-            invoiceNumber: invoiceNumber
+            invoiceNumber: invoiceNumber,
+            notes: notes ?? "",
+            lineItems: items
         )
     }
 }
@@ -179,17 +225,33 @@ private struct InvoiceRowInsert: Encodable {
     let status: String
     let dueDate: Date
     let invoiceNumber: String
+    let notes: String?
+    let lineItems: String?
 
     enum CodingKeys: String, CodingKey {
-        case amount, status
+        case amount, status, notes
         case userId        = "user_id"
         case clientId      = "client_id"
         case clientName    = "client_name"
         case dueDate       = "due_date"
         case invoiceNumber = "invoice_number"
+        case lineItems     = "line_items"
     }
 }
 
 private struct InvoiceStatusPatch: Encodable {
     let status: String
+}
+
+private struct InvoiceUpdatePatch: Encodable {
+    let amount: Double
+    let dueDate: Date
+    let notes: String?
+    let lineItems: String?
+
+    enum CodingKeys: String, CodingKey {
+        case amount, notes
+        case dueDate   = "due_date"
+        case lineItems = "line_items"
+    }
 }
