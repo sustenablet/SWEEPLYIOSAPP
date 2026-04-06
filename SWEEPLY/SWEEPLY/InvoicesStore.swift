@@ -159,6 +159,40 @@ final class InvoicesStore {
         }
     }
 
+    func markOverdueInvoices() async {
+        let today = Calendar.current.startOfDay(for: Date())
+        let overdueIds = invoices
+            .filter { $0.status == .unpaid && Calendar.current.startOfDay(for: $0.dueDate) < today }
+            .map { $0.id }
+        guard !overdueIds.isEmpty else { return }
+
+        // Update locally first for immediate UI response
+        for id in overdueIds {
+            if let idx = invoices.firstIndex(where: { $0.id == id }) {
+                invoices[idx].status = .overdue
+            }
+        }
+
+        // Persist to Supabase
+        guard let client = SupabaseManager.shared else { return }
+        for id in overdueIds {
+            do {
+                let patch = InvoiceStatusPatch(status: InvoiceStatus.overdue.rawValue)
+                let refreshed: InvoiceRow = try await client
+                    .from("invoices")
+                    .update(patch)
+                    .eq("id", value: id)
+                    .select()
+                    .single()
+                    .execute()
+                    .value
+                if let idx = invoices.firstIndex(where: { $0.id == refreshed.id }) {
+                    invoices[idx] = refreshed.toInvoice()
+                }
+            } catch { /* skip individual failures silently */ }
+        }
+    }
+
     /// Returns the next sequential invoice number (e.g. "INV-0044").
     func nextInvoiceNumber() -> String {
         let numbers = invoices.compactMap { inv -> Int? in

@@ -94,6 +94,7 @@ struct RootView: View {
             async let j: () = jobsStore.load(isAuthenticated: session.isAuthenticated)
             async let i: () = invoicesStore.load(isAuthenticated: session.isAuthenticated)
             _ = await (j, i)
+            await invoicesStore.markOverdueInvoices()
             if session.isAuthenticated, let uid = session.userId {
                 await profileStore.load(userId: uid)
             }
