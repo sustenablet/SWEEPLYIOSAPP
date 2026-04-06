@@ -81,9 +81,9 @@ struct RootView: View {
         .fullScreenCover(isPresented: $showOnboarding) {
             OnboardingView()
         }
-        .onChange(of: profileStore.profile) { _, profile in
-            guard session.isAuthenticated, let profile else { return }
-            if profile.businessName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+        .onChange(of: profileStore.profile?.businessName ?? "") { _, businessName in
+            guard session.isAuthenticated else { return }
+            if businessName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 showOnboarding = true
             } else {
                 showOnboarding = false
