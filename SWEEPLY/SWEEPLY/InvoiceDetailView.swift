@@ -5,6 +5,7 @@ struct InvoiceDetailView: View {
     @Environment(InvoicesStore.self) private var invoicesStore
     @Environment(ClientsStore.self) private var clientsStore
     @Environment(AppSession.self) private var session
+    @Environment(ProfileStore.self) private var profileStore
 
     let invoiceId: UUID
 
@@ -20,6 +21,8 @@ struct InvoiceDetailView: View {
     @State private var showingEdit = false
     @State private var showingDeleteConfirm = false
     @State private var isDeleting = false
+    @State private var pdfData: Data? = nil
+    @State private var showPDFShare = false
 
     var body: some View {
         Group {
@@ -57,6 +60,9 @@ struct InvoiceDetailView: View {
                 }
                 .sheet(isPresented: $showingEdit) {
                     EditInvoiceSheet(invoice: invoice)
+                }
+                .sheet(isPresented: $showPDFShare) {
+                    ShareSheetView(data: pdfData ?? Data(), fileName: "Invoice-\(invoice.invoiceNumber).pdf")
                 }
                 .alert("Delete Invoice?", isPresented: $showingDeleteConfirm) {
                     Button("Delete", role: .destructive) { deleteInvoice(invoice) }
@@ -151,7 +157,11 @@ struct InvoiceDetailView: View {
                     .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.sweeplyBorder, lineWidth: 1))
             }
 
-            ShareLink(item: shareText(invoice: invoice)) {
+            Button {
+                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                pdfData = generateInvoicePDF(invoice: invoice, businessName: profileStore.profile?.businessName ?? "My Business")
+                showPDFShare = true
+            } label: {
                 Label("Send", systemImage: "paperplane.fill")
                     .font(.system(size: 14, weight: .bold))
                     .frame(maxWidth: .infinity)
@@ -356,6 +366,128 @@ struct InvoiceDetailView: View {
     private func formatQty(_ v: Double) -> String {
         v.truncatingRemainder(dividingBy: 1) == 0 ? String(Int(v)) : String(format: "%.1f", v)
     }
+}
+
+// MARK: - PDF Generation
+
+private func generateInvoicePDF(invoice: Invoice, businessName: String) -> Data {
+    let pageWidth: CGFloat = 595
+    let pageHeight: CGFloat = 842
+    let margin: CGFloat = 40
+    let renderer = UIGraphicsPDFRenderer(bounds: CGRect(x: 0, y: 0, width: pageWidth, height: pageHeight))
+    return renderer.pdfData { ctx in
+        ctx.beginPage()
+        let context = ctx.cgContext
+
+        // Header bar
+        let headerRect = CGRect(x: 0, y: 0, width: pageWidth, height: 76)
+        UIColor(red: 0.06, green: 0.11, blue: 0.20, alpha: 1).setFill()
+        context.fill(headerRect)
+
+        let businessAttrs: [NSAttributedString.Key: Any] = [
+            .font: UIFont.systemFont(ofSize: 20, weight: .bold),
+            .foregroundColor: UIColor.white
+        ]
+        businessName.draw(at: CGPoint(x: margin, y: 24), withAttributes: businessAttrs)
+
+        let invoiceLabel = "INVOICE"
+        let invoiceAttrs: [NSAttributedString.Key: Any] = [
+            .font: UIFont.systemFont(ofSize: 11, weight: .semibold),
+            .foregroundColor: UIColor.white.withAlphaComponent(0.7)
+        ]
+        let invoiceLabelSize = (invoiceLabel as NSString).size(withAttributes: invoiceAttrs)
+        (invoiceLabel as NSString).draw(at: CGPoint(x: pageWidth - margin - invoiceLabelSize.width, y: 30), withAttributes: invoiceAttrs)
+
+        // Metadata
+        var y: CGFloat = 100
+        let labelAttrs: [NSAttributedString.Key: Any] = [.font: UIFont.systemFont(ofSize: 11, weight: .medium), .foregroundColor: UIColor.secondaryLabel]
+        let valueAttrs: [NSAttributedString.Key: Any] = [.font: UIFont.systemFont(ofSize: 12, weight: .semibold), .foregroundColor: UIColor.label]
+        let df = DateFormatter(); df.dateStyle = .medium
+
+        func drawRow(_ label: String, _ value: String, at yPos: CGFloat, valueColor: UIColor = UIColor.label) {
+            (label as NSString).draw(at: CGPoint(x: margin, y: yPos), withAttributes: labelAttrs)
+            var va = valueAttrs; va[.foregroundColor] = valueColor
+            (value as NSString).draw(at: CGPoint(x: margin + 120, y: yPos), withAttributes: va)
+        }
+
+        drawRow("Invoice #", invoice.invoiceNumber, at: y); y += 22
+        drawRow("Date", df.string(from: invoice.createdAt), at: y); y += 22
+        let overdueColor: UIColor = invoice.status == .overdue ? .systemRed : UIColor.label
+        drawRow("Due", df.string(from: invoice.dueDate), at: y, valueColor: overdueColor); y += 22
+        drawRow("Status", invoice.status.rawValue, at: y); y += 36
+
+        // Client
+        let billToAttrs: [NSAttributedString.Key: Any] = [.font: UIFont.systemFont(ofSize: 11, weight: .bold), .foregroundColor: UIColor.secondaryLabel]
+        ("BILL TO" as NSString).draw(at: CGPoint(x: margin, y: y), withAttributes: billToAttrs); y += 18
+        let clientNameAttrs: [NSAttributedString.Key: Any] = [.font: UIFont.systemFont(ofSize: 15, weight: .bold), .foregroundColor: UIColor.label]
+        (invoice.clientName as NSString).draw(at: CGPoint(x: margin, y: y), withAttributes: clientNameAttrs); y += 36
+
+        // Line items table header
+        let tableX = margin; let col1W: CGFloat = 240; let col2W: CGFloat = 50; let col3W: CGFloat = 110; let col4W: CGFloat = 110
+        let headerFill = CGRect(x: tableX, y: y, width: pageWidth - margin * 2, height: 26)
+        UIColor(white: 0.93, alpha: 1).setFill(); context.fill(headerFill)
+        let thAttrs: [NSAttributedString.Key: Any] = [.font: UIFont.systemFont(ofSize: 11, weight: .bold), .foregroundColor: UIColor.secondaryLabel]
+        ("DESCRIPTION" as NSString).draw(at: CGPoint(x: tableX + 8, y: y + 7), withAttributes: thAttrs)
+        ("QTY" as NSString).draw(at: CGPoint(x: tableX + col1W + 4, y: y + 7), withAttributes: thAttrs)
+        ("UNIT" as NSString).draw(at: CGPoint(x: tableX + col1W + col2W + 4, y: y + 7), withAttributes: thAttrs)
+        ("TOTAL" as NSString).draw(at: CGPoint(x: tableX + col1W + col2W + col3W + 4, y: y + 7), withAttributes: thAttrs)
+        y += 28
+
+        let items = invoice.lineItems.isEmpty
+            ? [InvoiceLineItem(description: invoice.clientName.isEmpty ? "Service" : "Cleaning Service", quantity: 1, unitPrice: invoice.amount)]
+            : invoice.lineItems
+
+        for (i, item) in items.enumerated() {
+            let rowRect = CGRect(x: tableX, y: y, width: pageWidth - margin * 2, height: 28)
+            if i % 2 == 1 { UIColor(white: 0.97, alpha: 1).setFill(); context.fill(rowRect) }
+            let cellAttrs: [NSAttributedString.Key: Any] = [.font: UIFont.systemFont(ofSize: 12), .foregroundColor: UIColor.label]
+            (item.description as NSString).draw(at: CGPoint(x: tableX + 8, y: y + 8), withAttributes: cellAttrs)
+            (String(format: "%.0f", item.quantity) as NSString).draw(at: CGPoint(x: tableX + col1W + 4, y: y + 8), withAttributes: cellAttrs)
+            (String(format: "$%.2f", item.unitPrice) as NSString).draw(at: CGPoint(x: tableX + col1W + col2W + 4, y: y + 8), withAttributes: cellAttrs)
+            (String(format: "$%.2f", item.total) as NSString).draw(at: CGPoint(x: tableX + col1W + col2W + col3W + 4, y: y + 8), withAttributes: cellAttrs)
+            y += 28
+        }
+
+        // Separator
+        context.setStrokeColor(UIColor.separator.cgColor); context.setLineWidth(0.5)
+        context.move(to: CGPoint(x: margin, y: y + 4)); context.addLine(to: CGPoint(x: pageWidth - margin, y: y + 4)); context.strokePath()
+        y += 16
+
+        // Total
+        let totalLabelAttrs: [NSAttributedString.Key: Any] = [.font: UIFont.systemFont(ofSize: 15, weight: .bold), .foregroundColor: UIColor.label]
+        let totalStr = String(format: "$%.2f", invoice.total)
+        let totalSize = (totalStr as NSString).size(withAttributes: totalLabelAttrs)
+        ("TOTAL" as NSString).draw(at: CGPoint(x: margin, y: y), withAttributes: totalLabelAttrs)
+        (totalStr as NSString).draw(at: CGPoint(x: pageWidth - margin - totalSize.width, y: y), withAttributes: totalLabelAttrs)
+        y += 32
+
+        // Notes
+        if !invoice.notes.isEmpty {
+            let notesLabelAttrs: [NSAttributedString.Key: Any] = [.font: UIFont.systemFont(ofSize: 11, weight: .bold), .foregroundColor: UIColor.secondaryLabel]
+            ("NOTES" as NSString).draw(at: CGPoint(x: margin, y: y), withAttributes: notesLabelAttrs); y += 16
+            let notesAttrs: [NSAttributedString.Key: Any] = [.font: UIFont.systemFont(ofSize: 12), .foregroundColor: UIColor.label]
+            (invoice.notes as NSString).draw(in: CGRect(x: margin, y: y, width: pageWidth - margin * 2, height: 60), withAttributes: notesAttrs)
+        }
+
+        // Footer
+        let footerAttrs: [NSAttributedString.Key: Any] = [.font: UIFont.systemFont(ofSize: 10), .foregroundColor: UIColor.tertiaryLabel]
+        let footerStr = "Generated by Sweeply"
+        let footerSize = (footerStr as NSString).size(withAttributes: footerAttrs)
+        (footerStr as NSString).draw(at: CGPoint(x: (pageWidth - footerSize.width) / 2, y: 810), withAttributes: footerAttrs)
+    }
+}
+
+// MARK: - Share Sheet
+
+private struct ShareSheetView: UIViewControllerRepresentable {
+    let data: Data
+    let fileName: String
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent(fileName)
+        try? data.write(to: url)
+        return UIActivityViewController(activityItems: [url], applicationActivities: nil)
+    }
+    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
 }
 
 // MARK: - Edit Sheet
