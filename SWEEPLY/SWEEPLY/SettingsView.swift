@@ -259,6 +259,9 @@ struct SettingsView: View {
                     }
                 }
                 .tint(Color.sweeplyNavy)
+                .onChange(of: localProfile.settings.darkMode) { _, _ in
+                    Task { await saveChanges() }
+                }
                 
                 Divider()
                 

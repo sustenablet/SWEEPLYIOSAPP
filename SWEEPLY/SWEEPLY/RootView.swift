@@ -34,7 +34,7 @@ struct RootView: View {
                 AuthView()
             }
         }
-        .preferredColorScheme(profileStore.profile?.settings.darkMode == true ? .dark : .light)
+        .preferredColorScheme(profileStore.profile?.settings.darkMode == true ? .dark : nil)
     }
 
     private var mainTabs: some View {
