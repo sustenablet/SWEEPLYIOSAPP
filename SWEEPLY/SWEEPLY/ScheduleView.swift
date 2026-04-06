@@ -43,8 +43,7 @@ struct ScheduleView: View {
                     .padding(.top, 12)
                 
                 if viewMode == .day {
-                    weekStrip
-                        .padding(.horizontal, 16)
+                    dateStrip
                         .padding(.top, 12)
                 }
 
@@ -501,68 +500,55 @@ private extension ScheduleView {
         .padding(.vertical, 60)
     }
 
-    // MARK: Week strip (green circle selection)
+    // MARK: Date strip (14-day horizontal scrollable)
 
-    private var weekStrip: some View {
-        HStack(spacing: 0) {
-            ForEach(weekDays, id: \.self) { day in
-                jobberDayCell(day)
-            }
-        }
-        .padding(.vertical, 12)
-        .padding(.horizontal, 8)
-        .background(Color.sweeplySurface)
-        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .stroke(Color.sweeplyBorder, lineWidth: 1)
-        )
-    }
-
-    private func jobberDayCell(_ day: Date) -> some View {
-        let isSelected = calendar.isDate(day, inSameDayAs: selectedDay)
-        let dayNum = calendar.component(.day, from: day)
-        let letter = singleLetterWeekday(day)
-
-        return Button {
-            selectedDay = calendar.startOfDay(for: day)
-        } label: {
-            VStack(spacing: 6) {
-                Text(letter)
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(Color.sweeplyTextSub)
-                ZStack {
-                    if isSelected {
-                        Circle()
-                            .fill(Color.sweeplySuccess)
-                            .frame(width: 32, height: 32)
+    private var dateStrip: some View {
+        ScrollViewReader { proxy in
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    ForEach(0..<14) { offset in
+                        let date = Calendar.current.date(byAdding: .day, value: offset, to: Calendar.current.startOfDay(for: Date()))!
+                        let isSelected = Calendar.current.isDate(selectedDay, inSameDayAs: date)
+                        let isToday = offset == 0
+                        Button {
+                            withAnimation(.easeInOut(duration: 0.2)) { selectedDay = date }
+                        } label: {
+                            VStack(spacing: 4) {
+                                Text(dayLabel(for: date))
+                                    .font(.system(size: 11, weight: .semibold))
+                                Text(dayNumber(for: date))
+                                    .font(.system(size: 16, weight: .bold))
+                            }
+                            .frame(width: 44, height: 58)
+                            .background(isSelected ? Color.sweeplyNavy : (isToday ? Color.sweeplyAccent.opacity(0.08) : Color.sweeplySurface))
+                            .foregroundStyle(isSelected ? .white : Color.sweeplyNavy)
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .stroke(isToday && !isSelected ? Color.sweeplyAccent.opacity(0.4) : Color.clear, lineWidth: 1.5)
+                            )
+                        }
+                        .buttonStyle(.plain)
+                        .id(offset)
                     }
-                    Text("\(dayNum)")
-                        .font(.system(size: 15, weight: .bold, design: .rounded))
-                        .foregroundStyle(isSelected ? Color.white : Color.sweeplyNavy)
                 }
-                .frame(height: 34)
+                .padding(.horizontal, 20)
+                .padding(.vertical, 4)
             }
-            .frame(maxWidth: .infinity)
+            .onAppear { proxy.scrollTo(0, anchor: .leading) }
         }
-        .buttonStyle(.plain)
     }
 
-    private func singleLetterWeekday(_ date: Date) -> String {
+    private func dayLabel(for date: Date) -> String {
         let f = DateFormatter()
-        f.dateFormat = "EEEEE"
-        return f.string(from: date)
+        f.dateFormat = "EEE"
+        return f.string(from: date).uppercased()
     }
 
-    private var weekInterval: DateInterval {
-        return calendar.dateInterval(of: .weekOfYear, for: selectedDay)
-            ?? DateInterval(start: Date(), end: Date())
-    }
- 
-    private var weekDays: [Date] {
-        (0..<7).compactMap { day in
-            calendar.date(byAdding: .day, value: day, to: weekInterval.start)
-        }
+    private func dayNumber(for date: Date) -> String {
+        let f = DateFormatter()
+        f.dateFormat = "d"
+        return f.string(from: date)
     }
 }
 
@@ -643,23 +629,21 @@ private struct ScheduleJobRow: View {
         NavigationLink(destination: JobDetailView(jobId: job.id)) {
             ZStack(alignment: .leading) {
                 Color.sweeplySurface
-                
-                Rectangle()
-                    .fill(statusColor)
-                    .frame(width: 4)
-                
-                HStack(spacing: 16) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(job.date.formatted(.dateTime.hour().minute()))
-                            .font(.system(size: 14, weight: .bold, design: .monospaced))
-                            .foregroundStyle(Color.sweeplyNavy)
-                        Text("\(Int(job.duration)) hr")
-                            .font(.system(size: 9))
-                            .foregroundStyle(Color.sweeplyTextSub)
-                    }
-                    .frame(width: 65, alignment: .leading)
-                    
-                    VStack(alignment: .leading, spacing: 4) {
+
+                // Left accent bar
+                Capsule()
+                    .fill(Color.sweeplyAccent)
+                    .frame(width: 3)
+                    .padding(.vertical, 10)
+                    .padding(.leading, 0)
+
+                HStack(spacing: 14) {
+                    // Leading spacer for the accent bar
+                    Color.clear.frame(width: 3)
+
+                    // Main content
+                    VStack(alignment: .leading, spacing: 6) {
+                        // Row 1: client name + recurring icon
                         HStack(spacing: 4) {
                             Text(job.clientName)
                                 .font(.system(size: 15, weight: .bold))
@@ -669,35 +653,54 @@ private struct ScheduleJobRow: View {
                                     .font(.system(size: 10, weight: .bold))
                                     .foregroundStyle(Color.sweeplyAccent)
                             }
+                            Spacer()
+                            // Price — right-aligned, monospaced
+                            Text(job.price.currency)
+                                .font(.system(size: 15, weight: .bold, design: .monospaced))
+                                .foregroundStyle(Color.sweeplyNavy)
                         }
-                        
+
+                        // Row 2: time + duration
                         HStack(spacing: 6) {
-                            Text(job.serviceType.rawValue)
+                            Text(timeString(from: job.date))
                                 .font(.system(size: 12))
                                 .foregroundStyle(Color.sweeplyTextSub)
-                            
-                            StatusBadge(status: job.status)
+                            Text("·")
+                                .font(.system(size: 12))
+                                .foregroundStyle(Color.sweeplyTextSub.opacity(0.5))
+                            Text("\(Int(job.duration)) hr")
+                                .font(.system(size: 12))
+                                .foregroundStyle(Color.sweeplyTextSub)
+                        }
+
+                        // Row 3: service type pill + status dot + status badge
+                        HStack(spacing: 8) {
+                            // Service type pill
+                            Text(job.serviceType.rawValue)
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundStyle(Color.sweeplyAccent)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(Color.sweeplyAccent.opacity(0.1))
+                                .clipShape(RoundedRectangle(cornerRadius: 6))
+
+                            // Status dot + badge
+                            HStack(spacing: 4) {
+                                Circle()
+                                    .fill(statusDotColor)
+                                    .frame(width: 6, height: 6)
+                                StatusBadge(status: job.status)
+                            }
                         }
                     }
-                    
-                    Spacer()
-                    
-                    HStack(spacing: 12) {
-                        Text(job.price.currency)
-                            .font(.system(size: 14, weight: .bold))
-                            .foregroundStyle(Color.sweeplyNavy)
-                        
-                        // Menu Button removed or changed because the whole row is clickable now.
-                        // Actually, I can keep the menu button inside if it works, or I'll just keep it.
-                        // But wait! Menus inside NavigationLink sometimes steal touches. 
-                        // It's safest to just rely on the DetailView!
-                        Image(systemName: "chevron.right")
-                            .font(.system(size: 14, weight: .bold))
-                            .foregroundStyle(Color.sweeplyBorder)
-                            .frame(width: 24, height: 24)
-                    }
+
+                    // Chevron
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(Color.sweeplyBorder)
                 }
-                .padding(.horizontal, 16)
+                .padding(.leading, 14)
+                .padding(.trailing, 16)
                 .padding(.vertical, 14)
             }
             .clipShape(RoundedRectangle(cornerRadius: 12))
@@ -740,13 +743,20 @@ private struct ScheduleJobRow: View {
         }
     }
 
-    private var statusColor: Color {
+    private var statusDotColor: Color {
         switch job.status {
         case .completed: return Color.sweeplySuccess
-        case .inProgress: return .orange
-        case .scheduled: return Color.sweeplyBorder
+        case .inProgress: return Color.sweeplyWarning
+        case .scheduled: return Color.sweeplyTextSub
         case .cancelled: return Color.sweeplyDestructive
         }
+    }
+
+    private func timeString(from date: Date) -> String {
+        let f = DateFormatter()
+        f.dateStyle = .none
+        f.timeStyle = .short
+        return f.string(from: date)
     }
 }
 
