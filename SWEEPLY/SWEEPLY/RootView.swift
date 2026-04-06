@@ -23,11 +23,7 @@ struct RootView: View {
             if !SupabaseManager.isConfigured {
                 mainTabs
             } else if !session.hasResolvedInitialSession {
-                ZStack {
-                    Color.sweeplyBackground.ignoresSafeArea()
-                    ProgressView()
-                        .tint(Color.sweeplyAccent)
-                }
+                SplashView()
             } else if session.isAuthenticated {
                 mainTabs
             } else {
