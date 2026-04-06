@@ -6,6 +6,7 @@ struct JobDetailView: View {
     @Environment(ClientsStore.self) private var clientsStore
 
     let jobId: UUID
+    @State private var showInvoiceSheet = false
 
     private var job: Job? {
         jobsStore.jobs.first(where: { $0.id == jobId })
@@ -41,6 +42,9 @@ struct JobDetailView: View {
                 .background(Color.sweeplyBackground.ignoresSafeArea())
                 .navigationTitle("Job Details")
                 .navigationBarTitleDisplayMode(.inline)
+                .sheet(isPresented: $showInvoiceSheet) {
+                    NewInvoiceView(prefill: job)
+                }
             } else {
                 VStack(spacing: 16) {
                     Image(systemName: "exclamationmark.square")
@@ -101,47 +105,65 @@ struct JobDetailView: View {
 
     // MARK: - Action Buttons
     private func actionButtons(job: Job) -> some View {
-        HStack(spacing: 12) {
-            if job.status != .completed {
+        VStack(spacing: 10) {
+            HStack(spacing: 12) {
+                if job.status != .completed {
+                    Button {
+                        Task { await jobsStore.updateStatus(id: job.id, status: .completed) }
+                    } label: {
+                        Label("Complete Job", systemImage: "checkmark.circle.fill")
+                            .font(.system(size: 14, weight: .bold))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 14)
+                            .background(Color.sweeplySuccess)
+                            .foregroundStyle(.white)
+                            .clipShape(RoundedRectangle(cornerRadius: 14))
+                    }
+                } else {
+                    Button {
+                        Task { await jobsStore.updateStatus(id: job.id, status: .scheduled) }
+                    } label: {
+                        Label("Re-open Job", systemImage: "arrow.uturn.backward")
+                            .font(.system(size: 14, weight: .bold))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 14)
+                            .background(Color.sweeplySurface)
+                            .foregroundStyle(Color.sweeplyNavy)
+                            .clipShape(RoundedRectangle(cornerRadius: 14))
+                            .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.sweeplyBorder, lineWidth: 1))
+                    }
+                }
+
                 Button {
-                    Task { await jobsStore.updateStatus(id: job.id, status: .completed) }
+                    let addr = job.address.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+                    if let url = URL(string: "http://maps.apple.com/?daddr=\(addr)") {
+                        UIApplication.shared.open(url)
+                    }
                 } label: {
-                    Label("Complete Job", systemImage: "checkmark.circle.fill")
+                    Label("Navigate", systemImage: "location.fill")
                         .font(.system(size: 14, weight: .bold))
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 14)
-                        .background(Color.sweeplySuccess)
+                        .background(Color.sweeplyNavy)
                         .foregroundStyle(.white)
                         .clipShape(RoundedRectangle(cornerRadius: 14))
                 }
-            } else {
+            }
+
+            // Create Invoice — visible once the job is completed
+            if job.status == .completed {
                 Button {
-                    Task { await jobsStore.updateStatus(id: job.id, status: .scheduled) }
+                    showInvoiceSheet = true
                 } label: {
-                    Label("Re-open Job", systemImage: "arrow.uturn.backward")
+                    Label("Create Invoice", systemImage: "doc.text.fill")
                         .font(.system(size: 14, weight: .bold))
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 14)
-                        .background(Color.sweeplySurface)
+                        .background(Color.sweeplyAccent.opacity(0.12))
                         .foregroundStyle(Color.sweeplyNavy)
                         .clipShape(RoundedRectangle(cornerRadius: 14))
-                        .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.sweeplyBorder, lineWidth: 1))
+                        .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.sweeplyAccent.opacity(0.3), lineWidth: 1))
                 }
-            }
-            
-            Button {
-                let addr = "\(job.address)".addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
-                if let url = URL(string: "http://maps.apple.com/?daddr=\(addr)") {
-                    UIApplication.shared.open(url)
-                }
-            } label: {
-                Label("Navigate", systemImage: "location.fill")
-                    .font(.system(size: 14, weight: .bold))
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 14)
-                    .background(Color.sweeplyNavy)
-                    .foregroundStyle(.white)
-                    .clipShape(RoundedRectangle(cornerRadius: 14))
             }
         }
     }

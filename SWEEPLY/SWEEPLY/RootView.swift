@@ -12,6 +12,7 @@ struct RootView: View {
     @State private var showNewClient = false
     @State private var showNewInvoice = false
     @State private var showQuickAdd = false
+    @State private var showOnboarding = false
 
     enum Tab {
         case dashboard, schedule, clients, finances, business
@@ -76,6 +77,17 @@ struct RootView: View {
         }
         .sheet(isPresented: $showNewInvoice) {
             NewInvoiceView()
+        }
+        .fullScreenCover(isPresented: $showOnboarding) {
+            OnboardingView()
+        }
+        .onChange(of: profileStore.profile) { _, profile in
+            guard session.isAuthenticated, let profile else { return }
+            if profile.businessName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                showOnboarding = true
+            } else {
+                showOnboarding = false
+            }
         }
 
         .task(id: session.isAuthenticated) {

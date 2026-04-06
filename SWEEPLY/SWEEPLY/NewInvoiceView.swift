@@ -16,6 +16,20 @@ struct NewInvoiceView: View {
     @State private var autoInvoiceNumber: String = ""
     @State private var showingServicePicker = false
 
+    /// Pre-fill from a completed job — client + one line item already populated.
+    init(prefill: Job) {
+        _selectedClientId = State(initialValue: prefill.clientId)
+        _lineItems = State(initialValue: [
+            InvoiceLineItem(description: prefill.serviceType.rawValue, quantity: 1, unitPrice: prefill.price)
+        ])
+        _dueDate = State(initialValue: Calendar.current.date(byAdding: .day, value: 30, to: Date()) ?? Date())
+        _notes = State(initialValue: "")
+        _isSubmitting = State(initialValue: false)
+        _errorMessage = State(initialValue: nil)
+        _autoInvoiceNumber = State(initialValue: "")
+        _showingServicePicker = State(initialValue: false)
+    }
+
     private var activeClients: [Client] {
         clientsStore.clients.filter { $0.isActive }
     }

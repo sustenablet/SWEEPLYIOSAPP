@@ -636,6 +636,8 @@ private struct ScheduleJobRow: View {
     @Environment(JobsStore.self) private var jobsStore
     @State private var showMenu = false
     @State private var showDeleteConfirm = false
+    @State private var showInvoicePrompt = false
+    @State private var showInvoiceSheet = false
 
     var body: some View {
         NavigationLink(destination: JobDetailView(jobId: job.id)) {
@@ -705,8 +707,9 @@ private struct ScheduleJobRow: View {
         .contextMenu {
             ForEach(JobStatus.allCases, id: \.self) { status in
                 if job.status != status {
-                    Button("Mark as \(status.rawValue.capitalized)") {
+                    Button("Mark as \(status.rawValue)") {
                         Task { await jobsStore.updateStatus(id: job.id, status: status) }
+                        if status == .completed { showInvoicePrompt = true }
                     }
                 }
             }
@@ -719,6 +722,15 @@ private struct ScheduleJobRow: View {
             }
         } message: {
             Text("Are you sure you want to delete this job?")
+        }
+        .alert("Create Invoice?", isPresented: $showInvoicePrompt) {
+            Button("Not Now", role: .cancel) {}
+            Button("Create Invoice") { showInvoiceSheet = true }
+        } message: {
+            Text("Generate an invoice for \(job.clientName) — \(job.price.currency)?")
+        }
+        .sheet(isPresented: $showInvoiceSheet) {
+            NewInvoiceView(prefill: job)
         }
     }
 
