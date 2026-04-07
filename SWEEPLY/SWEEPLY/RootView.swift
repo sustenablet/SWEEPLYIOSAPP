@@ -30,6 +30,7 @@ struct RootView: View {
                 AuthView()
             }
         }
+        .preferredColorScheme(.light)
     }
 
     private var mainTabs: some View {
