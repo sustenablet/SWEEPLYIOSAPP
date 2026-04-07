@@ -395,107 +395,211 @@ struct InvoiceDetailView: View {
 private func generateInvoicePDF(invoice: Invoice, businessName: String) -> Data {
     let pageWidth: CGFloat = 595
     let pageHeight: CGFloat = 842
-    let margin: CGFloat = 40
+    let margin: CGFloat = 48
+    let navyColor = UIColor(red: 0.06, green: 0.11, blue: 0.20, alpha: 1)
+    let accentColor = UIColor(red: 0.29, green: 0.76, blue: 0.53, alpha: 1) // sweeplyAccent
+    let lightGray = UIColor(white: 0.96, alpha: 1)
+    let df = DateFormatter(); df.dateStyle = .medium
+
     let renderer = UIGraphicsPDFRenderer(bounds: CGRect(x: 0, y: 0, width: pageWidth, height: pageHeight))
     return renderer.pdfData { ctx in
         ctx.beginPage()
         let context = ctx.cgContext
 
-        // Header bar
-        let headerRect = CGRect(x: 0, y: 0, width: pageWidth, height: 76)
-        UIColor(red: 0.06, green: 0.11, blue: 0.20, alpha: 1).setFill()
-        context.fill(headerRect)
+        // ─── 2-COLUMN HEADER ───────────────────────────────────
+        var y: CGFloat = margin
 
-        let businessAttrs: [NSAttributedString.Key: Any] = [
+        // Left: Business name + address
+        let bizNameAttrs: [NSAttributedString.Key: Any] = [
             .font: UIFont.systemFont(ofSize: 20, weight: .bold),
-            .foregroundColor: UIColor.white
+            .foregroundColor: navyColor
         ]
-        businessName.draw(at: CGPoint(x: margin, y: 24), withAttributes: businessAttrs)
+        (businessName as NSString).draw(at: CGPoint(x: margin, y: y), withAttributes: bizNameAttrs)
 
-        let invoiceLabel = "INVOICE"
-        let invoiceAttrs: [NSAttributedString.Key: Any] = [
-            .font: UIFont.systemFont(ofSize: 11, weight: .semibold),
-            .foregroundColor: UIColor.white.withAlphaComponent(0.7)
+        // Right: "INVOICE" large
+        let invoiceTitleAttrs: [NSAttributedString.Key: Any] = [
+            .font: UIFont.systemFont(ofSize: 28, weight: .heavy),
+            .foregroundColor: navyColor
         ]
-        let invoiceLabelSize = (invoiceLabel as NSString).size(withAttributes: invoiceAttrs)
-        (invoiceLabel as NSString).draw(at: CGPoint(x: pageWidth - margin - invoiceLabelSize.width, y: 30), withAttributes: invoiceAttrs)
-
-        // Metadata
-        var y: CGFloat = 100
-        let labelAttrs: [NSAttributedString.Key: Any] = [.font: UIFont.systemFont(ofSize: 11, weight: .medium), .foregroundColor: UIColor.secondaryLabel]
-        let valueAttrs: [NSAttributedString.Key: Any] = [.font: UIFont.systemFont(ofSize: 12, weight: .semibold), .foregroundColor: UIColor.label]
-        let df = DateFormatter(); df.dateStyle = .medium
-
-        func drawRow(_ label: String, _ value: String, at yPos: CGFloat, valueColor: UIColor = UIColor.label) {
-            (label as NSString).draw(at: CGPoint(x: margin, y: yPos), withAttributes: labelAttrs)
-            var va = valueAttrs; va[.foregroundColor] = valueColor
-            (value as NSString).draw(at: CGPoint(x: margin + 120, y: yPos), withAttributes: va)
-        }
-
-        drawRow("Invoice #", invoice.invoiceNumber, at: y); y += 22
-        drawRow("Date", df.string(from: invoice.createdAt), at: y); y += 22
-        let overdueColor: UIColor = invoice.status == .overdue ? .systemRed : UIColor.label
-        drawRow("Due", df.string(from: invoice.dueDate), at: y, valueColor: overdueColor); y += 22
-        drawRow("Status", invoice.status.rawValue, at: y); y += 36
-
-        // Client
-        let billToAttrs: [NSAttributedString.Key: Any] = [.font: UIFont.systemFont(ofSize: 11, weight: .bold), .foregroundColor: UIColor.secondaryLabel]
-        ("BILL TO" as NSString).draw(at: CGPoint(x: margin, y: y), withAttributes: billToAttrs); y += 18
-        let clientNameAttrs: [NSAttributedString.Key: Any] = [.font: UIFont.systemFont(ofSize: 15, weight: .bold), .foregroundColor: UIColor.label]
-        (invoice.clientName as NSString).draw(at: CGPoint(x: margin, y: y), withAttributes: clientNameAttrs); y += 36
-
-        // Line items table header
-        let tableX = margin; let col1W: CGFloat = 240; let col2W: CGFloat = 50; let col3W: CGFloat = 110; let col4W: CGFloat = 110
-        let headerFill = CGRect(x: tableX, y: y, width: pageWidth - margin * 2, height: 26)
-        UIColor(white: 0.93, alpha: 1).setFill(); context.fill(headerFill)
-        let thAttrs: [NSAttributedString.Key: Any] = [.font: UIFont.systemFont(ofSize: 11, weight: .bold), .foregroundColor: UIColor.secondaryLabel]
-        ("DESCRIPTION" as NSString).draw(at: CGPoint(x: tableX + 8, y: y + 7), withAttributes: thAttrs)
-        ("QTY" as NSString).draw(at: CGPoint(x: tableX + col1W + 4, y: y + 7), withAttributes: thAttrs)
-        ("UNIT" as NSString).draw(at: CGPoint(x: tableX + col1W + col2W + 4, y: y + 7), withAttributes: thAttrs)
-        ("TOTAL" as NSString).draw(at: CGPoint(x: tableX + col1W + col2W + col3W + 4, y: y + 7), withAttributes: thAttrs)
+        let invoiceTitle = "INVOICE"
+        let titleSize = (invoiceTitle as NSString).size(withAttributes: invoiceTitleAttrs)
+        (invoiceTitle as NSString).draw(
+            at: CGPoint(x: pageWidth - margin - titleSize.width, y: y),
+            withAttributes: invoiceTitleAttrs
+        )
         y += 28
 
+        // Sub-labels right column
+        let metaLabelAttrs: [NSAttributedString.Key: Any] = [
+            .font: UIFont.systemFont(ofSize: 10, weight: .medium),
+            .foregroundColor: UIColor.secondaryLabel
+        ]
+        let metaValueAttrs: [NSAttributedString.Key: Any] = [
+            .font: UIFont.monospacedSystemFont(ofSize: 11, weight: .semibold),
+            .foregroundColor: navyColor
+        ]
+        let overdueValueAttrs: [NSAttributedString.Key: Any] = [
+            .font: UIFont.monospacedSystemFont(ofSize: 11, weight: .semibold),
+            .foregroundColor: UIColor.systemRed
+        ]
+
+        func drawRightMeta(label: String, value: String, yPos: CGFloat, highlight: Bool = false) {
+            let labelStr = label as NSString
+            let valueStr = value as NSString
+            let valueAttrs = highlight ? overdueValueAttrs : metaValueAttrs
+            let valueSize = valueStr.size(withAttributes: valueAttrs)
+            let labelSize = labelStr.size(withAttributes: metaLabelAttrs)
+            labelStr.draw(at: CGPoint(x: pageWidth - margin - valueSize.width - labelSize.width - 8, y: yPos), withAttributes: metaLabelAttrs)
+            valueStr.draw(at: CGPoint(x: pageWidth - margin - valueSize.width, y: yPos), withAttributes: valueAttrs)
+        }
+
+        drawRightMeta(label: "No.  ", value: invoice.invoiceNumber, yPos: y)
+        y += 16
+        drawRightMeta(label: "Issued  ", value: df.string(from: invoice.createdAt), yPos: y)
+        y += 16
+        drawRightMeta(label: "Due  ", value: df.string(from: invoice.dueDate), yPos: y, highlight: invoice.status == .overdue)
+        y += 24
+
+        // ─── HORIZONTAL RULE ───────────────────────────────────
+        context.setStrokeColor(navyColor.withAlphaComponent(0.12).cgColor)
+        context.setLineWidth(1)
+        context.move(to: CGPoint(x: margin, y: y))
+        context.addLine(to: CGPoint(x: pageWidth - margin, y: y))
+        context.strokePath()
+        y += 20
+
+        // ─── BILL TO ───────────────────────────────────────────
+        let billToLabelAttrs: [NSAttributedString.Key: Any] = [
+            .font: UIFont.systemFont(ofSize: 9, weight: .bold),
+            .foregroundColor: UIColor.secondaryLabel
+        ]
+        let billToValueAttrs: [NSAttributedString.Key: Any] = [
+            .font: UIFont.systemFont(ofSize: 14, weight: .bold),
+            .foregroundColor: navyColor
+        ]
+        ("BILL TO" as NSString).draw(at: CGPoint(x: margin, y: y), withAttributes: billToLabelAttrs)
+        y += 14
+        (invoice.clientName as NSString).draw(at: CGPoint(x: margin, y: y), withAttributes: billToValueAttrs)
+        y += 32
+
+        // ─── LINE ITEMS TABLE ──────────────────────────────────
+        let tableX: CGFloat = margin
+        let tableWidth = pageWidth - margin * 2
+        let col1W: CGFloat = tableWidth * 0.48  // Description
+        let col2W: CGFloat = tableWidth * 0.12  // Qty
+        let col3W: CGFloat = tableWidth * 0.20  // Unit Price
+        let col4W: CGFloat = tableWidth * 0.20  // Total (right-aligned)
+
+        // Table header background
+        let thRect = CGRect(x: tableX, y: y, width: tableWidth, height: 24)
+        navyColor.setFill(); context.fill(thRect)
+
+        let thAttrs: [NSAttributedString.Key: Any] = [
+            .font: UIFont.systemFont(ofSize: 9, weight: .bold),
+            .foregroundColor: UIColor.white
+        ]
+        func rightAlign(_ str: String, in rect: CGRect, attrs: [NSAttributedString.Key: Any]) {
+            let size = (str as NSString).size(withAttributes: attrs)
+            (str as NSString).draw(at: CGPoint(x: rect.maxX - size.width - 6, y: rect.minY + 7), withAttributes: attrs)
+        }
+
+        ("DESCRIPTION" as NSString).draw(at: CGPoint(x: tableX + 8, y: y + 7), withAttributes: thAttrs)
+        rightAlign("QTY", in: CGRect(x: tableX + col1W, y: y, width: col2W, height: 24), attrs: thAttrs)
+        rightAlign("UNIT PRICE", in: CGRect(x: tableX + col1W + col2W, y: y, width: col3W, height: 24), attrs: thAttrs)
+        rightAlign("TOTAL", in: CGRect(x: tableX + col1W + col2W + col3W, y: y, width: col4W, height: 24), attrs: thAttrs)
+        y += 24
+
         let items = invoice.lineItems.isEmpty
-            ? [InvoiceLineItem(description: invoice.clientName.isEmpty ? "Service" : "Cleaning Service", quantity: 1, unitPrice: invoice.amount)]
+            ? [InvoiceLineItem(description: "Cleaning Service", quantity: 1, unitPrice: invoice.amount)]
             : invoice.lineItems
 
         for (i, item) in items.enumerated() {
-            let rowRect = CGRect(x: tableX, y: y, width: pageWidth - margin * 2, height: 28)
-            if i % 2 == 1 { UIColor(white: 0.97, alpha: 1).setFill(); context.fill(rowRect) }
-            let cellAttrs: [NSAttributedString.Key: Any] = [.font: UIFont.systemFont(ofSize: 12), .foregroundColor: UIColor.label]
+            let rowH: CGFloat = 28
+            let rowRect = CGRect(x: tableX, y: y, width: tableWidth, height: rowH)
+            if i % 2 == 0 {
+                UIColor.white.setFill()
+            } else {
+                lightGray.setFill()
+            }
+            context.fill(rowRect)
+
+            let cellAttrs: [NSAttributedString.Key: Any] = [
+                .font: UIFont.systemFont(ofSize: 11),
+                .foregroundColor: UIColor.label
+            ]
+            let monoAttrs: [NSAttributedString.Key: Any] = [
+                .font: UIFont.monospacedSystemFont(ofSize: 11, weight: .regular),
+                .foregroundColor: UIColor.label
+            ]
             (item.description as NSString).draw(at: CGPoint(x: tableX + 8, y: y + 8), withAttributes: cellAttrs)
-            (String(format: "%.0f", item.quantity) as NSString).draw(at: CGPoint(x: tableX + col1W + 4, y: y + 8), withAttributes: cellAttrs)
-            (String(format: "$%.2f", item.unitPrice) as NSString).draw(at: CGPoint(x: tableX + col1W + col2W + 4, y: y + 8), withAttributes: cellAttrs)
-            (String(format: "$%.2f", item.total) as NSString).draw(at: CGPoint(x: tableX + col1W + col2W + col3W + 4, y: y + 8), withAttributes: cellAttrs)
-            y += 28
+            rightAlign(String(format: "%.0f", item.quantity), in: CGRect(x: tableX + col1W, y: y, width: col2W, height: rowH), attrs: monoAttrs)
+            rightAlign(String(format: "$%.2f", item.unitPrice), in: CGRect(x: tableX + col1W + col2W, y: y, width: col3W, height: rowH), attrs: monoAttrs)
+            rightAlign(String(format: "$%.2f", item.total), in: CGRect(x: tableX + col1W + col2W + col3W, y: y, width: col4W, height: rowH), attrs: monoAttrs)
+            y += rowH
         }
 
-        // Separator
-        context.setStrokeColor(UIColor.separator.cgColor); context.setLineWidth(0.5)
-        context.move(to: CGPoint(x: margin, y: y + 4)); context.addLine(to: CGPoint(x: pageWidth - margin, y: y + 4)); context.strokePath()
-        y += 16
+        // Border-top line before totals
+        context.setStrokeColor(navyColor.withAlphaComponent(0.15).cgColor)
+        context.setLineWidth(1)
+        context.move(to: CGPoint(x: tableX, y: y + 8))
+        context.addLine(to: CGPoint(x: tableX + tableWidth, y: y + 8))
+        context.strokePath()
+        y += 20
 
-        // Total
-        let totalLabelAttrs: [NSAttributedString.Key: Any] = [.font: UIFont.systemFont(ofSize: 15, weight: .bold), .foregroundColor: UIColor.label]
+        // Subtotal row
+        let subLabelAttrs: [NSAttributedString.Key: Any] = [
+            .font: UIFont.systemFont(ofSize: 11, weight: .medium),
+            .foregroundColor: UIColor.secondaryLabel
+        ]
+        let subValueAttrs: [NSAttributedString.Key: Any] = [
+            .font: UIFont.monospacedSystemFont(ofSize: 11, weight: .medium),
+            .foregroundColor: UIColor.secondaryLabel
+        ]
+        let totalBoldAttrs: [NSAttributedString.Key: Any] = [
+            .font: UIFont.monospacedSystemFont(ofSize: 15, weight: .bold),
+            .foregroundColor: navyColor
+        ]
+        let totalLabelBoldAttrs: [NSAttributedString.Key: Any] = [
+            .font: UIFont.systemFont(ofSize: 12, weight: .bold),
+            .foregroundColor: navyColor
+        ]
+
+        let subtotalStr = String(format: "$%.2f", invoice.subtotal)
+        let subValSize = (subtotalStr as NSString).size(withAttributes: subValueAttrs)
+        ("Subtotal" as NSString).draw(at: CGPoint(x: tableX, y: y), withAttributes: subLabelAttrs)
+        (subtotalStr as NSString).draw(at: CGPoint(x: tableX + tableWidth - subValSize.width, y: y), withAttributes: subValueAttrs)
+        y += 20
+
+        // Total (bold)
         let totalStr = String(format: "$%.2f", invoice.total)
-        let totalSize = (totalStr as NSString).size(withAttributes: totalLabelAttrs)
-        ("TOTAL" as NSString).draw(at: CGPoint(x: margin, y: y), withAttributes: totalLabelAttrs)
-        (totalStr as NSString).draw(at: CGPoint(x: pageWidth - margin - totalSize.width, y: y), withAttributes: totalLabelAttrs)
+        let totalValSize = (totalStr as NSString).size(withAttributes: totalBoldAttrs)
+        ("TOTAL DUE" as NSString).draw(at: CGPoint(x: tableX, y: y), withAttributes: totalLabelBoldAttrs)
+        (totalStr as NSString).draw(at: CGPoint(x: tableX + tableWidth - totalValSize.width, y: y), withAttributes: totalBoldAttrs)
         y += 32
 
         // Notes
         if !invoice.notes.isEmpty {
-            let notesLabelAttrs: [NSAttributedString.Key: Any] = [.font: UIFont.systemFont(ofSize: 11, weight: .bold), .foregroundColor: UIColor.secondaryLabel]
-            ("NOTES" as NSString).draw(at: CGPoint(x: margin, y: y), withAttributes: notesLabelAttrs); y += 16
-            let notesAttrs: [NSAttributedString.Key: Any] = [.font: UIFont.systemFont(ofSize: 12), .foregroundColor: UIColor.label]
-            (invoice.notes as NSString).draw(in: CGRect(x: margin, y: y, width: pageWidth - margin * 2, height: 60), withAttributes: notesAttrs)
+            let notesLabelAttrs: [NSAttributedString.Key: Any] = [.font: UIFont.systemFont(ofSize: 9, weight: .bold), .foregroundColor: UIColor.secondaryLabel]
+            ("NOTES" as NSString).draw(at: CGPoint(x: margin, y: y), withAttributes: notesLabelAttrs); y += 14
+            let notesAttrs: [NSAttributedString.Key: Any] = [.font: UIFont.systemFont(ofSize: 11), .foregroundColor: UIColor.label]
+            (invoice.notes as NSString).draw(in: CGRect(x: margin, y: y, width: tableWidth, height: 60), withAttributes: notesAttrs)
+            y += 70
         }
 
-        // Footer
+        // ─── FOOTER ───────────────────────────────────────────
+        let footerY: CGFloat = pageHeight - 52
+        context.setStrokeColor(navyColor.withAlphaComponent(0.08).cgColor)
+        context.setLineWidth(0.5)
+        context.move(to: CGPoint(x: margin, y: footerY - 8))
+        context.addLine(to: CGPoint(x: pageWidth - margin, y: footerY - 8))
+        context.strokePath()
+
         let footerAttrs: [NSAttributedString.Key: Any] = [.font: UIFont.systemFont(ofSize: 10), .foregroundColor: UIColor.tertiaryLabel]
-        let footerStr = "Generated by Sweeply"
-        let footerSize = (footerStr as NSString).size(withAttributes: footerAttrs)
-        (footerStr as NSString).draw(at: CGPoint(x: (pageWidth - footerSize.width) / 2, y: 810), withAttributes: footerAttrs)
+        let footerLeft = "Payment due \(df.string(from: invoice.dueDate)). Thank you for your business."
+        let footerRight = "Powered by Sweeply"
+        (footerLeft as NSString).draw(at: CGPoint(x: margin, y: footerY), withAttributes: footerAttrs)
+        let rightSize = (footerRight as NSString).size(withAttributes: footerAttrs)
+        (footerRight as NSString).draw(at: CGPoint(x: pageWidth - margin - rightSize.width, y: footerY), withAttributes: footerAttrs)
     }
 }
 
