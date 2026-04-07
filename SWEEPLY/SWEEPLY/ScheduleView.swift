@@ -23,6 +23,7 @@ struct ScheduleView: View {
     @State private var showMonthPicker = false
     @State private var enabledViewModes: Set<ScheduleViewMode> = [.day, .list, .map]
     @State private var selectedJobId: UUID? = nil
+    @State private var mapCameraPosition: MapCameraPosition = .automatic
     @Namespace private var mapSelectionNamespace
     
     private var visibleViewModes: [ScheduleViewMode] {
@@ -42,11 +43,9 @@ struct ScheduleView: View {
                 modeSegment
                     .padding(.horizontal, 16)
                     .padding(.top, 12)
-                
-                if viewMode == .day {
-                    dateStrip
-                        .padding(.top, 12)
-                }
+
+                WeekStripView(selectedDay: $selectedDay, jobs: jobsStore.jobs)
+                    .padding(.top, 12)
 
                 Group {
                     switch viewMode {
@@ -93,7 +92,7 @@ struct ScheduleView: View {
 
     private var monthTitle: String {
         let f = DateFormatter()
-        f.dateFormat = "MMMM"
+        f.dateFormat = "MMMM yyyy"
         return f.string(from: selectedDay)
     }
 
@@ -134,7 +133,7 @@ struct ScheduleView: View {
     
     private var mapView: some View {
         ZStack(alignment: .bottom) {
-            Map(initialPosition: MapCameraPosition.automatic) {
+            Map(position: $mapCameraPosition) {
                 ForEach(jobsStore.jobs) { job in
                     if let client = clientsStore.clients.first(where: { $0.id == job.clientId }) {
                         Annotation(job.clientName, coordinate: CLLocationCoordinate2D(latitude: client.latitude ?? 0, longitude: client.longitude ?? 0)) {
@@ -159,21 +158,41 @@ struct ScheduleView: View {
                 MapScaleView()
             }
             .ignoresSafeArea(edges: .bottom)
-            
+
             // Map Controls Overlay
             VStack {
                 HStack {
                     Spacer()
                     VStack(spacing: 12) {
                         MapActionButton(icon: "location.fill") {
-                            // In a real app, this would use MapProxy to center on user
+                            withAnimation {
+                                mapCameraPosition = .userLocation(fallback: .automatic)
+                            }
                         }
                         MapActionButton(icon: "scope") {
-                            // Recenter on all jobs
+                            let coords = jobsStore.jobs.compactMap { job -> CLLocationCoordinate2D? in
+                                guard let c = clientsStore.clients.first(where: { $0.id == job.clientId }),
+                                      let lat = c.latitude, let lon = c.longitude else { return nil }
+                                return CLLocationCoordinate2D(latitude: lat, longitude: lon)
+                            }
+                            guard !coords.isEmpty else { return }
+                            let lats = coords.map(\.latitude)
+                            let lons = coords.map(\.longitude)
+                            let center = CLLocationCoordinate2D(
+                                latitude: (lats.min()! + lats.max()!) / 2,
+                                longitude: (lons.min()! + lons.max()!) / 2
+                            )
+                            let span = MKCoordinateSpan(
+                                latitudeDelta: (lats.max()! - lats.min()!) * 1.5 + 0.05,
+                                longitudeDelta: (lons.max()! - lons.min()!) * 1.5 + 0.05
+                            )
+                            withAnimation {
+                                mapCameraPosition = .region(MKCoordinateRegion(center: center, span: span))
+                            }
                         }
                     }
                     .padding(.trailing, 16)
-                    .padding(.top, 120)
+                    .padding(.top, 16)
                 }
                 Spacer()
             }
@@ -221,35 +240,27 @@ struct ScheduleView: View {
     }
 
     // MARK: - Day View
-    
+
     private var dayView: some View {
         VStack(spacing: 0) {
-            HStack {
-                Button { moveDate(by: -1) } label: { Image(systemName: "chevron.left") }
-                Spacer()
-                VStack(spacing: 2) {
-                    Text(selectedDay.formatted(.dateTime.weekday(.wide)))
-                        .font(.system(size: 14, weight: .bold))
-                    Text(selectedDay.formatted(.dateTime.day().month()))
-                        .font(.system(size: 11))
+            HStack(spacing: 0) {
+                HStack(spacing: 4) {
+                    Text("\(filteredJobsForDate(selectedDay).count)")
+                        .font(.system(size: 13, weight: .bold, design: .monospaced))
+                        .foregroundStyle(Color.sweeplyAccent)
+                    Text(filteredJobsForDate(selectedDay).count == 1 ? "job" : "jobs")
+                        .font(.system(size: 13, weight: .semibold))
                         .foregroundStyle(Color.sweeplyTextSub)
                 }
                 Spacer()
-                Button { moveDate(by: 1) } label: { Image(systemName: "chevron.right") }
+                Text(dayRevenue(selectedDay).currency)
+                    .font(.system(size: 13, weight: .bold, design: .monospaced))
+                    .foregroundStyle(Color.sweeplyNavy)
             }
             .padding(.horizontal, 24)
-            .padding(.vertical, 12)
+            .padding(.vertical, 10)
             .background(Color.sweeplySurface)
-            
-            HStack {
-                Text("\(filteredJobsForDate(selectedDay).count) Jobs")
-                Spacer()
-                Text("Total: \(dayRevenue(selectedDay).currency)")
-            }
-            .font(.system(size: 12, weight: .semibold))
-            .foregroundStyle(Color.sweeplyTextSub)
-            .padding(.horizontal, 24)
-            .padding(.vertical, 8)
+            .overlay(Rectangle().frame(height: 1).foregroundStyle(Color.sweeplyBorder), alignment: .bottom)
 
             ScrollView {
                 VStack(spacing: 12) {
@@ -270,10 +281,6 @@ struct ScheduleView: View {
         }
     }
 
-    private func moveDate(by days: Int) {
-        selectedDay = calendar.date(byAdding: .day, value: days, to: selectedDay) ?? selectedDay
-    }
-    
     private func dayRevenue(_ date: Date) -> Double {
         filteredJobsForDate(date).reduce(0) { $0 + $1.price }
     }
@@ -295,12 +302,32 @@ struct ScheduleView: View {
                     scheduleEmptyState.padding(.top, 40)
                 } else {
                     ForEach(sortedDates, id: \.self) { date in
-                        VStack(alignment: .leading, spacing: 12) {
-                            Text(date.formatted(.dateTime.month().day().weekday(.wide)))
-                                .font(.system(size: 14, weight: .bold))
-                                .foregroundStyle(Color.sweeplyNavy)
-                                .padding(.leading, 4)
-                            
+                        VStack(alignment: .leading, spacing: 10) {
+                            HStack(spacing: 8) {
+                                Text(date.formatted(.dateTime.weekday(.wide).month().day()))
+                                    .font(.system(size: 13, weight: .bold))
+                                    .foregroundStyle(Color.sweeplyNavy)
+                                if calendar.isDateInToday(date) {
+                                    Text("Today")
+                                        .font(.system(size: 10, weight: .bold))
+                                        .foregroundStyle(.white)
+                                        .padding(.horizontal, 7)
+                                        .padding(.vertical, 3)
+                                        .background(Color.sweeplyAccent)
+                                        .clipShape(Capsule())
+                                }
+                                Spacer()
+                                let count = grouped[date]?.count ?? 0
+                                Text("\(count) \(count == 1 ? "job" : "jobs")")
+                                    .font(.system(size: 11, weight: .semibold))
+                                    .foregroundStyle(Color.sweeplyTextSub)
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 3)
+                                    .background(Color.sweeplyAccent.opacity(0.1))
+                                    .clipShape(Capsule())
+                            }
+                            .padding(.horizontal, 4)
+
                             ForEach(grouped[date] ?? []) { job in
                                 ScheduleJobRow(job: job)
                             }
@@ -470,10 +497,10 @@ struct CalendarDayCell: View {
 
     private func statusColor(for status: JobStatus) -> Color {
         switch status {
-        case .completed: return .green
-        case .inProgress: return .orange
-        case .cancelled: return .red
-        case .scheduled: return Color.sweeplyBorder
+        case .completed: return Color.sweeplyAccent
+        case .inProgress: return Color.sweeplyWarning
+        case .cancelled: return Color.sweeplyDestructive
+        case .scheduled: return Color.sweeplyAccent.opacity(0.45)
         }
     }
 }
@@ -499,10 +526,10 @@ private extension ScheduleView {
             Image(systemName: "calendar.badge.clock")
                 .font(.system(size: 44))
                 .foregroundStyle(Color.sweeplyTextSub.opacity(0.3))
-            Text("Nothing scheduled")
+            Text("No jobs this day")
                 .font(.system(size: 16, weight: .semibold))
                 .foregroundStyle(Color.sweeplyTextSub)
-            Text("Jobs you add will show up here.")
+            Text("Tap + to schedule a job.")
                 .font(.system(size: 13))
                 .foregroundStyle(Color.sweeplyTextSub.opacity(0.6))
         }
@@ -510,66 +537,6 @@ private extension ScheduleView {
         .padding(.vertical, 60)
     }
 
-    // MARK: Date strip (14-day horizontal scrollable)
-
-    private var dateStrip: some View {
-        ScrollViewReader { proxy in
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 8) {
-                    ForEach(0..<14) { offset in
-                        let date = Calendar.current.date(byAdding: .day, value: offset, to: Calendar.current.startOfDay(for: Date()))!
-                        let isSelected = Calendar.current.isDate(selectedDay, inSameDayAs: date)
-                        let isToday = offset == 0
-                        Button {
-                            withAnimation(.easeInOut(duration: 0.2)) { selectedDay = date }
-                        } label: {
-                            VStack(spacing: 4) {
-                                Text(dayLabel(for: date))
-                                    .font(.system(size: 11, weight: .semibold))
-                                Text(dayNumber(for: date))
-                                    .font(.system(size: 16, weight: .bold))
-                                let jobCount = jobsStore.jobs.filter { Calendar.current.isDate($0.date, inSameDayAs: date) }.count
-                                if jobCount > 0 {
-                                    Circle()
-                                        .fill(isSelected ? Color.white.opacity(0.6) : Color.sweeplyAccent)
-                                        .frame(width: 5, height: 5)
-                                } else {
-                                    Circle()
-                                        .fill(Color.clear)
-                                        .frame(width: 5, height: 5)
-                                }
-                            }
-                            .frame(width: 44, height: 58)
-                            .background(isSelected ? Color.sweeplyNavy : (isToday ? Color.sweeplyAccent.opacity(0.08) : Color.sweeplySurface))
-                            .foregroundStyle(isSelected ? .white : Color.sweeplyNavy)
-                            .clipShape(RoundedRectangle(cornerRadius: 12))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 12)
-                                    .stroke(isToday && !isSelected ? Color.sweeplyAccent.opacity(0.4) : Color.clear, lineWidth: 1.5)
-                            )
-                        }
-                        .buttonStyle(.plain)
-                        .id(offset)
-                    }
-                }
-                .padding(.horizontal, 20)
-                .padding(.vertical, 4)
-            }
-            .onAppear { proxy.scrollTo(0, anchor: .leading) }
-        }
-    }
-
-    private func dayLabel(for date: Date) -> String {
-        let f = DateFormatter()
-        f.dateFormat = "EEE"
-        return f.string(from: date).uppercased()
-    }
-
-    private func dayNumber(for date: Date) -> String {
-        let f = DateFormatter()
-        f.dateFormat = "d"
-        return f.string(from: date)
-    }
 }
 
 // MARK: - Row Components
@@ -777,6 +744,104 @@ private struct ScheduleJobRow: View {
         f.dateStyle = .none
         f.timeStyle = .short
         return f.string(from: date)
+    }
+}
+
+// MARK: - Week Strip
+
+struct WeekStripView: View {
+    @Binding var selectedDay: Date
+    let jobs: [Job]
+
+    @State private var weekOffset: Int = 0
+    private let calendar: Calendar = {
+        var c = Calendar.current
+        c.firstWeekday = 1
+        return c
+    }()
+
+    private var todayWeekStart: Date {
+        calendar.date(from: calendar.dateComponents([.yearForWeekOfYear, .weekOfYear], from: Date())) ?? Date()
+    }
+
+    private func weekStart(for offset: Int) -> Date {
+        calendar.date(byAdding: .weekOfYear, value: offset, to: todayWeekStart) ?? todayWeekStart
+    }
+
+    private func weeksFromToday(to date: Date) -> Int {
+        let targetStart = calendar.date(from: calendar.dateComponents([.yearForWeekOfYear, .weekOfYear], from: date)) ?? date
+        return calendar.dateComponents([.weekOfYear], from: todayWeekStart, to: targetStart).weekOfYear ?? 0
+    }
+
+    var body: some View {
+        TabView(selection: $weekOffset) {
+            ForEach(-52...52, id: \.self) { offset in
+                weekRow(offset: offset)
+                    .tag(offset)
+            }
+        }
+        .tabViewStyle(.page(indexDisplayMode: .never))
+        .frame(height: 76)
+        .onAppear {
+            weekOffset = weeksFromToday(to: selectedDay)
+        }
+        .onChange(of: selectedDay) { _, newDay in
+            let newOffset = weeksFromToday(to: newDay)
+            if newOffset != weekOffset {
+                withAnimation { weekOffset = newOffset }
+            }
+        }
+        .onChange(of: weekOffset) { _, newOffset in
+            let start = weekStart(for: newOffset)
+            guard let end = calendar.date(byAdding: .day, value: 6, to: start) else { return }
+            if selectedDay < start || selectedDay > end {
+                let weekday = max(0, calendar.component(.weekday, from: selectedDay) - 1)
+                let newDay = calendar.date(byAdding: .day, value: weekday, to: start) ?? start
+                withAnimation(.easeInOut(duration: 0.2)) { selectedDay = newDay }
+            }
+        }
+    }
+
+    private func weekRow(offset: Int) -> some View {
+        let start = weekStart(for: offset)
+        return HStack(spacing: 6) {
+            ForEach(0..<7) { dayIndex in
+                let date = calendar.date(byAdding: .day, value: dayIndex, to: start) ?? start
+                let isSelected = calendar.isDate(date, inSameDayAs: selectedDay)
+                let isToday = calendar.isDateInToday(date)
+                let hasJobs = jobs.contains { calendar.isDate($0.date, inSameDayAs: date) }
+                let weekdayIdx = calendar.component(.weekday, from: date) - 1
+                let shortLabel = calendar.shortWeekdaySymbols[weekdayIdx].prefix(3).uppercased()
+
+                Button {
+                    withAnimation(.easeInOut(duration: 0.2)) { selectedDay = date }
+                } label: {
+                    VStack(spacing: 3) {
+                        Text(shortLabel)
+                            .font(.system(size: 10, weight: .semibold))
+                        Text("\(calendar.component(.day, from: date))")
+                            .font(.system(size: 17, weight: .bold))
+                        Circle()
+                            .fill(hasJobs ? (isSelected ? Color.white.opacity(0.65) : Color.sweeplyAccent) : Color.clear)
+                            .frame(width: 5, height: 5)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 68)
+                    .background(
+                        isSelected ? Color.sweeplyNavy :
+                        (isToday ? Color.sweeplyAccent.opacity(0.08) : Color.sweeplySurface)
+                    )
+                    .foregroundStyle(isSelected ? .white : Color.sweeplyNavy)
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .stroke(isToday && !isSelected ? Color.sweeplyAccent.opacity(0.45) : Color.clear, lineWidth: 1.5)
+                    )
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(.horizontal, 20)
     }
 }
 
