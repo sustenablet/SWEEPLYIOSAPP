@@ -12,10 +12,26 @@ struct DashboardView: View {
     @State private var showProfileMenu = false
     @State private var showSettings = false
     @State private var showNotifications = false
-    @State private var showPlaybook = true
-    @State private var playbookDone: [Bool] = [true, false, false, false]
+    @AppStorage("playbookDismissed") private var playbookDismissed: Bool = false
     @State private var healthStats: HealthStats? = nil
     @State private var selectedHealthSlide = 0
+
+    // MARK: - Get Started State
+
+    private var playbookDone: [Bool] {
+        [
+            !clientsStore.clients.isEmpty,
+            !jobsStore.jobs.isEmpty,
+            !invoicesStore.invoices.isEmpty,
+            profileIsComplete
+        ]
+    }
+
+    private var profileIsComplete: Bool {
+        guard let p = profileStore.profile else { return false }
+        return !p.businessName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            && !p.fullName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
 
     // MARK: - Derived Properties
     
@@ -159,8 +175,8 @@ struct DashboardView: View {
                 // ── Sub-sections with spacing ────────────────────
                 VStack(spacing: 12) {
                     // ── Getting Started checklist ────────────────
-                    if showPlaybook && !playbookDone.allSatisfy({ $0 }) {
-                        DashboardPlaybook(playbookDone: $playbookDone, showPlaybook: $showPlaybook)
+                    if !playbookDismissed && !playbookDone.allSatisfy({ $0 }) {
+                        DashboardPlaybook(playbookDone: playbookDone, isDismissed: $playbookDismissed)
                     }
 
                     // ── Today's Schedule ─────────────────────────
@@ -537,39 +553,111 @@ struct TrendBadge: View {
 }
 
 struct DashboardPlaybook: View {
-    @Binding var playbookDone: [Bool]
-    @Binding var showPlaybook: Bool
+    let playbookDone: [Bool]
+    @Binding var isDismissed: Bool
+
+    @State private var showClientForm = false
+    @State private var showJobForm = false
+    @State private var showInvoiceForm = false
+    @State private var showSettings = false
+
+    private var doneCount: Int { playbookDone.filter { $0 }.count }
+
     var body: some View {
         SectionCard {
             VStack(alignment: .leading, spacing: 16) {
+                // Header
                 HStack {
-                    Text("Get started").font(.system(size: 15, weight: .semibold))
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Get started")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundStyle(Color.sweeplyNavy)
+                        Text("\(doneCount) of 4 complete")
+                            .font(.system(size: 12))
+                            .foregroundStyle(Color.sweeplyTextSub)
+                    }
                     Spacer()
-                    Button { withAnimation { showPlaybook = false } } label: { Image(systemName: "xmark").font(.system(size: 12)).foregroundStyle(Color.sweeplyTextSub) }
+                    Button {
+                        withAnimation { isDismissed = true }
+                    } label: {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 12))
+                            .foregroundStyle(Color.sweeplyTextSub)
+                            .frame(width: 28, height: 28)
+                    }
                 }
-                VStack(spacing: 12) {
-                    PlaybookRow(title: "Add your first client", icon: "person.badge.plus", isDone: playbookDone[0]) { playbookDone[0].toggle() }
-                    PlaybookRow(title: "Schedule your first job", icon: "calendar.badge.plus", isDone: playbookDone[1]) { playbookDone[1].toggle() }
-                    PlaybookRow(title: "Create your first invoice", icon: "doc.badge.plus", isDone: playbookDone[2]) { playbookDone[2].toggle() }
-                    PlaybookRow(title: "Set up business profile", icon: "building.2", isDone: playbookDone[3]) { playbookDone[3].toggle() }
+
+                // Progress bar
+                GeometryReader { geo in
+                    ZStack(alignment: .leading) {
+                        RoundedRectangle(cornerRadius: 3)
+                            .fill(Color.sweeplyBorder)
+                            .frame(height: 4)
+                        RoundedRectangle(cornerRadius: 3)
+                            .fill(Color.sweeplyAccent)
+                            .frame(
+                                width: geo.size.width * CGFloat(doneCount) / 4.0,
+                                height: 4
+                            )
+                            .animation(.easeInOut(duration: 0.4), value: doneCount)
+                    }
                 }
-                Text("\(playbookDone.filter { $0 }.count) of 4 complete").font(.system(size: 12)).foregroundStyle(Color.sweeplyTextSub).padding(.top, 4)
+                .frame(height: 4)
+
+                // Rows
+                VStack(spacing: 10) {
+                    PlaybookRow(title: "Add your first client", icon: "person.badge.plus", isDone: playbookDone[0]) {
+                        if !playbookDone[0] { showClientForm = true }
+                    }
+                    PlaybookRow(title: "Schedule your first job", icon: "calendar.badge.plus", isDone: playbookDone[1]) {
+                        if !playbookDone[1] { showJobForm = true }
+                    }
+                    PlaybookRow(title: "Create your first invoice", icon: "doc.badge.plus", isDone: playbookDone[2]) {
+                        if !playbookDone[2] { showInvoiceForm = true }
+                    }
+                    PlaybookRow(title: "Set up business profile", icon: "building.2", isDone: playbookDone[3]) {
+                        if !playbookDone[3] { showSettings = true }
+                    }
+                }
             }
         }
+        .sheet(isPresented: $showClientForm) { NewClientForm() }
+        .sheet(isPresented: $showJobForm) { NewJobForm() }
+        .sheet(isPresented: $showInvoiceForm) { NewInvoiceView() }
+        .sheet(isPresented: $showSettings) { SettingsView() }
     }
 }
 
 struct PlaybookRow: View {
-    let title: String; let icon: String; let isDone: Bool; let action: () -> Void
+    let title: String
+    let icon: String
+    let isDone: Bool
+    let action: () -> Void
+
     var body: some View {
         Button(action: action) {
             HStack(spacing: 12) {
-                Image(systemName: isDone ? "checkmark.circle.fill" : "circle").foregroundStyle(isDone ? Color.sweeplyAccent : Color.sweeplyBorder)
-                Text(title).font(.system(size: 14)).foregroundStyle(isDone ? Color.sweeplyTextSub : Color.primary).strikethrough(isDone)
+                ZStack {
+                    Circle()
+                        .fill(isDone ? Color.sweeplyAccent : Color.sweeplyAccent.opacity(0.08))
+                        .frame(width: 32, height: 32)
+                    Image(systemName: isDone ? "checkmark" : icon)
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(isDone ? .white : Color.sweeplyAccent)
+                }
+                Text(title)
+                    .font(.system(size: 14, weight: isDone ? .regular : .medium))
+                    .foregroundStyle(isDone ? Color.sweeplyTextSub : Color.sweeplyNavy)
                 Spacer()
-                Image(systemName: icon).font(.system(size: 14)).foregroundStyle(Color.sweeplyTextSub.opacity(0.5))
+                if !isDone {
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(Color.sweeplyTextSub.opacity(0.4))
+                }
             }
-        }.buttonStyle(.plain)
+        }
+        .buttonStyle(.plain)
+        .opacity(isDone ? 0.6 : 1.0)
     }
 }
 

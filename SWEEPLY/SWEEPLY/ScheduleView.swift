@@ -64,7 +64,7 @@ struct ScheduleView: View {
             }
             .sheet(isPresented: $showMonthPicker) {
                 ScheduleMonthPicker(selectedDay: $selectedDay)
-                    .presentationDetents([.medium])
+                    .presentationDetents([.large])
             }
         }
     }
@@ -72,20 +72,35 @@ struct ScheduleView: View {
     // MARK: Top toolbar (month + icons)
 
     private var topToolbar: some View {
-        PageHeader(
-            eyebrow: nil,
-            title: "Schedule",
-            subtitle: monthTitle
-        ) {
-            HStack(spacing: 4) {
-                HeaderIconButton(systemName: "calendar") {
+        HStack(alignment: .center, spacing: 16) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Schedule")
+                    .font(.system(size: 28, weight: .semibold))
+                    .foregroundStyle(Color.sweeplyNavy)
+                    .lineLimit(1)
+
+                Button {
                     showMonthPicker = true
+                } label: {
+                    HStack(spacing: 4) {
+                        Text(monthTitle)
+                            .font(.system(size: 13))
+                            .foregroundStyle(Color.sweeplyTextSub)
+                        Image(systemName: "chevron.down")
+                            .font(.system(size: 10, weight: .semibold))
+                            .foregroundStyle(Color.sweeplyTextSub.opacity(0.7))
+                    }
                 }
-                HeaderIconButton(systemName: "line.3.horizontal.decrease.circle") {
-                    showFilters = true
-                }
+                .buttonStyle(.plain)
+            }
+
+            Spacer(minLength: 12)
+
+            HeaderIconButton(systemName: "line.3.horizontal.decrease.circle") {
+                showFilters = true
             }
         }
+        .frame(minHeight: 76, alignment: .center)
         .padding(.horizontal, 16)
         .padding(.top, 16)
     }
@@ -577,28 +592,24 @@ private struct ScheduleMonthPicker: View {
             
             Divider()
 
-            ScrollView(showsIndicators: false) {
-                VStack(spacing: 24) {
-                    DatePicker(
-                        "Selected Date",
-                        selection: $selectedDay,
-                        displayedComponents: .date
-                    )
-                    .datePickerStyle(.graphical)
-                    .tint(Color.sweeplyAccent)
-                    .labelsHidden()
-                    .padding(16)
-                    .background(Color.sweeplySurface)
-                    .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 20, style: .continuous)
-                            .stroke(Color.sweeplyBorder, lineWidth: 1)
-                    )
-                    .padding(.horizontal, 20)
-                    .padding(.top, 24)
-                }
-                .padding(.bottom, 40)
-            }
+            DatePicker(
+                "Selected Date",
+                selection: $selectedDay,
+                displayedComponents: .date
+            )
+            .datePickerStyle(.graphical)
+            .tint(Color.sweeplyAccent)
+            .labelsHidden()
+            .padding(16)
+            .background(Color.sweeplySurface)
+            .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                    .stroke(Color.sweeplyBorder, lineWidth: 1)
+            )
+            .padding(.horizontal, 20)
+            .padding(.top, 24)
+            .padding(.bottom, 40)
         }
         .background(Color.sweeplyBackground.ignoresSafeArea())
     }
