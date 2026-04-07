@@ -279,7 +279,10 @@ struct ScheduleView: View {
 
             ScrollView {
                 VStack(spacing: 12) {
-                    if filteredJobsForDate(selectedDay).isEmpty {
+                    if jobsStore.isLoading && jobsStore.jobs.isEmpty {
+                        SkeletonList(count: 4)
+                            .padding(.top, 4)
+                    } else if filteredJobsForDate(selectedDay).isEmpty {
                         scheduleEmptyState
                     } else {
                         ForEach(filteredJobsForDate(selectedDay)) { job in
@@ -623,76 +626,89 @@ private struct ScheduleJobRow: View {
     @State private var showInvoicePrompt = false
     @State private var showInvoiceSheet = false
 
+    private var serviceAccentColor: Color {
+        switch job.serviceType {
+        case .standard:         return Color.sweeplyAccent
+        case .deep:             return Color.sweeplyNavy
+        case .moveInOut:        return Color.sweeplyWarning
+        case .postConstruction: return Color.gray
+        case .office:           return Color.blue
+        case .custom:           return Color.sweeplyAccent
+        }
+    }
+
+    private var durationLabel: String {
+        let d = job.duration
+        if d == d.rounded() { return "\(Int(d))h" }
+        return String(format: "%.1fh", d)
+    }
+
     var body: some View {
         NavigationLink(destination: JobDetailView(jobId: job.id)) {
             ZStack(alignment: .leading) {
                 Color.sweeplySurface
 
-                // Left accent bar
+                // Left accent bar — service-type color
                 Capsule()
-                    .fill(Color.sweeplyAccent)
+                    .fill(serviceAccentColor)
                     .frame(width: 3)
                     .padding(.vertical, 10)
                     .padding(.leading, 0)
 
                 HStack(spacing: 14) {
-                    // Leading spacer for the accent bar
                     Color.clear.frame(width: 3)
 
-                    // Main content
                     VStack(alignment: .leading, spacing: 6) {
-                        // Row 1: client name + recurring icon
+                        // Row 1: client name + recurring icon + duration pill + price
                         HStack(spacing: 4) {
                             Text(job.clientName)
                                 .font(.system(size: 15, weight: .bold))
                                 .foregroundStyle(Color.sweeplyNavy)
+                                .lineLimit(1)
                             if job.isRecurring {
                                 Image(systemName: "arrow.triangle.2.circlepath")
                                     .font(.system(size: 10, weight: .bold))
-                                    .foregroundStyle(Color.sweeplyAccent)
+                                    .foregroundStyle(serviceAccentColor)
                             }
                             Spacer()
-                            // Price — right-aligned, monospaced
+                            // Duration pill
+                            Text(durationLabel)
+                                .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                                .foregroundStyle(serviceAccentColor)
+                                .padding(.horizontal, 7)
+                                .padding(.vertical, 3)
+                                .background(serviceAccentColor.opacity(0.1))
+                                .clipShape(Capsule())
+                            // Price
                             Text(job.price.currency)
                                 .font(.system(size: 15, weight: .bold, design: .monospaced))
                                 .foregroundStyle(Color.sweeplyNavy)
                         }
 
-                        // Row 2: time + duration
+                        // Row 2: time
                         HStack(spacing: 6) {
+                            Image(systemName: "clock")
+                                .font(.system(size: 10))
+                                .foregroundStyle(Color.sweeplyTextSub.opacity(0.6))
                             Text(timeString(from: job.date))
                                 .font(.system(size: 12))
                                 .foregroundStyle(Color.sweeplyTextSub)
-                            Text("·")
-                                .font(.system(size: 12))
-                                .foregroundStyle(Color.sweeplyTextSub.opacity(0.5))
-                            Text("\(Int(job.duration)) hr")
-                                .font(.system(size: 12))
-                                .foregroundStyle(Color.sweeplyTextSub)
                         }
 
-                        // Row 3: service type pill + status dot + status badge
+                        // Row 3: service pill + status badge
                         HStack(spacing: 8) {
-                            // Service type pill
                             Text(job.serviceType.rawValue)
                                 .font(.system(size: 11, weight: .semibold))
-                                .foregroundStyle(Color.sweeplyAccent)
+                                .foregroundStyle(serviceAccentColor)
                                 .padding(.horizontal, 8)
                                 .padding(.vertical, 4)
-                                .background(Color.sweeplyAccent.opacity(0.1))
+                                .background(serviceAccentColor.opacity(0.1))
                                 .clipShape(RoundedRectangle(cornerRadius: 6))
 
-                            // Status dot + badge
-                            HStack(spacing: 4) {
-                                Circle()
-                                    .fill(statusDotColor)
-                                    .frame(width: 6, height: 6)
-                                StatusBadge(status: job.status)
-                            }
+                            StatusBadge(status: job.status)
                         }
                     }
 
-                    // Chevron
                     Image(systemName: "chevron.right")
                         .font(.system(size: 12, weight: .semibold))
                         .foregroundStyle(Color.sweeplyBorder)
@@ -703,6 +719,7 @@ private struct ScheduleJobRow: View {
             }
             .clipShape(RoundedRectangle(cornerRadius: 12))
             .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.sweeplyBorder, lineWidth: 1))
+            .shadow(color: .black.opacity(0.04), radius: 8, x: 0, y: 2)
         }
         .buttonStyle(.plain)
         .contextMenu {

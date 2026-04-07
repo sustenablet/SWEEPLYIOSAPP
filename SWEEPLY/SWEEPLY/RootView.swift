@@ -19,6 +19,10 @@ struct RootView: View {
         case dashboard, schedule, clients, finances, business
     }
 
+    private var overdueInvoiceCount: Int {
+        invoicesStore.invoices.filter { $0.status == .overdue }.count
+    }
+
     var body: some View {
         Group {
             if !SupabaseManager.isConfigured {
@@ -52,6 +56,7 @@ struct RootView: View {
                 FinancesView()
                     .tabItem { Label("Finances", systemImage: "chart.line.uptrend.xyaxis") }
                     .tag(Tab.finances)
+                    .badge(overdueInvoiceCount > 0 ? overdueInvoiceCount : 0)
 
                 BusinessView()
                     .tabItem { Label("Business", systemImage: "building.2.fill") }

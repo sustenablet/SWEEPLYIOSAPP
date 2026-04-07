@@ -120,19 +120,10 @@ struct ClientsView: View {
                 }
             }
 
-            if clientsStore.isLoading || (clientsStore.lastError?.isEmpty == false) {
-                HStack(spacing: 8) {
-                    if clientsStore.isLoading {
-                        ProgressView()
-                            .scaleEffect(0.8)
-                    }
-
-                    if let err = clientsStore.lastError, !err.isEmpty {
-                        Text(err)
-                            .foregroundStyle(Color.sweeplyDestructive)
-                    }
-                }
-                .font(.system(size: 11, weight: .medium))
+            if let err = clientsStore.lastError, !err.isEmpty {
+                Text(err)
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(Color.sweeplyDestructive)
             }
         }
         .padding(.horizontal, 20)
@@ -164,7 +155,9 @@ struct ClientsView: View {
     // MARK: - Client List
     private var clientList: some View {
         LazyVStack(spacing: 10) {
-            if filtered.isEmpty {
+            if clientsStore.isLoading && filtered.isEmpty {
+                SkeletonList(count: 5)
+            } else if filtered.isEmpty {
                 emptyState
             } else {
                 ForEach(filtered) { client in

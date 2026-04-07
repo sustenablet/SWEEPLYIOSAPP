@@ -226,76 +226,108 @@ private struct NotificationRow: View {
     let onMarkUnread: () -> Void
     let onDelete: () -> Void
 
+    private var kindIcon: String {
+        switch notification.kind {
+        case .schedule: return "calendar"
+        case .billing:  return "creditcard"
+        case .profile:  return "person.fill"
+        case .system:   return "bell.fill"
+        }
+    }
+
+    private var kindColor: Color {
+        switch notification.kind {
+        case .schedule: return Color.sweeplyNavy
+        case .billing:  return Color.sweeplyAccent
+        case .profile:  return Color.sweeplyTextSub
+        case .system:   return Color.sweeplyBorder
+        }
+    }
+
     var body: some View {
-        HStack(alignment: .top, spacing: 14) {
-            // Indicator
+        HStack(alignment: .top, spacing: 12) {
+            // Left accent bar
             Rectangle()
-                .fill(kindColor)
+                .fill(notification.isRead ? Color.clear : kindColor)
                 .frame(width: 3)
                 .frame(maxHeight: .infinity)
-                .padding(.vertical, 2)
-            
+                .padding(.vertical, 4)
+                .clipShape(Capsule())
+
+            // Kind icon in colored circle
+            ZStack {
+                Circle()
+                    .fill(kindColor.opacity(notification.isRead ? 0.08 : 0.14))
+                    .frame(width: 38, height: 38)
+                Image(systemName: kindIcon)
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundStyle(kindColor.opacity(notification.isRead ? 0.45 : 1))
+            }
+
             // Content
-            VStack(alignment: .leading, spacing: 6) {
-                HStack(alignment: .top, spacing: 8) {
+            VStack(alignment: .leading, spacing: 5) {
+                // Title + timestamp on same line
+                HStack(alignment: .firstTextBaseline, spacing: 6) {
                     Text(notification.title)
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(Color.sweeplyNavy)
+                        .font(.system(size: 14, weight: notification.isRead ? .medium : .semibold))
+                        .foregroundStyle(Color.sweeplyNavy.opacity(notification.isRead ? 0.55 : 1))
                         .lineLimit(2)
-                        .strikethrough(notification.isRead)
-                        .opacity(notification.isRead ? 0.6 : 1)
-                    
+
                     Spacer()
-                    
-                    if !notification.isRead {
-                        Circle()
-                            .fill(Color.sweeplyNavy)
-                            .frame(width: 8, height: 8)
-                    }
-                }
-                
-                Text(notification.message)
-                    .font(.system(size: 13))
-                    .foregroundStyle(Color.sweeplyTextSub)
-                    .lineLimit(2)
-                    .opacity(notification.isRead ? 0.6 : 1)
-                
-                HStack {
+
                     Text(notification.timestamp.formatted(.relative(presentation: .named)))
                         .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(Color.sweeplyTextSub)
-                    
-                    Spacer()
-                    
-                    HStack(spacing: 14) {
-                        if !notification.isRead {
-                            Button {
-                                UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                                onMarkRead()
-                            } label: {
-                                Text("Mark read")
-                                    .font(.system(size: 12, weight: .medium))
-                                    .foregroundStyle(Color.sweeplyTextSub)
-                            }
-                        }
-                        
-                        Button {
-                            onDelete()
-                        } label: {
-                            Image(systemName: "xmark")
-                                .font(.system(size: 12, weight: .medium))
-                                .foregroundStyle(Color.sweeplyTextSub.opacity(0.6))
-                        }
+                        .foregroundStyle(Color.sweeplyTextSub.opacity(0.6))
+                        .lineLimit(1)
+
+                    if !notification.isRead {
+                        Circle()
+                            .fill(kindColor)
+                            .frame(width: 7, height: 7)
                     }
                 }
+
+                Text(notification.message)
+                    .font(.system(size: 13))
+                    .foregroundStyle(Color.sweeplyTextSub.opacity(notification.isRead ? 0.55 : 1))
+                    .lineLimit(2)
+
+                // Actions row
+                HStack(spacing: 12) {
+                    Spacer()
+                    if !notification.isRead {
+                        Button {
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                            onMarkRead()
+                        } label: {
+                            Text("Mark read")
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundStyle(kindColor)
+                        }
+                    }
+                    Button {
+                        onDelete()
+                    } label: {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(Color.sweeplyTextSub.opacity(0.5))
+                    }
+                }
+                .padding(.top, 2)
             }
         }
-        .padding(14)
-        .background(Color.sweeplySurface)
+        .padding(.leading, 10)
+        .padding(.trailing, 14)
+        .padding(.vertical, 12)
+        .background(
+            notification.isRead
+                ? Color.sweeplySurface
+                : Color.sweeplySurface.overlay(kindColor.opacity(0.03))
+        )
         .clipShape(RoundedRectangle(cornerRadius: 12))
         .overlay(
             RoundedRectangle(cornerRadius: 12)
-                .stroke(Color.sweeplyBorder, lineWidth: 1)
+                .stroke(notification.isRead ? Color.sweeplyBorder : kindColor.opacity(0.18), lineWidth: 1)
         )
         .contentShape(Rectangle())
         .onTapGesture {
@@ -328,18 +360,6 @@ private struct NotificationRow: View {
 
     }
 
-    private var kindColor: Color {
-        switch notification.kind {
-        case .schedule:
-            return Color.sweeplyNavy
-        case .billing:
-            return Color.sweeplyAccent
-        case .profile:
-            return Color.sweeplyNavy.opacity(0.6)
-        case .system:
-            return Color.sweeplyTextSub.opacity(0.5)
-        }
-    }
 }
 
 #Preview {
