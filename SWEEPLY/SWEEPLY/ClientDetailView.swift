@@ -530,8 +530,9 @@ private struct DetailJobRow: View {
                 Spacer()
                 
                 Text(job.price.currency)
-                    .font(.system(size: 14, weight: .bold))
+                    .font(.system(size: 14, weight: .bold, design: .monospaced))
                     .foregroundStyle(Color.sweeplyNavy)
+                    .monospacedDigit()
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 14)

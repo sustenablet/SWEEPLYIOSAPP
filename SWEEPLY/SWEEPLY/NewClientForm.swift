@@ -259,18 +259,29 @@ private struct FormTextField: View {
     let placeholder: String
     var keyboard: UIKeyboardType = .default
 
+    @FocusState private var isFocused: Bool
+
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text(label).font(.system(size: 12)).foregroundStyle(Color.sweeplyTextSub)
+            Text(label)
+                .font(.system(size: 12))
+                .foregroundStyle(isFocused ? Color.sweeplyAccent : Color.sweeplyTextSub)
+                .animation(.easeOut(duration: 0.15), value: isFocused)
             TextField(placeholder, text: $text)
                 .font(.system(size: 15))
                 .keyboardType(keyboard)
                 .autocorrectionDisabled()
+                .focused($isFocused)
                 .padding(.horizontal, 14)
                 .padding(.vertical, 11)
                 .background(Color.sweeplyBackground)
                 .clipShape(RoundedRectangle(cornerRadius: 10))
-                .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.sweeplyBorder, lineWidth: 1))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10)
+                        .stroke(isFocused ? Color.sweeplyAccent : Color.sweeplyBorder,
+                                lineWidth: isFocused ? 1.5 : 1)
+                        .animation(.easeOut(duration: 0.15), value: isFocused)
+                )
         }
     }
 }

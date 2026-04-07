@@ -81,8 +81,9 @@ struct JobDetailView: View {
                         .font(.system(size: 24, weight: .bold))
                         .foregroundStyle(Color.sweeplyNavy)
                     Text(job.price.currency)
-                        .font(.system(size: 18, weight: .semibold))
+                        .font(.system(size: 18, weight: .semibold, design: .monospaced))
                         .foregroundStyle(Color.sweeplyNavy.opacity(0.8))
+                        .monospacedDigit()
                 }
                 Spacer()
                 StatusBadge(status: job.status)
