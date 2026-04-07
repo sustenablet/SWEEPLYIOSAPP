@@ -1,4 +1,5 @@
 import SwiftUI
+import LocalAuthentication
 
 struct RootView: View {
     @Environment(AppSession.self)    private var session
@@ -14,6 +15,9 @@ struct RootView: View {
     @State private var showQuickAdd = false
     @State private var showAIChat = false
     @State private var showOnboarding = false
+    @State private var isLocked = false
+
+    @AppStorage("biometricLockEnabled") private var biometricLockEnabled: Bool = false
 
     enum Tab {
         case dashboard, schedule, clients, finances, business
@@ -23,6 +27,8 @@ struct RootView: View {
         invoicesStore.invoices.filter { $0.status == .overdue }.count
     }
 
+    @Environment(\.scenePhase) private var scenePhase
+
     var body: some View {
         Group {
             if !SupabaseManager.isConfigured {
@@ -30,12 +36,87 @@ struct RootView: View {
             } else if !session.hasResolvedInitialSession {
                 SplashView()
             } else if session.isAuthenticated {
-                mainTabs
+                ZStack {
+                    mainTabs
+                    if isLocked {
+                        biometricLockOverlay
+                    }
+                }
             } else {
                 AuthView()
             }
         }
         .preferredColorScheme(.light)
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .background && biometricLockEnabled {
+                isLocked = true
+            } else if phase == .active && isLocked {
+                authenticate()
+            }
+        }
+    }
+
+    private func authenticate() {
+        let context = LAContext()
+        var error: NSError?
+        if context.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: &error) {
+            context.evaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, localizedReason: "Unlock Sweeply") { success, _ in
+                DispatchQueue.main.async {
+                    if success { isLocked = false }
+                }
+            }
+        } else {
+            // Fall back to passcode
+            context.evaluatePolicy(.deviceOwnerAuthentication, localizedReason: "Unlock Sweeply") { success, _ in
+                DispatchQueue.main.async {
+                    if success { isLocked = false }
+                }
+            }
+        }
+    }
+
+    private var biometricLockOverlay: some View {
+        ZStack {
+            Color.sweeplyNavy.ignoresSafeArea()
+            VStack(spacing: 32) {
+                Spacer()
+                ZStack {
+                    Circle()
+                        .fill(Color.white.opacity(0.08))
+                        .frame(width: 100, height: 100)
+                    Text("S")
+                        .font(.system(size: 44, weight: .black, design: .rounded))
+                        .foregroundStyle(.white)
+                }
+                VStack(spacing: 10) {
+                    Text("Sweeply is Locked")
+                        .font(.system(size: 22, weight: .bold))
+                        .foregroundStyle(.white)
+                    Text("Your business data is protected.")
+                        .font(.system(size: 15))
+                        .foregroundStyle(.white.opacity(0.6))
+                }
+                Spacer()
+                Button {
+                    UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                    authenticate()
+                } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: "faceid")
+                            .font(.system(size: 16, weight: .semibold))
+                        Text("Unlock Sweeply")
+                            .font(.system(size: 16, weight: .semibold))
+                    }
+                    .foregroundStyle(Color.sweeplyNavy)
+                    .padding(.horizontal, 32)
+                    .padding(.vertical, 14)
+                    .background(.white)
+                    .clipShape(Capsule())
+                }
+                .padding(.bottom, 48)
+            }
+        }
+        .transition(.opacity)
     }
 
     private var mainTabs: some View {

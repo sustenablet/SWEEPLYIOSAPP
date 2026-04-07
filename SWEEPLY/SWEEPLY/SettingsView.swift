@@ -309,6 +309,19 @@ struct SettingsView: View {
                 }
                 .buttonStyle(.plain)
             }
+
+            // SECURITY
+            SectionCard {
+                VStack(alignment: .leading, spacing: 0) {
+                    Text("SECURITY")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundStyle(Color.sweeplyTextSub)
+                        .tracking(0.8)
+                        .padding(.bottom, 14)
+
+                    BiometricLockToggleRow()
+                }
+            }
         }
     }
 
@@ -564,7 +577,7 @@ struct SettingsField: View {
     let label: String
     @Binding var text: String
     var keyboard: UIKeyboardType = .default
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(label).font(.system(size: 12, weight: .semibold)).foregroundStyle(Color.sweeplyTextSub)
@@ -577,5 +590,31 @@ struct SettingsField: View {
                 .clipShape(RoundedRectangle(cornerRadius: 10))
                 .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.sweeplyBorder, lineWidth: 1))
         }
+    }
+}
+
+// MARK: - Biometric Lock Toggle
+
+private struct BiometricLockToggleRow: View {
+    @AppStorage("biometricLockEnabled") private var biometricLockEnabled: Bool = false
+
+    var body: some View {
+        Toggle(isOn: $biometricLockEnabled) {
+            HStack(spacing: 10) {
+                Image(systemName: "faceid")
+                    .font(.system(size: 14))
+                    .foregroundStyle(Color.sweeplyNavy)
+                    .frame(width: 20)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Require Face ID to Open")
+                        .font(.system(size: 15))
+                        .foregroundStyle(Color.sweeplyNavy)
+                    Text("Locks app when it goes to background")
+                        .font(.system(size: 12))
+                        .foregroundStyle(Color.sweeplyTextSub)
+                }
+            }
+        }
+        .tint(Color.sweeplyAccent)
     }
 }

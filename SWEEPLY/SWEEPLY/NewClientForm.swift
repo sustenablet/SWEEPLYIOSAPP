@@ -1,4 +1,6 @@
 import SwiftUI
+import Contacts
+import ContactsUI
 
 struct NewClientForm: View {
     @Environment(\.dismiss)         private var dismiss
@@ -21,6 +23,7 @@ struct NewClientForm: View {
     @State private var entryInstructions = ""
     @State private var notes = ""
     @State private var isSaving = false
+    @State private var showContactPicker = false
 
     private var fallbackSettings: AppSettings {
         var settings = AppSettings()
@@ -55,9 +58,31 @@ struct NewClientForm: View {
                     .foregroundStyle(Color.sweeplyTextSub)
             }
             .padding(24)
-            
+
             ScrollView {
                 VStack(spacing: 24) {
+                    // Import from Contacts button (new client only)
+                    if editingClient == nil {
+                        Button {
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                            showContactPicker = true
+                        } label: {
+                            HStack(spacing: 8) {
+                                Image(systemName: "person.crop.circle.badge.plus")
+                                    .font(.system(size: 15, weight: .semibold))
+                                Text("Import from Contacts")
+                                    .font(.system(size: 14, weight: .semibold))
+                            }
+                            .foregroundStyle(Color.sweeplyNavy)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
+                            .background(Color.sweeplyNavy.opacity(0.06))
+                            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                            .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).stroke(Color.sweeplyNavy.opacity(0.15), lineWidth: 1))
+                        }
+                        .buttonStyle(.plain)
+                    }
+
                     // Contact
                     VStack(alignment: .leading, spacing: 14) {
                         Text("CONTACT INFO").font(.system(size: 10, weight: .bold)).foregroundStyle(Color.sweeplyTextSub).tracking(1.0)
@@ -146,6 +171,30 @@ struct NewClientForm: View {
             .padding(24)
         }
         .background(Color.sweeplySurface)
+        .sheet(isPresented: $showContactPicker) {
+            ContactPickerView { contact in
+                if let first = contact.givenName.isEmpty ? nil : contact.givenName {
+                    firstName = first
+                }
+                if let last = contact.familyName.isEmpty ? nil : contact.familyName {
+                    lastName = last
+                }
+                if let emailAddr = contact.emailAddresses.first {
+                    email = String(emailAddr.value)
+                }
+                if let phoneNum = contact.phoneNumbers.first {
+                    phone = phoneNum.value.stringValue
+                }
+                if let postalAddr = contact.postalAddresses.first {
+                    let addr = postalAddr.value
+                    street = addr.street
+                    city = addr.city
+                    state = addr.state
+                    zip = addr.postalCode
+                }
+                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+            }
+        }
         .onAppear {
             if let c = editingClient {
                 let parts = c.name.split(separator: " ", maxSplits: 1)
@@ -222,6 +271,34 @@ private struct FormTextField: View {
                 .background(Color.sweeplyBackground)
                 .clipShape(RoundedRectangle(cornerRadius: 10))
                 .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.sweeplyBorder, lineWidth: 1))
+        }
+    }
+}
+
+// MARK: - Contact Picker (CNContactPickerViewController)
+
+private struct ContactPickerView: UIViewControllerRepresentable {
+    let onSelect: (CNContact) -> Void
+
+    func makeUIViewController(context: Context) -> CNContactPickerViewController {
+        let picker = CNContactPickerViewController()
+        picker.delegate = context.coordinator
+        picker.predicateForEnablingContact = NSPredicate(value: true)
+        return picker
+    }
+
+    func updateUIViewController(_ uiViewController: CNContactPickerViewController, context: Context) {}
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(onSelect: onSelect)
+    }
+
+    class Coordinator: NSObject, CNContactPickerDelegate {
+        let onSelect: (CNContact) -> Void
+        init(onSelect: @escaping (CNContact) -> Void) { self.onSelect = onSelect }
+
+        func contactPicker(_ picker: CNContactPickerViewController, didSelectContact contact: CNContact) {
+            onSelect(contact)
         }
     }
 }
