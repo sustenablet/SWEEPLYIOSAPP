@@ -1,3 +1,4 @@
+import CoreSpotlight
 import SwiftUI
 import Supabase
 import UIKit
@@ -44,6 +45,11 @@ struct SWEEPLYApp: App {
                 }
                 .onOpenURL { url in
                     SupabaseManager.shared?.auth.handle(url)
+                }
+                .onContinueUserActivity(CSSearchableItemActionType) { activity in
+                    if let deepLink = SpotlightIndexer.deepLink(from: activity) {
+                        UserDefaults.standard.set(deepLink, forKey: "pendingSpotlightLink")
+                    }
                 }
         }
     }

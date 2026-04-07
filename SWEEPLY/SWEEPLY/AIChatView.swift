@@ -1,3 +1,5 @@
+import AVFoundation
+import Speech
 import SwiftUI
 import UserNotifications
 
@@ -206,6 +208,17 @@ struct AIChatView: View {
     @State private var searchText: String = ""
     @State private var showSearch: Bool = false
 
+    @AppStorage("aiChatOnboardingDone") private var onboardingDone: Bool = false
+    @State private var onboardingStep: Int = 0
+    @State private var showOnboarding: Bool = false
+
+    // Voice input
+    @State private var isRecording: Bool = false
+    @State private var audioEngine = AVAudioEngine()
+    @State private var recognitionRequest: SFSpeechAudioBufferRecognitionRequest?
+    @State private var recognitionTask: SFSpeechRecognitionTask?
+    private let speechRecognizer = SFSpeechRecognizer(locale: Locale.current)
+
     private var slashCommands: [(command: String, icon: String, label: String, query: String)] {
         [
             ("/jobs",     "briefcase.fill",             "My Jobs",         "Show my upcoming jobs"),
@@ -403,10 +416,110 @@ struct AIChatView: View {
                 if !hasFiredProactive {
                     fireProactiveMessage()
                 }
+                if !onboardingDone {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+                        withAnimation(.easeOut(duration: 0.25)) { showOnboarding = true }
+                    }
+                }
             }
             .onDisappear {
                 persistChat()
             }
+            .overlay(alignment: .bottom) {
+                if showOnboarding {
+                    aiOnboardingOverlay
+                        .transition(.opacity.combined(with: .move(edge: .bottom)))
+                }
+            }
+        }
+    }
+
+    // MARK: - AI Onboarding Tour
+
+    private var aiOnboardingOverlay: some View {
+        VStack(spacing: 0) {
+            Spacer()
+            VStack(spacing: 20) {
+                // Step indicator dots
+                HStack(spacing: 6) {
+                    ForEach(0..<3) { i in
+                        Circle()
+                            .fill(i == onboardingStep ? Color.sweeplyAccent : Color.sweeplyBorder)
+                            .frame(width: i == onboardingStep ? 8 : 6, height: i == onboardingStep ? 8 : 6)
+                            .animation(.easeOut(duration: 0.2), value: onboardingStep)
+                    }
+                }
+
+                VStack(spacing: 8) {
+                    Text(onboardingStepTitle)
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundStyle(Color.sweeplyNavy)
+                        .multilineTextAlignment(.center)
+                    Text(onboardingStepSubtitle)
+                        .font(.system(size: 13))
+                        .foregroundStyle(Color.sweeplyTextSub)
+                        .multilineTextAlignment(.center)
+                        .lineSpacing(2)
+                }
+
+                HStack(spacing: 12) {
+                    if onboardingStep < 2 {
+                        Button {
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                            withAnimation(.easeOut(duration: 0.25)) { onboardingStep += 1 }
+                        } label: {
+                            Text("Next")
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundStyle(.white)
+                                .padding(.horizontal, 28)
+                                .padding(.vertical, 11)
+                                .background(Color.sweeplyNavy)
+                                .clipShape(Capsule())
+                        }
+                        .buttonStyle(.plain)
+                    } else {
+                        Button {
+                            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                            withAnimation(.easeOut(duration: 0.25)) { showOnboarding = false }
+                            onboardingDone = true
+                        } label: {
+                            Text("Got it")
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundStyle(.white)
+                                .padding(.horizontal, 28)
+                                .padding(.vertical, 11)
+                                .background(Color.sweeplyNavy)
+                                .clipShape(Capsule())
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
+            .padding(24)
+            .background(
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                    .fill(Color.sweeplySurface)
+                    .shadow(color: .black.opacity(0.12), radius: 20, x: 0, y: -4)
+            )
+            .padding(.horizontal, 16)
+            .padding(.bottom, 20)
+        }
+        .background(Color.black.opacity(0.35).ignoresSafeArea())
+    }
+
+    private var onboardingStepTitle: String {
+        switch onboardingStep {
+        case 0: return "Quick actions at a tap"
+        case 1: return "Shortcuts for power users"
+        default: return "Or just type naturally"
+        }
+    }
+
+    private var onboardingStepSubtitle: String {
+        switch onboardingStep {
+        case 0: return "Tap any suggestion chip above to instantly get revenue summaries, today's jobs, or client insights."
+        case 1: return "Type \"/\" to open the command menu with shortcuts for jobs, invoices, revenue, and more."
+        default: return "Ask me anything in plain English — \"what's my revenue this month?\" or \"mark John's job as done\"."
         }
     }
 
@@ -550,7 +663,24 @@ struct AIChatView: View {
 
     private var inputBar: some View {
         HStack(spacing: 10) {
-            TextField("Ask Sweeply AI anything...", text: $inputText, axis: .vertical)
+            // Mic button
+            Button {
+                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                if isRecording { stopRecording() } else { startRecording() }
+            } label: {
+                ZStack {
+                    Circle()
+                        .fill(isRecording ? Color.red.opacity(0.12) : Color.sweeplySurface)
+                        .frame(width: 36, height: 36)
+                    Image(systemName: isRecording ? "waveform" : "mic")
+                        .font(.system(size: 15, weight: .medium))
+                        .foregroundStyle(isRecording ? Color.red : Color.sweeplyTextSub)
+                        .symbolEffect(.variableColor, isActive: isRecording)
+                }
+            }
+            .buttonStyle(.plain)
+
+            TextField(isRecording ? "Listening..." : "Ask Sweeply AI anything...", text: $inputText, axis: .vertical)
                 .font(.system(size: 15))
                 .lineLimit(5)
                 .padding(.horizontal, 14)
@@ -558,8 +688,9 @@ struct AIChatView: View {
                 .background(Color.sweeplySurface)
                 .clipShape(RoundedRectangle(cornerRadius: 22))
                 .overlay(RoundedRectangle(cornerRadius: 22).stroke(
+                    isRecording ? Color.red.opacity(0.4) :
                     showSlashMenu ? Color.sweeplyAccent.opacity(0.5) : Color.sweeplyBorder,
-                    lineWidth: showSlashMenu ? 1.5 : 1
+                    lineWidth: (isRecording || showSlashMenu) ? 1.5 : 1
                 ))
                 .onChange(of: inputText) { _, newValue in
                     let isSlash = newValue.hasPrefix("/")
@@ -572,6 +703,7 @@ struct AIChatView: View {
                 let trimmed = inputText.trimmingCharacters(in: .whitespaces)
                 guard !trimmed.isEmpty else { return }
                 withAnimation(.easeInOut(duration: 0.15)) { showSlashMenu = false }
+                if isRecording { stopRecording() }
                 sendMessage(trimmed)
             } label: {
                 ZStack {
@@ -591,6 +723,56 @@ struct AIChatView: View {
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
         .background(Color.sweeplyBackground)
+    }
+
+    // MARK: - Voice Recording
+
+    private func startRecording() {
+        SFSpeechRecognizer.requestAuthorization { status in
+            guard status == .authorized else { return }
+            AVAudioApplication.requestRecordPermission { granted in
+                guard granted else { return }
+                DispatchQueue.main.async { beginAudioSession() }
+            }
+        }
+    }
+
+    private func beginAudioSession() {
+        let request = SFSpeechAudioBufferRecognitionRequest()
+        request.shouldReportPartialResults = true
+        recognitionRequest = request
+
+        let inputNode = audioEngine.inputNode
+        let fmt = inputNode.outputFormat(forBus: 0)
+        inputNode.installTap(onBus: 0, bufferSize: 1024, format: fmt) { buffer, _ in
+            request.append(buffer)
+        }
+
+        recognitionTask = speechRecognizer?.recognitionTask(with: request) { result, error in
+            if let result {
+                DispatchQueue.main.async { inputText = result.bestTranscription.formattedString }
+            }
+            if error != nil || result?.isFinal == true {
+                DispatchQueue.main.async { stopRecording() }
+            }
+        }
+
+        do {
+            try audioEngine.start()
+            withAnimation { isRecording = true }
+        } catch {
+            stopRecording()
+        }
+    }
+
+    private func stopRecording() {
+        audioEngine.stop()
+        audioEngine.inputNode.removeTap(onBus: 0)
+        recognitionRequest?.endAudio()
+        recognitionRequest = nil
+        recognitionTask?.cancel()
+        recognitionTask = nil
+        withAnimation { isRecording = false }
     }
 
     // MARK: - Send Logic

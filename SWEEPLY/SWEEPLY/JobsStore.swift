@@ -38,6 +38,7 @@ final class JobsStore {
                 .execute()
                 .value
             jobs = rows.map { $0.toJob() }
+            SpotlightIndexer.shared.indexJobs(jobs)
         } catch {
             lastError = error.localizedDescription
             jobs = []
@@ -78,6 +79,7 @@ final class JobsStore {
             NotificationManager.shared.scheduleJobReminder(for: mapped)
             await NotificationHelper.insert(userId: userId, title: "Job Scheduled", message: "\(mapped.serviceType.rawValue) for \(mapped.clientName) on \(mapped.date.formatted(date: .abbreviated, time: .shortened)).", kind: "schedule")
             Task.detached { await CalendarSyncManager.shared.addEvent(for: mapped) }
+            SpotlightIndexer.shared.indexJobs([mapped])
             return true
         } catch {
             lastError = error.localizedDescription
@@ -175,6 +177,7 @@ final class JobsStore {
                 .execute()
             jobs.removeAll { $0.id == id }
             Task.detached { await CalendarSyncManager.shared.removeEvent(for: id) }
+            SpotlightIndexer.shared.removeJob(id: id)
             return true
         } catch {
             lastError = error.localizedDescription

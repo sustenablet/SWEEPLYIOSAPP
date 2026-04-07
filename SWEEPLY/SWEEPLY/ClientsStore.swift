@@ -1,4 +1,5 @@
 import CoreLocation
+import CoreSpotlight
 import Foundation
 import Observation
 import Supabase
@@ -38,6 +39,7 @@ final class ClientsStore {
                 .execute()
                 .value
             clients = rows.map { $0.toClient() }
+            SpotlightIndexer.shared.indexClients(clients)
         } catch {
             lastError = error.localizedDescription
             clients = []
@@ -77,6 +79,7 @@ final class ClientsStore {
             clients.append(mapped)
             clients.sort { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
             geocodeAndPatch(client: mapped, userId: userId)
+            SpotlightIndexer.shared.indexClients([mapped])
             return true
         } catch {
             lastError = error.localizedDescription
@@ -163,6 +166,7 @@ final class ClientsStore {
                 .eq("id", value: id)
                 .execute()
             clients.removeAll { $0.id == id }
+            SpotlightIndexer.shared.removeClient(id: id)
             return true
         } catch {
             lastError = error.localizedDescription

@@ -13,8 +13,6 @@
 			</array>
 		</dict>
 	</array>
-	<key>UIBackgroundModes</key>
-	<array/>
 	<key>UILaunchScreen</key>
 	<dict>
 		<key>UIColorName</key>
@@ -28,5 +26,13 @@
 	<string>Sweeply can sync your scheduled jobs to your iOS Calendar so you never miss an appointment.</string>
 	<key>NSCalendarsWriteOnlyAccessUsageDescription</key>
 	<string>Sweeply adds your scheduled cleaning jobs to your calendar.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Sweeply uses your microphone so you can dictate messages to the AI assistant.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Sweeply uses speech recognition to transcribe your voice into text for the AI assistant.</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>fetch</string>
+	</array>
 </dict>
 </plist>

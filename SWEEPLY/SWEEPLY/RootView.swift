@@ -19,6 +19,7 @@ struct RootView: View {
 
     @AppStorage("biometricLockEnabled") private var biometricLockEnabled: Bool = false
     @AppStorage("pendingShortcut") private var pendingShortcut: String = ""
+    @AppStorage("pendingSpotlightLink") private var pendingSpotlightLink: String = ""
 
     enum Tab {
         case dashboard, schedule, clients, finances, business
@@ -55,7 +56,19 @@ struct RootView: View {
                 authenticate()
             } else if phase == .active && !pendingShortcut.isEmpty {
                 handlePendingShortcut()
+            } else if phase == .active && !pendingSpotlightLink.isEmpty {
+                handleSpotlightLink()
             }
+        }
+    }
+
+    private func handleSpotlightLink() {
+        let link = pendingSpotlightLink
+        pendingSpotlightLink = ""
+        if link.hasPrefix("client:") {
+            selectedTab = .clients
+        } else if link.hasPrefix("job:") {
+            selectedTab = .schedule
         }
     }
 
