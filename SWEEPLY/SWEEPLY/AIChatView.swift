@@ -66,12 +66,19 @@ struct ChatMessage: Identifiable {
 
 // MARK: - Conversation State
 
+enum DirectAction {
+    case markJobComplete(Job)
+    case markInvoicePaid(Invoice)
+    case rescheduleJob(Job, Date)
+}
+
 enum ConversationState {
     case idle
     case collectingJob(JobDraft)
     case awaitingJobConfirmation(JobDraft)
     case collectingClient(ClientDraft)
     case awaitingReminder(String)
+    case awaitingDirectAction(DirectAction)
 }
 
 struct JobDraft {
@@ -194,6 +201,28 @@ struct AIChatView: View {
     @State private var isAssistantTyping: Bool = false
     @State private var conversationState: ConversationState = .idle
     @State private var hasFiredProactive: Bool = false
+    @State private var lastIntent: String? = nil
+    @State private var showSlashMenu: Bool = false
+    @State private var searchText: String = ""
+    @State private var showSearch: Bool = false
+
+    private var slashCommands: [(command: String, icon: String, label: String, query: String)] {
+        [
+            ("/jobs",     "briefcase.fill",             "My Jobs",         "Show my upcoming jobs"),
+            ("/today",    "calendar",                   "Today",           "What's on my schedule today?"),
+            ("/revenue",  "chart.line.uptrend.xyaxis",  "Revenue",         "What's my revenue?"),
+            ("/clients",  "person.2.fill",              "Clients",         "Show my clients"),
+            ("/invoice",  "doc.badge.plus",             "New Invoice",     "Create a new invoice"),
+            ("/insights", "sparkles",                   "Insights",        "Give me business insights"),
+            ("/overview", "square.grid.2x2.fill",       "Overview",        "Business overview"),
+            ("/help",     "questionmark.circle",        "Help",            "What can you do?"),
+        ]
+    }
+
+    private var displayedMessages: [ChatMessage] {
+        guard showSearch, !searchText.isEmpty else { return messages }
+        return messages.filter { $0.text.localizedCaseInsensitiveContains(searchText) }
+    }
 
     @AppStorage("sweeplyAIChatHistoryV2") private var chatHistoryData: Data = Data()
     @AppStorage("sweeplyAIChatSavedAt") private var chatSavedAt: Double = 0
@@ -218,6 +247,31 @@ struct AIChatView: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
+                // Search bar
+                if showSearch {
+                    HStack(spacing: 10) {
+                        Image(systemName: "magnifyingglass")
+                            .font(.system(size: 14))
+                            .foregroundStyle(Color.sweeplyTextSub)
+                        TextField("Search messages...", text: $searchText)
+                            .font(.system(size: 14))
+                        if !searchText.isEmpty {
+                            Button { searchText = "" } label: {
+                                Image(systemName: "xmark.circle.fill")
+                                    .foregroundStyle(Color.sweeplyTextSub)
+                            }
+                        }
+                    }
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 8)
+                    .background(Color.sweeplySurface)
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                    .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.sweeplyBorder, lineWidth: 1))
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
+                    .transition(.move(edge: .top).combined(with: .opacity))
+                }
+
                 ScrollViewReader { proxy in
                     ScrollView {
                         VStack(spacing: 0) {
@@ -225,13 +279,22 @@ struct AIChatView: View {
                                 welcomeHeader
                             }
                             LazyVStack(spacing: 12) {
-                                ForEach(messages) { message in
+                                ForEach(displayedMessages) { message in
                                     MessageBubble(
                                         message: message,
                                         onAction: handleAction,
                                         onQuickReply: sendMessage
                                     )
                                     .id(message.id)
+                                    .swipeActions(edge: .leading, allowsFullSwipe: true) {
+                                        Button(role: .destructive) {
+                                            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                                            messages.removeAll { $0.id == message.id }
+                                            persistChat()
+                                        } label: {
+                                            Label("Delete", systemImage: "trash")
+                                        }
+                                    }
                                 }
                                 if isAssistantTyping {
                                     TypingIndicatorView()
@@ -264,6 +327,12 @@ struct AIChatView: View {
 
                 quickActionsBar
 
+                // Slash command overlay
+                if showSlashMenu {
+                    slashCommandMenu
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                }
+
                 Divider()
                 inputBar
             }
@@ -291,17 +360,33 @@ struct AIChatView: View {
                     }
                 }
                 ToolbarItem(placement: .navigationBarLeading) {
-                    if !messages.isEmpty {
-                        Button {
-                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                            messages = []
-                            conversationState = .idle
-                            hasFiredProactive = false
-                            chatHistoryData = Data()
-                        } label: {
-                            Text("Clear")
-                                .font(.system(size: 13, weight: .medium))
-                                .foregroundStyle(Color.sweeplyTextSub)
+                    HStack(spacing: 12) {
+                        if !messages.isEmpty {
+                            Button {
+                                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                messages = []
+                                conversationState = .idle
+                                hasFiredProactive = false
+                                chatHistoryData = Data()
+                                searchText = ""
+                                showSearch = false
+                            } label: {
+                                Text("Clear")
+                                    .font(.system(size: 13, weight: .medium))
+                                    .foregroundStyle(Color.sweeplyTextSub)
+                            }
+                        }
+                        if !messages.isEmpty {
+                            Button {
+                                withAnimation(.easeInOut(duration: 0.2)) {
+                                    showSearch.toggle()
+                                    if !showSearch { searchText = "" }
+                                }
+                            } label: {
+                                Image(systemName: showSearch ? "magnifyingglass.circle.fill" : "magnifyingglass")
+                                    .font(.system(size: 15, weight: .medium))
+                                    .foregroundStyle(showSearch ? Color.sweeplyAccent : Color.sweeplyTextSub)
+                            }
                         }
                     }
                 }
@@ -405,6 +490,62 @@ struct AIChatView: View {
         .background(Color.sweeplyBackground)
     }
 
+    // MARK: - Slash Command Menu
+
+    private var slashCommandMenu: some View {
+        VStack(spacing: 0) {
+            ForEach(filteredSlashCommands, id: \.command) { cmd in
+                Button {
+                    withAnimation(.easeInOut(duration: 0.15)) { showSlashMenu = false }
+                    inputText = ""
+                    sendMessage(cmd.query)
+                } label: {
+                    HStack(spacing: 12) {
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                .fill(Color.sweeplyNavy.opacity(0.08))
+                                .frame(width: 32, height: 32)
+                            Image(systemName: cmd.icon)
+                                .font(.system(size: 13, weight: .semibold))
+                                .foregroundStyle(Color.sweeplyNavy)
+                        }
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text(cmd.command)
+                                .font(.system(size: 13, weight: .bold, design: .monospaced))
+                                .foregroundStyle(Color.sweeplyNavy)
+                            Text(cmd.label)
+                                .font(.system(size: 11))
+                                .foregroundStyle(Color.sweeplyTextSub)
+                        }
+                        Spacer()
+                        Image(systemName: "arrow.up.left")
+                            .font(.system(size: 11))
+                            .foregroundStyle(Color.sweeplyTextSub.opacity(0.4))
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+                }
+                .buttonStyle(.plain)
+
+                if cmd.command != filteredSlashCommands.last?.command {
+                    Divider().padding(.leading, 60)
+                }
+            }
+        }
+        .background(Color.sweeplySurface)
+        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(Color.sweeplyBorder, lineWidth: 1))
+        .shadow(color: .black.opacity(0.08), radius: 16, x: 0, y: -4)
+        .padding(.horizontal, 12)
+        .padding(.bottom, 4)
+    }
+
+    private var filteredSlashCommands: [(command: String, icon: String, label: String, query: String)] {
+        let query = inputText.lowercased().dropFirst() // drop the "/"
+        if query.isEmpty { return slashCommands }
+        return slashCommands.filter { $0.command.dropFirst().lowercased().hasPrefix(query) || $0.label.lowercased().contains(query) }
+    }
+
     // MARK: - Input Bar
 
     private var inputBar: some View {
@@ -416,19 +557,21 @@ struct AIChatView: View {
                 .padding(.vertical, 10)
                 .background(Color.sweeplySurface)
                 .clipShape(RoundedRectangle(cornerRadius: 22))
-                .overlay(RoundedRectangle(cornerRadius: 22).stroke(Color.sweeplyBorder, lineWidth: 1))
-
-            Button { } label: {
-                Image(systemName: "mic")
-                    .font(.system(size: 16))
-                    .foregroundStyle(Color.sweeplyTextSub.opacity(0.4))
-                    .frame(width: 36, height: 36)
-            }
-            .disabled(true)
+                .overlay(RoundedRectangle(cornerRadius: 22).stroke(
+                    showSlashMenu ? Color.sweeplyAccent.opacity(0.5) : Color.sweeplyBorder,
+                    lineWidth: showSlashMenu ? 1.5 : 1
+                ))
+                .onChange(of: inputText) { _, newValue in
+                    let isSlash = newValue.hasPrefix("/")
+                    withAnimation(.easeInOut(duration: 0.15)) {
+                        showSlashMenu = isSlash && !newValue.trimmingCharacters(in: .whitespaces).isEmpty
+                    }
+                }
 
             Button {
                 let trimmed = inputText.trimmingCharacters(in: .whitespaces)
                 guard !trimmed.isEmpty else { return }
+                withAnimation(.easeInOut(duration: 0.15)) { showSlashMenu = false }
                 sendMessage(trimmed)
             } label: {
                 ZStack {
@@ -458,16 +601,17 @@ struct AIChatView: View {
 
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
         inputText = ""
+        withAnimation(.easeInOut(duration: 0.15)) { showSlashMenu = false }
 
         let userMsg = ChatMessage(role: .user, text: trimmed)
         messages.append(userMsg)
 
         isAssistantTyping = true
-        let delay = Double.random(in: 0.7...1.2)
+        let delay = Double.random(in: 0.6...1.1)
 
         Task {
             try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
-            let response = generateResponse(for: trimmed)
+            let response = await generateResponse(for: trimmed)
             await MainActor.run {
                 isAssistantTyping = false
                 messages.append(response)
@@ -571,7 +715,8 @@ struct AIChatView: View {
 
     // MARK: - Response Engine
 
-    private func generateResponse(for input: String) -> ChatMessage {
+    @MainActor
+    private func generateResponse(for input: String) async -> ChatMessage {
         let lowered = input.lowercased()
 
         // Conversational state handling
@@ -599,8 +744,114 @@ struct AIChatView: View {
             return handleClientCollection(input: input, lowered: lowered, draft: draft)
         case .awaitingReminder(let note):
             return handleReminderDate(input: input, note: note)
+        case .awaitingDirectAction(let action):
+            return await handleDirectActionConfirmation(input: input, lowered: lowered, action: action)
         case .idle:
             break
+        }
+
+        // DIRECT ACTION: Mark job complete
+        let isMarkComplete = (lowered.contains("mark") || lowered.contains("complete") || lowered.contains("finish") || lowered.contains("done")) &&
+            (lowered.contains("job") || lowered.contains("clean") || lowered.contains("appointment"))
+        if isMarkComplete {
+            for client in clientsStore.clients {
+                let parts = client.name.lowercased().components(separatedBy: " ")
+                if parts.contains(where: { lowered.contains($0) && $0.count > 2 }) {
+                    if let job = jobsStore.jobs.first(where: { $0.clientId == client.id && $0.status == .scheduled }) {
+                        conversationState = .awaitingDirectAction(.markJobComplete(job))
+                        return ChatMessage(
+                            role: .assistant,
+                            text: "I found a scheduled job for \(client.name) — \(job.serviceType.rawValue) on \(job.date.formatted(date: .abbreviated, time: .shortened)).\n\nMark it as completed?",
+                            style: .info,
+                            quickReplies: ["Yes, mark complete", "No, cancel"]
+                        )
+                    }
+                }
+            }
+            // No name found — show most recent scheduled job
+            if let recentJob = jobsStore.jobs.filter({ $0.status == .scheduled }).sorted(by: { $0.date < $1.date }).first {
+                conversationState = .awaitingDirectAction(.markJobComplete(recentJob))
+                return ChatMessage(
+                    role: .assistant,
+                    text: "Your next scheduled job is \(recentJob.serviceType.rawValue) for \(recentJob.clientName) on \(recentJob.date.formatted(date: .abbreviated, time: .shortened)).\n\nMark it as completed?",
+                    style: .info,
+                    quickReplies: ["Yes, mark complete", "No, cancel"]
+                )
+            }
+            return ChatMessage(role: .assistant, text: "No scheduled jobs found to mark complete.", quickReplies: ["Schedule a job"])
+        }
+
+        // DIRECT ACTION: Mark invoice paid
+        let isMarkPaid = (lowered.contains("mark") || lowered.contains("paid") || lowered.contains("pay")) &&
+            (lowered.contains("invoice") || lowered.contains("bill") || lowered.contains("payment"))
+        if isMarkPaid {
+            // Try to match invoice number
+            let invoicePattern = "INV-?[0-9]+"
+            if let regex = try? NSRegularExpression(pattern: invoicePattern, options: .caseInsensitive),
+               let match = regex.firstMatch(in: input, range: NSRange(input.startIndex..., in: input)),
+               let matchRange = Range(match.range, in: input) {
+                let invoiceNum = String(input[matchRange]).uppercased().replacingOccurrences(of: "INV", with: "INV-").replacingOccurrences(of: "INV--", with: "INV-")
+                if let invoice = invoicesStore.invoices.first(where: { $0.invoiceNumber.uppercased() == invoiceNum && $0.status != .paid }) {
+                    conversationState = .awaitingDirectAction(.markInvoicePaid(invoice))
+                    return ChatMessage(
+                        role: .assistant,
+                        text: "Invoice \(invoice.invoiceNumber) — \(invoice.clientName) for \(invoice.subtotal.formatted(.currency(code: "USD"))).\n\nMark it as paid?",
+                        style: .info,
+                        quickReplies: ["Yes, mark paid", "No, cancel"]
+                    )
+                }
+            }
+            // Try client name match
+            for client in clientsStore.clients {
+                let parts = client.name.lowercased().components(separatedBy: " ")
+                if parts.contains(where: { lowered.contains($0) && $0.count > 2 }) {
+                    if let invoice = invoicesStore.invoices.first(where: { $0.clientId == client.id && $0.status != .paid }) {
+                        conversationState = .awaitingDirectAction(.markInvoicePaid(invoice))
+                        return ChatMessage(
+                            role: .assistant,
+                            text: "Found invoice \(invoice.invoiceNumber) for \(invoice.clientName) — \(invoice.subtotal.formatted(.currency(code: "USD"))).\n\nMark it as paid?",
+                            style: .info,
+                            quickReplies: ["Yes, mark paid", "No, cancel"]
+                        )
+                    }
+                }
+            }
+            if let oldest = invoicesStore.invoices.filter({ $0.status != .paid }).sorted(by: { $0.dueDate < $1.dueDate }).first {
+                conversationState = .awaitingDirectAction(.markInvoicePaid(oldest))
+                return ChatMessage(
+                    role: .assistant,
+                    text: "Oldest unpaid invoice is \(oldest.invoiceNumber) for \(oldest.clientName) — \(oldest.subtotal.formatted(.currency(code: "USD"))).\n\nMark it as paid?",
+                    style: .warning,
+                    quickReplies: ["Yes, mark paid", "No, cancel"]
+                )
+            }
+            return ChatMessage(role: .assistant, text: "No unpaid invoices found.", style: .success, quickReplies: ["Create invoice", "Business overview"])
+        }
+
+        // FOLLOW-UP CONTEXT: "last month?", "more details", "show all", "what about this week?"
+        if let intent = lastIntent {
+            let isFollowUp = lowered.contains("last month") || lowered.contains("this month") || lowered == "more" || lowered == "more details" || lowered.contains("show all") || lowered.contains("what about") || lowered.contains("and this week") || lowered.contains("this week?")
+            if isFollowUp {
+                if intent == "revenue" {
+                    if lowered.contains("last month") {
+                        if let lastMonthDate = Calendar.current.date(byAdding: .month, value: -1, to: Date()) {
+                            let lastMonth = invoicesStore.invoices.filter { $0.status == .paid && Calendar.current.isDate($0.createdAt, equalTo: lastMonthDate, toGranularity: .month) }.reduce(0.0) { $0 + $1.subtotal }
+                            return ChatMessage(role: .assistant, text: "Last month's collected revenue was \(lastMonth.formatted(.currency(code: "USD"))).", style: .info, quickReplies: ["This month?", "Business overview"])
+                        }
+                    }
+                    if lowered.contains("this month") {
+                        let thisMonth = invoicesStore.invoices.filter { $0.status == .paid && Calendar.current.isDate($0.createdAt, equalTo: Date(), toGranularity: .month) }.reduce(0.0) { $0 + $1.subtotal }
+                        return ChatMessage(role: .assistant, text: "This month's collected revenue is \(thisMonth.formatted(.currency(code: "USD"))).", style: .info, quickReplies: ["Last month?", "Business overview"])
+                    }
+                }
+                if intent == "jobs" && (lowered.contains("this week") || lowered.contains("show all")) {
+                    if let weekOut = Calendar.current.date(byAdding: .day, value: 7, to: Date()) {
+                        let weekJobs = jobsStore.jobs.filter { $0.date >= Date() && $0.date <= weekOut }.sorted { $0.date < $1.date }
+                        let previews = weekJobs.prefix(6).map { ChatMessage.JobPreview(clientName: $0.clientName, serviceType: $0.serviceType.rawValue, date: $0.date, status: $0.status, price: $0.price, address: $0.address) }
+                        return ChatMessage(role: .assistant, text: "This week's jobs (\(weekJobs.count) total):", style: .info, quickReplies: ["Next week", "Add a job"], contextCard: .jobs(Array(previews)))
+                    }
+                }
+            }
         }
 
         // REMIND ME
@@ -627,6 +878,7 @@ struct AIChatView: View {
 
         // TODAY'S JOBS
         if (lowered.contains("today") && (lowered.contains("job") || lowered.contains("schedule") || lowered.contains("what"))) || lowered == "today's jobs" || lowered == "today's schedule" || lowered == "what's on my schedule today?" {
+            lastIntent = "jobs"
             let todayJobs = jobsStore.jobs.filter { Calendar.current.isDateInToday($0.date) }.sorted { $0.date < $1.date }
             if todayJobs.isEmpty {
                 return ChatMessage(
@@ -640,11 +892,16 @@ struct AIChatView: View {
             let previews = todayJobs.map {
                 ChatMessage.JobPreview(clientName: $0.clientName, serviceType: $0.serviceType.rawValue, date: $0.date, status: $0.status, price: $0.price, address: $0.address)
             }
+            let todayVariants = [
+                "You have \(todayJobs.count) job\(todayJobs.count == 1 ? "" : "s") today:",
+                "Here's your schedule for today (\(todayJobs.count) job\(todayJobs.count == 1 ? "" : "s")):",
+                "Today's \(todayJobs.count == 1 ? "job" : "\(todayJobs.count) jobs"):"
+            ]
             return ChatMessage(
                 role: .assistant,
-                text: "You have \(todayJobs.count) job\(todayJobs.count == 1 ? "" : "s") today:",
+                text: todayVariants.randomElement() ?? todayVariants[0],
                 style: .info,
-                quickReplies: ["Add another job", "View full schedule"],
+                quickReplies: ["Add another job", "This week?"],
                 contextCard: .jobs(previews)
             )
         }
@@ -833,6 +1090,7 @@ struct AIChatView: View {
 
         // REVENUE / MONEY
         if lowered.contains("revenue") || lowered.contains("money") || lowered.contains("earn") || lowered.contains("income") || lowered.contains("finance") || lowered.contains("how much") || lowered.contains("what's my revenue") || lowered.contains("check revenue") || (lowered.contains("paid") && !lowered.contains("job")) {
+            lastIntent = "revenue"
             let paidInvoices = invoicesStore.invoices.filter { $0.status == .paid }
             let collected = paidInvoices.reduce(0.0) { $0 + $1.subtotal }
             let pipeline = invoicesStore.invoices.filter { $0.status == .unpaid }.reduce(0.0) { $0 + $1.subtotal }
@@ -842,10 +1100,12 @@ struct AIChatView: View {
                 Calendar.current.isDate($0.createdAt, equalTo: Date(), toGranularity: .month)
             }.reduce(0.0) { $0 + $1.subtotal }
 
-            var text = "Financial snapshot:\n\n"
-            text += "• Collected: \(collected.formatted(.currency(code: "USD")))\n"
-            text += "• This month: \(thisMonth.formatted(.currency(code: "USD")))\n"
-            text += "• Outstanding: \(pipeline.formatted(.currency(code: "USD")))"
+            let revenueVariants = [
+                "Financial snapshot:\n\n• Collected: \(collected.formatted(.currency(code: "USD")))\n• This month: \(thisMonth.formatted(.currency(code: "USD")))\n• Outstanding: \(pipeline.formatted(.currency(code: "USD")))",
+                "Here's where you stand financially:\n\n• Total collected: \(collected.formatted(.currency(code: "USD")))\n• This month: \(thisMonth.formatted(.currency(code: "USD")))\n• In the pipeline: \(pipeline.formatted(.currency(code: "USD")))",
+                "Revenue breakdown:\n\n• \(collected.formatted(.currency(code: "USD"))) collected total\n• \(thisMonth.formatted(.currency(code: "USD"))) this month\n• \(pipeline.formatted(.currency(code: "USD"))) outstanding"
+            ]
+            var text = revenueVariants.randomElement() ?? revenueVariants[0]
             if overdueAmt > 0 { text += "\n• Overdue: \(overdueAmt.formatted(.currency(code: "USD")))" }
 
             return ChatMessage(
@@ -854,7 +1114,7 @@ struct AIChatView: View {
                 style: .info,
                 action: .openFinances,
                 actionLabel: "View Full Finances",
-                quickReplies: overdueAmt > 0 ? ["Check overdue invoices", "Create invoice"] : ["Create invoice", "Business overview"]
+                quickReplies: overdueAmt > 0 ? ["Check overdue invoices", "Last month?"] : ["Last month?", "Business overview"]
             )
         }
 
@@ -945,9 +1205,15 @@ struct AIChatView: View {
 
         // GREETINGS
         if lowered.hasPrefix("hi") || lowered.hasPrefix("hello") || lowered.hasPrefix("hey") || lowered == "yo" || lowered.hasPrefix("good morning") || lowered.hasPrefix("good afternoon") || lowered.hasPrefix("good evening") {
+            let greetingVariants = [
+                "Hey \(firstName)! What can I help you with today?",
+                "Hi \(firstName)! I'm here — what do you need?",
+                "\(timeGreeting), \(firstName)! Ask me anything about your business.",
+                "Hey! What's on your mind, \(firstName)?"
+            ]
             return ChatMessage(
                 role: .assistant,
-                text: "Hey \(firstName)! What can I help you with today?",
+                text: greetingVariants.randomElement() ?? greetingVariants[0],
                 quickReplies: ["Today's jobs", "Business overview", "Check revenue"]
             )
         }
@@ -1066,6 +1332,56 @@ struct AIChatView: View {
         }
     }
 
+    // MARK: - Direct Action Confirmation
+
+    @MainActor
+    private func handleDirectActionConfirmation(input: String, lowered: String, action: DirectAction) async -> ChatMessage {
+        let isYes = lowered.contains("yes") || lowered == "yep" || lowered == "yup" || lowered == "ok" || lowered == "okay" || lowered.contains("confirm") || lowered.contains("mark") || lowered.contains("do it")
+        let isNo = lowered.contains("no") || lowered.contains("cancel") || lowered.contains("nevermind") || lowered.contains("stop")
+
+        conversationState = .idle
+
+        if isNo {
+            return ChatMessage(role: .assistant, text: "No problem — action cancelled. What else can I help with?", quickReplies: ["Business overview", "Today's jobs"])
+        }
+
+        if isYes {
+            switch action {
+            case .markJobComplete(let job):
+                await jobsStore.updateStatus(id: job.id, status: .completed)
+                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                return ChatMessage(
+                    role: .assistant,
+                    text: "\(job.serviceType.rawValue) for \(job.clientName) marked as completed.",
+                    style: .success,
+                    quickReplies: ["Create invoice for \(job.clientName.components(separatedBy: " ").first ?? job.clientName)", "View schedule"]
+                )
+            case .markInvoicePaid(let invoice):
+                await invoicesStore.markPaid(id: invoice.id, userId: nil)
+                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                return ChatMessage(
+                    role: .assistant,
+                    text: "Invoice \(invoice.invoiceNumber) for \(invoice.clientName) — \(invoice.subtotal.formatted(.currency(code: "USD"))) — marked as paid.",
+                    style: .success,
+                    quickReplies: ["Check all invoices", "Business overview"]
+                )
+            case .rescheduleJob(let job, let newDate):
+                var updated = job
+                updated = Job(id: job.id, clientId: job.clientId, clientName: job.clientName, serviceType: job.serviceType, date: newDate, duration: job.duration, price: job.price, status: job.status, address: job.address, isRecurring: job.isRecurring, recurrenceRuleId: job.recurrenceRuleId)
+                _ = await jobsStore.update(updated)
+                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                return ChatMessage(
+                    role: .assistant,
+                    text: "\(job.clientName)'s job rescheduled to \(newDate.formatted(date: .abbreviated, time: .shortened)).",
+                    style: .success,
+                    quickReplies: ["View schedule", "Today's jobs"]
+                )
+            }
+        }
+
+        return ChatMessage(role: .assistant, text: "Say yes to confirm or no to cancel.", quickReplies: ["Yes", "No"])
+    }
+
     // MARK: - Reminder Date Collection
 
     private func handleReminderDate(input: String, note: String) -> ChatMessage {
@@ -1139,11 +1455,33 @@ struct AIChatView: View {
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: Date())
 
-        if lowered.contains("today") { return today }
-        if lowered.contains("day after tomorrow") { return calendar.date(byAdding: .day, value: 2, to: today) }
-        if lowered.contains("tomorrow") { return calendar.date(byAdding: .day, value: 1, to: today) }
-        if lowered.contains("next week") { return calendar.date(byAdding: .weekOfYear, value: 1, to: today) }
+        // Relative days
+        if lowered.contains("today") { return combineDateAndTime(base: today, text: lowered) }
+        if lowered.contains("day after tomorrow") { return combineDateAndTime(base: calendar.date(byAdding: .day, value: 2, to: today) ?? today, text: lowered) }
+        if lowered.contains("tomorrow") { return combineDateAndTime(base: calendar.date(byAdding: .day, value: 1, to: today) ?? today, text: lowered) }
+        if lowered.contains("next week") { return combineDateAndTime(base: calendar.date(byAdding: .weekOfYear, value: 1, to: today) ?? today, text: lowered) }
+        if lowered.contains("next month") {
+            return combineDateAndTime(base: calendar.date(byAdding: .month, value: 1, to: today) ?? today, text: lowered)
+        }
+        if lowered.contains("end of month") || lowered.contains("end of the month") {
+            var comps = calendar.dateComponents([.year, .month], from: today)
+            comps.month = (comps.month ?? 1) + 1
+            comps.day = 0
+            return combineDateAndTime(base: calendar.date(from: comps) ?? today, text: lowered)
+        }
 
+        // "in N days/weeks"
+        if let inMatch = lowered.range(of: #"in\s+(\d+)\s+(day|days|week|weeks)"#, options: .regularExpression) {
+            let matched = String(lowered[inMatch])
+            let parts = matched.components(separatedBy: .whitespaces).compactMap { Int($0) }
+            let isWeeks = matched.contains("week")
+            if let n = parts.first {
+                let base = calendar.date(byAdding: isWeeks ? .weekOfYear : .day, value: n, to: today) ?? today
+                return combineDateAndTime(base: base, text: lowered)
+            }
+        }
+
+        // Named weekdays
         let weekdays = ["sunday": 1, "monday": 2, "tuesday": 3, "wednesday": 4, "thursday": 5, "friday": 6, "saturday": 7]
         for (name, weekday) in weekdays {
             if lowered.contains(name) {
@@ -1151,7 +1489,8 @@ struct AIChatView: View {
                 var daysAhead = weekday - currentWeekday
                 if daysAhead <= 0 { daysAhead += 7 }
                 if lowered.contains("next \(name)") && daysAhead < 7 { daysAhead += 7 }
-                return calendar.date(byAdding: .day, value: daysAhead, to: today)
+                let base = calendar.date(byAdding: .day, value: daysAhead, to: today) ?? today
+                return combineDateAndTime(base: base, text: lowered)
             }
         }
 
@@ -1162,12 +1501,54 @@ struct AIChatView: View {
             if let date = formatter.date(from: text.trimmingCharacters(in: .whitespacesAndNewlines)) {
                 var components = calendar.dateComponents([.month, .day], from: date)
                 components.year = calendar.component(.year, from: Date())
-                if let result = calendar.date(from: components), result >= today { return result }
+                if let result = calendar.date(from: components), result >= today {
+                    return combineDateAndTime(base: result, text: lowered)
+                }
                 components.year = (components.year ?? 2025) + 1
-                return calendar.date(from: components)
+                return combineDateAndTime(base: calendar.date(from: components) ?? today, text: lowered)
             }
         }
         return nil
+    }
+
+    /// Parses a time from text like "at 9am", "at 2:30pm", "at noon", and merges it into the base date.
+    private func combineDateAndTime(base: Date, text: String) -> Date {
+        let calendar = Calendar.current
+        let lowered = text.lowercased()
+
+        if lowered.contains("noon") {
+            return calendar.date(bySettingHour: 12, minute: 0, second: 0, of: base) ?? base
+        }
+        if lowered.contains("midnight") {
+            return calendar.date(bySettingHour: 0, minute: 0, second: 0, of: base) ?? base
+        }
+        if lowered.contains("morning") && !lowered.contains("at") {
+            return calendar.date(bySettingHour: 9, minute: 0, second: 0, of: base) ?? base
+        }
+        if lowered.contains("afternoon") && !lowered.contains("at") {
+            return calendar.date(bySettingHour: 14, minute: 0, second: 0, of: base) ?? base
+        }
+        if lowered.contains("evening") && !lowered.contains("at") {
+            return calendar.date(bySettingHour: 17, minute: 0, second: 0, of: base) ?? base
+        }
+
+        // "at H:MMam/pm" or "at Ham/pm"
+        let timePattern = #"at\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)?"#
+        if let regex = try? NSRegularExpression(pattern: timePattern, options: .caseInsensitive),
+           let match = regex.firstMatch(in: lowered, range: NSRange(lowered.startIndex..., in: lowered)) {
+            let hourRange = Range(match.range(at: 1), in: lowered)
+            let minuteRange = Range(match.range(at: 2), in: lowered)
+            let periodRange = Range(match.range(at: 3), in: lowered)
+            if let hourRange, var hour = Int(lowered[hourRange]) {
+                let minute = minuteRange.flatMap { Int(lowered[$0]) } ?? 0
+                let period = periodRange.map { String(lowered[$0]).lowercased() }
+                if period == "pm" && hour < 12 { hour += 12 }
+                if period == "am" && hour == 12 { hour = 0 }
+                return calendar.date(bySettingHour: hour, minute: minute, second: 0, of: base) ?? base
+            }
+        }
+
+        return base
     }
 
     // MARK: - Price Extractor
@@ -1258,6 +1639,18 @@ private struct MessageBubble: View {
     let onQuickReply: (String) -> Void
 
     @State private var displayedText: String = ""
+    @AppStorage("aiMessageRatings") private var ratingsData: Data = Data()
+
+    private func saveRating(messageId: UUID, helpful: Bool) {
+        var ratings: [String: Bool] = (try? JSONDecoder().decode([String: Bool].self, from: ratingsData)) ?? [:]
+        ratings[messageId.uuidString] = helpful
+        ratingsData = (try? JSONEncoder().encode(ratings)) ?? Data()
+    }
+
+    private func rating(for messageId: UUID) -> Bool? {
+        let ratings: [String: Bool] = (try? JSONDecoder().decode([String: Bool].self, from: ratingsData)) ?? [:]
+        return ratings[messageId.uuidString]
+    }
 
     var body: some View {
         HStack(alignment: .bottom, spacing: 8) {
@@ -1314,9 +1707,16 @@ private struct MessageBubble: View {
                     }
                 }
 
-                Text(message.timestamp.formatted(.relative(presentation: .named)))
-                    .font(.system(size: 10))
-                    .foregroundStyle(Color.sweeplyTextSub.opacity(0.5))
+                HStack(spacing: 4) {
+                    Text(message.timestamp.formatted(.relative(presentation: .named)))
+                        .font(.system(size: 10))
+                        .foregroundStyle(Color.sweeplyTextSub.opacity(0.5))
+                    if message.role == .assistant, let rated = rating(for: message.id) {
+                        Image(systemName: rated ? "hand.thumbsup.fill" : "hand.thumbsdown.fill")
+                            .font(.system(size: 9))
+                            .foregroundStyle(rated ? Color.sweeplyAccent : Color.sweeplyTextSub.opacity(0.4))
+                    }
+                }
             }
 
             if message.role == .user {
@@ -1342,6 +1742,21 @@ private struct MessageBubble: View {
                 }
             } label: {
                 Label("Share", systemImage: "square.and.arrow.up")
+            }
+            if message.role == .assistant {
+                Divider()
+                Button {
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    saveRating(messageId: message.id, helpful: true)
+                } label: {
+                    Label("Helpful", systemImage: "hand.thumbsup")
+                }
+                Button {
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    saveRating(messageId: message.id, helpful: false)
+                } label: {
+                    Label("Not Helpful", systemImage: "hand.thumbsdown")
+                }
             }
         }
     }
