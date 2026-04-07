@@ -150,7 +150,7 @@ struct AuthView: View {
             .padding(.bottom, 48)
         }
         .background(
-            Color.sweeplyCard
+            Color.sweeplySurface
                 .clipShape(RoundedRectangle(cornerRadius: 32, style: .continuous))
                 .ignoresSafeArea(edges: .bottom)
         )

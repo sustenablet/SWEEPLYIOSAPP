@@ -252,27 +252,79 @@ struct SettingsView: View {
     }
     
     private var preferencesSection: some View {
-        SectionCard {
-            VStack(spacing: 20) {
-                Toggle(isOn: Binding(
-                    get: { notificationManager.isAuthorized },
-                    set: { newValue in
-                        if newValue {
-                            notificationManager.requestAuthorization()
-                        } else {
-                            // Can't "un-request" but we can direct them to settings if needed
-                            // For now, mirroring status is enough
+        VStack(spacing: 16) {
+            SectionCard {
+                VStack(spacing: 20) {
+                    Toggle(isOn: Binding(
+                        get: { notificationManager.isAuthorized },
+                        set: { newValue in
+                            if newValue {
+                                notificationManager.requestAuthorization()
+                            }
+                        }
+                    )) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Push Notifications").font(.system(size: 15, weight: .semibold))
+                            Text("Job reminders, invoice alerts, billing updates").font(.system(size: 12)).foregroundStyle(Color.sweeplyTextSub)
                         }
                     }
-                )) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Push Notifications").font(.system(size: 15, weight: .semibold))
-                        Text("Alerts for schedule and billing updates").font(.system(size: 12)).foregroundStyle(Color.sweeplyTextSub)
+                    .tint(Color.sweeplyNavy)
+
+                    if notificationManager.isAuthorized {
+                        Divider()
+
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("REMINDER SCHEDULE").font(.system(size: 10, weight: .bold)).foregroundStyle(Color.sweeplyTextSub)
+
+                            HStack(spacing: 6) {
+                                reminderChip(label: "1 hr before", icon: "clock")
+                                reminderChip(label: "Morning of", icon: "sunrise")
+                                reminderChip(label: "Day before", icon: "calendar")
+                            }
+                        }
                     }
                 }
-                .tint(Color.sweeplyNavy)
+            }
+
+            if notificationManager.isAuthorized {
+                Button {
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    notificationManager.sendTestNotification()
+                } label: {
+                    HStack {
+                        Image(systemName: "bell.badge")
+                            .font(.system(size: 14))
+                        Text("Send Test Notification")
+                            .font(.system(size: 14, weight: .medium))
+                        Spacer()
+                        Text("5s delay")
+                            .font(.system(size: 12))
+                            .foregroundStyle(Color.sweeplyTextSub)
+                    }
+                    .foregroundStyle(Color.sweeplyNavy)
+                    .padding(16)
+                    .background(Color.sweeplySurface)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.sweeplyBorder, lineWidth: 1))
+                }
+                .buttonStyle(.plain)
             }
         }
+    }
+
+    @ViewBuilder
+    private func reminderChip(label: String, icon: String) -> some View {
+        HStack(spacing: 4) {
+            Image(systemName: icon)
+                .font(.system(size: 10))
+            Text(label)
+                .font(.system(size: 11, weight: .medium))
+        }
+        .foregroundStyle(Color.sweeplyNavy)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background(Color.sweeplyNavy.opacity(0.08))
+        .clipShape(Capsule())
     }
     
     private var accountSection: some View {

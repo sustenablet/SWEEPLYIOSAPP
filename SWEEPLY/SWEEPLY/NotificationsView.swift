@@ -72,15 +72,6 @@ struct NotificationsView: View {
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button {
-                        notificationManager.sendTestNotification()
-                    } label: {
-                        Image(systemName: "bell.badge")
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundStyle(Color.sweeplyNavy)
-                    }
-                }
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button {
                         dismiss()
                     } label: {
                         Image(systemName: "xmark")

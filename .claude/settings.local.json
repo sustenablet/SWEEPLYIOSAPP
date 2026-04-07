@@ -4,5 +4,6 @@
       "Bash(git rm:*)",
       "Bash(git add:*)"
     ]
-  }
+  },
+  "prefersReducedMotion": false
 }

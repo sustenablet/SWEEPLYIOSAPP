@@ -75,6 +75,7 @@ final class JobsStore {
             jobs.append(mapped)
             jobs.sort { $0.date > $1.date }
             NotificationManager.shared.scheduleJobReminder(for: mapped)
+            await NotificationHelper.insert(userId: userId, title: "Job Scheduled", message: "\(mapped.serviceType.rawValue) for \(mapped.clientName) on \(mapped.date.formatted(date: .abbreviated, time: .shortened)).", kind: "schedule")
             return true
         } catch {
             lastError = error.localizedDescription

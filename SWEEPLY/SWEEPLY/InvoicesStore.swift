@@ -69,7 +69,10 @@ final class InvoicesStore {
                 .single()
                 .execute()
                 .value
-            invoices.insert(inserted.toInvoice(), at: 0)
+            let finalInvoice = inserted.toInvoice()
+            invoices.insert(finalInvoice, at: 0)
+            NotificationManager.shared.scheduleInvoiceReminder(for: finalInvoice)
+            await NotificationHelper.insert(userId: userId, title: "Invoice Sent", message: "\(finalInvoice.invoiceNumber) for \(finalInvoice.clientName) — due \(finalInvoice.dueDate.formatted(date: .abbreviated, time: .omitted)).", kind: "billing")
             return true
         } catch {
             lastError = error.localizedDescription
@@ -111,7 +114,7 @@ final class InvoicesStore {
         }
     }
 
-    func markPaid(id: UUID) async -> Bool {
+    func markPaid(id: UUID, userId: UUID? = nil) async -> Bool {
         guard let client = SupabaseManager.shared else {
             if let idx = invoices.firstIndex(where: { $0.id == id }) {
                 invoices[idx].status = .paid
@@ -130,7 +133,12 @@ final class InvoicesStore {
                 .execute()
                 .value
             if let idx = invoices.firstIndex(where: { $0.id == id }) {
-                invoices[idx] = refreshed.toInvoice()
+                let paid = refreshed.toInvoice()
+                invoices[idx] = paid
+                NotificationManager.shared.cancelInvoiceReminders(for: id)
+                if let uid = userId {
+                    await NotificationHelper.insert(userId: uid, title: "Payment Received", message: "\(paid.invoiceNumber) for \(paid.clientName) has been marked as paid. \(paid.subtotal.formatted(.currency(code: "USD")))", kind: "billing")
+                }
             }
             return true
         } catch {
@@ -146,6 +154,7 @@ final class InvoicesStore {
         }
         lastError = nil
         do {
+            NotificationManager.shared.cancelInvoiceReminders(for: id)
             try await client
                 .from("invoices")
                 .delete()
