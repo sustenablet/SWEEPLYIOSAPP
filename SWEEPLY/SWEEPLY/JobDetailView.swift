@@ -1,3 +1,4 @@
+import PhotosUI
 import SwiftUI
 
 struct JobDetailView: View {
@@ -7,6 +8,12 @@ struct JobDetailView: View {
 
     let jobId: UUID
     @State private var showInvoiceSheet = false
+
+    // Photo attachments
+    @State private var photoItems: [PhotosPickerItem] = []
+    @State private var photoFilenames: [String] = []
+    @State private var selectedPhotoIndex: PhotoIndex? = nil
+    @State private var showPhotoPicker = false
 
     private var job: Job? {
         jobsStore.jobs.first(where: { $0.id == jobId })
@@ -34,6 +41,7 @@ struct JobDetailView: View {
                         }
                         
                         jobDetailsCard(job: job)
+                        jobPhotosSection(job: job)
 
                         Spacer(minLength: 40)
                     }
@@ -285,5 +293,166 @@ private struct JobInfoRow: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
+    }
+
+    // MARK: - Job Photos
+
+    private func jobPhotosSection(job: Job) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text("PHOTOS")
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(Color.sweeplyTextSub)
+                    .tracking(1.0)
+                Spacer()
+                PhotosPicker(
+                    selection: $photoItems,
+                    maxSelectionCount: 10,
+                    matching: .images
+                ) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "plus")
+                            .font(.system(size: 12, weight: .semibold))
+                        Text("Add Photo")
+                            .font(.system(size: 12, weight: .medium))
+                    }
+                    .foregroundStyle(Color.sweeplyAccent)
+                }
+                .onChange(of: photoItems) { _, items in
+                    Task { await saveNewPhotos(items, jobId: job.id) }
+                }
+            }
+
+            if photoFilenames.isEmpty {
+                Text("No photos yet. Tap \"Add Photo\" to attach images.")
+                    .font(.system(size: 13))
+                    .foregroundStyle(Color.sweeplyTextSub)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            } else {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 10) {
+                        ForEach(photoFilenames.indices, id: \.self) { idx in
+                            let filename = photoFilenames[idx]
+                            if let img = loadPhoto(filename: filename, jobId: job.id) {
+                                ZStack(alignment: .topTrailing) {
+                                    Image(uiImage: img)
+                                        .resizable()
+                                        .scaledToFill()
+                                        .frame(width: 80, height: 80)
+                                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                                        .onTapGesture { selectedPhotoIndex = PhotoIndex(idx) }
+
+                                    Button {
+                                        deletePhoto(filename: filename, jobId: job.id)
+                                    } label: {
+                                        Image(systemName: "xmark.circle.fill")
+                                            .font(.system(size: 16))
+                                            .foregroundStyle(.white)
+                                            .shadow(radius: 2)
+                                            .padding(4)
+                                    }
+                                    .buttonStyle(.plain)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        .onAppear { photoFilenames = loadPhotoMap()[job.id.uuidString] ?? [] }
+        .fullScreenCover(item: $selectedPhotoIndex) { pi in
+            if pi.value < photoFilenames.count, let img = loadPhoto(filename: photoFilenames[pi.value], jobId: job.id) {
+                PhotoFullScreenView(image: img)
+            }
+        }
+    }
+
+    private func saveNewPhotos(_ items: [PhotosPickerItem], jobId: UUID) async {
+        for item in items {
+            guard let data = try? await item.loadTransferable(type: Data.self) else { continue }
+            let filename = UUID().uuidString + ".jpg"
+            let url = photosDirectory(for: jobId).appendingPathComponent(filename)
+            try? data.write(to: url)
+            await MainActor.run { photoFilenames.append(filename) }
+        }
+        savePhotoMap(jobId: jobId, filenames: photoFilenames)
+    }
+
+    private func deletePhoto(filename: String, jobId: UUID) {
+        let url = photosDirectory(for: jobId).appendingPathComponent(filename)
+        try? FileManager.default.removeItem(at: url)
+        photoFilenames.removeAll { $0 == filename }
+        savePhotoMap(jobId: jobId, filenames: photoFilenames)
+    }
+
+    private func photosDirectory(for jobId: UUID) -> URL {
+        let base = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("jobPhotos/\(jobId.uuidString)", isDirectory: true)
+        try? FileManager.default.createDirectory(at: base, withIntermediateDirectories: true)
+        return base
+    }
+
+    private func loadPhoto(filename: String, jobId: UUID) -> UIImage? {
+        let url = photosDirectory(for: jobId).appendingPathComponent(filename)
+        return UIImage(contentsOfFile: url.path)
+    }
+
+    private func loadPhotoMap() -> [String: [String]] {
+        guard let data = UserDefaults.standard.data(forKey: "jobPhotoMap"),
+              let map = try? JSONDecoder().decode([String: [String]].self, from: data)
+        else { return [:] }
+        return map
+    }
+
+    private func savePhotoMap(jobId: UUID, filenames: [String]) {
+        var map = loadPhotoMap()
+        map[jobId.uuidString] = filenames
+        if let data = try? JSONEncoder().encode(map) {
+            UserDefaults.standard.set(data, forKey: "jobPhotoMap")
+        }
+    }
+}
+
+// MARK: - Helpers
+
+private struct PhotoIndex: Identifiable {
+    let id = UUID()
+    let value: Int
+    init(_ value: Int) { self.value = value }
+}
+
+// MARK: - Full screen photo viewer
+
+private struct PhotoFullScreenView: View {
+    let image: UIImage
+    @Environment(\.dismiss) private var dismiss
+    @State private var scale: CGFloat = 1.0
+
+    var body: some View {
+        ZStack(alignment: .topTrailing) {
+            Color.black.ignoresSafeArea()
+            Image(uiImage: image)
+                .resizable()
+                .scaledToFit()
+                .scaleEffect(scale)
+                .gesture(MagnificationGesture()
+                    .onChanged { scale = max(1.0, $0) }
+                    .onEnded { _ in withAnimation { scale = 1.0 } }
+                )
+                .gesture(TapGesture(count: 2).onEnded { withAnimation { scale = scale == 1 ? 2 : 1 } })
+            Button {
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                dismiss()
+            } label: {
+                Image(systemName: "xmark.circle.fill")
+                    .font(.system(size: 28))
+                    .foregroundStyle(.white.opacity(0.85))
+                    .padding(20)
+            }
+            .buttonStyle(.plain)
+        }
+        .gesture(DragGesture(minimumDistance: 40).onEnded { v in
+            if abs(v.translation.height) > 100 { dismiss() }
+        })
     }
 }

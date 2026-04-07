@@ -1,11 +1,30 @@
+import BackgroundTasks
 import CoreSpotlight
 import SwiftUI
 import Supabase
 import UIKit
 
-// MARK: - AppDelegate for shortcut item handling
+// MARK: - AppDelegate
 
 final class AppDelegate: NSObject, UIApplicationDelegate {
+    func application(
+        _ application: UIApplication,
+        didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
+    ) -> Bool {
+        BGTaskScheduler.shared.register(
+            forTaskWithIdentifier: "com.sweeply.refresh",
+            using: nil
+        ) { task in
+            guard let refreshTask = task as? BGAppRefreshTask else { return }
+            Task {
+                await InvoicesStore().markOverdueInvoices()
+            }
+            refreshTask.setTaskCompleted(success: true)
+            AppDelegate.scheduleBackgroundRefresh()
+        }
+        return true
+    }
+
     func application(
         _ application: UIApplication,
         performActionFor shortcutItem: UIApplicationShortcutItem,
@@ -13,6 +32,12 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
     ) {
         UserDefaults.standard.set(shortcutItem.type, forKey: "pendingShortcut")
         completionHandler(true)
+    }
+
+    static func scheduleBackgroundRefresh() {
+        let request = BGAppRefreshTaskRequest(identifier: "com.sweeply.refresh")
+        request.earliestBeginDate = Date(timeIntervalSinceNow: 60 * 60) // 1 hour
+        try? BGTaskScheduler.shared.submit(request)
     }
 }
 
@@ -42,6 +67,7 @@ struct SWEEPLYApp: App {
                 .onAppear {
                     notificationManager.checkAuthorizationStatus()
                     registerQuickActions()
+                    AppDelegate.scheduleBackgroundRefresh()
                 }
                 .onOpenURL { url in
                     SupabaseManager.shared?.auth.handle(url)

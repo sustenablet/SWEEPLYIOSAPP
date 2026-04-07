@@ -2,13 +2,16 @@ import SwiftUI
 import LocalAuthentication
 
 struct RootView: View {
-    @Environment(AppSession.self)    private var session
-    @Environment(ClientsStore.self)  private var clientsStore
-    @Environment(JobsStore.self)     private var jobsStore
-    @Environment(InvoicesStore.self) private var invoicesStore
-    @Environment(ProfileStore.self)  private var profileStore
+    @Environment(AppSession.self)          private var session
+    @Environment(ClientsStore.self)        private var clientsStore
+    @Environment(JobsStore.self)           private var jobsStore
+    @Environment(InvoicesStore.self)       private var invoicesStore
+    @Environment(ProfileStore.self)        private var profileStore
+    @Environment(NotificationManager.self) private var notificationManager
 
     @State private var selectedTab: Tab = .dashboard
+    @State private var deepLinkedJobId: UUID? = nil
+    @State private var deepLinkedInvoiceId: UUID? = nil
     @State private var showNewJob = false
     @State private var showNewClient = false
     @State private var showNewInvoice = false
@@ -233,6 +236,18 @@ struct RootView: View {
                 invoicesStore.clear()
                 profileStore.clear()
             }
+        }
+        .onChange(of: notificationManager.pendingDeepLink) { _, link in
+            guard let link else { return }
+            switch link {
+            case .job(let id):
+                selectedTab = .schedule
+                deepLinkedJobId = id
+            case .invoice(let id):
+                selectedTab = .finances
+                deepLinkedInvoiceId = id
+            }
+            notificationManager.pendingDeepLink = nil
         }
         .onAppear {
             let appearance = UITabBarAppearance()
