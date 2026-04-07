@@ -310,7 +310,7 @@ struct SettingsView: View {
                 .buttonStyle(.plain)
             }
 
-            // SECURITY
+            // SECURITY & INTEGRATIONS
             SectionCard {
                 VStack(alignment: .leading, spacing: 0) {
                     Text("SECURITY")
@@ -320,6 +320,10 @@ struct SettingsView: View {
                         .padding(.bottom, 14)
 
                     BiometricLockToggleRow()
+
+                    Divider().padding(.vertical, 12)
+
+                    CalendarSyncToggleRow()
                 }
             }
         }
@@ -589,6 +593,37 @@ struct SettingsField: View {
                 .background(Color.sweeplyBackground)
                 .clipShape(RoundedRectangle(cornerRadius: 10))
                 .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.sweeplyBorder, lineWidth: 1))
+        }
+    }
+}
+
+/// MARK: - Calendar Sync Toggle
+
+private struct CalendarSyncToggleRow: View {
+    @AppStorage("calendarSyncEnabled") private var calendarSyncEnabled: Bool = false
+
+    var body: some View {
+        Toggle(isOn: $calendarSyncEnabled) {
+            HStack(spacing: 10) {
+                Image(systemName: "calendar.badge.plus")
+                    .font(.system(size: 14))
+                    .foregroundStyle(Color.sweeplyNavy)
+                    .frame(width: 20)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Sync Jobs to iOS Calendar")
+                        .font(.system(size: 15))
+                        .foregroundStyle(Color.sweeplyNavy)
+                    Text("Adds scheduled jobs to your Calendar app")
+                        .font(.system(size: 12))
+                        .foregroundStyle(Color.sweeplyTextSub)
+                }
+            }
+        }
+        .tint(Color.sweeplyAccent)
+        .onChange(of: calendarSyncEnabled) { _, enabled in
+            if enabled {
+                Task { _ = await CalendarSyncManager.shared.requestAccessIfNeeded() }
+            }
         }
     }
 }

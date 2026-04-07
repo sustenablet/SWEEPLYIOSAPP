@@ -167,27 +167,11 @@ struct NotificationsView: View {
     // MARK: - Empty State
 
     private var emptyState: some View {
-        VStack(spacing: 16) {
-            Spacer()
-            
-            Image(systemName: emptyIcon)
-                .font(.system(size: 40, weight: .light))
-                .foregroundStyle(Color.sweeplyTextSub.opacity(0.4))
-            
-            VStack(spacing: 6) {
-                Text(emptyTitle)
-                    .font(.system(size: 17, weight: .semibold))
-                    .foregroundStyle(Color.sweeplyNavy)
-                
-                Text(emptyMessage)
-                    .font(.system(size: 14))
-                    .foregroundStyle(Color.sweeplyTextSub)
-                    .multilineTextAlignment(.center)
-            }
-            
-            Spacer()
-        }
-        .padding(.horizontal, 40)
+        EmptyStateView(
+            icon: emptyIcon,
+            title: emptyTitle,
+            subtitle: emptyMessage
+        )
     }
     
     private var emptyIcon: String {

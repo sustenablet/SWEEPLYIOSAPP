@@ -1,6 +1,7 @@
 import Foundation
 import Observation
 import Supabase
+import EventKit
 
 @Observable
 @MainActor
@@ -76,6 +77,7 @@ final class JobsStore {
             jobs.sort { $0.date > $1.date }
             NotificationManager.shared.scheduleJobReminder(for: mapped)
             await NotificationHelper.insert(userId: userId, title: "Job Scheduled", message: "\(mapped.serviceType.rawValue) for \(mapped.clientName) on \(mapped.date.formatted(date: .abbreviated, time: .shortened)).", kind: "schedule")
+            Task.detached { await CalendarSyncManager.shared.addEvent(for: mapped) }
             return true
         } catch {
             lastError = error.localizedDescription
@@ -118,6 +120,7 @@ final class JobsStore {
             }
             NotificationManager.shared.cancelJobReminders(for: mapped.id)
             NotificationManager.shared.scheduleJobReminder(for: mapped)
+            Task.detached { await CalendarSyncManager.shared.updateEvent(for: mapped) }
             return true
         } catch {
             lastError = error.localizedDescription
@@ -171,6 +174,7 @@ final class JobsStore {
                 .eq("id", value: id)
                 .execute()
             jobs.removeAll { $0.id == id }
+            Task.detached { await CalendarSyncManager.shared.removeEvent(for: id) }
             return true
         } catch {
             lastError = error.localizedDescription

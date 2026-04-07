@@ -625,6 +625,7 @@ private struct ScheduleJobRow: View {
     @State private var showDeleteConfirm = false
     @State private var showInvoicePrompt = false
     @State private var showInvoiceSheet = false
+    @State private var isPressed = false
 
     private var serviceAccentColor: Color {
         switch job.serviceType {
@@ -720,8 +721,15 @@ private struct ScheduleJobRow: View {
             .clipShape(RoundedRectangle(cornerRadius: 12))
             .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.sweeplyBorder, lineWidth: 1))
             .shadow(color: .black.opacity(0.04), radius: 8, x: 0, y: 2)
+            .scaleEffect(isPressed ? 0.97 : 1.0)
+            .animation(.easeOut(duration: 0.12), value: isPressed)
         }
         .buttonStyle(.plain)
+        .simultaneousGesture(
+            DragGesture(minimumDistance: 0)
+                .onChanged { _ in isPressed = true }
+                .onEnded { _ in isPressed = false }
+        )
         .contextMenu {
             ForEach(JobStatus.allCases, id: \.self) { status in
                 if job.status != status {

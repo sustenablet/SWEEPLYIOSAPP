@@ -245,6 +245,8 @@ private struct ClientCard: View {
     let onDelete: () -> Void
     let onToggleArchive: () -> Void
 
+    @State private var isPressed = false
+
     var body: some View {
         ZStack(alignment: .leading) {
             Color.sweeplySurface
@@ -365,6 +367,13 @@ private struct ClientCard: View {
                 .stroke(Color.sweeplyBorder, lineWidth: 1)
         )
         .contentShape(Rectangle())
+        .scaleEffect(isPressed ? 0.98 : 1.0)
+        .animation(.easeOut(duration: 0.12), value: isPressed)
+        .simultaneousGesture(
+            DragGesture(minimumDistance: 0)
+                .onChanged { _ in isPressed = true }
+                .onEnded { _ in isPressed = false }
+        )
     }
 }
 

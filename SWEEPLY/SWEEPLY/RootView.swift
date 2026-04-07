@@ -18,6 +18,7 @@ struct RootView: View {
     @State private var isLocked = false
 
     @AppStorage("biometricLockEnabled") private var biometricLockEnabled: Bool = false
+    @AppStorage("pendingShortcut") private var pendingShortcut: String = ""
 
     enum Tab {
         case dashboard, schedule, clients, finances, business
@@ -52,7 +53,24 @@ struct RootView: View {
                 isLocked = true
             } else if phase == .active && isLocked {
                 authenticate()
+            } else if phase == .active && !pendingShortcut.isEmpty {
+                handlePendingShortcut()
             }
+        }
+    }
+
+    private func handlePendingShortcut() {
+        let shortcut = pendingShortcut
+        pendingShortcut = ""
+        switch shortcut {
+        case "com.sweeply.newjob":
+            showNewJob = true
+        case "com.sweeply.ai":
+            showAIChat = true
+        case "com.sweeply.schedule":
+            selectedTab = .schedule
+        default:
+            break
         }
     }
 
