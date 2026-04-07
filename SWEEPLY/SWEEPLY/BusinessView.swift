@@ -63,6 +63,22 @@ struct BusinessView: View {
         return completedRevenue / Double(completedJobsThisMonth)
     }
 
+    private var monthlyEarned: Double {
+        monthlyJobs.filter { $0.status == .completed }.reduce(0) { $0 + $1.price }
+    }
+
+    private var upcomingPipelineValue: Double {
+        upcomingJobs.reduce(0) { $0 + $1.price }
+    }
+
+    private var recurringJobsThisMonth: Int {
+        monthlyJobs.filter { $0.isRecurring }.count
+    }
+
+    private var totalActiveClients: Int {
+        clientsStore.clients.filter { $0.isActive }.count
+    }
+
     private var nextJob: Job? {
         upcomingJobs.first
     }
@@ -132,13 +148,13 @@ struct BusinessView: View {
                         CardHeader(title: "Business Snapshot", subtitle: "How the operation is moving this month", action: nil)
 
                         TabView(selection: $selectedSnapshotSlide) {
-                            // Slide 1
+                            // Slide 1 — Monthly Operations
                             VStack(alignment: .leading, spacing: 14) {
                                 Divider()
                                 snapshotRow(
                                     title: "Completed Jobs",
                                     value: "\(completedJobsThisMonth)",
-                                    detail: "\(monthlyJobs.count - completedJobsThisMonth) still in flight",
+                                    detail: "\(max(0, monthlyJobs.count - completedJobsThisMonth)) still in flight",
                                     accent: .sweeplyAccent
                                 )
                                 Divider()
@@ -158,38 +174,93 @@ struct BusinessView: View {
                             }
                             .tag(0)
 
-                            // Slide 2
+                            // Slide 2 — Revenue
                             VStack(alignment: .leading, spacing: 14) {
-                                VStack(alignment: .leading, spacing: 10) {
-                                    Text("Growth Activity")
-                                        .font(.system(size: 15, weight: .bold))
-                                        .foregroundStyle(Color.sweeplyNavy)
-                                    HStack {
-                                        Text("\(activeClientsCount)")
-                                            .font(.system(size: 38, weight: .bold, design: .rounded))
-                                        Spacer()
-                                        Image(systemName: "chart.line.uptrend.xyaxis")
-                                            .font(.system(size: 32))
-                                            .foregroundStyle(Color.sweeplyAccent)
-                                    }
-                                    Text("Active clients placing orders this month. Keep building your recurring base!")
-                                        .font(.system(size: 13))
-                                        .foregroundStyle(Color.sweeplyTextSub)
-                                }
-                                .padding(16)
-                                .background(Color.sweeplyAccent.opacity(0.1))
-                                .clipShape(RoundedRectangle(cornerRadius: 14))
-                                Spacer()
+                                Divider()
+                                snapshotRow(
+                                    title: "Earned This Month",
+                                    value: monthlyEarned.currency,
+                                    detail: "From completed jobs",
+                                    accent: .sweeplyAccent
+                                )
+                                Divider()
+                                snapshotRow(
+                                    title: "Upcoming Pipeline",
+                                    value: upcomingPipelineValue.currency,
+                                    detail: "Scheduled job value",
+                                    accent: .sweeplyNavy
+                                )
+                                Divider()
+                                snapshotRow(
+                                    title: "Collected All-Time",
+                                    value: totalRevenue.currency,
+                                    detail: "Paid invoices total",
+                                    accent: .sweeplyAccent
+                                )
                             }
-                            .padding(.top, 12)
                             .tag(1)
+
+                            // Slide 3 — Clients
+                            VStack(alignment: .leading, spacing: 14) {
+                                Divider()
+                                snapshotRow(
+                                    title: "Active This Month",
+                                    value: "\(activeClientsCount)",
+                                    detail: "Unique clients with visits",
+                                    accent: .sweeplyNavy
+                                )
+                                Divider()
+                                snapshotRow(
+                                    title: "Total Clients",
+                                    value: "\(totalActiveClients)",
+                                    detail: "In your client base",
+                                    accent: .sweeplyAccent
+                                )
+                                Divider()
+                                snapshotRow(
+                                    title: "Recurring Jobs",
+                                    value: "\(recurringJobsThisMonth)",
+                                    detail: "Repeating bookings this month",
+                                    accent: .sweeplyWarning
+                                )
+                            }
+                            .tag(2)
+
+                            // Slide 4 — Service Mix
+                            VStack(alignment: .leading, spacing: 14) {
+                                let topServices = Array(serviceMix.prefix(3))
+                                if topServices.isEmpty {
+                                    VStack(spacing: 10) {
+                                        Image(systemName: "chart.bar.xaxis")
+                                            .font(.system(size: 28))
+                                            .foregroundStyle(Color.sweeplyTextSub.opacity(0.3))
+                                        Text("Schedule jobs to see\nservice breakdown")
+                                            .font(.system(size: 13))
+                                            .foregroundStyle(Color.sweeplyTextSub)
+                                            .multilineTextAlignment(.center)
+                                    }
+                                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                                } else {
+                                    Divider()
+                                    ForEach(Array(topServices.enumerated()), id: \.offset) { i, svc in
+                                        snapshotRow(
+                                            title: svc.label,
+                                            value: "\(svc.count) job\(svc.count == 1 ? "" : "s")",
+                                            detail: String(format: "%.0f%% of this month's bookings", svc.percentage * 100),
+                                            accent: [Color.sweeplyAccent, Color.sweeplyNavy, Color.sweeplyWarning][i % 3]
+                                        )
+                                        if i < topServices.count - 1 { Divider() }
+                                    }
+                                }
+                            }
+                            .tag(3)
                         }
                         .tabViewStyle(.page(indexDisplayMode: .never))
                         .frame(height: 220)
 
                         HStack(spacing: 8) {
                             Spacer()
-                            ForEach(0..<2, id: \.self) { index in
+                            ForEach(0..<4, id: \.self) { index in
                                 Capsule()
                                     .fill(index == selectedSnapshotSlide ? Color.sweeplyNavy : Color.sweeplyBorder.opacity(0.8))
                                     .frame(width: index == selectedSnapshotSlide ? 18 : 8, height: 8)

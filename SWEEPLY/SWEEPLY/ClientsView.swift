@@ -253,26 +253,32 @@ private struct ClientCard: View {
     let onToggleArchive: () -> Void
 
     var body: some View {
-        SectionCard {
-            VStack(spacing: 0) {
-                // Top row
-                HStack(alignment: .top, spacing: 12) {
-                    // Avatar
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 10)
-                            .fill(Color.sweeplyNavy)
-                            .frame(width: 40, height: 40)
-                        Text(String(client.name.prefix(1)).uppercased())
-                            .font(.system(size: 16, weight: .bold))
-                            .foregroundStyle(.white)
-                    }
+        ZStack(alignment: .leading) {
+            Color.sweeplySurface
 
-                    // Name + notes
-                    VStack(alignment: .leading, spacing: 2) {
+            Capsule()
+                .fill(client.isActive ? Color.sweeplyAccent : Color.sweeplyBorder)
+                .frame(width: 3)
+                .padding(.vertical, 12)
+
+            HStack(spacing: 14) {
+                Color.clear.frame(width: 3)
+
+                ZStack {
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(client.isActive ? Color.sweeplyNavy : Color.sweeplyTextSub.opacity(0.25))
+                        .frame(width: 46, height: 46)
+                    Text(String(client.name.prefix(1)).uppercased())
+                        .font(.system(size: 18, weight: .bold))
+                        .foregroundStyle(.white)
+                }
+
+                VStack(alignment: .leading, spacing: 5) {
+                    HStack(spacing: 6) {
                         Text(client.name)
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundStyle(client.isActive ? Color.primary : Color.sweeplyTextSub)
-                        
+                            .font(.system(size: 15, weight: .bold))
+                            .foregroundStyle(client.isActive ? Color.sweeplyNavy : Color.sweeplyTextSub)
+                            .lineLimit(1)
                         if !client.isActive {
                             Text("ARCHIVED")
                                 .font(.system(size: 8, weight: .bold))
@@ -283,86 +289,89 @@ private struct ClientCard: View {
                                 .clipShape(Capsule())
                                 .overlay(Capsule().stroke(Color.sweeplyBorder, lineWidth: 1))
                         }
+                        Spacer()
+                        HStack(spacing: 3) {
+                            Text("\(jobCount)")
+                                .font(.system(size: 13, weight: .bold, design: .monospaced))
+                                .foregroundStyle(Color.sweeplyAccent)
+                            Text("jobs")
+                                .font(.system(size: 11, weight: .medium))
+                                .foregroundStyle(Color.sweeplyTextSub)
+                        }
+                    }
 
-                        if !client.notes.isEmpty {
-                            Text(client.notes)
+                    if let service = client.preferredService {
+                        HStack(spacing: 4) {
+                            Image(systemName: "star.fill")
+                                .font(.system(size: 9, weight: .bold))
+                                .foregroundStyle(Color.sweeplyAccent)
+                            Text(service.rawValue)
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundStyle(Color.sweeplyTextSub)
+                        }
+                    } else if !client.address.isEmpty {
+                        HStack(spacing: 4) {
+                            Image(systemName: "mappin")
+                                .font(.system(size: 10))
+                                .foregroundStyle(Color.sweeplyTextSub)
+                            Text([client.address, client.city].filter { !$0.isEmpty }.joined(separator: ", "))
                                 .font(.system(size: 12))
                                 .foregroundStyle(Color.sweeplyTextSub)
                                 .lineLimit(1)
                         }
                     }
 
-                    Spacer()
-
-                    // Job count + menu
-                    HStack(spacing: 8) {
-                        Text("\(jobCount) jobs")
-                            .font(.system(size: 11, weight: .semibold))
-                            .foregroundStyle(Color.sweeplyTextSub)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(Color.sweeplyBackground)
-                            .clipShape(Capsule())
-
-                        Menu {
-                            Button { onEdit() } label: { Label("Edit Client", systemImage: "pencil") }
-                            
-                            Button {
-                                onToggleArchive()
-                            } label: {
-                                Label(client.isActive ? "Archive Client" : "Unarchive Client", 
-                                      systemImage: client.isActive ? "archivebox" : "archivebox.fill")
-                            }
-
-                            Divider()
-                            
-                            Button(role: .destructive) { onDelete() } label: { Label("Delete Client", systemImage: "trash") }
-                        } label: {
-                            Image(systemName: "ellipsis")
-                                .font(.system(size: 14))
+                    if !client.phone.isEmpty {
+                        HStack(spacing: 4) {
+                            Image(systemName: "phone")
+                                .font(.system(size: 10))
                                 .foregroundStyle(Color.sweeplyTextSub)
-                                .frame(width: 28, height: 28)
+                            Text(client.phone)
+                                .font(.system(size: 12))
+                                .foregroundStyle(Color.sweeplyTextSub)
+                        }
+                    } else if !client.email.isEmpty {
+                        HStack(spacing: 4) {
+                            Image(systemName: "envelope")
+                                .font(.system(size: 10))
+                                .foregroundStyle(Color.sweeplyTextSub)
+                            Text(client.email)
+                                .font(.system(size: 12))
+                                .foregroundStyle(Color.sweeplyTextSub)
+                                .lineLimit(1)
                         }
                     }
                 }
 
-                // Contact details
-                if !client.address.isEmpty || !client.phone.isEmpty || !client.email.isEmpty {
-                    VStack(alignment: .leading, spacing: 5) {
-                        if !client.address.isEmpty {
-                            ClientInfoRow(icon: "mappin", text: "\(client.address), \(client.city)")
-                        }
-                        if !client.phone.isEmpty {
-                            ClientInfoRow(icon: "phone", text: client.phone)
-                        }
-                        if !client.email.isEmpty {
-                            ClientInfoRow(icon: "envelope", text: client.email)
-                        }
+                Menu {
+                    Button { onEdit() } label: { Label("Edit Client", systemImage: "pencil") }
+                    Button { onToggleArchive() } label: {
+                        Label(
+                            client.isActive ? "Archive Client" : "Unarchive Client",
+                            systemImage: client.isActive ? "archivebox" : "archivebox.fill"
+                        )
                     }
-                    .padding(.top, 10)
-                    .padding(.leading, 52)
+                    Divider()
+                    Button(role: .destructive) { onDelete() } label: {
+                        Label("Delete Client", systemImage: "trash")
+                    }
+                } label: {
+                    Image(systemName: "ellipsis")
+                        .font(.system(size: 14))
+                        .foregroundStyle(Color.sweeplyTextSub)
+                        .frame(width: 32, height: 32)
                 }
             }
+            .padding(.leading, 14)
+            .padding(.trailing, 10)
+            .padding(.vertical, 14)
         }
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .stroke(Color.sweeplyBorder, lineWidth: 1)
+        )
         .contentShape(Rectangle())
-    }
-}
-
-private struct ClientInfoRow: View {
-    let icon: String
-    let text: String
-
-    var body: some View {
-        HStack(spacing: 6) {
-            Image(systemName: icon)
-                .font(.system(size: 11))
-                .foregroundStyle(Color.sweeplyTextSub)
-                .frame(width: 12)
-            Text(text)
-                .font(.system(size: 12))
-                .foregroundStyle(Color.sweeplyTextSub)
-                .lineLimit(1)
-        }
     }
 }
 

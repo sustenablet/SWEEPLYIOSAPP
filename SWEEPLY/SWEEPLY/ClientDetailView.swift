@@ -162,10 +162,6 @@ struct ClientDetailView: View {
                                 .font(.system(size: 12, weight: .medium))
                                 .foregroundStyle(Color.sweeplyTextSub)
                         }
-                    } else {
-                        Text("No preferred service")
-                            .font(.system(size: 12))
-                            .foregroundStyle(Color.sweeplyTextSub.opacity(0.6))
                     }
                     
                     // Status Badge
@@ -201,10 +197,10 @@ struct ClientDetailView: View {
 
             // Quick Actions
             HStack(spacing: 12) {
-                QuickActionButton(icon: "phone.fill", label: "Call", color: .green) {
+                QuickActionButton(icon: "phone.fill", label: "Call", color: Color.sweeplyAccent) {
                     callClient()
                 }
-                QuickActionButton(icon: "envelope.fill", label: "Email", color: .blue) {
+                QuickActionButton(icon: "envelope.fill", label: "Email", color: Color.sweeplyAccent) {
                     emailClient()
                 }
                 QuickActionButton(icon: "map.fill", label: "Navigate", color: Color.sweeplyNavy) {
