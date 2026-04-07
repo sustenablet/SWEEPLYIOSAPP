@@ -1,5 +1,12 @@
 import SwiftUI
 
+// MARK: - Sort Order
+
+enum ClientSortOrder: String, CaseIterable {
+    case nameAZ = "Name A–Z"
+    case mostActive = "Most Active"
+}
+
 // MARK: - Clients List View
 
 struct ClientsView: View {
@@ -12,10 +19,18 @@ struct ClientsView: View {
     @State private var editingClient: Client? = nil
     @State private var deleteTarget: Client? = nil
     @State private var appeared = false
+    @State private var showFilters = false
     @State private var showArchived = false
+    @State private var sortOrder: ClientSortOrder = .nameAZ
 
-    private var displayClients: [Client] { 
-        clientsStore.clients.filter { $0.isActive || showArchived }
+    private var displayClients: [Client] {
+        let base = clientsStore.clients.filter { $0.isActive || showArchived }
+        switch sortOrder {
+        case .nameAZ:
+            return base.sorted { $0.name < $1.name }
+        case .mostActive:
+            return base.sorted { jobCount(for: $0) > jobCount(for: $1) }
+        }
     }
 
     private var displayJobs: [Job] { jobsStore.jobs }
@@ -63,6 +78,10 @@ struct ClientsView: View {
         .sheet(isPresented: $showAddSheet) {
             NewClientForm(editingClient: editingClient)
         }
+        .sheet(isPresented: $showFilters) {
+            ClientFiltersSheet(showArchived: $showArchived, sortOrder: $sortOrder)
+                .presentationDetents([.medium])
+        }
         .confirmationDialog(
             "Delete \(deleteTarget?.name ?? "client")?",
             isPresented: Binding(get: { deleteTarget != nil }, set: { if !$0 { deleteTarget = nil } }),
@@ -86,23 +105,14 @@ struct ClientsView: View {
     private var headerSection: some View {
         VStack(alignment: .leading, spacing: 10) {
             PageHeader(
-                eyebrow: "Directory",
+                eyebrow: nil,
                 title: "Clients",
                 subtitle: "\(displayClients.count) \(showArchived ? "total" : "active") clients"
             ) {
-                HStack(spacing: 12) {
-                    Button {
-                        withAnimation { showArchived.toggle() }
-                    } label: {
-                        Image(systemName: showArchived ? "archivebox.fill" : "archivebox")
-                            .font(.system(size: 14))
-                            .foregroundStyle(showArchived ? Color.sweeplyAccent : Color.sweeplyNavy)
-                            .frame(width: 38, height: 38)
-                            .background(Color.sweeplySurface)
-                            .clipShape(Circle())
-                            .overlay(Circle().stroke(Color.sweeplyBorder, lineWidth: 1))
+                HStack(spacing: 8) {
+                    HeaderIconButton(systemName: "line.3.horizontal.decrease.circle") {
+                        showFilters = true
                     }
-
                     HeaderIconButton(systemName: "plus", foregroundColor: .white, backgroundColor: .sweeplyNavy) {
                         editingClient = nil
                         showAddSheet = true
@@ -357,6 +367,118 @@ private struct ClientInfoRow: View {
 }
 
 // MARK: - Form Helpers Moved to NewClientForm.swift
+
+// MARK: - Client Filters Sheet
+
+private struct ClientFiltersSheet: View {
+    @Binding var showArchived: Bool
+    @Binding var sortOrder: ClientSortOrder
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        VStack(spacing: 0) {
+            // Handle
+            Capsule()
+                .fill(Color.sweeplyBorder)
+                .frame(width: 36, height: 4)
+                .padding(.top, 12)
+                .padding(.bottom, 20)
+
+            // Header
+            HStack {
+                Text("Filter Clients")
+                    .font(.system(size: 17, weight: .bold))
+                    .foregroundStyle(Color.sweeplyNavy)
+                Spacer()
+                Button("Done") { dismiss() }
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(Color.sweeplyAccent)
+            }
+            .padding(.horizontal, 24)
+            .padding(.bottom, 24)
+
+            // Status section
+            VStack(alignment: .leading, spacing: 12) {
+                Text("STATUS")
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(Color.sweeplyTextSub)
+                    .tracking(0.8)
+                    .padding(.horizontal, 20)
+
+                Toggle(isOn: $showArchived) {
+                    HStack(spacing: 10) {
+                        Image(systemName: "archivebox")
+                            .font(.system(size: 14))
+                            .foregroundStyle(Color.sweeplyTextSub)
+                            .frame(width: 20)
+                        Text("Show archived clients")
+                            .font(.system(size: 15))
+                            .foregroundStyle(Color.sweeplyNavy)
+                    }
+                }
+                .tint(Color.sweeplyAccent)
+                .padding(.horizontal, 20)
+                .padding(.vertical, 14)
+                .background(Color.sweeplySurface)
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .stroke(Color.sweeplyBorder, lineWidth: 1)
+                )
+                .padding(.horizontal, 20)
+            }
+
+            // Sort section
+            VStack(alignment: .leading, spacing: 12) {
+                Text("SORT BY")
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(Color.sweeplyTextSub)
+                    .tracking(0.8)
+                    .padding(.horizontal, 20)
+                    .padding(.top, 24)
+
+                VStack(spacing: 0) {
+                    ForEach(ClientSortOrder.allCases, id: \.self) { option in
+                        Button {
+                            withAnimation(.easeInOut(duration: 0.15)) {
+                                sortOrder = option
+                            }
+                        } label: {
+                            HStack {
+                                Text(option.rawValue)
+                                    .font(.system(size: 15))
+                                    .foregroundStyle(Color.sweeplyNavy)
+                                Spacer()
+                                if sortOrder == option {
+                                    Image(systemName: "checkmark")
+                                        .font(.system(size: 13, weight: .semibold))
+                                        .foregroundStyle(Color.sweeplyAccent)
+                                }
+                            }
+                            .padding(.horizontal, 20)
+                            .padding(.vertical, 14)
+                        }
+                        .buttonStyle(.plain)
+
+                        if option != ClientSortOrder.allCases.last {
+                            Divider().padding(.leading, 20)
+                        }
+                    }
+                }
+                .background(Color.sweeplySurface)
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .stroke(Color.sweeplyBorder, lineWidth: 1)
+                )
+                .padding(.horizontal, 20)
+            }
+
+            Spacer()
+        }
+        .background(Color.sweeplyBackground.ignoresSafeArea())
+    }
+}
 
 // MARK: - Preview
 
