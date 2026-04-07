@@ -834,6 +834,44 @@ struct AIChatView: View {
                 isAssistantTyping = false
                 messages.append(msg)
             }
+            // Proactive nudges — fire after a short delay if conditions warrant
+            try? await Task.sleep(nanoseconds: 2_000_000_000)
+            await MainActor.run {
+                fireProactiveNudges(mainMessageMentionedOverdue: msg.messageStyle == .warning)
+            }
+        }
+    }
+
+    private func fireProactiveNudges(mainMessageMentionedOverdue: Bool) {
+        let overdueInvoices = invoicesStore.invoices.filter { $0.status == .overdue }
+        let todayJobs = jobsStore.jobs.filter { Calendar.current.isDateInToday($0.date) && $0.status == .scheduled }.sorted { $0.date < $1.date }
+
+        // Nudge 1: overdue invoices not already mentioned
+        if overdueInvoices.count >= 2 && !mainMessageMentionedOverdue {
+            let total = overdueInvoices.reduce(0.0) { $0 + $1.subtotal }
+            let nudge = ChatMessage(
+                role: .assistant,
+                text: "By the way, you have \(overdueInvoices.count) overdue invoices totaling \(total.formatted(.currency(code: "USD"))). Want me to list them?",
+                style: .warning,
+                quickReplies: ["Show overdue", "Remind me later"]
+            )
+            messages.append(nudge)
+            persistChat()
+            return
+        }
+
+        // Nudge 2: 3+ jobs today
+        if todayJobs.count >= 3 {
+            let firstName = todayJobs[0].clientName
+            let timeStr = todayJobs[0].date.formatted(date: .omitted, time: .shortened)
+            let nudge = ChatMessage(
+                role: .assistant,
+                text: "You've got a full day ahead — \(todayJobs.count) jobs scheduled. Your first job is \(firstName) at \(timeStr).",
+                style: .info,
+                quickReplies: ["See today's schedule"]
+            )
+            messages.append(nudge)
+            persistChat()
         }
     }
 
@@ -930,6 +968,97 @@ struct AIChatView: View {
             return await handleDirectActionConfirmation(input: input, lowered: lowered, action: action)
         case .idle:
             break
+        }
+
+        // DIRECT ACTION: Reschedule job
+        let isReschedule = (lowered.contains("reschedule") || lowered.contains("move") || lowered.contains("postpone") || lowered.contains("change date")) &&
+            (lowered.contains("job") || lowered.contains("appointment") || lowered.contains("clean") ||
+             clientsStore.clients.contains { c in c.name.lowercased().components(separatedBy: " ").contains { $0.count > 2 && lowered.contains($0) } })
+        if isReschedule {
+            for client in clientsStore.clients {
+                let parts = client.name.lowercased().components(separatedBy: " ")
+                if parts.contains(where: { lowered.contains($0) && $0.count > 2 }) {
+                    if let job = jobsStore.jobs.first(where: { $0.clientId == client.id && ($0.status == .scheduled || $0.status == .inProgress) }) {
+                        conversationState = .awaitingDirectAction(.rescheduleJob(job, Date.distantPast))
+                        return ChatMessage(
+                            role: .assistant,
+                            text: "What date and time would you like to reschedule \(client.name)'s \(job.serviceType.rawValue) to?",
+                            style: .info,
+                            quickReplies: ["Tomorrow", "Next Monday", "Next Wednesday", "Next Friday"]
+                        )
+                    }
+                }
+            }
+            // No client match — use next scheduled job
+            if let nextJob = jobsStore.jobs.filter({ $0.status == .scheduled }).sorted(by: { $0.date < $1.date }).first {
+                conversationState = .awaitingDirectAction(.rescheduleJob(nextJob, Date.distantPast))
+                return ChatMessage(
+                    role: .assistant,
+                    text: "What date and time would you like to reschedule \(nextJob.clientName)'s \(nextJob.serviceType.rawValue) to?",
+                    style: .info,
+                    quickReplies: ["Tomorrow", "Next Monday", "Next Wednesday", "Next Friday"]
+                )
+            }
+            return ChatMessage(role: .assistant, text: "No upcoming jobs found to reschedule.", quickReplies: ["Schedule a job"])
+        }
+
+        // FOCUS / PRIORITIZE
+        let isFocusIntent = lowered.contains("focus") || lowered.contains("most important") || lowered.contains("what do i need to do") || lowered.contains("prioritize") || lowered.contains("what should i") || lowered == "help me focus"
+        if isFocusIntent {
+            return buildFocusBriefing()
+        }
+
+        // EDIT JOB THROUGH CHAT
+        let isEditJob = (lowered.contains("update") || lowered.contains("change") || lowered.contains("edit")) &&
+            (lowered.contains("job") || lowered.contains("price") || lowered.contains("time") ||
+             clientsStore.clients.contains { c in c.name.lowercased().components(separatedBy: " ").contains { $0.count > 2 && lowered.contains($0) } })
+        if isEditJob {
+            for client in clientsStore.clients {
+                let parts = client.name.lowercased().components(separatedBy: " ")
+                if parts.contains(where: { lowered.contains($0) && $0.count > 2 }) {
+                    if var job = jobsStore.jobs.filter({ $0.clientId == client.id && $0.status == .scheduled }).sorted(by: { $0.date < $1.date }).first {
+                        // Detect price change
+                        if let newPrice = extractPrice(from: lowered) {
+                            job.price = newPrice
+                            conversationState = .awaitingDirectAction(.rescheduleJob(job, job.date))
+                            // Use rescheduleJob as a vessel — we override in confirmation
+                            return ChatMessage(
+                                role: .assistant,
+                                text: "Update \(client.name)'s \(job.serviceType.rawValue) price to \(newPrice.formatted(.currency(code: "USD")))?",
+                                style: .info,
+                                quickReplies: ["Yes, update", "Cancel"]
+                            )
+                        }
+                        // Detect time change
+                        let timePattern = #"(\d{1,2})(?::(\d{2}))?\s*(am|pm)"#
+                        if let regex = try? NSRegularExpression(pattern: timePattern, options: .caseInsensitive),
+                           let match = regex.firstMatch(in: lowered, range: NSRange(lowered.startIndex..., in: lowered)) {
+                            let hourRange = Range(match.range(at: 1), in: lowered)
+                            let minuteRange = Range(match.range(at: 2), in: lowered)
+                            let periodRange = Range(match.range(at: 3), in: lowered)
+                            if let hourRange, var hour = Int(lowered[hourRange]) {
+                                let minute = minuteRange.flatMap { Int(lowered[$0]) } ?? 0
+                                let period = periodRange.map { String(lowered[$0]).lowercased() }
+                                if period == "pm" && hour < 12 { hour += 12 }
+                                if period == "am" && hour == 12 { hour = 0 }
+                                let calendar = Calendar.current
+                                if let newDate = calendar.date(bySettingHour: hour, minute: minute, second: 0, of: job.date) {
+                                    job.date = newDate
+                                    conversationState = .awaitingDirectAction(.rescheduleJob(job, newDate))
+                                    let timeStr = newDate.formatted(date: .omitted, time: .shortened)
+                                    return ChatMessage(
+                                        role: .assistant,
+                                        text: "Update \(client.name)'s \(job.serviceType.rawValue) time to \(timeStr)?",
+                                        style: .info,
+                                        quickReplies: ["Yes, update", "Cancel"]
+                                    )
+                                }
+                            }
+                        }
+                        return ChatMessage(role: .assistant, text: "What would you like to change for \(client.name)'s job? For example: \"change price to $150\" or \"update time to 2pm\".", quickReplies: ["Cancel"])
+                    }
+                }
+            }
         }
 
         // DIRECT ACTION: Mark job complete
@@ -1516,10 +1645,32 @@ struct AIChatView: View {
 
     // MARK: - Direct Action Confirmation
 
+    // Sentinel: when rescheduleJob's stored date == distantPast, we're still awaiting the new date from user
+    private let rescheduleSentinel = Date.distantPast
+
     @MainActor
     private func handleDirectActionConfirmation(input: String, lowered: String, action: DirectAction) async -> ChatMessage {
-        let isYes = lowered.contains("yes") || lowered == "yep" || lowered == "yup" || lowered == "ok" || lowered == "okay" || lowered.contains("confirm") || lowered.contains("mark") || lowered.contains("do it")
+        let isYes = lowered.contains("yes") || lowered == "yep" || lowered == "yup" || lowered == "ok" || lowered == "okay" || lowered.contains("confirm") || lowered.contains("mark") || lowered.contains("do it") || lowered.contains("reschedule") || lowered.contains("update")
         let isNo = lowered.contains("no") || lowered.contains("cancel") || lowered.contains("nevermind") || lowered.contains("stop")
+
+        // Special handling: awaiting a new date for reschedule (sentinel date)
+        if case .rescheduleJob(let job, let storedDate) = action, storedDate == rescheduleSentinel {
+            if isNo {
+                conversationState = .idle
+                return ChatMessage(role: .assistant, text: "No problem — reschedule cancelled.", quickReplies: ["Today's jobs", "Business overview"])
+            }
+            if let newDate = parseDateFromText(lowered) {
+                // Confirm with user before applying
+                conversationState = .awaitingDirectAction(.rescheduleJob(job, newDate))
+                return ChatMessage(
+                    role: .assistant,
+                    text: "Reschedule \(job.clientName)'s \(job.serviceType.rawValue) from \(job.date.formatted(date: .abbreviated, time: .shortened)) to \(newDate.formatted(date: .abbreviated, time: .shortened))?",
+                    style: .info,
+                    quickReplies: ["Yes, reschedule", "Cancel"]
+                )
+            }
+            return ChatMessage(role: .assistant, text: "I couldn't parse that date. Try \"tomorrow\", \"next Monday\", or \"April 20\".", quickReplies: ["Tomorrow", "Next Monday", "Next Friday"])
+        }
 
         conversationState = .idle
 
@@ -1548,13 +1699,12 @@ struct AIChatView: View {
                     quickReplies: ["Check all invoices", "Business overview"]
                 )
             case .rescheduleJob(let job, let newDate):
-                var updated = job
-                updated = Job(id: job.id, clientId: job.clientId, clientName: job.clientName, serviceType: job.serviceType, date: newDate, duration: job.duration, price: job.price, status: job.status, address: job.address, isRecurring: job.isRecurring, recurrenceRuleId: job.recurrenceRuleId)
+                let updated = Job(id: job.id, clientId: job.clientId, clientName: job.clientName, serviceType: job.serviceType, date: newDate, duration: job.duration, price: job.price, status: job.status, address: job.address, isRecurring: job.isRecurring, recurrenceRuleId: job.recurrenceRuleId)
                 _ = await jobsStore.update(updated)
                 UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                 return ChatMessage(
                     role: .assistant,
-                    text: "\(job.clientName)'s job rescheduled to \(newDate.formatted(date: .abbreviated, time: .shortened)).",
+                    text: "Done! Rescheduled to \(newDate.formatted(date: .abbreviated, time: .shortened)).",
                     style: .success,
                     quickReplies: ["View schedule", "Today's jobs"]
                 )
@@ -1628,6 +1778,66 @@ struct AIChatView: View {
 
         let text = "Business insights:\n\n" + insights.map { "• \($0)" }.joined(separator: "\n")
         return ChatMessage(role: .assistant, text: text, style: .info, quickReplies: ["Business overview", "Check finances"])
+    }
+
+    // MARK: - Focus Briefing
+
+    private func buildFocusBriefing() -> ChatMessage {
+        let calendar = Calendar.current
+        var items: [String] = []
+
+        // 1. Overdue invoices
+        let overdueInvoices = invoicesStore.invoices.filter { $0.status == .overdue }
+        if !overdueInvoices.isEmpty {
+            let total = overdueInvoices.reduce(0.0) { $0 + $1.subtotal }
+            items.append("⚠️ \(overdueInvoices.count) overdue invoice\(overdueInvoices.count == 1 ? "" : "s") totaling \(total.formatted(.currency(code: "USD"))) — collect these first")
+        }
+
+        // 2. Today's scheduled jobs
+        let todayScheduled = jobsStore.jobs.filter { calendar.isDateInToday($0.date) && $0.status == .scheduled }.sorted { $0.date < $1.date }
+        if !todayScheduled.isEmpty {
+            let earliest = todayScheduled[0].date.formatted(date: .omitted, time: .shortened)
+            items.append("📋 \(todayScheduled.count) job\(todayScheduled.count == 1 ? "" : "s") scheduled today starting at \(earliest)")
+        }
+
+        // 3. In-progress jobs
+        let inProgress = jobsStore.jobs.filter { $0.status == .inProgress }
+        if !inProgress.isEmpty {
+            let names = inProgress.prefix(2).map { $0.clientName }.joined(separator: " and ")
+            items.append("🔄 \(names)\(inProgress.count > 2 ? " and more" : "") currently in progress")
+        }
+
+        // 4. Invoices due within 3 days
+        let threeDaysOut = calendar.date(byAdding: .day, value: 3, to: Date()) ?? Date()
+        let dueSoon = invoicesStore.invoices.filter { $0.status == .unpaid && $0.dueDate <= threeDaysOut && $0.dueDate >= Date() }
+        if !dueSoon.isEmpty {
+            items.append("📅 \(dueSoon.count) invoice\(dueSoon.count == 1 ? "" : "s") due within 3 days")
+        }
+
+        // 5. Inactive clients (30+ days, more than 2)
+        let thirtyDaysAgo = calendar.date(byAdding: .day, value: -30, to: Date()) ?? Date()
+        let recentClientIds = Set(jobsStore.jobs.filter { $0.date >= thirtyDaysAgo }.map { $0.clientId })
+        let inactiveClients = clientsStore.clients.filter { $0.isActive && !recentClientIds.contains($0.id) }
+        if inactiveClients.count > 2 {
+            items.append("👥 \(inactiveClients.count) clients haven't booked in 30+ days")
+        }
+
+        if items.isEmpty {
+            return ChatMessage(
+                role: .assistant,
+                text: "You're in great shape — no overdue invoices, no urgent items. Keep up the momentum!",
+                style: .success,
+                quickReplies: ["Today's schedule", "Business overview", "New job"]
+            )
+        }
+
+        let text = "Here's what matters most right now:\n\n" + items.map { "\($0)" }.joined(separator: "\n")
+        return ChatMessage(
+            role: .assistant,
+            text: text,
+            style: .info,
+            quickReplies: ["Show overdue invoices", "Today's schedule", "New job"]
+        )
     }
 
     // MARK: - Date Parser
