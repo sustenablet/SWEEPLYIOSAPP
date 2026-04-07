@@ -178,6 +178,9 @@ struct RootView: View {
                     .tag(Tab.business)
             }
             .tint(Color.sweeplyAccent)
+        .onChange(of: selectedTab) { _, _ in
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        }
 
             FABView(
                 selectedTab: $selectedTab,

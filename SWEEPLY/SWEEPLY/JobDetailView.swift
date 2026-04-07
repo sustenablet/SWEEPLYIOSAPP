@@ -119,6 +119,7 @@ struct JobDetailView: View {
                 if job.status != .completed {
                     Button {
                         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                        UINotificationFeedbackGenerator().notificationOccurred(.success)
                         Task { await jobsStore.updateStatus(id: job.id, status: .completed) }
                     } label: {
                         Label("Complete Job", systemImage: "checkmark.circle.fill")

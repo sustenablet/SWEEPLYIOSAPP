@@ -387,6 +387,12 @@ struct BusinessView: View {
             .offset(y: appeared ? 0 : 8)
         }
         .background(Color.sweeplyBackground.ignoresSafeArea())
+        .refreshable {
+            async let j: () = jobsStore.load(isAuthenticated: session.isAuthenticated)
+            async let i: () = invoicesStore.load(isAuthenticated: session.isAuthenticated)
+            async let c: () = clientsStore.load(isAuthenticated: session.isAuthenticated)
+            _ = await (j, i, c)
+        }
         .onAppear {
             withAnimation(.easeOut(duration: 0.3)) { appeared = true }
         }

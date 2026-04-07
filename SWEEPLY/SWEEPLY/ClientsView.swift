@@ -22,6 +22,7 @@ struct ClientsView: View {
     @State private var showFilters = false
     @State private var showArchived = false
     @State private var sortOrder: ClientSortOrder = .nameAZ
+    @State private var archiveHaptic = false
 
     private var displayClients: [Client] {
         let base = clientsStore.clients.filter { $0.isActive || showArchived }
@@ -175,7 +176,7 @@ struct ClientsView: View {
                             },
                             onDelete: { deleteTarget = client },
                             onToggleArchive: {
-                                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                                archiveHaptic.toggle()
                                 Task {
                                     var updated = client
                                     updated.isActive.toggle()
@@ -189,6 +190,7 @@ struct ClientsView: View {
             }
         }
         .padding(.horizontal, 20)
+        .sensoryFeedback(.impact(.heavy), trigger: archiveHaptic)
     }
 
     private var emptyState: some View {
