@@ -215,6 +215,26 @@ enum RecurrenceFrequency: String, Codable, CaseIterable {
     case biweekly  = "biweekly"
     case monthly   = "monthly"
     case custom    = "custom"
+
+    var displayName: String {
+        switch self {
+        case .once:     return "Does not repeat"
+        case .weekly:   return "Every week"
+        case .biweekly: return "Every 2 weeks"
+        case .monthly:  return "Every month"
+        case .custom:   return "Custom"
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .once:     return "minus"
+        case .weekly:   return "repeat"
+        case .biweekly: return "repeat.circle"
+        case .monthly:  return "calendar.badge.clock"
+        case .custom:   return "slider.horizontal.3"
+        }
+    }
 }
 
 struct InvoiceLineItem: Identifiable, Codable {

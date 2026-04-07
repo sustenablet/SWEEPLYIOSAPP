@@ -172,52 +172,97 @@ struct NewJobForm: View {
                     // 4. Recurrence
                     VStack(alignment: .leading, spacing: 20) {
                         SectionHeader(title: "RECURRENCE")
-                        
-                        Menu {
-                            ForEach(RecurrenceFrequency.allCases, id: \.self) { freq in
-                                Button(freq.rawValue.capitalized) {
-                                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                                    withAnimation { recurrence = freq }
+
+                        // Chip-style frequency picker
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 8) {
+                                ForEach(RecurrenceFrequency.allCases, id: \.self) { freq in
+                                    Button {
+                                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                            recurrence = freq
+                                        }
+                                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                    } label: {
+                                        HStack(spacing: 6) {
+                                            Image(systemName: freq.icon)
+                                                .font(.system(size: 12, weight: .semibold))
+                                            Text(freq.displayName)
+                                                .font(.system(size: 13, weight: .semibold))
+                                        }
+                                        .padding(.horizontal, 12)
+                                        .padding(.vertical, 8)
+                                        .background(recurrence == freq ? Color.sweeplyNavy : Color.sweeplySurface)
+                                        .foregroundStyle(recurrence == freq ? Color.white : Color.primary)
+                                        .clipShape(Capsule())
+                                        .overlay(
+                                            Capsule().stroke(
+                                                recurrence == freq ? Color.sweeplyNavy : Color.sweeplyBorder,
+                                                lineWidth: 1
+                                            )
+                                        )
+                                    }
+                                    .buttonStyle(.plain)
                                 }
                             }
-                        } label: {
-                            PickerButton(
-                                label: recurrence.rawValue.capitalized,
-                                isSelected: true
-                            )
+                            .padding(.horizontal, 1)
+                            .padding(.vertical, 2)
                         }
-                        
+
                         if recurrence != .once {
-                            VStack(spacing: 16) {
+                            VStack(alignment: .leading, spacing: 16) {
                                 if recurrence == .custom {
-                                    HStack {
-                                        Text("Every").font(.system(size: 14))
+                                    HStack(spacing: 8) {
+                                        Text("Every")
+                                            .font(.system(size: 14))
                                         TextField("7", text: $customInterval)
                                             .keyboardType(.numberPad)
                                             .frame(width: 40)
                                             .multilineTextAlignment(.center)
                                             .padding(6)
-                                            .background(Color.sweeplySurface)
+                                            .background(Color.sweeplyBackground)
                                             .clipShape(RoundedRectangle(cornerRadius: 8))
                                             .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.sweeplyBorder, lineWidth: 1))
-                                        Text("Days").font(.system(size: 14))
+                                        Text("days")
+                                            .font(.system(size: 14))
                                         Spacer()
                                     }
                                 }
-                                
+
+                                // Next occurrence preview
+                                let nextDates = generateNextOccurrences(from: date, recurrence: recurrence, interval: Int(customInterval) ?? 7, count: 3)
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("Next occurrences")
+                                        .font(.system(size: 12, weight: .medium))
+                                        .foregroundStyle(Color.sweeplyTextSub)
+                                    ForEach(nextDates, id: \.self) { nextDate in
+                                        HStack(spacing: 6) {
+                                            Image(systemName: "arrow.right")
+                                                .font(.system(size: 10))
+                                                .foregroundStyle(Color.sweeplyTextSub.opacity(0.5))
+                                            Text(nextDate.formatted(date: .abbreviated, time: .shortened))
+                                                .font(.system(size: 12, design: .monospaced))
+                                                .foregroundStyle(Color.sweeplyTextSub)
+                                        }
+                                    }
+                                }
+                                .padding(.top, 4)
+                                .transition(.opacity.combined(with: .move(edge: .top)))
+
                                 Toggle(isOn: $showEndDatePicker) {
-                                    Text("Set End Date").font(.system(size: 14))
+                                    Text("Set end date")
+                                        .font(.system(size: 14))
                                 }
                                 .tint(Color.sweeplyNavy)
 
                                 if showEndDatePicker {
-                                    DatePicker("Repeat Until", selection: $endDate, displayedComponents: .date)
+                                    DatePicker("Repeat until", selection: $endDate, displayedComponents: .date)
                                         .font(.system(size: 14))
                                 }
                             }
                             .padding(16)
                             .background(Color.sweeplyBackground)
                             .clipShape(RoundedRectangle(cornerRadius: 16))
+                            .transition(.opacity.combined(with: .move(edge: .top)))
                         }
                     }
                 }
@@ -283,6 +328,28 @@ struct NewJobForm: View {
             price = "\(Int(rate))"
             duration = "\(Int(settings.defaultDuration > 0 ? settings.defaultDuration : 2))"
         }
+    }
+
+    private func generateNextOccurrences(from startDate: Date, recurrence: RecurrenceFrequency, interval: Int, count: Int) -> [Date] {
+        var dates: [Date] = []
+        var current = startDate
+        let calendar = Calendar.current
+        for _ in 0..<count {
+            switch recurrence {
+            case .once:
+                break
+            case .weekly:
+                current = calendar.date(byAdding: .weekOfYear, value: 1, to: current) ?? current
+            case .biweekly:
+                current = calendar.date(byAdding: .weekOfYear, value: 2, to: current) ?? current
+            case .monthly:
+                current = calendar.date(byAdding: .month, value: 1, to: current) ?? current
+            case .custom:
+                current = calendar.date(byAdding: .day, value: interval, to: current) ?? current
+            }
+            dates.append(current)
+        }
+        return dates
     }
 
     private func saveJob() async {
