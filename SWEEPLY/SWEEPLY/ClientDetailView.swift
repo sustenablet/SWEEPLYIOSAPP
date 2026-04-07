@@ -1,4 +1,5 @@
 import SwiftUI
+import Charts
 
 struct ClientDetailView: View {
     @Environment(\.dismiss) private var dismiss
@@ -245,15 +246,69 @@ struct ClientDetailView: View {
     }
 
     // MARK: - Stats Row
+    private var paidInvoiceSparklineData: [(index: Int, amount: Double)] {
+        clientInvoices
+            .filter { $0.status == .paid }
+            .sorted { $0.createdAt < $1.createdAt }
+            .suffix(6)
+            .enumerated()
+            .map { (index: $0.offset, amount: $0.element.subtotal) }
+    }
+
     private var statsRow: some View {
-        HStack(spacing: 0) {
-            StatCell(label: "Total Revenue", value: totalRevenue.currency, valueColor: .sweeplySuccess)
-            dividerLine
-            StatCell(label: "Outstanding", value: outstanding.currency, valueColor: outstanding > 0 ? .sweeplyWarning : .sweeplyTextSub)
-            dividerLine
-            StatCell(label: "Total Jobs", value: "\(clientJobs.count)")
+        VStack(spacing: 0) {
+            HStack(spacing: 0) {
+                StatCell(label: "Total Revenue", value: totalRevenue.currency, valueColor: .sweeplySuccess)
+                dividerLine
+                StatCell(label: "Outstanding", value: outstanding.currency, valueColor: outstanding > 0 ? .sweeplyWarning : .sweeplyTextSub)
+                dividerLine
+                StatCell(label: "Total Jobs", value: "\(clientJobs.count)")
+            }
+            .padding(.vertical, 16)
+
+            if paidInvoiceSparklineData.count >= 2 {
+                Divider()
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("REVENUE HISTORY")
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundStyle(Color.sweeplyTextSub)
+                        .tracking(0.8)
+                        .padding(.horizontal, 16)
+                        .padding(.top, 10)
+
+                    Chart(paidInvoiceSparklineData, id: \.index) { point in
+                        AreaMark(
+                            x: .value("Invoice", point.index),
+                            y: .value("Amount", point.amount)
+                        )
+                        .foregroundStyle(
+                            LinearGradient(
+                                colors: [Color.sweeplyAccent.opacity(0.25), Color.sweeplyAccent.opacity(0)],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
+                        )
+                        LineMark(
+                            x: .value("Invoice", point.index),
+                            y: .value("Amount", point.amount)
+                        )
+                        .foregroundStyle(Color.sweeplyAccent)
+                        .lineStyle(StrokeStyle(lineWidth: 2))
+                        PointMark(
+                            x: .value("Invoice", point.index),
+                            y: .value("Amount", point.amount)
+                        )
+                        .foregroundStyle(Color.sweeplyAccent)
+                        .symbolSize(20)
+                    }
+                    .chartXAxis(.hidden)
+                    .chartYAxis(.hidden)
+                    .frame(height: 48)
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 12)
+                }
+            }
         }
-        .padding(.vertical, 16)
         .background(Color.sweeplySurface)
         .clipShape(RoundedRectangle(cornerRadius: 12))
         .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.sweeplyBorder, lineWidth: 1))

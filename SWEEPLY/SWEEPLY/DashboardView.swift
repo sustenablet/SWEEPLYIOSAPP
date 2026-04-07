@@ -1,4 +1,5 @@
 import SwiftUI
+import Charts
 
 struct DashboardView: View {
     @Environment(AppSession.self) private var session
@@ -264,6 +265,20 @@ struct DashboardView: View {
         }
     }
 
+    // 8 weeks of paid invoice revenue grouped by week start
+    private var weeklyRevenueData: [(week: Date, amount: Double)] {
+        let cal = Calendar.current
+        let today = Date()
+        return (0..<8).reversed().compactMap { weeksAgo -> (Date, Double)? in
+            guard let weekStart = cal.date(byAdding: .weekOfYear, value: -weeksAgo, to: cal.startOfDay(for: today)),
+                  let weekEnd = cal.date(byAdding: .day, value: 7, to: weekStart) else { return nil }
+            let total = invoicesStore.invoices
+                .filter { $0.status == .paid && $0.createdAt >= weekStart && $0.createdAt < weekEnd }
+                .reduce(0.0) { $0 + $1.subtotal }
+            return (weekStart, total)
+        }
+    }
+
     private var revenueHero: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text("REVENUE THIS WEEK")
@@ -284,6 +299,34 @@ struct DashboardView: View {
                 Text("No completed jobs yet this week")
                     .font(.system(size: 13))
                     .foregroundStyle(Color.sweeplyTextSub)
+            }
+
+            // Mini area sparkline — last 8 weeks
+            if !weeklyRevenueData.isEmpty {
+                Chart(weeklyRevenueData, id: \.week) { point in
+                    AreaMark(
+                        x: .value("Week", point.week),
+                        y: .value("Revenue", point.amount)
+                    )
+                    .foregroundStyle(
+                        LinearGradient(
+                            colors: [Color.sweeplyAccent.opacity(0.3), Color.sweeplyAccent.opacity(0.0)],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+                    LineMark(
+                        x: .value("Week", point.week),
+                        y: .value("Revenue", point.amount)
+                    )
+                    .foregroundStyle(Color.sweeplyAccent)
+                    .lineStyle(StrokeStyle(lineWidth: 2))
+                }
+                .chartXAxis(.hidden)
+                .chartYAxis(.hidden)
+                .frame(height: 36)
+                .animation(.easeOut(duration: 0.6), value: weeklyRevenueData.map(\.amount))
+                .padding(.top, 4)
             }
         }
     }
