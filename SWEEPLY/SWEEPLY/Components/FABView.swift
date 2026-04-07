@@ -6,13 +6,15 @@ struct FABView: View {
     var onNewJob: () -> Void
     var onNewClient: () -> Void
     var onNewInvoice: () -> Void
-    
-    let actions: [(label: String, icon: String)] = [
-        ("New Invoice", "doc.badge.plus"),
-        ("New Client", "person.badge.plus"),
-        ("New Job", "briefcase.fill"),
+    var onAIChat: () -> Void
+
+    private let actions: [(label: String, icon: String, tag: String)] = [
+        ("AI Assistant", "sparkles", "ai"),
+        ("New Invoice", "doc.badge.plus", "invoice"),
+        ("New Client", "person.badge.plus", "client"),
+        ("New Job", "briefcase.fill", "job"),
     ]
-    
+
     var body: some View {
         ZStack(alignment: .bottomTrailing) {
             // Scrim when expanded
@@ -26,22 +28,26 @@ struct FABView: View {
                     }
                     .transition(.opacity)
             }
-            
+
             VStack(alignment: .trailing, spacing: 12) {
                 // Expanded action buttons
                 if isExpanded {
-                    ForEach(actions, id: \.label) { action in
-                        FABActionButton(label: action.label, icon: action.icon) {
+                    ForEach(actions, id: \.tag) { action in
+                        FABActionButton(
+                            label: action.label,
+                            icon: action.icon,
+                            isAI: action.tag == "ai"
+                        ) {
                             UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                             withAnimation(.spring(duration: 0.3)) {
                                 isExpanded = false
                             }
-                            if action.label == "New Job" {
-                                onNewJob()
-                            } else if action.label == "New Client" {
-                                onNewClient()
-                            } else if action.label == "New Invoice" {
-                                onNewInvoice()
+                            switch action.tag {
+                            case "ai": onAIChat()
+                            case "job": onNewJob()
+                            case "client": onNewClient()
+                            case "invoice": onNewInvoice()
+                            default: break
                             }
                         }
                         .transition(.asymmetric(
@@ -50,8 +56,8 @@ struct FABView: View {
                         ))
                     }
                 }
-                
-                // Main FAB
+
+                // Main FAB — Sweeply brand button
                 Button {
                     UIImpactFeedbackGenerator(style: .light).impactOccurred()
                     withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
@@ -61,18 +67,29 @@ struct FABView: View {
                     ZStack {
                         Circle()
                             .fill(Color.sweeplyNavy)
-                            .frame(width: 56, height: 56)
-                            .shadow(color: .black.opacity(0.25), radius: 12, x: 0, y: 4)
-                        Image(systemName: "plus")
-                            .font(.system(size: 20, weight: .semibold))
-                            .foregroundStyle(.white)
-                            .rotationEffect(.degrees(isExpanded ? 45 : 0))
+                            .frame(width: 58, height: 58)
+                            .shadow(color: Color.sweeplyNavy.opacity(0.4), radius: 14, x: 0, y: 5)
+
+                        if isExpanded {
+                            Image(systemName: "xmark")
+                                .font(.system(size: 18, weight: .bold))
+                                .foregroundStyle(.white)
+                                .transition(.scale.combined(with: .opacity))
+                        } else {
+                            // Brand "S" mark
+                            VStack(spacing: -2) {
+                                Text("S")
+                                    .font(.system(size: 24, weight: .black, design: .rounded))
+                                    .foregroundStyle(.white)
+                            }
+                            .transition(.scale.combined(with: .opacity))
+                        }
                     }
                 }
                 .buttonStyle(.plain)
             }
             .padding(.trailing, 20)
-            .padding(.bottom, 80) // above tab bar
+            .padding(.bottom, 80)
         }
     }
 }
@@ -80,23 +97,27 @@ struct FABView: View {
 struct FABActionButton: View {
     let label: String
     let icon: String
+    var isAI: Bool = false
     let action: () -> Void
-    
+
     var body: some View {
         Button(action: action) {
             HStack(spacing: 10) {
                 Text(label)
                     .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(isAI ? Color.sweeplyNavy : .white)
                 Image(systemName: icon)
                     .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(isAI ? Color.sweeplyNavy : .white)
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 10)
-            .background(Color.sweeplyNavy)
+            .background(isAI ? Color.sweeplyAccent.opacity(0.15) : Color.sweeplyNavy)
             .clipShape(Capsule())
-            .shadow(color: .black.opacity(0.2), radius: 8, x: 0, y: 3)
+            .overlay(
+                isAI ? Capsule().stroke(Color.sweeplyAccent.opacity(0.4), lineWidth: 1.5) : nil
+            )
+            .shadow(color: .black.opacity(0.15), radius: 8, x: 0, y: 3)
         }
         .buttonStyle(.plain)
     }
@@ -109,7 +130,8 @@ struct FABActionButton: View {
             selectedTab: .constant(.dashboard),
             onNewJob: {},
             onNewClient: {},
-            onNewInvoice: {}
+            onNewInvoice: {},
+            onAIChat: {}
         )
     }
 }

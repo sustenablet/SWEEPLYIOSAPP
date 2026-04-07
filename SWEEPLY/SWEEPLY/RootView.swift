@@ -12,6 +12,7 @@ struct RootView: View {
     @State private var showNewClient = false
     @State private var showNewInvoice = false
     @State private var showQuickAdd = false
+    @State private var showAIChat = false
     @State private var showOnboarding = false
 
     enum Tab {
@@ -59,10 +60,11 @@ struct RootView: View {
             .tint(Color.sweeplyAccent)
 
             FABView(
-                selectedTab: $selectedTab, 
+                selectedTab: $selectedTab,
                 onNewJob: { showNewJob = true },
                 onNewClient: { showNewClient = true },
-                onNewInvoice: { showNewInvoice = true }
+                onNewInvoice: { showNewInvoice = true },
+                onAIChat: { showAIChat = true }
             )
         }
         .sheet(isPresented: $showNewJob) {
@@ -73,6 +75,17 @@ struct RootView: View {
         }
         .sheet(isPresented: $showNewInvoice) {
             NewInvoiceView()
+        }
+        .sheet(isPresented: $showAIChat) {
+            AIChatView(
+                onNewJob: { showNewJob = true },
+                onNewClient: { showNewClient = true },
+                onNewInvoice: { showNewInvoice = true }
+            )
+            .environment(jobsStore)
+            .environment(clientsStore)
+            .environment(invoicesStore)
+            .environment(profileStore)
         }
         .fullScreenCover(isPresented: $showOnboarding) {
             OnboardingView()
