@@ -40,6 +40,47 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
                 self.checkAuthorizationStatus()
             }
         }
+        registerNotificationCategories()
+    }
+
+    func registerNotificationCategories() {
+        // Job reminder actions
+        let markCompleteAction = UNNotificationAction(
+            identifier: "MARK_JOB_COMPLETE",
+            title: "Mark Complete",
+            options: [.authenticationRequired]
+        )
+        let viewJobAction = UNNotificationAction(
+            identifier: "VIEW_JOB",
+            title: "View Job",
+            options: [.foreground]
+        )
+        let jobCategory = UNNotificationCategory(
+            identifier: "JOB_REMINDER",
+            actions: [markCompleteAction, viewJobAction],
+            intentIdentifiers: [],
+            options: []
+        )
+
+        // Invoice reminder actions
+        let markPaidAction = UNNotificationAction(
+            identifier: "MARK_INVOICE_PAID",
+            title: "Mark Paid",
+            options: [.authenticationRequired]
+        )
+        let remindLaterAction = UNNotificationAction(
+            identifier: "REMIND_INVOICE_LATER",
+            title: "Remind in 3 Days",
+            options: []
+        )
+        let invoiceCategory = UNNotificationCategory(
+            identifier: "INVOICE_REMINDER",
+            actions: [markPaidAction, remindLaterAction],
+            intentIdentifiers: [],
+            options: []
+        )
+
+        UNUserNotificationCenter.current().setNotificationCategories([jobCategory, invoiceCategory])
     }
 
     func sendTestNotification() {
@@ -85,12 +126,14 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
         content3Day.body = "\(invoice.invoiceNumber) for \(invoice.clientName) is due in 3 days — \(invoice.subtotal.formatted(.currency(code: "USD")))"
         content3Day.sound = .default
         content3Day.userInfo = ["invoiceId": invoice.id.uuidString]
+        content3Day.categoryIdentifier = "INVOICE_REMINDER"
 
         let contentDayOf = UNMutableNotificationContent()
         contentDayOf.title = "Invoice Due Today"
         contentDayOf.body = "\(invoice.invoiceNumber) for \(invoice.clientName) is due today — \(invoice.subtotal.formatted(.currency(code: "USD")))"
         contentDayOf.sound = .default
         contentDayOf.userInfo = ["invoiceId": invoice.id.uuidString]
+        contentDayOf.categoryIdentifier = "INVOICE_REMINDER"
 
         // 3 days before at 9am
         if let threeDayBefore = Calendar.current.date(byAdding: .day, value: -3, to: invoice.dueDate) {
@@ -128,6 +171,7 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
         content.body = body
         content.sound = .default
         content.userInfo = ["jobId": job.id.uuidString]
+        content.categoryIdentifier = "JOB_REMINDER"
         let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: false)
         let request = UNNotificationRequest(identifier: "\(job.id)-\(suffix)", content: content, trigger: trigger)
         UNUserNotificationCenter.current().add(request, withCompletionHandler: nil)
@@ -142,6 +186,7 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
         content.body = body
         content.sound = .default
         content.userInfo = ["jobId": job.id.uuidString]
+        content.categoryIdentifier = "JOB_REMINDER"
         let trigger = UNTimeIntervalNotificationTrigger(timeInterval: max(interval, 1), repeats: false)
         let request = UNNotificationRequest(identifier: "\(job.id)-\(suffix)", content: content, trigger: trigger)
         UNUserNotificationCenter.current().add(request, withCompletionHandler: nil)
@@ -155,15 +200,62 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
 
     func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse, withCompletionHandler completionHandler: @escaping () -> Void) {
         let userInfo = response.notification.request.content.userInfo
-        if let jobIdString = userInfo["jobId"] as? String, let jobId = UUID(uuidString: jobIdString) {
-            DispatchQueue.main.async {
-                self.pendingDeepLink = .job(jobId)
+
+        switch response.actionIdentifier {
+        case "MARK_JOB_COMPLETE":
+            if let jobIdString = userInfo["jobId"] as? String,
+               let jobId = UUID(uuidString: jobIdString) {
+                NotificationCenter.default.post(
+                    name: NSNotification.Name("MarkJobComplete"),
+                    object: nil,
+                    userInfo: ["jobId": jobId]
+                )
             }
-        } else if let invoiceIdString = userInfo["invoiceId"] as? String, let invoiceId = UUID(uuidString: invoiceIdString) {
-            DispatchQueue.main.async {
-                self.pendingDeepLink = .invoice(invoiceId)
+
+        case "MARK_INVOICE_PAID":
+            if let invoiceIdString = userInfo["invoiceId"] as? String,
+               let invoiceId = UUID(uuidString: invoiceIdString) {
+                NotificationCenter.default.post(
+                    name: NSNotification.Name("MarkInvoicePaid"),
+                    object: nil,
+                    userInfo: ["invoiceId": invoiceId]
+                )
+            }
+
+        case "REMIND_INVOICE_LATER":
+            if let invoiceIdString = userInfo["invoiceId"] as? String,
+               let invoiceId = UUID(uuidString: invoiceIdString) {
+                let content = UNMutableNotificationContent()
+                content.title = "Invoice Reminder"
+                content.body = response.notification.request.content.body
+                content.sound = .default
+                content.categoryIdentifier = "INVOICE_REMINDER"
+                content.userInfo = userInfo
+                let trigger = UNTimeIntervalNotificationTrigger(
+                    timeInterval: 3 * 24 * 60 * 60,
+                    repeats: false
+                )
+                let request = UNNotificationRequest(
+                    identifier: "invoice-remind-later-\(invoiceId)",
+                    content: content,
+                    trigger: trigger
+                )
+                UNUserNotificationCenter.current().add(request, withCompletionHandler: nil)
+            }
+
+        default:
+            // Default tap — navigate via deep link
+            if let jobIdString = userInfo["jobId"] as? String, let jobId = UUID(uuidString: jobIdString) {
+                DispatchQueue.main.async {
+                    self.pendingDeepLink = .job(jobId)
+                }
+            } else if let invoiceIdString = userInfo["invoiceId"] as? String, let invoiceId = UUID(uuidString: invoiceIdString) {
+                DispatchQueue.main.async {
+                    self.pendingDeepLink = .invoice(invoiceId)
+                }
             }
         }
+
         completionHandler()
     }
 }

@@ -249,6 +249,20 @@ struct RootView: View {
             }
             notificationManager.pendingDeepLink = nil
         }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("MarkJobComplete"))) { notification in
+            if let jobId = notification.userInfo?["jobId"] as? UUID {
+                Task {
+                    await jobsStore.updateStatus(id: jobId, status: .completed)
+                }
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("MarkInvoicePaid"))) { notification in
+            if let invoiceId = notification.userInfo?["invoiceId"] as? UUID {
+                Task {
+                    await invoicesStore.markPaid(id: invoiceId, userId: session.userId)
+                }
+            }
+        }
         .onAppear {
             let appearance = UITabBarAppearance()
             appearance.configureWithOpaqueBackground()
