@@ -327,20 +327,33 @@ struct AIChatView: View {
             .toolbar {
                 ToolbarItem(placement: .principal) {
                     HStack(spacing: 8) {
-                        ZStack {
+                        ZStack(alignment: .topTrailing) {
+                            ZStack {
+                                Circle()
+                                    .fill(
+                                        LinearGradient(
+                                            colors: [Color.sweeplyNavy, Color.sweeplyNavy.opacity(0.75)],
+                                            startPoint: .topLeading,
+                                            endPoint: .bottomTrailing
+                                        )
+                                    )
+                                    .frame(width: 30, height: 30)
+                                Text("S")
+                                    .font(.system(size: 15, weight: .black, design: .rounded))
+                                    .foregroundStyle(.white)
+                            }
                             Circle()
-                                .fill(Color.sweeplyNavy)
-                                .frame(width: 30, height: 30)
-                            Text("S")
-                                .font(.system(size: 15, weight: .black, design: .rounded))
-                                .foregroundStyle(.white)
+                                .fill(Color.green)
+                                .frame(width: 8, height: 8)
+                                .overlay(Circle().stroke(Color.sweeplyBackground, lineWidth: 1.5))
+                                .offset(x: 2, y: -2)
                         }
                         VStack(alignment: .leading, spacing: 0) {
                             Text("Sweeply AI")
                                 .font(.system(size: 15, weight: .bold))
                                 .foregroundStyle(Color.sweeplyNavy)
-                            Text("Your business assistant")
-                                .font(.system(size: 11))
+                            Text("AI · Online")
+                                .font(.system(size: 11, weight: .medium))
                                 .foregroundStyle(Color.sweeplyTextSub)
                         }
                     }
@@ -506,29 +519,61 @@ struct AIChatView: View {
 
     // MARK: - Welcome Header
 
+    private var welcomeTodayJobCount: Int {
+        jobsStore.jobs.filter { Calendar.current.isDateInToday($0.date) && $0.status == .scheduled }.count
+    }
+
+    private var welcomeOutstandingAmount: Double {
+        invoicesStore.invoices.filter { $0.status != .paid }.reduce(0) { $0 + $1.subtotal }
+    }
+
+    private var welcomeClientCount: Int {
+        clientsStore.clients.filter { $0.isActive }.count
+    }
+
     private var welcomeHeader: some View {
         VStack(spacing: 24) {
             Spacer(minLength: 28)
             ZStack {
                 Circle()
-                    .fill(Color.sweeplyNavy.opacity(0.08))
+                    .stroke(Color.sweeplyNavy.opacity(0.06), lineWidth: 1)
+                    .frame(width: 120, height: 120)
+                Circle()
+                    .fill(Color.sweeplyNavy.opacity(0.1))
                     .frame(width: 100, height: 100)
                 Circle()
-                    .fill(Color.sweeplyNavy)
+                    .fill(
+                        LinearGradient(
+                            colors: [Color.sweeplyNavy, Color.sweeplyNavy.opacity(0.75)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
                     .frame(width: 76, height: 76)
                 Text("S")
                     .font(.system(size: 36, weight: .black, design: .rounded))
                     .foregroundStyle(.white)
             }
-            VStack(spacing: 8) {
-                Text(timeGreeting + ", \(firstName)")
-                    .font(.system(size: 22, weight: .bold))
-                    .foregroundStyle(Color.sweeplyNavy)
-                Text("I'm your Sweeply business assistant.\nAsk me anything or tap a quick action below.")
-                    .font(.system(size: 14))
-                    .foregroundStyle(Color.sweeplyTextSub)
-                    .multilineTextAlignment(.center)
-                    .lineSpacing(3)
+            VStack(spacing: 12) {
+                VStack(spacing: 8) {
+                    Text(timeGreeting + ", \(firstName)")
+                        .font(.system(size: 22, weight: .bold))
+                        .foregroundStyle(Color.sweeplyNavy)
+                    Text("I'm your Sweeply business assistant.\nAsk me anything or tap a quick action below.")
+                        .font(.system(size: 14))
+                        .foregroundStyle(Color.sweeplyTextSub)
+                        .multilineTextAlignment(.center)
+                        .lineSpacing(3)
+                }
+                HStack(spacing: 8) {
+                    if welcomeTodayJobCount > 0 {
+                        StatPill(value: "\(welcomeTodayJobCount)", label: "today")
+                    }
+                    if welcomeOutstandingAmount > 0 {
+                        StatPill(value: welcomeOutstandingAmount.currency, label: "outstanding")
+                    }
+                    StatPill(value: "\(welcomeClientCount)", label: "clients")
+                }
             }
             Spacer(minLength: 8)
         }
@@ -571,12 +616,13 @@ struct AIChatView: View {
     private var quickActionsBar: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
-                QuickActionChip(icon: "calendar", label: "Today") { sendMessage("What's on my schedule today?") }
-                QuickActionChip(icon: "chart.line.uptrend.xyaxis", label: "Revenue") { sendMessage("What's my revenue?") }
-                QuickActionChip(icon: "briefcase.fill", label: "New Job") { sendMessage("I want to schedule a new job") }
-                QuickActionChip(icon: "person.badge.plus", label: "New Client") { sendMessage("Add a new client") }
-                QuickActionChip(icon: "doc.badge.plus", label: "Invoice") { sendMessage("Create a new invoice") }
-                QuickActionChip(icon: "sparkles", label: "Insights") { sendMessage("Give me business insights") }
+                QuickActionChip(icon: "calendar", label: "Today", color: Color.sweeplyNavy) { sendMessage("What's on my schedule today?") }
+                QuickActionChip(icon: "chart.line.uptrend.xyaxis", label: "Revenue", color: Color.sweeplyAccent) { sendMessage("What's my revenue?") }
+                QuickActionChip(icon: "briefcase.fill", label: "New Job", color: Color(red: 0.4, green: 0.45, blue: 0.95)) { sendMessage("I want to schedule a new job") }
+                QuickActionChip(icon: "person.badge.plus", label: "New Client", color: Color.sweeplyNavy) { sendMessage("Add a new client") }
+                QuickActionChip(icon: "doc.badge.plus", label: "Invoice", color: Color.sweeplyAccent) { sendMessage("Create a new invoice") }
+                QuickActionChip(icon: "trophy.fill", label: "Best Client", color: Color(red: 0.9, green: 0.65, blue: 0.1)) { sendMessage("Who's my best client?") }
+                QuickActionChip(icon: "sparkles", label: "Insights", color: Color(red: 0.4, green: 0.45, blue: 0.95)) { sendMessage("Give me business insights") }
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 8)
@@ -670,7 +716,7 @@ struct AIChatView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 22))
                 .overlay(RoundedRectangle(cornerRadius: 22).stroke(
                     isRecording ? Color.red.opacity(0.4) :
-                    showSlashMenu ? Color.sweeplyAccent.opacity(0.5) : Color.sweeplyBorder,
+                    showSlashMenu ? Color.sweeplyAccent.opacity(0.5) : Color.sweeplyNavy.opacity(0.12),
                     lineWidth: (isRecording || showSlashMenu) ? 1.5 : 1
                 ))
                 .onChange(of: inputText) { _, newValue in
@@ -1606,7 +1652,7 @@ struct AIChatView: View {
         if lowered.contains("help") || lowered.contains("what can you") || lowered.contains("what do you") || lowered.contains("capabilities") || lowered.contains("show me around") {
             return ChatMessage(
                 role: .assistant,
-                text: "Here's what I can help with:\n\n• Schedule and manage jobs\n• Add and look up clients\n• Create and track invoices\n• Revenue: total, monthly, YTD, by client\n• Business pace — am I on track this month?\n• Who owes me most, average job price\n• Busiest month, most popular services\n• Last visit for any client\n• Business overview and insights\n\nJust talk to me naturally.",
+                text: "Here's what I can help with:\n\n• Schedule and manage jobs\n• Cancel a job or mark it in progress\n• Rebook the same job for a client\n• Add and look up clients\n• Create and track invoices\n• Revenue: total, monthly, YTD, by client\n• Business pace — am I on track this month?\n• Who owes me most, average job price\n• Busiest month, most popular services\n• Last visit for any client\n• Business overview and insights\n\nJust talk to me naturally.",
                 quickReplies: ["Who's my best client?", "Am I on track?", "Most popular services"]
             )
         }
@@ -2213,23 +2259,53 @@ struct AIChatView: View {
     }
 }
 
+// MARK: - Stat Pill
+
+private struct StatPill: View {
+    let value: String
+    let label: String
+
+    var body: some View {
+        VStack(spacing: 2) {
+            Text(value)
+                .font(.system(size: 13, weight: .bold, design: .monospaced))
+                .foregroundStyle(Color.sweeplyNavy)
+            Text(label)
+                .font(.system(size: 10, weight: .medium))
+                .foregroundStyle(Color.sweeplyTextSub)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(Color.sweeplySurface)
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.sweeplyBorder, lineWidth: 1))
+    }
+}
+
 // MARK: - Quick Action Chip
 
 private struct QuickActionChip: View {
     let icon: String
     let label: String
+    var color: Color = Color.sweeplyNavy
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 5) {
-                Image(systemName: icon)
-                    .font(.system(size: 11, weight: .semibold))
+            HStack(spacing: 6) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 6, style: .continuous)
+                        .fill(color.opacity(0.12))
+                        .frame(width: 24, height: 24)
+                    Image(systemName: icon)
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(color)
+                }
                 Text(label)
                     .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(Color.sweeplyNavy)
             }
-            .foregroundStyle(Color.sweeplyNavy)
-            .padding(.horizontal, 12)
+            .padding(.horizontal, 11)
             .padding(.vertical, 7)
             .background(Color.sweeplySurface)
             .clipShape(Capsule())
@@ -2278,19 +2354,23 @@ private struct MessageBubble: View {
 
                 if let action = message.action, let label = message.actionLabel {
                     Button { onAction(action) } label: {
-                        HStack(spacing: 6) {
+                        HStack(spacing: 8) {
                             Text(label)
                                 .font(.system(size: 13, weight: .semibold))
-                                .foregroundStyle(Color.sweeplyNavy)
+                            Spacer()
                             Image(systemName: "arrow.right")
-                                .font(.system(size: 11, weight: .semibold))
-                                .foregroundStyle(Color.sweeplyNavy)
+                                .font(.system(size: 11, weight: .bold))
                         }
+                        .foregroundStyle(Color.sweeplyNavy)
                         .padding(.horizontal, 14)
-                        .padding(.vertical, 8)
-                        .background(Color.sweeplyAccent.opacity(0.12))
-                        .clipShape(Capsule())
-                        .overlay(Capsule().stroke(Color.sweeplyAccent.opacity(0.3), lineWidth: 1))
+                        .padding(.vertical, 10)
+                        .frame(maxWidth: 280)
+                        .background(Color.sweeplyAccent.opacity(0.1))
+                        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                .stroke(Color.sweeplyAccent.opacity(0.25), lineWidth: 1)
+                        )
                     }
                     .buttonStyle(.plain)
                 }
