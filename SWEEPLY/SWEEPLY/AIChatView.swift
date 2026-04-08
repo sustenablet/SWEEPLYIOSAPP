@@ -1718,6 +1718,105 @@ struct AIChatView: View {
             }
         }
 
+        // CANCEL JOB
+        let isCancelIntent = lowered.contains("cancel") && (lowered.contains("job") || lowered.contains("appointment") || lowered.contains("clean") || clientsStore.clients.contains { c in c.name.lowercased().components(separatedBy: " ").contains { $0.count > 2 && lowered.contains($0) } })
+        if isCancelIntent {
+            let matchedJob: Job? = {
+                for client in clientsStore.clients {
+                    let parts = client.name.lowercased().components(separatedBy: " ")
+                    if parts.contains(where: { $0.count > 2 && lowered.contains($0) }) {
+                        return jobsStore.jobs.filter { $0.clientId == client.id && ($0.status == .scheduled || $0.status == .inProgress) }.sorted { $0.date < $1.date }.first
+                    }
+                }
+                return jobsStore.jobs.filter { $0.status == .scheduled }.sorted { $0.date < $1.date }.first
+            }()
+            if let job = matchedJob {
+                Task { await jobsStore.updateStatus(id: job.id, status: .cancelled) }
+                UINotificationFeedbackGenerator().notificationOccurred(.warning)
+                return ChatMessage(
+                    role: .assistant,
+                    text: "Done — I've cancelled the \(job.serviceType.rawValue) for \(job.clientName) on \(job.date.formatted(date: .abbreviated, time: .omitted)).",
+                    style: .warning,
+                    quickReplies: ["Schedule a new job", "Business overview"]
+                )
+            } else {
+                return ChatMessage(
+                    role: .assistant,
+                    text: "I couldn't find an upcoming job to cancel. Which client's job would you like to cancel?",
+                    quickReplies: ["Show upcoming jobs"]
+                )
+            }
+        }
+
+        // START JOB (mark in-progress)
+        let isStartJobIntent = (lowered.contains("start") || lowered.contains("begin") || lowered.contains("starting") || (lowered.contains("mark") && lowered.contains("progress"))) && (lowered.contains("job") || lowered.contains("clean") || lowered.contains("appointment") || clientsStore.clients.contains { c in c.name.lowercased().components(separatedBy: " ").contains { $0.count > 2 && lowered.contains($0) } })
+        if isStartJobIntent {
+            let matchedJob: Job? = {
+                for client in clientsStore.clients {
+                    let parts = client.name.lowercased().components(separatedBy: " ")
+                    if parts.contains(where: { $0.count > 2 && lowered.contains($0) }) {
+                        return jobsStore.jobs.filter { $0.clientId == client.id && $0.status == .scheduled }.sorted { $0.date < $1.date }.first
+                    }
+                }
+                let todayJobs = jobsStore.jobs.filter { Calendar.current.isDateInToday($0.date) && $0.status == .scheduled }.sorted { $0.date < $1.date }
+                return todayJobs.first ?? jobsStore.jobs.filter { $0.status == .scheduled }.sorted { $0.date < $1.date }.first
+            }()
+            if let job = matchedJob {
+                Task { await jobsStore.updateStatus(id: job.id, status: .inProgress) }
+                UINotificationFeedbackGenerator().notificationOccurred(.success)
+                return ChatMessage(
+                    role: .assistant,
+                    text: "Job started! \(job.serviceType.rawValue) for \(job.clientName) is now in progress. I'll be here when you're done.",
+                    style: .success,
+                    quickReplies: ["Mark complete", "Today's jobs"]
+                )
+            } else {
+                return ChatMessage(
+                    role: .assistant,
+                    text: "No scheduled jobs found to start. Check your schedule?",
+                    quickReplies: ["Today's jobs", "Upcoming schedule"]
+                )
+            }
+        }
+
+        // REBOOK — schedule same thing again
+        let isRebookIntent = lowered.contains("rebook") || lowered.contains("book again") || lowered.contains("same again") || lowered.contains("book the same") || ((lowered.contains("schedule") || lowered.contains("book")) && lowered.contains("again"))
+        if isRebookIntent {
+            let matchedClient: Client? = clientsStore.clients.first { client in
+                let parts = client.name.lowercased().components(separatedBy: " ")
+                return parts.contains { $0.count > 2 && lowered.contains($0) }
+            }
+            let targetClient: Client? = matchedClient ?? {
+                let lastJob = jobsStore.jobs.filter { $0.status == .completed }.sorted { $0.date > $1.date }.first
+                return lastJob.flatMap { job in clientsStore.clients.first { $0.id == job.clientId } }
+            }()
+            if let client = targetClient {
+                let lastJob = jobsStore.jobs.filter { $0.clientId == client.id }.sorted { $0.date > $1.date }.first
+                if let last = lastJob {
+                    return ChatMessage(
+                        role: .assistant,
+                        text: "Opening the job form pre-filled for \(client.name) — same service (\(last.serviceType.rawValue), \(last.price.formatted(.currency(code: "USD")))).\n\nJust pick a new date and you're set.",
+                        action: .newJob,
+                        actionLabel: "Open Job Form",
+                        quickReplies: ["Schedule a different job"]
+                    )
+                } else {
+                    return ChatMessage(
+                        role: .assistant,
+                        text: "I don't have a previous job for \(client.name) to rebook from. Want to schedule a new one?",
+                        action: .newJob,
+                        actionLabel: "Schedule a Job"
+                    )
+                }
+            } else {
+                return ChatMessage(
+                    role: .assistant,
+                    text: "Which client would you like to rebook? Say their name and I'll pull up their last job details.",
+                    quickReplies: ["Show my clients"]
+                )
+            }
+        }
+
         // DEFAULT — fall through to Groq AI if configured
         if AIService.shared.isConfigured {
             let context = buildBusinessContext()
