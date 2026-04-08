@@ -1529,6 +1529,52 @@ struct AIChatView: View {
             )
         }
 
+        // BUSIEST MONTH
+        if lowered.contains("busiest month") || (lowered.contains("busiest") && lowered.contains("month")) || lowered.contains("what month") && lowered.contains("most") {
+            let calendar = Calendar.current
+            var monthCounts: [Int: (label: String, count: Int)] = [:]
+            let formatter = DateFormatter()
+            formatter.dateFormat = "MMMM yyyy"
+            for job in jobsStore.jobs {
+                let month = calendar.component(.month, from: job.date)
+                let year = calendar.component(.year, from: job.date)
+                let key = year * 100 + month
+                let label = formatter.string(from: job.date)
+                monthCounts[key] = (label: label, count: (monthCounts[key]?.count ?? 0) + 1)
+            }
+            if let busiest = monthCounts.max(by: { $0.value.count < $1.value.count }) {
+                let runner = monthCounts.sorted { $0.value.count > $1.value.count }.dropFirst().first
+                var text = "Your busiest month was \(busiest.value.label) with \(busiest.value.count) job\(busiest.value.count == 1 ? "" : "s")."
+                if let runner {
+                    text += " Runner-up: \(runner.value.label) (\(runner.value.count) jobs)."
+                }
+                return ChatMessage(role: .assistant, text: text, style: .info, quickReplies: ["Revenue this month", "Business overview", "Business insights"])
+            } else {
+                return ChatMessage(role: .assistant, text: "No job history yet — schedule some jobs and I'll track your busiest months.", quickReplies: ["Schedule a job"])
+            }
+        }
+
+        // SEND INVOICE TO CLIENT
+        if lowered.contains("send invoice") || (lowered.contains("invoice") && lowered.contains("for") && !lowered.contains("create") && !lowered.contains("new")) {
+            let matchedClient = clientsStore.clients.first { client in
+                let parts = client.name.lowercased().components(separatedBy: " ")
+                return parts.contains { $0.count > 2 && lowered.contains($0) }
+            }
+            if let client = matchedClient {
+                let invoice = invoicesStore.invoices
+                    .filter { $0.clientId == client.id && $0.status != .paid }
+                    .sorted { $0.createdAt > $1.createdAt }
+                    .first
+                if let invoice {
+                    return ChatMessage(role: .assistant, text: "Found an open invoice for \(client.name) — \(invoice.invoiceNumber), \(invoice.total.currency) due \(invoice.dueDate.formatted(date: .abbreviated, time: .omitted)). Head to Finances to view or share it.", action: .openFinances, actionLabel: "Open Finances", quickReplies: ["Mark as paid", "Business overview"])
+                } else {
+                    return ChatMessage(role: .assistant, text: "No open invoices for \(client.name). Want to create one?", quickReplies: ["Create invoice", "Business overview"])
+                }
+            } else {
+                return ChatMessage(role: .assistant, text: "Who's the invoice for? Say the client's name and I'll look it up.", quickReplies: ["View all invoices"])
+            }
+        }
+
         // DEFAULT — fall through to Groq AI if configured
         if AIService.shared.isConfigured {
             let context = buildBusinessContext()
