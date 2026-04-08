@@ -816,11 +816,27 @@ struct AIChatView: View {
         messages.append(userMsg)
 
         isAssistantTyping = true
-        let delay = Double.random(in: 0.6...1.1)
+        let delay = Double.random(in: 0.5...0.9)
 
         Task {
             try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
-            let response = await generateResponse(for: trimmed)
+
+            // Race generateResponse against a 10-second hard timeout
+            let response: ChatMessage = await withTaskGroup(of: ChatMessage.self) { group in
+                group.addTask { await self.generateResponse(for: trimmed) }
+                group.addTask {
+                    try? await Task.sleep(nanoseconds: 10_000_000_000)
+                    return ChatMessage(
+                        role: .assistant,
+                        text: "I'm having trouble connecting right now. Try again in a moment.",
+                        quickReplies: ["Today's jobs", "Business overview"]
+                    )
+                }
+                let first = await group.next()!
+                group.cancelAll()
+                return first
+            }
+
             await MainActor.run {
                 isAssistantTyping = false
                 messages.append(response)

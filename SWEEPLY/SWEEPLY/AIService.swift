@@ -49,7 +49,7 @@ final class AIService {
         request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = bodyData
-        request.timeoutInterval = 15
+        request.timeoutInterval = 7
 
         do {
             let (data, response) = try await URLSession.shared.data(for: request)
