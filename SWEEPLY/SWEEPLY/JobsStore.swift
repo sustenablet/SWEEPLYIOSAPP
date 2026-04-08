@@ -2,6 +2,8 @@ import Foundation
 import Observation
 import Supabase
 import EventKit
+import StoreKit
+import UIKit
 
 @Observable
 @MainActor
@@ -135,6 +137,7 @@ final class JobsStore {
             if let idx = jobs.firstIndex(where: { $0.id == id }) {
                 jobs[idx].status = status
             }
+            if status == .completed { requestReviewIfAppropriate() }
             return true
         }
         lastError = nil
@@ -155,6 +158,7 @@ final class JobsStore {
             if status == .completed || status == .cancelled {
                 NotificationManager.shared.cancelJobReminders(for: id)
             }
+            if status == .completed { requestReviewIfAppropriate() }
             return true
         } catch {
             lastError = error.localizedDescription
@@ -259,6 +263,23 @@ final class JobsStore {
         } catch {
             lastError = error.localizedDescription
             return false
+        }
+    }
+
+    private func requestReviewIfAppropriate() {
+        let completedCount = jobs.filter { $0.status == .completed }.count
+        let milestones = [5, 15, 50]
+        guard milestones.contains(completedCount) else { return }
+
+        let lastCount = UserDefaults.standard.integer(forKey: "lastReviewPromptCount")
+        guard lastCount != completedCount else { return }
+
+        UserDefaults.standard.set(completedCount, forKey: "lastReviewPromptCount")
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+            guard let scene = UIApplication.shared.connectedScenes
+                .first(where: { $0.activationState == .foregroundActive }) as? UIWindowScene else { return }
+            SKStoreReviewController.requestReview(in: scene)
         }
     }
 
