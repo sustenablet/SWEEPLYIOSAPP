@@ -686,7 +686,7 @@ private struct ScheduleJobRow: View {
                                 .foregroundStyle(Color.sweeplyNavy)
                         }
 
-                        // Row 2: time
+                        // Row 2: time + elapsed timer if in progress
                         HStack(spacing: 6) {
                             Image(systemName: "clock")
                                 .font(.system(size: 10))
@@ -694,6 +694,10 @@ private struct ScheduleJobRow: View {
                             Text(timeString(from: job.date))
                                 .font(.system(size: 12))
                                 .foregroundStyle(Color.sweeplyTextSub)
+                            if job.status == .inProgress {
+                                Spacer()
+                                ElapsedTimeView(startedAt: job.date)
+                            }
                         }
 
                         // Row 3: service pill + status badge
