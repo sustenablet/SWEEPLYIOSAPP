@@ -508,126 +508,74 @@ struct BusinessView: View {
     }
 
     private var aiPreviewSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text("AI ASSISTANT")
-                    .font(.system(size: 11, weight: .bold))
-                    .foregroundStyle(Color.sweeplyTextSub)
-                    .tracking(1.0)
-                Spacer()
-                HStack(spacing: 4) {
-                    Circle().fill(Color.green).frame(width: 6, height: 6)
-                    Text("Online")
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(Color.sweeplyTextSub)
+        SectionCard {
+            VStack(spacing: 0) {
+                // Minimal header — title only, no badge/subtitle clutter
+                HStack(spacing: 12) {
+                    ZStack {
+                        Circle().fill(Color.sweeplyNavy).frame(width: 40, height: 40)
+                        Text("S")
+                            .font(.system(size: 18, weight: .black, design: .rounded))
+                            .foregroundStyle(.white)
+                    }
+                    Text("Sweeply AI")
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundStyle(Color.sweeplyNavy)
+                    Spacer()
+                    // Pagination dots
+                    if !rotatingInsights.isEmpty {
+                        HStack(spacing: 4) {
+                            let count = min(rotatingInsights.count, 6)
+                            let activeIdx = insightIndex % rotatingInsights.count
+                            ForEach(0..<count, id: \.self) { i in
+                                Circle()
+                                    .fill(i == activeIdx ? Color.sweeplyNavy : Color.sweeplyBorder)
+                                    .frame(width: i == activeIdx ? 6 : 4, height: i == activeIdx ? 6 : 4)
+                                    .animation(.easeInOut(duration: 0.25), value: insightIndex)
+                            }
+                        }
+                    }
                 }
-            }
 
-            SectionCard {
-                VStack(spacing: 0) {
-                    // Header row
-                    HStack(spacing: 12) {
-                        ZStack {
-                            Circle().fill(Color.sweeplyNavy).frame(width: 44, height: 44)
-                            Text("S")
-                                .font(.system(size: 20, weight: .black, design: .rounded))
-                                .foregroundStyle(.white)
-                        }
-                        VStack(alignment: .leading, spacing: 3) {
-                            Text("Sweeply AI")
-                                .font(.system(size: 16, weight: .bold))
-                                .foregroundStyle(Color.sweeplyNavy)
-                            Text("Your personal business assistant")
-                                .font(.system(size: 12))
-                                .foregroundStyle(Color.sweeplyTextSub)
-                        }
+                Divider().padding(.vertical, 14)
+
+                // Rotating insight
+                Group {
+                    if rotatingInsights.isEmpty {
+                        AIInsightRow(icon: "sparkles", text: "Book jobs and create invoices to unlock personalized AI insights.")
+                    } else {
+                        let idx = insightIndex % rotatingInsights.count
+                        let insight = rotatingInsights[idx]
+                        AIInsightRow(icon: insight.icon, text: insight.text, isWarning: insight.isWarning, isSuccess: insight.isSuccess)
+                            .id(insightIndex)
+                            .transition(.asymmetric(
+                                insertion: .opacity.combined(with: .move(edge: .trailing)),
+                                removal: .opacity.combined(with: .move(edge: .leading))
+                            ))
+                    }
+                }
+                .animation(.easeInOut(duration: 0.35), value: insightIndex)
+
+                Divider().padding(.vertical, 14)
+
+                // CTA
+                Button {
+                    UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                    showAIChat = true
+                } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: "sparkles").font(.system(size: 13, weight: .semibold))
+                        Text("Open AI Assistant").font(.system(size: 14, weight: .bold))
                         Spacer()
-                        Image(systemName: "sparkles")
-                            .font(.system(size: 16))
-                            .foregroundStyle(Color.sweeplyAccent)
+                        Image(systemName: "arrow.right").font(.system(size: 12, weight: .semibold))
                     }
-
-                    Divider().padding(.vertical, 14)
-
-                    // Rotating insight display
-                    VStack(alignment: .leading, spacing: 10) {
-                        HStack {
-                            Text("BUSINESS INSIGHT")
-                                .font(.system(size: 10, weight: .bold))
-                                .foregroundStyle(Color.sweeplyTextSub)
-                                .tracking(0.8)
-                            Spacer()
-                            if !rotatingInsights.isEmpty {
-                                HStack(spacing: 4) {
-                                    let count = min(rotatingInsights.count, 6)
-                                    let activeIdx = insightIndex % rotatingInsights.count
-                                    ForEach(0..<count, id: \.self) { i in
-                                        Circle()
-                                            .fill(i == activeIdx ? Color.sweeplyNavy : Color.sweeplyBorder.opacity(0.8))
-                                            .frame(width: i == activeIdx ? 6 : 4, height: i == activeIdx ? 6 : 4)
-                                            .animation(.easeInOut(duration: 0.25), value: insightIndex)
-                                    }
-                                }
-                            }
-                        }
-
-                        Group {
-                            if rotatingInsights.isEmpty {
-                                AIInsightRow(icon: "sparkles", text: "Book jobs and create invoices to unlock personalized AI insights.")
-                            } else {
-                                let idx = insightIndex % rotatingInsights.count
-                                let insight = rotatingInsights[idx]
-                                AIInsightRow(icon: insight.icon, text: insight.text, isWarning: insight.isWarning, isSuccess: insight.isSuccess)
-                                    .id(insightIndex)
-                                    .transition(.asymmetric(
-                                        insertion: .opacity.combined(with: .move(edge: .trailing)),
-                                        removal: .opacity.combined(with: .move(edge: .leading))
-                                    ))
-                            }
-                        }
-                        .animation(.easeInOut(duration: 0.35), value: insightIndex)
-                    }
-
-                    Divider().padding(.vertical, 14)
-
-                    // Unique chips — NOT duplicating Dashboard/Finances content
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 8) {
-                            ForEach(["Avg job price", "Busiest month", "Who to re-engage?", "Monthly forecast", "Popular service"], id: \.self) { label in
-                                Button { showAIChat = true } label: {
-                                    Text(label)
-                                        .font(.system(size: 12, weight: .medium))
-                                        .foregroundStyle(Color.sweeplyNavy)
-                                        .padding(.horizontal, 12)
-                                        .padding(.vertical, 7)
-                                        .background(Color.sweeplyNavy.opacity(0.06))
-                                        .clipShape(Capsule())
-                                        .overlay(Capsule().stroke(Color.sweeplyBorder, lineWidth: 1))
-                                }
-                                .buttonStyle(.plain)
-                            }
-                        }
-                    }
-
-                    Button {
-                        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-                        showAIChat = true
-                    } label: {
-                        HStack(spacing: 8) {
-                            Image(systemName: "sparkles").font(.system(size: 14, weight: .semibold))
-                            Text("Open AI Assistant").font(.system(size: 15, weight: .bold))
-                            Spacer()
-                            Image(systemName: "arrow.right").font(.system(size: 13, weight: .semibold))
-                        }
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 18)
-                        .padding(.vertical, 14)
-                        .background(Color.sweeplyNavy)
-                        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-                    }
-                    .buttonStyle(.plain)
-                    .padding(.top, 4)
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 13)
+                    .background(Color.sweeplyNavy)
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                 }
+                .buttonStyle(.plain)
             }
         }
         .onReceive(Timer.publish(every: 6, on: .main, in: .common).autoconnect()) { _ in

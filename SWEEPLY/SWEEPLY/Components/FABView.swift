@@ -107,36 +107,18 @@ struct FABActionButton: View {
     var body: some View {
         Button(action: action) {
             HStack(spacing: 10) {
-                if isAI {
-                    ZStack {
-                        Circle()
-                            .fill(Color.sweeplyAccent.opacity(0.15))
-                            .frame(width: 28, height: 28)
-                        Image(systemName: icon)
-                            .font(.system(size: 13, weight: .bold))
-                            .foregroundStyle(Color.sweeplyNavy)
-                    }
-                } else {
-                    Image(systemName: icon)
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(.white)
-                }
+                Image(systemName: icon)
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundStyle(isAI ? Color.sweeplyAccent : .white)
                 Text(label)
                     .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(isAI ? Color.sweeplyNavy : .white)
+                    .foregroundStyle(.white)
             }
-            .padding(.horizontal, 18)
-            .padding(.vertical, 12)
-            .background(
-                isAI
-                    ? LinearGradient(colors: [Color.sweeplyAccent.opacity(0.18), Color.sweeplyAccent.opacity(0.08)], startPoint: .leading, endPoint: .trailing)
-                    : LinearGradient(colors: [Color.sweeplyNavy, Color.sweeplyNavy], startPoint: .leading, endPoint: .trailing)
-            )
+            .padding(.horizontal, 20)
+            .padding(.vertical, 13)
+            .background(Color.sweeplyNavy)
             .clipShape(Capsule())
-            .overlay(
-                isAI ? Capsule().stroke(Color.sweeplyAccent.opacity(0.5), lineWidth: 1.5) : nil
-            )
-            .shadow(color: isAI ? Color.sweeplyAccent.opacity(0.15) : Color.black.opacity(0.2), radius: 10, x: 0, y: 4)
+            .shadow(color: Color.black.opacity(0.18), radius: 10, x: 0, y: 4)
         }
         .buttonStyle(.plain)
     }
