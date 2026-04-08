@@ -11,7 +11,7 @@ struct BusinessView: View {
     @State private var serviceEditorState: ServiceCatalogEditorState?
     @State private var catalogFeedbackMessage: String?
     @State private var selectedSnapshotSlide = 0
-    @State private var healthRingProgress: Double = 0
+    @State private var showAIChat = false
 
     private var profile: UserProfile {
         profileStore.profile ?? MockData.profile
@@ -119,48 +119,6 @@ struct BusinessView: View {
         profile.settings.hydratedServiceCatalog
     }
 
-    // MARK: - Health Score
-
-    private var healthJobScore: Double {
-        let total = businessJobs.filter { $0.status != .cancelled }.count
-        guard total > 0 else { return 0 }
-        let completed = businessJobs.filter { $0.status == .completed }.count
-        return min(Double(completed) / Double(total) * 40.0, 40.0)
-    }
-
-    private var healthInvoiceScore: Double {
-        let total = businessInvoices.count
-        guard total > 0 else { return 0 }
-        let paid = businessInvoices.filter { $0.status == .paid }.count
-        return min(Double(paid) / Double(total) * 35.0, 35.0)
-    }
-
-    private var healthClientScore: Double {
-        min(Double(totalActiveClients) * 5.0, 25.0)
-    }
-
-    private var healthScore: Double {
-        healthJobScore + healthInvoiceScore + healthClientScore
-    }
-
-    private var healthLabel: String {
-        switch healthScore {
-        case 80...100: return "Excellent"
-        case 60..<80:  return "Good"
-        case 40..<60:  return "Fair"
-        default:       return "Needs Attention"
-        }
-    }
-
-    private var healthColor: Color {
-        switch healthScore {
-        case 80...100: return .sweeplySuccess
-        case 60..<80:  return Color(red: 0.2, green: 0.72, blue: 0.45)
-        case 40..<60:  return .sweeplyWarning
-        default:       return .sweeplyDestructive
-        }
-    }
-
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 28) {
@@ -185,8 +143,8 @@ struct BusinessView: View {
                 }
                 .padding(.horizontal, -20)
 
-                // 2. Business Health Score
-                healthScoreCard
+                // 2. AI Preview
+                aiPreviewSection
 
                 // 3. Snapshot
                 SectionCard {
@@ -441,57 +399,150 @@ struct BusinessView: View {
         }
         .onAppear {
             withAnimation(.easeOut(duration: 0.3)) { appeared = true }
-            withAnimation(.easeInOut(duration: 1.0).delay(0.3)) {
-                healthRingProgress = healthScore / 100.0
-            }
         }
         .sheet(item: $serviceEditorState) { editorState in
             ServiceCatalogEditorSheet(state: editorState) { result in
                 Task { await saveCatalogChange(from: result) }
             }
         }
+        .sheet(isPresented: $showAIChat) {
+            AIChatView(
+                onNewJob: nil,
+                onNewClient: nil,
+                onNewInvoice: nil
+            )
+            .environment(jobsStore)
+            .environment(clientsStore)
+            .environment(invoicesStore)
+            .environment(profileStore)
+        }
     }
 
-    private var healthScoreCard: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack(spacing: 16) {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("Business Health")
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(Color.sweeplyNavy)
-                    Text(healthLabel)
-                        .font(.system(size: 13, weight: .bold))
-                        .foregroundStyle(healthColor)
-                }
+    private var aiPreviewSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            // Section label
+            HStack {
+                Text("AI ASSISTANT")
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(Color.sweeplyTextSub)
+                    .tracking(1.0)
                 Spacer()
-                ZStack {
+                // Online badge
+                HStack(spacing: 4) {
                     Circle()
-                        .stroke(Color.sweeplyBorder, lineWidth: 6)
-                        .frame(width: 64, height: 64)
-                    Circle()
-                        .trim(from: 0, to: healthRingProgress)
-                        .stroke(healthColor, style: StrokeStyle(lineWidth: 6, lineCap: .round))
-                        .frame(width: 64, height: 64)
-                        .rotationEffect(.degrees(-90))
-                    Text("\(Int(healthScore))")
-                        .font(.system(size: 16, weight: .bold, design: .monospaced))
-                        .foregroundStyle(Color.sweeplyNavy)
+                        .fill(Color.green)
+                        .frame(width: 6, height: 6)
+                    Text("Online")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(Color.sweeplyTextSub)
                 }
             }
 
-            VStack(spacing: 8) {
-                HealthMiniBar(label: "Jobs", value: healthJobScore, maxValue: 40, color: healthColor)
-                HealthMiniBar(label: "Invoices", value: healthInvoiceScore, maxValue: 35, color: healthColor)
-                HealthMiniBar(label: "Clients", value: healthClientScore, maxValue: 25, color: healthColor)
+            SectionCard {
+                VStack(spacing: 0) {
+                    // Header row
+                    HStack(spacing: 12) {
+                        ZStack {
+                            Circle()
+                                .fill(Color.sweeplyNavy)
+                                .frame(width: 44, height: 44)
+                            Text("S")
+                                .font(.system(size: 20, weight: .black, design: .rounded))
+                                .foregroundStyle(.white)
+                        }
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text("Sweeply AI")
+                                .font(.system(size: 16, weight: .bold))
+                                .foregroundStyle(Color.sweeplyNavy)
+                            Text("Your personal business assistant")
+                                .font(.system(size: 12))
+                                .foregroundStyle(Color.sweeplyTextSub)
+                        }
+                        Spacer()
+                        Image(systemName: "sparkles")
+                            .font(.system(size: 16))
+                            .foregroundStyle(Color.sweeplyAccent)
+                    }
+
+                    Divider().padding(.vertical, 14)
+
+                    // Live insights preview
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("QUICK INSIGHTS")
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundStyle(Color.sweeplyTextSub)
+                            .tracking(0.8)
+
+                        // Today's jobs insight
+                        let todayJobs = businessJobs.filter { Calendar.current.isDateInToday($0.date) && $0.status == .scheduled }
+                        if !todayJobs.isEmpty {
+                            AIInsightRow(icon: "calendar", text: "\(todayJobs.count) job\(todayJobs.count == 1 ? "" : "s") scheduled for today")
+                        } else {
+                            AIInsightRow(icon: "calendar", text: "No jobs scheduled today — a good time to book new ones")
+                        }
+
+                        // Revenue insight
+                        let weekStart = Calendar.current.date(byAdding: .day, value: -7, to: Date()) ?? Date()
+                        let weekRevenue = businessInvoices.filter { $0.status == .paid && $0.createdAt >= weekStart }.reduce(0.0) { $0 + $1.total }
+                        AIInsightRow(icon: "chart.line.uptrend.xyaxis", text: "\(weekRevenue.currency) collected this week")
+
+                        // Overdue insight
+                        let overdueCount = businessInvoices.filter { $0.status == .overdue }.count
+                        if overdueCount > 0 {
+                            AIInsightRow(icon: "exclamationmark.circle", text: "\(overdueCount) overdue invoice\(overdueCount == 1 ? "" : "s") need attention", isWarning: true)
+                        } else {
+                            AIInsightRow(icon: "checkmark.circle", text: "All invoices are paid up — great work!", isSuccess: true)
+                        }
+                    }
+
+                    Divider().padding(.vertical, 14)
+
+                    // Quick action chips
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 8) {
+                            ForEach(["Today's jobs", "Revenue check", "Who owes me?", "Best client", "Am I on track?"], id: \.self) { label in
+                                Button {
+                                    showAIChat = true
+                                } label: {
+                                    Text(label)
+                                        .font(.system(size: 12, weight: .medium))
+                                        .foregroundStyle(Color.sweeplyNavy)
+                                        .padding(.horizontal, 12)
+                                        .padding(.vertical, 7)
+                                        .background(Color.sweeplyNavy.opacity(0.06))
+                                        .clipShape(Capsule())
+                                        .overlay(Capsule().stroke(Color.sweeplyBorder, lineWidth: 1))
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                    }
+
+                    // CTA button
+                    Button {
+                        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                        showAIChat = true
+                    } label: {
+                        HStack(spacing: 8) {
+                            Image(systemName: "sparkles")
+                                .font(.system(size: 14, weight: .semibold))
+                            Text("Open AI Assistant")
+                                .font(.system(size: 15, weight: .bold))
+                            Spacer()
+                            Image(systemName: "arrow.right")
+                                .font(.system(size: 13, weight: .semibold))
+                        }
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 18)
+                        .padding(.vertical, 14)
+                        .background(Color.sweeplyNavy)
+                        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.top, 4)
+                }
             }
         }
-        .padding(16)
-        .background(Color.sweeplySurface)
-        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .stroke(Color.sweeplyBorder, lineWidth: 1)
-        )
     }
 
     private func snapshotRow(title: String, value: String, detail: String, accent: Color) -> some View {
@@ -689,33 +740,29 @@ private struct KPIBlock: View {
     }
 }
 
-private struct HealthMiniBar: View {
-    let label: String
-    let value: Double
-    let maxValue: Double
-    let color: Color
+private struct AIInsightRow: View {
+    let icon: String
+    let text: String
+    var isWarning: Bool = false
+    var isSuccess: Bool = false
+
+    var iconColor: Color {
+        if isWarning { return Color.sweeplyDestructive }
+        if isSuccess { return Color(red: 0.2, green: 0.7, blue: 0.4) }
+        return Color.sweeplyAccent
+    }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            HStack {
-                Text(label)
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundStyle(Color.sweeplyTextSub)
-                Spacer()
-                Text("\(Int(value))/\(Int(maxValue))")
-                    .font(.system(size: 10, weight: .semibold, design: .monospaced))
-                    .foregroundStyle(Color.sweeplyTextSub)
-            }
-            GeometryReader { geo in
-                ZStack(alignment: .leading) {
-                    RoundedRectangle(cornerRadius: 3)
-                        .fill(Color.sweeplyBorder.opacity(0.5))
-                    RoundedRectangle(cornerRadius: 3)
-                        .fill(color)
-                        .frame(width: maxValue > 0 ? geo.size.width * (value / maxValue) : 0)
-                }
-            }
-            .frame(height: 5)
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: icon)
+                .font(.system(size: 13))
+                .foregroundStyle(iconColor)
+                .frame(width: 18)
+                .padding(.top, 1)
+            Text(text)
+                .font(.system(size: 13))
+                .foregroundStyle(isWarning ? Color.sweeplyDestructive : Color.sweeplyNavy.opacity(0.8))
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
 }
