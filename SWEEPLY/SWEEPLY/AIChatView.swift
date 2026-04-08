@@ -205,8 +205,7 @@ struct AIChatView: View {
     @State private var hasFiredProactive: Bool = false
     @State private var lastIntent: String? = nil
     @State private var showSlashMenu: Bool = false
-    @State private var searchText: String = ""
-    @State private var showSearch: Bool = false
+    @State private var showHistory: Bool = false
 
     @AppStorage("aiChatOnboardingDone") private var onboardingDone: Bool = false
     @State private var onboardingStep: Int = 0
@@ -229,15 +228,14 @@ struct AIChatView: View {
             ("/insights", "sparkles",                   "Insights",        "Give me business insights"),
             ("/overview", "square.grid.2x2.fill",       "Overview",        "Business overview"),
             ("/help",     "questionmark.circle",        "Help",            "What can you do?"),
+            ("/cancel",  "xmark.circle",               "Cancel Job",      "Cancel a job"),
+            ("/start",   "play.fill",                  "Start Job",       "Start my next job"),
+            ("/rebook",  "arrow.counterclockwise",     "Rebook",          "Book the same job again"),
         ]
     }
 
-    private var displayedMessages: [ChatMessage] {
-        guard showSearch, !searchText.isEmpty else { return messages }
-        return messages.filter { $0.text.localizedCaseInsensitiveContains(searchText) }
-    }
-
     @AppStorage("sweeplyAIChatHistoryV2") private var chatHistoryData: Data = Data()
+    @AppStorage("aiChatSessionsV1") private var chatSessionsData: Data = Data()
     @AppStorage("sweeplyAIChatSavedAt") private var chatSavedAt: Double = 0
 
     private var firstName: String {
@@ -260,31 +258,6 @@ struct AIChatView: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
-                // Search bar
-                if showSearch {
-                    HStack(spacing: 10) {
-                        Image(systemName: "magnifyingglass")
-                            .font(.system(size: 14))
-                            .foregroundStyle(Color.sweeplyTextSub)
-                        TextField("Search messages...", text: $searchText)
-                            .font(.system(size: 14))
-                        if !searchText.isEmpty {
-                            Button { searchText = "" } label: {
-                                Image(systemName: "xmark.circle.fill")
-                                    .foregroundStyle(Color.sweeplyTextSub)
-                            }
-                        }
-                    }
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 8)
-                    .background(Color.sweeplySurface)
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
-                    .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.sweeplyBorder, lineWidth: 1))
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 8)
-                    .transition(.move(edge: .top).combined(with: .opacity))
-                }
-
                 ScrollViewReader { proxy in
                     ScrollView {
                         VStack(spacing: 0) {
@@ -292,7 +265,7 @@ struct AIChatView: View {
                                 welcomeHeader
                             }
                             LazyVStack(spacing: 12) {
-                                ForEach(displayedMessages) { message in
+                                ForEach(messages) { message in
                                     MessageBubble(
                                         message: message,
                                         onAction: handleAction,
@@ -377,12 +350,11 @@ struct AIChatView: View {
                         if !messages.isEmpty {
                             Button {
                                 UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                saveToHistory()
                                 messages = []
                                 conversationState = .idle
                                 hasFiredProactive = false
                                 chatHistoryData = Data()
-                                searchText = ""
-                                showSearch = false
                             } label: {
                                 Text("Clear")
                                     .font(.system(size: 13, weight: .medium))
@@ -391,14 +363,12 @@ struct AIChatView: View {
                         }
                         if !messages.isEmpty {
                             Button {
-                                withAnimation(.easeInOut(duration: 0.2)) {
-                                    showSearch.toggle()
-                                    if !showSearch { searchText = "" }
-                                }
+                                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                showHistory = true
                             } label: {
-                                Image(systemName: showSearch ? "magnifyingglass.circle.fill" : "magnifyingglass")
+                                Image(systemName: "clock.arrow.circlepath")
                                     .font(.system(size: 15, weight: .medium))
-                                    .foregroundStyle(showSearch ? Color.sweeplyAccent : Color.sweeplyTextSub)
+                                    .foregroundStyle(Color.sweeplyTextSub)
                             }
                         }
                     }
@@ -430,6 +400,17 @@ struct AIChatView: View {
                     aiOnboardingOverlay
                         .transition(.opacity.combined(with: .move(edge: .bottom)))
                 }
+            }
+            .sheet(isPresented: $showHistory) {
+                ChatHistorySheet(sessions: loadSessionHistory(), onRestore: { session in
+                    restoreSession(session)
+                }, onDelete: { index in
+                    var sessions = loadSessionHistory()
+                    sessions.remove(at: index)
+                    chatSessionsData = (try? JSONEncoder().encode(sessions)) ?? Data()
+                })
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
             }
         }
     }
@@ -2209,6 +2190,27 @@ struct AIChatView: View {
         messages = session.messages.map { $0.toChatMessage() }
         hasFiredProactive = true
     }
+
+    // MARK: - Chat History (multi-session)
+
+    private func saveToHistory() {
+        guard !messages.isEmpty else { return }
+        var sessions = loadSessionHistory()
+        let session = PersistedSession(savedAt: Date(), messages: Array(messages.suffix(60).map { PersistedMessage(from: $0) }))
+        sessions.insert(session, at: 0)
+        if sessions.count > 10 { sessions = Array(sessions.prefix(10)) }
+        chatSessionsData = (try? JSONEncoder().encode(sessions)) ?? Data()
+    }
+
+    private func loadSessionHistory() -> [PersistedSession] {
+        (try? JSONDecoder().decode([PersistedSession].self, from: chatSessionsData)) ?? []
+    }
+
+    private func restoreSession(_ session: PersistedSession) {
+        messages = session.messages.map { $0.toChatMessage() }
+        hasFiredProactive = true
+        showHistory = false
+    }
 }
 
 // MARK: - Quick Action Chip
@@ -2656,6 +2658,84 @@ private struct TypingIndicatorView: View {
             Spacer()
         }
         .onAppear { animating = true }
+    }
+}
+
+// MARK: - Chat History Sheet
+
+private struct ChatHistorySheet: View {
+    let sessions: [PersistedSession]
+    let onRestore: (PersistedSession) -> Void
+    let onDelete: (Int) -> Void
+
+    private let dateFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateStyle = .medium
+        f.timeStyle = .short
+        return f
+    }()
+
+    var body: some View {
+        NavigationStack {
+            Group {
+                if sessions.isEmpty {
+                    VStack(spacing: 16) {
+                        Image(systemName: "clock.arrow.circlepath")
+                            .font(.system(size: 42))
+                            .foregroundStyle(Color.sweeplyTextSub.opacity(0.3))
+                        Text("No chat history yet")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundStyle(Color.sweeplyNavy)
+                        Text("Past conversations will appear here after you clear a chat.")
+                            .font(.system(size: 13))
+                            .foregroundStyle(Color.sweeplyTextSub)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 32)
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(Color.sweeplyBackground)
+                } else {
+                    List {
+                        ForEach(Array(sessions.enumerated()), id: \.offset) { index, session in
+                            Button {
+                                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                onRestore(session)
+                            } label: {
+                                VStack(alignment: .leading, spacing: 6) {
+                                    HStack {
+                                        Text(dateFormatter.string(from: session.savedAt))
+                                            .font(.system(size: 13, weight: .semibold))
+                                            .foregroundStyle(Color.sweeplyNavy)
+                                        Spacer()
+                                        Text("\(session.messages.count) messages")
+                                            .font(.system(size: 11, weight: .medium))
+                                            .foregroundStyle(Color.sweeplyTextSub)
+                                            .padding(.horizontal, 8)
+                                            .padding(.vertical, 3)
+                                            .background(Color.sweeplyNavy.opacity(0.06))
+                                            .clipShape(Capsule())
+                                    }
+                                    if let firstUser = session.messages.first(where: { $0.role == .user }) {
+                                        Text(firstUser.text)
+                                            .font(.system(size: 13))
+                                            .foregroundStyle(Color.sweeplyTextSub)
+                                            .lineLimit(2)
+                                    }
+                                }
+                                .padding(.vertical, 4)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                        .onDelete { offsets in
+                            offsets.forEach { onDelete($0) }
+                        }
+                    }
+                    .listStyle(.plain)
+                }
+            }
+            .navigationTitle("Chat History")
+            .navigationBarTitleDisplayMode(.inline)
+        }
     }
 }
 
