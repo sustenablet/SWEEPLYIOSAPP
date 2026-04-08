@@ -1,6 +1,8 @@
 import SwiftUI
 import Charts
 
+private let inProgressColor = Color(red: 0.4, green: 0.45, blue: 0.95)
+
 struct DashboardView: View {
     @Environment(AppSession.self) private var session
     @Environment(ClientsStore.self) private var clientsStore
@@ -145,7 +147,7 @@ struct DashboardView: View {
                 trend: activeClientsThisWeek > 0 ? "Active week" : "No activity",
                 isPositive: activeClientsThisWeek > 0,
                 icon: "person.2",
-                iconColor: .blue,
+                iconColor: .sweeplyNavy,
                 footnote: "\(clientsStore.clients.count) total clients in the system"
             )
         ]
@@ -496,7 +498,7 @@ struct DashJobRow: View {
     private var statusColor: Color {
         switch job.status {
         case .completed:  return Color.sweeplyAccent
-        case .inProgress: return Color.blue
+        case .inProgress: return inProgressColor
         case .scheduled:  return Color.sweeplyTextSub.opacity(0.5)
         case .cancelled:  return Color.sweeplyDestructive
         }
@@ -514,8 +516,11 @@ struct DashInvoiceRow: View {
         HStack {
             VStack(alignment: .leading, spacing: 3) {
                 Text(invoice.clientName).font(.system(size: 14, weight: .semibold))
-                Text("Due \(invoice.dueDate.formatted(date: .abbreviated, time: .omitted))")
-                    .font(.system(size: 12)).foregroundStyle(invoice.status == .overdue ? Color.sweeplyDestructive : Color.sweeplyTextSub)
+                Text(invoice.status == .overdue
+                    ? "Overdue since \(invoice.dueDate.formatted(date: .abbreviated, time: .omitted))"
+                    : "Due \(invoice.dueDate.formatted(date: .abbreviated, time: .omitted))"
+                )
+                .font(.system(size: 12)).foregroundStyle(invoice.status == .overdue ? Color.sweeplyDestructive : Color.sweeplyTextSub)
             }
             Spacer()
             HStack(spacing: 8) {

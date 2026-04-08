@@ -223,7 +223,7 @@ struct ClientsView: View {
             }
         }
         .padding(.horizontal, 20)
-        .sensoryFeedback(.impact(.heavy), trigger: archiveHaptic)
+        .sensoryFeedback(.impact(weight: .heavy), trigger: archiveHaptic)
     }
 
     private var emptyState: some View {
@@ -309,6 +309,7 @@ private struct ClientCard: View {
                             .font(.system(size: 15, weight: .bold))
                             .foregroundStyle(client.isActive ? Color.sweeplyNavy : Color.sweeplyTextSub)
                             .lineLimit(1)
+                            .truncationMode(.tail)
                         if !client.isActive {
                             Text("ARCHIVED")
                                 .font(.system(size: 8, weight: .bold))
@@ -348,6 +349,7 @@ private struct ClientCard: View {
                                 .font(.system(size: 12))
                                 .foregroundStyle(Color.sweeplyTextSub)
                                 .lineLimit(1)
+                                .truncationMode(.tail)
                         }
                     }
 
@@ -369,6 +371,7 @@ private struct ClientCard: View {
                                 .font(.system(size: 12))
                                 .foregroundStyle(Color.sweeplyTextSub)
                                 .lineLimit(1)
+                                .truncationMode(.tail)
                         }
                     }
                 }

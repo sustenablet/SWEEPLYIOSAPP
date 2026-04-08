@@ -10,6 +10,8 @@ enum ScheduleViewMode: String, CaseIterable {
     case map = "Map"
 }
 
+private let inProgressColor = Color(red: 0.4, green: 0.45, blue: 0.95)
+
 struct ScheduleView: View {
     @Environment(JobsStore.self) private var jobsStore
     @Environment(ClientsStore.self) private var clientsStore
@@ -140,7 +142,7 @@ struct ScheduleView: View {
         .padding(4)
         .background(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(Color(red: 0.93, green: 0.93, blue: 0.94))
+                .fill(Color.sweeplyBackground)
         )
     }
 
@@ -248,9 +250,9 @@ struct ScheduleView: View {
     private func statusColor(for status: JobStatus) -> Color {
         switch status {
         case .completed: return .sweeplyAccent
-        case .inProgress: return .blue
+        case .inProgress: return inProgressColor
         case .scheduled: return .gray
-        case .cancelled: return .red
+        case .cancelled: return Color.sweeplyDestructive
         }
     }
 
@@ -633,7 +635,7 @@ private struct ScheduleJobRow: View {
         case .deep:             return Color.sweeplyNavy
         case .moveInOut:        return Color.sweeplyWarning
         case .postConstruction: return Color.gray
-        case .office:           return Color.blue
+        case .office:           return Color.sweeplyNavy
         case .custom:           return Color.sweeplyAccent
         }
     }
@@ -666,6 +668,7 @@ private struct ScheduleJobRow: View {
                                 .font(.system(size: 15, weight: .bold))
                                 .foregroundStyle(Color.sweeplyNavy)
                                 .lineLimit(1)
+                                .truncationMode(.tail)
                             if job.isRecurring {
                                 Image(systemName: "arrow.triangle.2.circlepath")
                                     .font(.system(size: 10, weight: .bold))
@@ -773,7 +776,7 @@ private struct ScheduleJobRow: View {
     private var statusDotColor: Color {
         switch job.status {
         case .completed: return Color.sweeplySuccess
-        case .inProgress: return Color.sweeplyWarning
+        case .inProgress: return inProgressColor
         case .scheduled: return Color.sweeplyTextSub
         case .cancelled: return Color.sweeplyDestructive
         }
@@ -924,7 +927,7 @@ struct MapPinView: View {
     private var statusColor: Color {
         switch status {
         case .completed: return Color.sweeplyAccent
-        case .inProgress: return .blue
+        case .inProgress: return inProgressColor
         case .scheduled: return Color.sweeplyNavy.opacity(0.6)
         case .cancelled: return Color.sweeplyDestructive
         }
