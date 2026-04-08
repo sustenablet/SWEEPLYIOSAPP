@@ -24,6 +24,7 @@ struct NewClientForm: View {
     @State private var notes = ""
     @State private var isSaving = false
     @State private var showContactPicker = false
+    @State private var showValidationErrors = false
 
     private var fallbackSettings: AppSettings {
         var settings = AppSettings()
@@ -34,6 +35,17 @@ struct NewClientForm: View {
     private var serviceCatalog: [BusinessService] {
         let settings = profileStore.profile?.settings ?? fallbackSettings
         return settings.hydratedServiceCatalog
+    }
+
+    private var isEmailValid: Bool {
+        guard !email.isEmpty else { return true }
+        let pattern = #"^[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}$"#
+        return email.range(of: pattern, options: .regularExpression) != nil
+    }
+
+    private var isPhoneValid: Bool {
+        guard !phone.isEmpty else { return true }
+        return phone.filter(\.isNumber).count >= 10
     }
 
     private var preferredServiceLabel: String {
@@ -87,11 +99,28 @@ struct NewClientForm: View {
                     VStack(alignment: .leading, spacing: 14) {
                         Text("CONTACT INFO").font(.system(size: 10, weight: .bold)).foregroundStyle(Color.sweeplyTextSub).tracking(1.0)
                         HStack(spacing: 12) {
-                            FormTextField(label: "First Name *", text: $firstName, placeholder: "John")
+                            FormTextField(
+                                label: "First Name *",
+                                text: $firstName,
+                                placeholder: "John",
+                                errorMessage: showValidationErrors && firstName.isEmpty ? "First name is required" : nil
+                            )
                             FormTextField(label: "Last Name", text: $lastName, placeholder: "Doe")
                         }
-                        FormTextField(label: "Email", text: $email, placeholder: "john@example.com", keyboard: .emailAddress)
-                        FormTextField(label: "Phone", text: $phone, placeholder: "(555) 000-0000", keyboard: .phonePad)
+                        FormTextField(
+                            label: "Email",
+                            text: $email,
+                            placeholder: "john@example.com",
+                            keyboard: .emailAddress,
+                            errorMessage: showValidationErrors && !isEmailValid ? "Enter a valid email address" : nil
+                        )
+                        FormTextField(
+                            label: "Phone",
+                            text: $phone,
+                            placeholder: "(555) 000-0000",
+                            keyboard: .phonePad,
+                            errorMessage: showValidationErrors && !isPhoneValid ? "Phone number must be at least 10 digits" : nil
+                        )
                     }
 
                     // Preferences
@@ -154,6 +183,11 @@ struct NewClientForm: View {
 
             // Save
             Button {
+                showValidationErrors = true
+                guard !firstName.isEmpty, isEmailValid, isPhoneValid else {
+                    UINotificationFeedbackGenerator().notificationOccurred(.error)
+                    return
+                }
                 Task { await saveClient() }
             } label: {
                 HStack {
@@ -164,10 +198,10 @@ struct NewClientForm: View {
                 .foregroundStyle(.white)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 14)
-                .background(firstName.isEmpty || isSaving ? Color.sweeplyBorder : Color.sweeplyNavy)
+                .background(isSaving ? Color.sweeplyBorder : Color.sweeplyNavy)
                 .clipShape(RoundedRectangle(cornerRadius: 12))
             }
-            .disabled(firstName.isEmpty || isSaving)
+            .disabled(isSaving)
             .padding(24)
         }
         .background(Color.sweeplySurface)
@@ -258,14 +292,17 @@ private struct FormTextField: View {
     @Binding var text: String
     let placeholder: String
     var keyboard: UIKeyboardType = .default
+    var errorMessage: String? = nil
 
     @FocusState private var isFocused: Bool
+
+    private var hasError: Bool { errorMessage != nil }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(label)
                 .font(.system(size: 12))
-                .foregroundStyle(isFocused ? Color.sweeplyAccent : Color.sweeplyTextSub)
+                .foregroundStyle(hasError ? Color.sweeplyDestructive : isFocused ? Color.sweeplyAccent : Color.sweeplyTextSub)
                 .animation(.easeOut(duration: 0.15), value: isFocused)
             TextField(placeholder, text: $text)
                 .font(.system(size: 15))
@@ -278,10 +315,18 @@ private struct FormTextField: View {
                 .clipShape(RoundedRectangle(cornerRadius: 10))
                 .overlay(
                     RoundedRectangle(cornerRadius: 10)
-                        .stroke(isFocused ? Color.sweeplyAccent : Color.sweeplyBorder,
-                                lineWidth: isFocused ? 1.5 : 1)
+                        .stroke(
+                            hasError ? Color.sweeplyDestructive : isFocused ? Color.sweeplyAccent : Color.sweeplyBorder,
+                            lineWidth: hasError || isFocused ? 1.5 : 1
+                        )
                         .animation(.easeOut(duration: 0.15), value: isFocused)
                 )
+            if let errorMessage {
+                Text(errorMessage)
+                    .font(.system(size: 12))
+                    .foregroundStyle(Color.sweeplyDestructive)
+                    .padding(.top, 2)
+            }
         }
     }
 }
@@ -308,7 +353,7 @@ private struct ContactPickerView: UIViewControllerRepresentable {
         let onSelect: (CNContact) -> Void
         init(onSelect: @escaping (CNContact) -> Void) { self.onSelect = onSelect }
 
-        func contactPicker(_ picker: CNContactPickerViewController, didSelectContact contact: CNContact) {
+        func contactPicker(_ picker: CNContactPickerViewController, didSelect contact: CNContact) {
             onSelect(contact)
         }
     }

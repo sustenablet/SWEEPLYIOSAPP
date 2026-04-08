@@ -21,6 +21,7 @@ struct NewJobForm: View {
     @State private var endDate: Date = Date().addingTimeInterval(86400 * 30)
     @State private var showEndDatePicker = false
     @State private var isSaving = false
+    @State private var showValidationErrors = false
 
     private var fallbackSettings: AppSettings {
         var settings = AppSettings()
@@ -40,6 +41,14 @@ struct NewJobForm: View {
             return "\(service.name) · \(service.price.currency)"
         }
         return serviceType.rawValue
+    }
+
+    private var validationErrors: [String] {
+        var errors: [String] = []
+        if selectedClientId == nil { errors.append("Select a client") }
+        if (Double(price) ?? 0) <= 0 { errors.append("Enter a price greater than $0") }
+        if date < Date() { errors.append("Job date must be in the future") }
+        return errors
     }
 
     private var selectedService: BusinessService? {
@@ -73,7 +82,7 @@ struct NewJobForm: View {
                         
                         // Client Selector
                         VStack(alignment: .leading, spacing: 8) {
-                            Text("Client *").font(.system(size: 13, weight: .medium)).foregroundStyle(Color.sweeplyTextSub)
+                            Text("Client *").font(.system(size: 13, weight: .medium)).foregroundStyle(showValidationErrors && selectedClientId == nil ? Color.sweeplyDestructive : Color.sweeplyTextSub)
                             Menu {
                                 ForEach(clientsStore.clients) { client in
                                     Button(client.name) {
@@ -86,6 +95,16 @@ struct NewJobForm: View {
                                     label: selectedClient?.name ?? "Select client",
                                     isSelected: selectedClientId != nil
                                 )
+                            }
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .stroke(showValidationErrors && selectedClientId == nil ? Color.sweeplyDestructive : Color.clear, lineWidth: 1.5)
+                            )
+                            if showValidationErrors && selectedClientId == nil {
+                                Text("Please select a client")
+                                    .font(.system(size: 12))
+                                    .foregroundStyle(Color.sweeplyDestructive)
+                                    .padding(.top, 2)
                             }
                         }
                         
@@ -116,7 +135,7 @@ struct NewJobForm: View {
                         HStack(spacing: 16) {
                             // Date
                             VStack(alignment: .leading, spacing: 8) {
-                                Text("Date *").font(.system(size: 13, weight: .medium)).foregroundStyle(Color.sweeplyTextSub)
+                                Text("Date *").font(.system(size: 13, weight: .medium)).foregroundStyle(showValidationErrors && date < Date() ? Color.sweeplyDestructive : Color.sweeplyTextSub)
                                 DatePicker("", selection: $date, displayedComponents: .date)
                                     .labelsHidden()
                                     .frame(maxWidth: .infinity)
@@ -124,9 +143,9 @@ struct NewJobForm: View {
                                     .padding(.vertical, 8)
                                     .background(Color.sweeplySurface)
                                     .clipShape(RoundedRectangle(cornerRadius: 12))
-                                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.sweeplyBorder, lineWidth: 1))
+                                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(showValidationErrors && date < Date() ? Color.sweeplyDestructive : Color.sweeplyBorder, lineWidth: 1))
                             }
-                            
+
                             // Time
                             VStack(alignment: .leading, spacing: 8) {
                                 Text("Time *").font(.system(size: 13, weight: .medium)).foregroundStyle(Color.sweeplyTextSub)
@@ -139,6 +158,12 @@ struct NewJobForm: View {
                                     .clipShape(RoundedRectangle(cornerRadius: 12))
                                     .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.sweeplyBorder, lineWidth: 1))
                             }
+                        }
+                        if showValidationErrors && date < Date() {
+                            Text("Job date must be in the future")
+                                .font(.system(size: 12))
+                                .foregroundStyle(Color.sweeplyDestructive)
+                                .padding(.top, 2)
                         }
                     }
                     
@@ -158,17 +183,23 @@ struct NewJobForm: View {
                                     .clipShape(RoundedRectangle(cornerRadius: 12))
                                     .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.sweeplyBorder, lineWidth: 1))
                             }
-                            
+
                             // Price
                             VStack(alignment: .leading, spacing: 8) {
-                                Text("Price ($)").font(.system(size: 13, weight: .medium)).foregroundStyle(Color.sweeplyTextSub)
+                                Text("Price ($)").font(.system(size: 13, weight: .medium)).foregroundStyle(showValidationErrors && (Double(price) ?? 0) <= 0 ? Color.sweeplyDestructive : Color.sweeplyTextSub)
                                 TextField("120.00", text: $price)
                                     .keyboardType(.decimalPad)
                                     .padding(.horizontal, 16)
                                     .padding(.vertical, 14)
                                     .background(Color.sweeplySurface)
                                     .clipShape(RoundedRectangle(cornerRadius: 12))
-                                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.sweeplyBorder, lineWidth: 1))
+                                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(showValidationErrors && (Double(price) ?? 0) <= 0 ? Color.sweeplyDestructive : Color.sweeplyBorder, lineWidth: 1))
+                                if showValidationErrors && (Double(price) ?? 0) <= 0 {
+                                    Text("Enter a price greater than $0")
+                                        .font(.system(size: 12))
+                                        .foregroundStyle(Color.sweeplyDestructive)
+                                        .padding(.top, 2)
+                                }
                             }
                         }
                     }
@@ -286,6 +317,11 @@ struct NewJobForm: View {
                     .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.sweeplyBorder, lineWidth: 1))
                 
                 Button {
+                    showValidationErrors = true
+                    guard validationErrors.isEmpty else {
+                        UINotificationFeedbackGenerator().notificationOccurred(.error)
+                        return
+                    }
                     Task { await saveJob() }
                 } label: {
                     HStack {
@@ -296,11 +332,11 @@ struct NewJobForm: View {
                     .foregroundStyle(.white)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 16)
-                    .background(selectedClientId == nil || isSaving ? Color.sweeplyNavy.opacity(0.4) : Color.sweeplyNavy)
+                    .background(isSaving ? Color.sweeplyNavy.opacity(0.4) : Color.sweeplyNavy)
                     .clipShape(RoundedRectangle(cornerRadius: 12))
                     .shadow(color: Color.sweeplyNavy.opacity(0.15), radius: 8, x: 0, y: 4)
                 }
-                .disabled(selectedClientId == nil || isSaving)
+                .disabled(isSaving)
             }
             .padding(24)
             .background(Color.sweeplySurface)
