@@ -242,18 +242,14 @@ struct AIChatView: View {
         profileStore.profile?.fullName.components(separatedBy: " ").first ?? "there"
     }
 
-    private var dynamicSuggestions: [String] {
-        var chips: [String] = []
-        let overdueCount = invoicesStore.invoices.filter { $0.status == .overdue }.count
-        let todayJobs = jobsStore.jobs.filter { Calendar.current.isDateInToday($0.date) && $0.status == .scheduled }.count
-        if overdueCount > 0 { chips.append("Check overdue invoices") }
-        if todayJobs > 0 { chips.append("Today's jobs") }
-        let upcoming = jobsStore.jobs.filter { $0.date > Date() && $0.status == .scheduled }.count
-        if upcoming > 0 { chips.append("Upcoming schedule") }
-        chips.append("Business overview")
-        chips.append("Add a new job")
-        return Array(chips.prefix(4))
-    }
+    private let chatSuggestions: [(label: String, query: String)] = [
+        ("Today's jobs",   "What's on my schedule today?"),
+        ("Revenue",        "What's my revenue this month?"),
+        ("New job",        "I want to schedule a new job"),
+        ("New client",     "Add a new client"),
+        ("Invoice",        "Create a new invoice"),
+        ("Insights",       "Give me business insights"),
+    ]
 
     var body: some View {
         NavigationStack {
@@ -307,11 +303,7 @@ struct AIChatView: View {
                     }
                 }
 
-                if messages.isEmpty && !isAssistantTyping {
-                    suggestionChipsRow
-                }
-
-                quickActionsBar
+                suggestionsCarousel
 
                 // Slash command overlay
                 if showSlashMenu {
@@ -521,93 +513,31 @@ struct AIChatView: View {
 
     // MARK: - Welcome Header
 
-    private var welcomeTodayJobCount: Int {
-        jobsStore.jobs.filter { Calendar.current.isDateInToday($0.date) && $0.status == .scheduled }.count
-    }
-
-    private var welcomeOutstandingAmount: Double {
-        invoicesStore.invoices.filter { $0.status != .paid }.reduce(0) { $0 + $1.subtotal }
-    }
-
-    private var welcomeClientCount: Int {
-        clientsStore.clients.filter { $0.isActive }.count
-    }
-
     private var welcomeHeader: some View {
-        VStack(spacing: 0) {
-            // Dark navy hero section
-            VStack(spacing: 22) {
-                Spacer(minLength: 28)
+        VStack(alignment: .leading, spacing: 12) {
+            Spacer(minLength: 32)
 
-                // Avatar with glowing rings on dark bg
-                ZStack {
-                    Circle()
-                        .fill(.white.opacity(0.05))
-                        .frame(width: 108, height: 108)
-                    Circle()
-                        .fill(.white.opacity(0.08))
-                        .frame(width: 86, height: 86)
-                    Circle()
-                        .fill(
-                            LinearGradient(
-                                colors: [Color.sweeplyAccent, Color.sweeplyAccent.opacity(0.65)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                        .frame(width: 66, height: 66)
-                    Text("S")
-                        .font(.system(size: 30, weight: .black, design: .rounded))
-                        .foregroundStyle(.white)
-                    // Online indicator
-                    Circle()
-                        .fill(Color.green)
-                        .frame(width: 12, height: 12)
-                        .overlay(Circle().stroke(Color.sweeplyNavy, lineWidth: 2))
-                        .offset(x: 24, y: -24)
-                }
-
-                VStack(spacing: 8) {
-                    Text(timeGreeting + ", \(firstName)")
-                        .font(.system(size: 22, weight: .bold))
-                        .foregroundStyle(.white)
-                    Text("Ask me anything about your business")
-                        .font(.system(size: 13))
-                        .foregroundStyle(.white.opacity(0.55))
-                        .multilineTextAlignment(.center)
-                }
-
-                // Dark-styled stat pills
-                HStack(spacing: 8) {
-                    if welcomeTodayJobCount > 0 {
-                        chatNavyStatPill(value: "\(welcomeTodayJobCount)", label: "today")
-                    }
-                    if welcomeOutstandingAmount > 0 {
-                        chatNavyStatPill(value: welcomeOutstandingAmount.currency, label: "outstanding")
-                    }
-                    chatNavyStatPill(value: "\(welcomeClientCount)", label: "clients")
-                }
-
-                Spacer(minLength: 28)
+            // Typographic greeting — no avatar, left-aligned, warm palette
+            VStack(alignment: .leading, spacing: 4) {
+                Text(timeGreeting)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(Color.sweeplyAccent)
+                    .tracking(0.5)
+                Text("\(firstName).")
+                    .font(.system(size: 34, weight: .bold))
+                    .foregroundStyle(Color.sweeplyNavy)
             }
-            .frame(maxWidth: .infinity)
-            .background(Color.sweeplyNavy)
-        }
-    }
 
-    private func chatNavyStatPill(value: String, label: String) -> some View {
-        VStack(spacing: 2) {
-            Text(value)
-                .font(.system(size: 13, weight: .bold, design: .monospaced))
-                .foregroundStyle(.white)
-            Text(label)
-                .font(.system(size: 10, weight: .medium))
-                .foregroundStyle(.white.opacity(0.5))
+            Text("Ask me anything about your business,\nor use a suggestion below.")
+                .font(.system(size: 14))
+                .foregroundStyle(Color.sweeplyTextSub)
+                .lineSpacing(3)
+
+            Spacer(minLength: 20)
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 9)
-        .background(.white.opacity(0.1))
-        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .padding(.horizontal, 24)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.sweeplyBackground)
     }
 
     private var timeGreeting: String {
@@ -617,15 +547,15 @@ struct AIChatView: View {
         return "Good evening"
     }
 
-    // MARK: - Suggestion Chips
+    // MARK: - Suggestions Carousel
 
-    private var suggestionChipsRow: some View {
+    private var suggestionsCarousel: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
-                ForEach(dynamicSuggestions, id: \.self) { suggestion in
-                    Button { sendMessage(suggestion) } label: {
-                        Text(suggestion)
-                            .font(.system(size: 12, weight: .semibold))
+                ForEach(chatSuggestions, id: \.label) { suggestion in
+                    Button { sendMessage(suggestion.query) } label: {
+                        Text(suggestion.label)
+                            .font(.system(size: 13, weight: .medium))
                             .foregroundStyle(Color.sweeplyNavy)
                             .padding(.horizontal, 14)
                             .padding(.vertical, 8)
@@ -637,29 +567,9 @@ struct AIChatView: View {
                 }
             }
             .padding(.horizontal, 16)
-            .padding(.vertical, 12)
+            .padding(.vertical, 10)
         }
         .background(Color.sweeplyBackground)
-    }
-
-    // MARK: - Quick Actions Bar
-
-    private var quickActionsBar: some View {
-        VStack(spacing: 6) {
-            HStack(spacing: 6) {
-                GridActionChip(icon: "calendar", label: "Today", color: Color.sweeplyNavy) { sendMessage("What's on my schedule today?") }
-                GridActionChip(icon: "chart.line.uptrend.xyaxis", label: "Revenue", color: Color.sweeplyAccent) { sendMessage("What's my revenue?") }
-                GridActionChip(icon: "briefcase.fill", label: "New Job", color: Color(red: 0.4, green: 0.45, blue: 0.95)) { sendMessage("I want to schedule a new job") }
-            }
-            HStack(spacing: 6) {
-                GridActionChip(icon: "person.badge.plus", label: "New Client", color: Color.sweeplyNavy) { sendMessage("Add a new client") }
-                GridActionChip(icon: "doc.badge.plus", label: "Invoice", color: Color.sweeplyAccent) { sendMessage("Create a new invoice") }
-                GridActionChip(icon: "sparkles", label: "Insights", color: Color(red: 0.55, green: 0.35, blue: 0.95)) { sendMessage("Give me business insights") }
-            }
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 10)
-        .background(Color.sweeplyNavy.opacity(0.03))
     }
 
     // MARK: - Slash Command Menu
@@ -2403,97 +2313,6 @@ struct AIChatView: View {
         messages = session.messages.map { $0.toChatMessage() }
         hasFiredProactive = true
         showHistory = false
-    }
-}
-
-// MARK: - Stat Pill
-
-private struct StatPill: View {
-    let value: String
-    let label: String
-
-    var body: some View {
-        VStack(spacing: 2) {
-            Text(value)
-                .font(.system(size: 13, weight: .bold, design: .monospaced))
-                .foregroundStyle(Color.sweeplyNavy)
-            Text(label)
-                .font(.system(size: 10, weight: .medium))
-                .foregroundStyle(Color.sweeplyTextSub)
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-        .background(Color.sweeplySurface)
-        .clipShape(RoundedRectangle(cornerRadius: 10))
-        .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.sweeplyBorder, lineWidth: 1))
-    }
-}
-
-// MARK: - Quick Action Chip
-
-private struct QuickActionChip: View {
-    let icon: String
-    let label: String
-    var color: Color = Color.sweeplyNavy
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            HStack(spacing: 6) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 6, style: .continuous)
-                        .fill(color.opacity(0.12))
-                        .frame(width: 24, height: 24)
-                    Image(systemName: icon)
-                        .font(.system(size: 10, weight: .semibold))
-                        .foregroundStyle(color)
-                }
-                Text(label)
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(Color.sweeplyNavy)
-            }
-            .padding(.horizontal, 11)
-            .padding(.vertical, 7)
-            .background(Color.sweeplySurface)
-            .clipShape(Capsule())
-            .overlay(Capsule().stroke(Color.sweeplyBorder, lineWidth: 1))
-        }
-        .buttonStyle(.plain)
-    }
-}
-
-// MARK: - Grid Action Chip
-
-private struct GridActionChip: View {
-    let icon: String
-    let label: String
-    var color: Color = Color.sweeplyNavy
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            HStack(spacing: 6) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 6, style: .continuous)
-                        .fill(color.opacity(0.12))
-                        .frame(width: 22, height: 22)
-                    Image(systemName: icon)
-                        .font(.system(size: 9, weight: .semibold))
-                        .foregroundStyle(color)
-                }
-                Text(label)
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(Color.sweeplyNavy)
-                    .lineLimit(1)
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 8)
-            .background(Color.sweeplySurface)
-            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).stroke(Color.sweeplyBorder, lineWidth: 1))
-        }
-        .buttonStyle(.plain)
     }
 }
 
