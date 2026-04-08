@@ -360,7 +360,35 @@ struct SettingsView: View {
                     }
                 }
             }
-            
+
+            SectionCard {
+                VStack(spacing: 16) {
+                    HStack {
+                        Image(systemName: "info.circle")
+                            .frame(width: 20)
+                        Text("Version")
+                        Spacer()
+                        Text(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "—")
+                            .foregroundStyle(Color.sweeplyTextSub)
+                    }
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundStyle(Color.sweeplyNavy)
+
+                    Divider().background(Color.sweeplyBorder)
+
+                    HStack {
+                        Image(systemName: "hammer")
+                            .frame(width: 20)
+                        Text("Build")
+                        Spacer()
+                        Text(Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "—")
+                            .foregroundStyle(Color.sweeplyTextSub)
+                    }
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundStyle(Color.sweeplyNavy)
+                }
+            }
+
             Button { showDeleteConfirmation = true } label: {
                 Text("Delete Account")
                     .font(.system(size: 14, weight: .bold))
