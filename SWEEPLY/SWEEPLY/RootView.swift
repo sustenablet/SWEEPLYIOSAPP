@@ -156,7 +156,10 @@ struct RootView: View {
     private var mainTabs: some View {
         ZStack(alignment: .bottomTrailing) {
             TabView(selection: $selectedTab) {
-                DashboardView()
+                DashboardView(
+                    onViewAllSchedule: { selectedTab = .schedule },
+                    onViewAllFinances: { selectedTab = .finances }
+                )
                     .tabItem { Label("Dashboard", systemImage: "square.grid.2x2.fill") }
                     .tag(Tab.dashboard)
 

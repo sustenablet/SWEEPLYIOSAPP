@@ -4,6 +4,9 @@ import Charts
 private let inProgressColor = Color(red: 0.4, green: 0.45, blue: 0.95)
 
 struct DashboardView: View {
+    var onViewAllSchedule: (() -> Void)? = nil
+    var onViewAllFinances: (() -> Void)? = nil
+
     @Environment(AppSession.self) private var session
     @Environment(ClientsStore.self) private var clientsStore
     @Environment(JobsStore.self) private var jobsStore
@@ -363,7 +366,7 @@ struct DashboardView: View {
     private var todayScheduleSection: some View {
         SectionCard {
             VStack(alignment: .leading, spacing: 14) {
-                CardHeader(title: "Today's Schedule", action: { /* View All */ })
+                CardHeader(title: "Today's Schedule", action: onViewAllSchedule)
                 
                 if todayJobs.isEmpty {
                     VStack(spacing: 8) {
@@ -424,7 +427,7 @@ struct DashboardView: View {
     private var outstandingInvoicesSection: some View {
         SectionCard {
             VStack(alignment: .leading, spacing: 14) {
-                CardHeader(title: "Outstanding Invoices", action: { /* View All */ })
+                CardHeader(title: "Outstanding Invoices", action: onViewAllFinances)
                 
                 if ongoingInvoices.isEmpty {
                     VStack(spacing: 8) {
