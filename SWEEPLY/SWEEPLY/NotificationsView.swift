@@ -303,11 +303,14 @@ private struct NotificationRow: View {
         .padding(.leading, 10)
         .padding(.trailing, 14)
         .padding(.vertical, 12)
-        .background(
-            notification.isRead
-                ? Color.sweeplySurface
-                : Color.sweeplySurface.overlay(kindColor.opacity(0.03))
-        )
+        .background {
+            Color.sweeplySurface
+                .overlay {
+                    if !notification.isRead {
+                        kindColor.opacity(0.03)
+                    }
+                }
+        }
         .clipShape(RoundedRectangle(cornerRadius: 12))
         .overlay(
             RoundedRectangle(cornerRadius: 12)

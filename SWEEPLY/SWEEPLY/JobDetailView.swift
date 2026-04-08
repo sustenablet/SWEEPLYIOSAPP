@@ -270,32 +270,6 @@ struct JobDetailView: View {
             }
         }
     }
-}
-
-private struct JobInfoRow: View {
-    let icon: String
-    let title: String
-    let value: String
-
-    var body: some View {
-        HStack(alignment: .top, spacing: 12) {
-            Image(systemName: icon)
-                .font(.system(size: 15))
-                .foregroundStyle(Color.sweeplyAccent)
-                .frame(width: 20)
-                .padding(.top, 2)
-            
-            VStack(alignment: .leading, spacing: 4) {
-                Text(title)
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(Color.sweeplyTextSub)
-                Text(value)
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundStyle(Color.sweeplyNavy)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-        }
-    }
 
     // MARK: - Job Photos
 
@@ -416,6 +390,32 @@ private struct JobInfoRow: View {
 }
 
 // MARK: - Helpers
+
+private struct JobInfoRow: View {
+    let icon: String
+    let title: String
+    let value: String
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: icon)
+                .font(.system(size: 15))
+                .foregroundStyle(Color.sweeplyAccent)
+                .frame(width: 20)
+                .padding(.top, 2)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(Color.sweeplyTextSub)
+                Text(value)
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundStyle(Color.sweeplyNavy)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
+}
 
 private struct PhotoIndex: Identifiable {
     let id = UUID()

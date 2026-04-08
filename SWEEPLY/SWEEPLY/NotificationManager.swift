@@ -2,7 +2,7 @@ import Foundation
 import UserNotifications
 import Observation
 
-enum DeepLink {
+enum DeepLink: Equatable {
     case job(UUID)
     case invoice(UUID)
 }
