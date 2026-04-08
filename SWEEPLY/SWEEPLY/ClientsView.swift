@@ -23,6 +23,7 @@ struct ClientsView: View {
     @State private var showArchived = false
     @State private var sortOrder: ClientSortOrder = .nameAZ
     @State private var archiveHaptic = false
+    @State private var newJobForClient: Client? = nil
 
     private var displayClients: [Client] {
         let base = clientsStore.clients.filter { $0.isActive || showArchived }
@@ -82,6 +83,9 @@ struct ClientsView: View {
         .sheet(isPresented: $showFilters) {
             ClientFiltersSheet(showArchived: $showArchived, sortOrder: $sortOrder)
                 .presentationDetents([.medium])
+        }
+        .sheet(item: $newJobForClient) { client in
+            NewJobForm(preselectClient: client)
         }
         .confirmationDialog(
             "Delete \(deleteTarget?.name ?? "client")?",
@@ -186,6 +190,35 @@ struct ClientsView: View {
                         )
                     }
                     .buttonStyle(.plain)
+                    .swipeActions(edge: .leading, allowsFullSwipe: true) {
+                        Button {
+                            let digits = client.phone.filter { $0.isNumber || $0 == "+" }
+                            if let url = URL(string: "tel://\(digits)") {
+                                UIApplication.shared.open(url)
+                            }
+                        } label: {
+                            Label("Call", systemImage: "phone.fill")
+                        }
+                        .tint(.green)
+                    }
+                    .swipeActions(edge: .trailing) {
+                        Button {
+                            newJobForClient = client
+                        } label: {
+                            Label("New Job", systemImage: "plus.circle.fill")
+                        }
+                        .tint(Color.sweeplyNavy)
+
+                        Button {
+                            let digits = client.phone.filter { $0.isNumber || $0 == "+" }
+                            if let url = URL(string: "sms:\(digits)") {
+                                UIApplication.shared.open(url)
+                            }
+                        } label: {
+                            Label("Text", systemImage: "message.fill")
+                        }
+                        .tint(.blue)
+                    }
                 }
             }
         }

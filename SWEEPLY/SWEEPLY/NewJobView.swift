@@ -8,6 +8,10 @@ struct NewJobForm: View {
     @Environment(JobsStore.self)     private var jobsStore
 
     @State private var selectedClientId: UUID? = nil
+
+    init(preselectClient: Client? = nil) {
+        _selectedClientId = State(initialValue: preselectClient?.id)
+    }
     @State private var serviceType: ServiceType = .standard
     @State private var date = Date()
     @State private var price: String = ""
