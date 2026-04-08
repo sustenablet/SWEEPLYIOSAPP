@@ -324,6 +324,8 @@ struct AIChatView: View {
             }
             .background(Color.sweeplyBackground.ignoresSafeArea())
             .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(Color.sweeplyNavy, for: .navigationBar)
+            .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .principal) {
                     HStack(spacing: 8) {
@@ -332,7 +334,7 @@ struct AIChatView: View {
                                 Circle()
                                     .fill(
                                         LinearGradient(
-                                            colors: [Color.sweeplyNavy, Color.sweeplyNavy.opacity(0.75)],
+                                            colors: [Color.sweeplyAccent, Color.sweeplyAccent.opacity(0.75)],
                                             startPoint: .topLeading,
                                             endPoint: .bottomTrailing
                                         )
@@ -345,16 +347,16 @@ struct AIChatView: View {
                             Circle()
                                 .fill(Color.green)
                                 .frame(width: 8, height: 8)
-                                .overlay(Circle().stroke(Color.sweeplyBackground, lineWidth: 1.5))
+                                .overlay(Circle().stroke(Color.sweeplyNavy, lineWidth: 1.5))
                                 .offset(x: 2, y: -2)
                         }
                         VStack(alignment: .leading, spacing: 0) {
                             Text("Sweeply AI")
                                 .font(.system(size: 15, weight: .bold))
-                                .foregroundStyle(Color.sweeplyNavy)
+                                .foregroundStyle(.white)
                             Text("AI · Online")
                                 .font(.system(size: 11, weight: .medium))
-                                .foregroundStyle(Color.sweeplyTextSub)
+                                .foregroundStyle(.white.opacity(0.6))
                         }
                     }
                 }
@@ -371,7 +373,7 @@ struct AIChatView: View {
                             } label: {
                                 Text("Clear")
                                     .font(.system(size: 13, weight: .medium))
-                                    .foregroundStyle(Color.sweeplyTextSub)
+                                    .foregroundStyle(.white.opacity(0.75))
                             }
                         }
                         if !messages.isEmpty {
@@ -381,7 +383,7 @@ struct AIChatView: View {
                             } label: {
                                 Image(systemName: "clock.arrow.circlepath")
                                     .font(.system(size: 15, weight: .medium))
-                                    .foregroundStyle(Color.sweeplyTextSub)
+                                    .foregroundStyle(.white.opacity(0.75))
                             }
                         }
                     }
@@ -390,7 +392,7 @@ struct AIChatView: View {
                     Button { dismiss() } label: {
                         Image(systemName: "xmark")
                             .font(.system(size: 14, weight: .semibold))
-                            .foregroundStyle(Color.sweeplyNavy)
+                            .foregroundStyle(.white.opacity(0.8))
                     }
                 }
             }
@@ -532,52 +534,80 @@ struct AIChatView: View {
     }
 
     private var welcomeHeader: some View {
-        VStack(spacing: 24) {
-            Spacer(minLength: 28)
-            ZStack {
-                Circle()
-                    .stroke(Color.sweeplyNavy.opacity(0.06), lineWidth: 1)
-                    .frame(width: 120, height: 120)
-                Circle()
-                    .fill(Color.sweeplyNavy.opacity(0.1))
-                    .frame(width: 100, height: 100)
-                Circle()
-                    .fill(
-                        LinearGradient(
-                            colors: [Color.sweeplyNavy, Color.sweeplyNavy.opacity(0.75)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
+        VStack(spacing: 0) {
+            // Dark navy hero section
+            VStack(spacing: 22) {
+                Spacer(minLength: 28)
+
+                // Avatar with glowing rings on dark bg
+                ZStack {
+                    Circle()
+                        .fill(.white.opacity(0.05))
+                        .frame(width: 108, height: 108)
+                    Circle()
+                        .fill(.white.opacity(0.08))
+                        .frame(width: 86, height: 86)
+                    Circle()
+                        .fill(
+                            LinearGradient(
+                                colors: [Color.sweeplyAccent, Color.sweeplyAccent.opacity(0.65)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
                         )
-                    )
-                    .frame(width: 76, height: 76)
-                Text("S")
-                    .font(.system(size: 36, weight: .black, design: .rounded))
-                    .foregroundStyle(.white)
-            }
-            VStack(spacing: 12) {
+                        .frame(width: 66, height: 66)
+                    Text("S")
+                        .font(.system(size: 30, weight: .black, design: .rounded))
+                        .foregroundStyle(.white)
+                    // Online indicator
+                    Circle()
+                        .fill(Color.green)
+                        .frame(width: 12, height: 12)
+                        .overlay(Circle().stroke(Color.sweeplyNavy, lineWidth: 2))
+                        .offset(x: 24, y: -24)
+                }
+
                 VStack(spacing: 8) {
                     Text(timeGreeting + ", \(firstName)")
                         .font(.system(size: 22, weight: .bold))
-                        .foregroundStyle(Color.sweeplyNavy)
-                    Text("I'm your Sweeply business assistant.\nAsk me anything or tap a quick action below.")
-                        .font(.system(size: 14))
-                        .foregroundStyle(Color.sweeplyTextSub)
+                        .foregroundStyle(.white)
+                    Text("Ask me anything about your business")
+                        .font(.system(size: 13))
+                        .foregroundStyle(.white.opacity(0.55))
                         .multilineTextAlignment(.center)
-                        .lineSpacing(3)
                 }
+
+                // Dark-styled stat pills
                 HStack(spacing: 8) {
                     if welcomeTodayJobCount > 0 {
-                        StatPill(value: "\(welcomeTodayJobCount)", label: "today")
+                        chatNavyStatPill(value: "\(welcomeTodayJobCount)", label: "today")
                     }
                     if welcomeOutstandingAmount > 0 {
-                        StatPill(value: welcomeOutstandingAmount.currency, label: "outstanding")
+                        chatNavyStatPill(value: welcomeOutstandingAmount.currency, label: "outstanding")
                     }
-                    StatPill(value: "\(welcomeClientCount)", label: "clients")
+                    chatNavyStatPill(value: "\(welcomeClientCount)", label: "clients")
                 }
+
+                Spacer(minLength: 28)
             }
-            Spacer(minLength: 8)
+            .frame(maxWidth: .infinity)
+            .background(Color.sweeplyNavy)
         }
-        .padding(.horizontal, 32)
+    }
+
+    private func chatNavyStatPill(value: String, label: String) -> some View {
+        VStack(spacing: 2) {
+            Text(value)
+                .font(.system(size: 13, weight: .bold, design: .monospaced))
+                .foregroundStyle(.white)
+            Text(label)
+                .font(.system(size: 10, weight: .medium))
+                .foregroundStyle(.white.opacity(0.5))
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 9)
+        .background(.white.opacity(0.1))
+        .clipShape(RoundedRectangle(cornerRadius: 10))
     }
 
     private var timeGreeting: String {
@@ -595,7 +625,7 @@ struct AIChatView: View {
                 ForEach(dynamicSuggestions, id: \.self) { suggestion in
                     Button { sendMessage(suggestion) } label: {
                         Text(suggestion)
-                            .font(.system(size: 13, weight: .medium))
+                            .font(.system(size: 12, weight: .semibold))
                             .foregroundStyle(Color.sweeplyNavy)
                             .padding(.horizontal, 14)
                             .padding(.vertical, 8)
@@ -607,27 +637,29 @@ struct AIChatView: View {
                 }
             }
             .padding(.horizontal, 16)
-            .padding(.vertical, 10)
+            .padding(.vertical, 12)
         }
+        .background(Color.sweeplyBackground)
     }
 
     // MARK: - Quick Actions Bar
 
     private var quickActionsBar: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
-                QuickActionChip(icon: "calendar", label: "Today", color: Color.sweeplyNavy) { sendMessage("What's on my schedule today?") }
-                QuickActionChip(icon: "chart.line.uptrend.xyaxis", label: "Revenue", color: Color.sweeplyAccent) { sendMessage("What's my revenue?") }
-                QuickActionChip(icon: "briefcase.fill", label: "New Job", color: Color(red: 0.4, green: 0.45, blue: 0.95)) { sendMessage("I want to schedule a new job") }
-                QuickActionChip(icon: "person.badge.plus", label: "New Client", color: Color.sweeplyNavy) { sendMessage("Add a new client") }
-                QuickActionChip(icon: "doc.badge.plus", label: "Invoice", color: Color.sweeplyAccent) { sendMessage("Create a new invoice") }
-                QuickActionChip(icon: "trophy.fill", label: "Best Client", color: Color(red: 0.9, green: 0.65, blue: 0.1)) { sendMessage("Who's my best client?") }
-                QuickActionChip(icon: "sparkles", label: "Insights", color: Color(red: 0.4, green: 0.45, blue: 0.95)) { sendMessage("Give me business insights") }
+        VStack(spacing: 6) {
+            HStack(spacing: 6) {
+                GridActionChip(icon: "calendar", label: "Today", color: Color.sweeplyNavy) { sendMessage("What's on my schedule today?") }
+                GridActionChip(icon: "chart.line.uptrend.xyaxis", label: "Revenue", color: Color.sweeplyAccent) { sendMessage("What's my revenue?") }
+                GridActionChip(icon: "briefcase.fill", label: "New Job", color: Color(red: 0.4, green: 0.45, blue: 0.95)) { sendMessage("I want to schedule a new job") }
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 8)
+            HStack(spacing: 6) {
+                GridActionChip(icon: "person.badge.plus", label: "New Client", color: Color.sweeplyNavy) { sendMessage("Add a new client") }
+                GridActionChip(icon: "doc.badge.plus", label: "Invoice", color: Color.sweeplyAccent) { sendMessage("Create a new invoice") }
+                GridActionChip(icon: "sparkles", label: "Insights", color: Color(red: 0.55, green: 0.35, blue: 0.95)) { sendMessage("Give me business insights") }
+            }
         }
-        .background(Color.sweeplyBackground)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .background(Color.sweeplyNavy.opacity(0.03))
     }
 
     // MARK: - Slash Command Menu
@@ -2430,6 +2462,41 @@ private struct QuickActionChip: View {
     }
 }
 
+// MARK: - Grid Action Chip
+
+private struct GridActionChip: View {
+    let icon: String
+    let label: String
+    var color: Color = Color.sweeplyNavy
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 6) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 6, style: .continuous)
+                        .fill(color.opacity(0.12))
+                        .frame(width: 22, height: 22)
+                    Image(systemName: icon)
+                        .font(.system(size: 9, weight: .semibold))
+                        .foregroundStyle(color)
+                }
+                Text(label)
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(Color.sweeplyNavy)
+                    .lineLimit(1)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 8)
+            .background(Color.sweeplySurface)
+            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).stroke(Color.sweeplyBorder, lineWidth: 1))
+        }
+        .buttonStyle(.plain)
+    }
+}
+
 // MARK: - Message Bubble
 
 private struct MessageBubble: View {
@@ -2594,7 +2661,7 @@ private struct MessageBubble: View {
                     .clipShape(RoundedRectangle(cornerRadius: 2))
             }
             Text(displayedText.isEmpty && !message.isNew ? message.text : displayedText)
-                .font(.system(size: 14))
+                .font(.system(size: 15))
                 .foregroundStyle(textColor)
                 .padding(.horizontal, 14)
                 .padding(.vertical, 10)

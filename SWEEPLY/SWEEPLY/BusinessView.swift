@@ -1,4 +1,5 @@
 import SwiftUI
+import Combine
 
 struct BusinessView: View {
     @Environment(AppSession.self)    private var session
@@ -12,6 +13,7 @@ struct BusinessView: View {
     @State private var catalogFeedbackMessage: String?
     @State private var selectedSnapshotSlide = 0
     @State private var showAIChat = false
+    @State private var insightIndex = 0
 
     private var profile: UserProfile {
         profileStore.profile ?? MockData.profile
@@ -82,6 +84,93 @@ struct BusinessView: View {
 
     private var nextJob: Job? {
         upcomingJobs.first
+    }
+
+    private var rotatingInsights: [AIInsight] {
+        var items: [AIInsight] = []
+        let cal = Calendar.current
+
+        // 1. Average job price (all completed jobs)
+        let allCompleted = businessJobs.filter { $0.status == .completed }
+        if !allCompleted.isEmpty {
+            let avg = allCompleted.reduce(0.0) { $0 + $1.price } / Double(allCompleted.count)
+            items.append(AIInsight(
+                icon: "dollarsign.circle.fill",
+                text: "Your average job is \(avg.currency) based on \(allCompleted.count) completed clean\(allCompleted.count == 1 ? "" : "s")"
+            ))
+        }
+
+        // 2. Busiest day of week (all-time)
+        let dayGroups = Dictionary(grouping: businessJobs) { cal.component(.weekday, from: $0.date) }
+        if let busiest = dayGroups.max(by: { $0.value.count < $1.value.count }) {
+            let dayNames = ["", "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
+            let name = busiest.key < dayNames.count ? dayNames[busiest.key] : "that day"
+            items.append(AIInsight(
+                icon: "star.fill",
+                text: "\(name) is your busiest day — \(busiest.value.count) job\(busiest.value.count == 1 ? "" : "s") historically"
+            ))
+        }
+
+        // 3. Most booked service type (all-time)
+        let serviceGroups = Dictionary(grouping: businessJobs) { $0.serviceType.rawValue }
+        if let top = serviceGroups.max(by: { $0.value.count < $1.value.count }) {
+            items.append(AIInsight(
+                icon: "sparkles",
+                text: "\(top.key) is your most requested service — booked \(top.value.count) time\(top.value.count == 1 ? "" : "s")"
+            ))
+        }
+
+        // 4. Client re-engagement opportunity (30+ days inactive)
+        let thirtyDaysAgo = cal.date(byAdding: .day, value: -30, to: Date()) ?? Date()
+        let recentClientIds = Set(businessJobs.filter { $0.date >= thirtyDaysAgo }.map { $0.clientId })
+        let inactive = clientsStore.clients.filter { $0.isActive && !recentClientIds.contains($0.id) }
+        if !inactive.isEmpty {
+            if inactive.count == 1, let client = inactive.first {
+                items.append(AIInsight(
+                    icon: "person.badge.clock.fill",
+                    text: "\(client.name) hasn't had a booking in 30+ days — a good time to reach out"
+                ))
+            } else {
+                items.append(AIInsight(
+                    icon: "person.badge.clock.fill",
+                    text: "\(inactive.count) clients haven't booked in 30+ days — a re-engagement opportunity"
+                ))
+            }
+        }
+
+        // 5. Month-over-month revenue change
+        if let lastMonthDate = cal.date(byAdding: .month, value: -1, to: Date()) {
+            let thisM = businessInvoices.filter {
+                $0.status == .paid && cal.isDate($0.createdAt, equalTo: Date(), toGranularity: .month)
+            }.reduce(0.0) { $0 + $1.total }
+            let lastM = businessInvoices.filter {
+                $0.status == .paid && cal.isDate($0.createdAt, equalTo: lastMonthDate, toGranularity: .month)
+            }.reduce(0.0) { $0 + $1.total }
+            if lastM > 0 {
+                let pct = ((thisM - lastM) / lastM) * 100
+                let dir = pct >= 0 ? "up" : "down"
+                items.append(AIInsight(
+                    icon: pct >= 0 ? "arrow.up.right.circle.fill" : "arrow.down.right.circle.fill",
+                    text: "Revenue is \(dir) \(Int(abs(pct)))% vs last month (\(lastM.currency) → \(thisM.currency))",
+                    isWarning: pct < -20,
+                    isSuccess: pct > 0
+                ))
+            }
+        }
+
+        // 6. Projected monthly revenue at current pace
+        let dayOfMonth = cal.component(.day, from: Date())
+        let daysInMonth = cal.range(of: .day, in: .month, for: Date())?.count ?? 30
+        if dayOfMonth > 5 && monthlyEarned > 0 {
+            let projected = (monthlyEarned / Double(dayOfMonth)) * Double(daysInMonth)
+            items.append(AIInsight(
+                icon: "chart.line.uptrend.xyaxis.circle.fill",
+                text: "At this pace you're on track for ~\(projected.currency) this month (\(monthlyEarned.currency) earned so far)",
+                isSuccess: true
+            ))
+        }
+
+        return items
     }
 
     private var serviceMix: [(label: String, percentage: Double, count: Int)] {
@@ -420,18 +509,14 @@ struct BusinessView: View {
 
     private var aiPreviewSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            // Section label
             HStack {
                 Text("AI ASSISTANT")
                     .font(.system(size: 11, weight: .bold))
                     .foregroundStyle(Color.sweeplyTextSub)
                     .tracking(1.0)
                 Spacer()
-                // Online badge
                 HStack(spacing: 4) {
-                    Circle()
-                        .fill(Color.green)
-                        .frame(width: 6, height: 6)
+                    Circle().fill(Color.green).frame(width: 6, height: 6)
                     Text("Online")
                         .font(.system(size: 11, weight: .semibold))
                         .foregroundStyle(Color.sweeplyTextSub)
@@ -443,9 +528,7 @@ struct BusinessView: View {
                     // Header row
                     HStack(spacing: 12) {
                         ZStack {
-                            Circle()
-                                .fill(Color.sweeplyNavy)
-                                .frame(width: 44, height: 44)
+                            Circle().fill(Color.sweeplyNavy).frame(width: 44, height: 44)
                             Text("S")
                                 .font(.system(size: 20, weight: .black, design: .rounded))
                                 .foregroundStyle(.white)
@@ -466,44 +549,52 @@ struct BusinessView: View {
 
                     Divider().padding(.vertical, 14)
 
-                    // Live insights preview
+                    // Rotating insight display
                     VStack(alignment: .leading, spacing: 10) {
-                        Text("QUICK INSIGHTS")
-                            .font(.system(size: 10, weight: .bold))
-                            .foregroundStyle(Color.sweeplyTextSub)
-                            .tracking(0.8)
-
-                        // Today's jobs insight
-                        let todayJobs = businessJobs.filter { Calendar.current.isDateInToday($0.date) && $0.status == .scheduled }
-                        if !todayJobs.isEmpty {
-                            AIInsightRow(icon: "calendar", text: "\(todayJobs.count) job\(todayJobs.count == 1 ? "" : "s") scheduled for today")
-                        } else {
-                            AIInsightRow(icon: "calendar", text: "No jobs scheduled today — a good time to book new ones")
+                        HStack {
+                            Text("BUSINESS INSIGHT")
+                                .font(.system(size: 10, weight: .bold))
+                                .foregroundStyle(Color.sweeplyTextSub)
+                                .tracking(0.8)
+                            Spacer()
+                            if !rotatingInsights.isEmpty {
+                                HStack(spacing: 4) {
+                                    let count = min(rotatingInsights.count, 6)
+                                    let activeIdx = insightIndex % rotatingInsights.count
+                                    ForEach(0..<count, id: \.self) { i in
+                                        Circle()
+                                            .fill(i == activeIdx ? Color.sweeplyNavy : Color.sweeplyBorder.opacity(0.8))
+                                            .frame(width: i == activeIdx ? 6 : 4, height: i == activeIdx ? 6 : 4)
+                                            .animation(.easeInOut(duration: 0.25), value: insightIndex)
+                                    }
+                                }
+                            }
                         }
 
-                        // Revenue insight
-                        let weekStart = Calendar.current.date(byAdding: .day, value: -7, to: Date()) ?? Date()
-                        let weekRevenue = businessInvoices.filter { $0.status == .paid && $0.createdAt >= weekStart }.reduce(0.0) { $0 + $1.total }
-                        AIInsightRow(icon: "chart.line.uptrend.xyaxis", text: "\(weekRevenue.currency) collected this week")
-
-                        // Overdue insight
-                        let overdueCount = businessInvoices.filter { $0.status == .overdue }.count
-                        if overdueCount > 0 {
-                            AIInsightRow(icon: "exclamationmark.circle", text: "\(overdueCount) overdue invoice\(overdueCount == 1 ? "" : "s") need attention", isWarning: true)
-                        } else {
-                            AIInsightRow(icon: "checkmark.circle", text: "All invoices are paid up — great work!", isSuccess: true)
+                        Group {
+                            if rotatingInsights.isEmpty {
+                                AIInsightRow(icon: "sparkles", text: "Book jobs and create invoices to unlock personalized AI insights.")
+                            } else {
+                                let idx = insightIndex % rotatingInsights.count
+                                let insight = rotatingInsights[idx]
+                                AIInsightRow(icon: insight.icon, text: insight.text, isWarning: insight.isWarning, isSuccess: insight.isSuccess)
+                                    .id(insightIndex)
+                                    .transition(.asymmetric(
+                                        insertion: .opacity.combined(with: .move(edge: .trailing)),
+                                        removal: .opacity.combined(with: .move(edge: .leading))
+                                    ))
+                            }
                         }
+                        .animation(.easeInOut(duration: 0.35), value: insightIndex)
                     }
 
                     Divider().padding(.vertical, 14)
 
-                    // Quick action chips
+                    // Unique chips — NOT duplicating Dashboard/Finances content
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 8) {
-                            ForEach(["Today's jobs", "Revenue check", "Who owes me?", "Best client", "Am I on track?"], id: \.self) { label in
-                                Button {
-                                    showAIChat = true
-                                } label: {
+                            ForEach(["Avg job price", "Busiest month", "Who to re-engage?", "Monthly forecast", "Popular service"], id: \.self) { label in
+                                Button { showAIChat = true } label: {
                                     Text(label)
                                         .font(.system(size: 12, weight: .medium))
                                         .foregroundStyle(Color.sweeplyNavy)
@@ -518,19 +609,15 @@ struct BusinessView: View {
                         }
                     }
 
-                    // CTA button
                     Button {
                         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                         showAIChat = true
                     } label: {
                         HStack(spacing: 8) {
-                            Image(systemName: "sparkles")
-                                .font(.system(size: 14, weight: .semibold))
-                            Text("Open AI Assistant")
-                                .font(.system(size: 15, weight: .bold))
+                            Image(systemName: "sparkles").font(.system(size: 14, weight: .semibold))
+                            Text("Open AI Assistant").font(.system(size: 15, weight: .bold))
                             Spacer()
-                            Image(systemName: "arrow.right")
-                                .font(.system(size: 13, weight: .semibold))
+                            Image(systemName: "arrow.right").font(.system(size: 13, weight: .semibold))
                         }
                         .foregroundStyle(.white)
                         .padding(.horizontal, 18)
@@ -541,6 +628,12 @@ struct BusinessView: View {
                     .buttonStyle(.plain)
                     .padding(.top, 4)
                 }
+            }
+        }
+        .onReceive(Timer.publish(every: 6, on: .main, in: .common).autoconnect()) { _ in
+            guard !rotatingInsights.isEmpty else { return }
+            withAnimation(.easeInOut(duration: 0.35)) {
+                insightIndex = (insightIndex + 1) % rotatingInsights.count
             }
         }
     }
@@ -704,6 +797,13 @@ struct BusinessView: View {
 }
 
 // MARK: - Subviews
+
+private struct AIInsight {
+    let icon: String
+    let text: String
+    var isWarning: Bool = false
+    var isSuccess: Bool = false
+}
 
 private struct KPIBlock: View {
     let title: String
