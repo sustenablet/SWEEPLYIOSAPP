@@ -1345,7 +1345,7 @@ struct AIChatView: View {
                 style: .info,
                 action: .openClients,
                 actionLabel: "View All Clients",
-                quickReplies: ["Add a client", "Who's most active?"]
+                quickReplies: ["Add a client", "Who's my best client?", "New clients this month"]
             )
         }
 
@@ -1425,7 +1425,7 @@ struct AIChatView: View {
                 style: .info,
                 action: .openFinances,
                 actionLabel: "View Full Finances",
-                quickReplies: overdueAmt > 0 ? ["Check overdue invoices", "Last month?"] : ["Last month?", "Business overview"]
+                quickReplies: overdueAmt > 0 ? ["Who owes me most?", "Am I on track?"] : ["Am I on track?", "Year to date", "Who's my best client?"]
             )
         }
 
@@ -1463,7 +1463,7 @@ struct AIChatView: View {
                 role: .assistant,
                 text: text,
                 style: .info,
-                quickReplies: ["Business insights", "Check finances", "Today's jobs"]
+                quickReplies: ["Who's my best client?", "Am I on track?", "Most popular services"]
             )
         }
 
@@ -1505,12 +1505,128 @@ struct AIChatView: View {
             return ChatMessage(role: .assistant, text: "\(inactive.count) client\(inactive.count == 1 ? "" : "s") haven't booked in 30+ days: \(names)\(inactive.count > 3 ? " and more" : "").", style: .info, action: .openClients, actionLabel: "View Clients", quickReplies: ["Schedule a job", "View all clients"])
         }
 
+        // TOP CLIENT BY REVENUE
+        if lowered.contains("best client") || lowered.contains("top client") || lowered.contains("most valuable client") || lowered.contains("who pays me the most") || lowered.contains("highest paying") || (lowered.contains("which client") && (lowered.contains("most") || lowered.contains("revenue") || lowered.contains("pays"))) {
+            let clientRevenue = clientsStore.clients.map { client -> (name: String, revenue: Double, count: Int) in
+                let paid = invoicesStore.invoices.filter { $0.clientId == client.id && $0.status == .paid }
+                return (name: client.name, revenue: paid.reduce(0) { $0 + $1.subtotal }, count: paid.count)
+            }.sorted { $0.revenue > $1.revenue }
+            if let top = clientRevenue.first, top.revenue > 0 {
+                var text = "Your top client by revenue is \(top.name) — \(top.revenue.formatted(.currency(code: "USD"))) collected across \(top.count) invoice\(top.count == 1 ? "" : "s")."
+                if clientRevenue.count > 1, clientRevenue[1].revenue > 0 {
+                    text += " Runner-up: \(clientRevenue[1].name) (\(clientRevenue[1].revenue.formatted(.currency(code: "USD"))))."
+                }
+                return ChatMessage(role: .assistant, text: text, style: .success, quickReplies: ["Business overview", "Revenue breakdown", "Who owes me most?"])
+            } else {
+                return ChatMessage(role: .assistant, text: "No paid invoices yet — once you start collecting, I'll rank your clients by revenue.", quickReplies: ["Create invoice", "Business overview"])
+            }
+        }
+
+        // MONTHLY PACE / ON TRACK
+        if lowered.contains("on track") || lowered.contains("on pace") || (lowered.contains("this month") && (lowered.contains("vs") || lowered.contains("compare") || lowered.contains("last month") || lowered.contains("pace"))) || lowered.contains("how's my month") || lowered.contains("am i on pace") {
+            let calendar = Calendar.current
+            let now = Date()
+            let dayOfMonth = calendar.component(.day, from: now)
+            let daysInMonth = calendar.range(of: .day, in: .month, for: now)?.count ?? 30
+            guard let lastMonthStart = calendar.date(byAdding: .month, value: -1, to: calendar.startOfMonth(for: now)),
+                  let lastMonthEnd = calendar.date(byAdding: .month, value: 1, to: lastMonthStart) else {
+                return ChatMessage(role: .assistant, text: "Couldn't calculate monthly pace right now.", quickReplies: ["Check revenue"])
+            }
+            let thisMonthRevenue = invoicesStore.invoices.filter { $0.status == .paid && calendar.isDate($0.createdAt, equalTo: now, toGranularity: .month) }.reduce(0.0) { $0 + $1.subtotal }
+            let lastMonthRevenue = invoicesStore.invoices.filter { $0.status == .paid && $0.createdAt >= lastMonthStart && $0.createdAt < lastMonthEnd }.reduce(0.0) { $0 + $1.subtotal }
+            let projectedRevenue = dayOfMonth > 0 ? (thisMonthRevenue / Double(dayOfMonth)) * Double(daysInMonth) : 0
+            var text = "This month so far: \(thisMonthRevenue.formatted(.currency(code: "USD"))) (\(dayOfMonth) of \(daysInMonth) days in)."
+            if lastMonthRevenue > 0 {
+                text += "\nLast month total: \(lastMonthRevenue.formatted(.currency(code: "USD")))."
+                text += "\nAt this pace, you're projected to collect \(projectedRevenue.formatted(.currency(code: "USD"))) — \(projectedRevenue >= lastMonthRevenue ? "ahead of" : "behind") last month."
+            }
+            return ChatMessage(role: .assistant, text: text, style: projectedRevenue >= lastMonthRevenue ? .success : .info, quickReplies: ["Check revenue", "Business overview", "Busiest month?"])
+        }
+
+        // YEAR TO DATE
+        if lowered.contains("year to date") || lowered.contains("ytd") || (lowered.contains("this year") && (lowered.contains("revenue") || lowered.contains("make") || lowered.contains("earn") || lowered.contains("collect") || lowered.contains("how much"))) || lowered.contains("all of this year") {
+            let calendar = Calendar.current
+            let yearStart = calendar.startOfYear(for: Date())
+            let ytdRevenue = invoicesStore.invoices.filter { $0.status == .paid && $0.createdAt >= yearStart }.reduce(0.0) { $0 + $1.subtotal }
+            let ytdJobs = jobsStore.jobs.filter { $0.status == .completed && $0.date >= yearStart }.count
+            let ytdClients = Set(jobsStore.jobs.filter { $0.date >= yearStart }.map(\.clientId)).count
+            return ChatMessage(role: .assistant, text: "Year to date (\(calendar.component(.year, from: Date()))):\n\n• Revenue collected: \(ytdRevenue.formatted(.currency(code: "USD")))\n• Jobs completed: \(ytdJobs)\n• Clients served: \(ytdClients)", style: .info, quickReplies: ["Busiest month?", "Business overview", "Check revenue"])
+        }
+
+        // WHO OWES ME MOST
+        if lowered.contains("who owes me") || lowered.contains("biggest outstanding") || lowered.contains("largest unpaid") || lowered.contains("most money owed") || (lowered.contains("owes") && lowered.contains("most")) {
+            let outstanding = invoicesStore.invoices.filter { $0.status == .unpaid || $0.status == .overdue }.sorted { $0.subtotal > $1.subtotal }
+            if outstanding.isEmpty {
+                return ChatMessage(role: .assistant, text: "Nobody owes you anything right now — all invoices are paid up!", style: .success, quickReplies: ["Business overview", "Create invoice"])
+            }
+            let lines = outstanding.prefix(4).map { "\($0.clientName): \($0.subtotal.formatted(.currency(code: "USD")))\($0.status == .overdue ? " (overdue)" : "")" }.joined(separator: "\n")
+            let total = outstanding.reduce(0.0) { $0 + $1.subtotal }
+            return ChatMessage(role: .assistant, text: "Outstanding balances (\(outstanding.count) invoice\(outstanding.count == 1 ? "" : "s"), \(total.formatted(.currency(code: "USD"))) total):\n\n\(lines)", style: outstanding.contains(where: { $0.status == .overdue }) ? .warning : .info, action: .openFinances, actionLabel: "Open Finances", quickReplies: ["Check overdue", "Business overview"])
+        }
+
+        // AVERAGE JOB PRICE
+        if lowered.contains("average job") || lowered.contains("average price") || lowered.contains("average charge") || lowered.contains("average rate") || (lowered.contains("average") && (lowered.contains("job") || lowered.contains("earn") || lowered.contains("make") || lowered.contains("clean"))) || lowered.contains("what do i charge on average") {
+            let completed = jobsStore.jobs.filter { $0.status == .completed }
+            if completed.isEmpty {
+                return ChatMessage(role: .assistant, text: "No completed jobs yet to average. Complete some jobs and I'll track your pricing.", quickReplies: ["Schedule a job"])
+            }
+            let avg = completed.reduce(0.0) { $0 + $1.price } / Double(completed.count)
+            let highest = completed.max(by: { $0.price < $1.price })
+            var text = "Your average job price is \(avg.formatted(.currency(code: "USD"))) across \(completed.count) completed job\(completed.count == 1 ? "" : "s")."
+            if let h = highest, h.price > avg {
+                text += " Your highest was \(h.price.formatted(.currency(code: "USD"))) for \(h.serviceType.rawValue)."
+            }
+            return ChatMessage(role: .assistant, text: text, style: .info, quickReplies: ["Most popular services", "Revenue breakdown", "Business overview"])
+        }
+
+        // LAST VISIT / WHEN DID I LAST CLEAN
+        let isLastVisitQuery = (lowered.contains("last job") || lowered.contains("last time") || lowered.contains("last clean") || lowered.contains("when did i last") || lowered.contains("last visit")) && !lowered.contains("my last job")
+        if isLastVisitQuery {
+            let matchedClient = clientsStore.clients.first { client in
+                let parts = client.name.lowercased().components(separatedBy: " ")
+                return parts.contains { $0.count > 2 && lowered.contains($0) }
+            }
+            if let client = matchedClient {
+                let lastJob = jobsStore.jobs.filter { $0.clientId == client.id && $0.status == .completed }.sorted { $0.date > $1.date }.first
+                if let job = lastJob {
+                    let daysAgo = Calendar.current.dateComponents([.day], from: job.date, to: Date()).day ?? 0
+                    let daysText = daysAgo == 0 ? "today" : daysAgo == 1 ? "yesterday" : "\(daysAgo) days ago"
+                    return ChatMessage(role: .assistant, text: "Last job for \(client.name) was \(job.serviceType.rawValue) on \(job.date.formatted(date: .abbreviated, time: .omitted)) — \(daysText).", style: .info, quickReplies: ["Schedule a follow-up for \(client.name.components(separatedBy: " ").first ?? client.name)", "Business overview"])
+                } else {
+                    return ChatMessage(role: .assistant, text: "No completed jobs found for \(client.name) yet.", quickReplies: ["Schedule a job for \(client.name.components(separatedBy: " ").first ?? client.name)"])
+                }
+            }
+        }
+
+        // MOST POPULAR SERVICES
+        if lowered.contains("popular service") || lowered.contains("most booked") || lowered.contains("best selling") || (lowered.contains("what service") && (lowered.contains("most") || lowered.contains("popular") || lowered.contains("common"))) || lowered.contains("service breakdown") {
+            var counts: [String: Int] = [:]
+            for job in jobsStore.jobs { counts[job.serviceType.rawValue, default: 0] += 1 }
+            if counts.isEmpty {
+                return ChatMessage(role: .assistant, text: "No jobs on record yet to rank services.", quickReplies: ["Schedule a job"])
+            }
+            let ranked = counts.sorted { $0.value > $1.value }
+            let lines = ranked.prefix(5).map { "\($0.key): \($0.value) job\($0.value == 1 ? "" : "s")" }.joined(separator: "\n")
+            return ChatMessage(role: .assistant, text: "Services by booking count:\n\n\(lines)", style: .info, quickReplies: ["Average job price", "Business insights", "Business overview"])
+        }
+
+        // NEW CLIENTS THIS MONTH
+        if (lowered.contains("new client") || lowered.contains("new customer")) && (lowered.contains("this month") || lowered.contains("month") || lowered.contains("recently") || lowered.contains("lately")) {
+            let calendar = Calendar.current
+            let monthStart = calendar.startOfMonth(for: Date())
+            let recentClients = clientsStore.clients.filter { client in
+                guard let firstJob = jobsStore.jobs.filter({ $0.clientId == client.id }).sorted(by: { $0.date < $1.date }).first else { return false }
+                return firstJob.date >= monthStart
+            }
+            return ChatMessage(role: .assistant, text: "\(recentClients.count) new client\(recentClients.count == 1 ? "" : "s") this month\(recentClients.isEmpty ? ". Tip: reach out to past clients to re-book." : recentClients.count == 1 ? ": \(recentClients[0].name)." : ": \(recentClients.prefix(3).map(\.name).joined(separator: ", "))\(recentClients.count > 3 ? " and more." : ".")") ", style: .info, quickReplies: ["Add a client", "Business overview", "Inactive clients"])
+        }
+
         // HELP
         if lowered.contains("help") || lowered.contains("what can you") || lowered.contains("what do you") || lowered.contains("capabilities") || lowered.contains("show me around") {
             return ChatMessage(
                 role: .assistant,
-                text: "Here's what I can help with:\n\n• Schedule and manage jobs (guided)\n• Add new clients (guided)\n• Create and track invoices\n• Check revenue and finances\n• Business overview and insights\n• Set reminders\n• Look up specific clients\n• Today's schedule, this week's jobs\n\nJust talk to me naturally.",
-                quickReplies: ["Schedule a job", "Check revenue", "Business overview"]
+                text: "Here's what I can help with:\n\n• Schedule and manage jobs\n• Add and look up clients\n• Create and track invoices\n• Revenue: total, monthly, YTD, by client\n• Business pace — am I on track this month?\n• Who owes me most, average job price\n• Busiest month, most popular services\n• Last visit for any client\n• Business overview and insights\n\nJust talk to me naturally.",
+                quickReplies: ["Who's my best client?", "Am I on track?", "Most popular services"]
             )
         }
 
@@ -2540,5 +2656,19 @@ private struct TypingIndicatorView: View {
             Spacer()
         }
         .onAppear { animating = true }
+    }
+}
+
+// MARK: - Calendar Helpers
+
+private extension Calendar {
+    func startOfMonth(for date: Date) -> Date {
+        let components = dateComponents([.year, .month], from: date)
+        return self.date(from: components) ?? date
+    }
+
+    func startOfYear(for date: Date) -> Date {
+        let components = dateComponents([.year], from: date)
+        return self.date(from: components) ?? date
     }
 }
