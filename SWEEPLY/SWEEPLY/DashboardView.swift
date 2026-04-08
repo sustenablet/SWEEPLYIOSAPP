@@ -42,6 +42,15 @@ struct DashboardView: View {
         profileStore.profile ?? MockData.profile
     }
 
+    private var greeting: String {
+        let hour = Calendar.current.component(.hour, from: Date())
+        switch hour {
+        case 5..<12:  return "Good morning"
+        case 12..<17: return "Good afternoon"
+        default:      return "Good evening"
+        }
+    }
+
     private var notificationsCount: Int {
         notificationsStore.notifications.filter { !$0.isRead }.count
     }
@@ -227,7 +236,7 @@ struct DashboardView: View {
         PageHeader(
             eyebrow: nil,
             title: longDate,
-            subtitle: "Good morning, \(profile.fullName.split(separator: " ").first ?? "")"
+            subtitle: "\(greeting), \(profile.fullName.split(separator: " ").first ?? "")"
         ) {
             HStack(spacing: 12) {
                 Button { showNotifications = true } label: {
