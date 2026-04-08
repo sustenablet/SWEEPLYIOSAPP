@@ -7,10 +7,20 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		E9743FA32F87116D0075413E /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E9743FA22F87116D0075413E /* WidgetKit.framework */; };
+		E9743FA52F87116D0075413E /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E9743FA42F87116D0075413E /* SwiftUI.framework */; };
+		E9743FB22F87116F0075413E /* SweeplyWIdgetsExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = E9743FA02F87116D0075413E /* SweeplyWIdgetsExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		E9D078C32F7E357400E31AC7 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = E9D078C22F7E357400E31AC7 /* Supabase */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
+		E9743FB02F87116F0075413E /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = E9D078352F7E357300E31AC7 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = E9743F9F2F87116D0075413E;
+			remoteInfo = SweeplyWIdgetsExtension;
+		};
 		E9D0784F2F7E357400E31AC7 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = E9D078352F7E357300E31AC7 /* Project object */;
@@ -27,13 +37,37 @@
 		};
 /* End PBXContainerItemProxy section */
 
+/* Begin PBXCopyFilesBuildPhase section */
+		E9743FB72F87116F0075413E /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				E9743FB22F87116F0075413E /* SweeplyWIdgetsExtension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
+		E9743FA02F87116D0075413E /* SweeplyWIdgetsExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = SweeplyWIdgetsExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		E9743FA22F87116D0075413E /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = /System/Library/Frameworks/WidgetKit.framework; sourceTree = "<absolute>"; };
+		E9743FA42F87116D0075413E /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = /System/Library/Frameworks/SwiftUI.framework; sourceTree = "<absolute>"; };
 		E9D0783D2F7E357300E31AC7 /* SWEEPLY.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SWEEPLY.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		E9D0784E2F7E357400E31AC7 /* SWEEPLYTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SWEEPLYTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		E9D078582F7E357400E31AC7 /* SWEEPLYUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SWEEPLYUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		E9743FB62F87116F0075413E /* Exceptions for "SweeplyWIdgets" folder in "SweeplyWIdgetsExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = E9743F9F2F87116D0075413E /* SweeplyWIdgetsExtension */;
+		};
 		E9D078602F7E357400E31AC7 /* Exceptions for "SWEEPLY" folder in "SWEEPLY" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
@@ -44,6 +78,14 @@
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
+		E9743FA62F87116D0075413E /* SweeplyWIdgets */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				E9743FB62F87116F0075413E /* Exceptions for "SweeplyWIdgets" folder in "SweeplyWIdgetsExtension" target */,
+			);
+			path = SweeplyWIdgets;
+			sourceTree = "<group>";
+		};
 		E9D0783F2F7E357300E31AC7 /* SWEEPLY */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
@@ -65,6 +107,15 @@
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		E9743F9D2F87116D0075413E /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				E9743FA52F87116D0075413E /* SwiftUI.framework in Frameworks */,
+				E9743FA32F87116D0075413E /* WidgetKit.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		E9D0783A2F7E357300E31AC7 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -90,12 +141,23 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		E9743FA12F87116D0075413E /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				E9743FA22F87116D0075413E /* WidgetKit.framework */,
+				E9743FA42F87116D0075413E /* SwiftUI.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
 		E9D078342F7E357300E31AC7 = {
 			isa = PBXGroup;
 			children = (
 				E9D0783F2F7E357300E31AC7 /* SWEEPLY */,
 				E9D078512F7E357400E31AC7 /* SWEEPLYTests */,
 				E9D0785B2F7E357400E31AC7 /* SWEEPLYUITests */,
+				E9743FA62F87116D0075413E /* SweeplyWIdgets */,
+				E9743FA12F87116D0075413E /* Frameworks */,
 				E9D0783E2F7E357300E31AC7 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -106,6 +168,7 @@
 				E9D0783D2F7E357300E31AC7 /* SWEEPLY.app */,
 				E9D0784E2F7E357400E31AC7 /* SWEEPLYTests.xctest */,
 				E9D078582F7E357400E31AC7 /* SWEEPLYUITests.xctest */,
+				E9743FA02F87116D0075413E /* SweeplyWIdgetsExtension.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -113,6 +176,28 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		E9743F9F2F87116D0075413E /* SweeplyWIdgetsExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = E9743FB32F87116F0075413E /* Build configuration list for PBXNativeTarget "SweeplyWIdgetsExtension" */;
+			buildPhases = (
+				E9743F9C2F87116D0075413E /* Sources */,
+				E9743F9D2F87116D0075413E /* Frameworks */,
+				E9743F9E2F87116D0075413E /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				E9743FA62F87116D0075413E /* SweeplyWIdgets */,
+			);
+			name = SweeplyWIdgetsExtension;
+			packageProductDependencies = (
+			);
+			productName = SweeplyWIdgetsExtension;
+			productReference = E9743FA02F87116D0075413E /* SweeplyWIdgetsExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 		E9D0783C2F7E357300E31AC7 /* SWEEPLY */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = E9D078612F7E357400E31AC7 /* Build configuration list for PBXNativeTarget "SWEEPLY" */;
@@ -120,10 +205,12 @@
 				E9D078392F7E357300E31AC7 /* Sources */,
 				E9D0783A2F7E357300E31AC7 /* Frameworks */,
 				E9D0783B2F7E357300E31AC7 /* Resources */,
+				E9743FB72F87116F0075413E /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				E9743FB12F87116F0075413E /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				E9D0783F2F7E357300E31AC7 /* SWEEPLY */,
@@ -192,6 +279,9 @@
 				LastSwiftUpdateCheck = 2640;
 				LastUpgradeCheck = 2640;
 				TargetAttributes = {
+					E9743F9F2F87116D0075413E = {
+						CreatedOnToolsVersion = 26.4;
+					};
 					E9D0783C2F7E357300E31AC7 = {
 						CreatedOnToolsVersion = 26.4;
 					};
@@ -225,11 +315,19 @@
 				E9D0783C2F7E357300E31AC7 /* SWEEPLY */,
 				E9D0784D2F7E357400E31AC7 /* SWEEPLYTests */,
 				E9D078572F7E357400E31AC7 /* SWEEPLYUITests */,
+				E9743F9F2F87116D0075413E /* SweeplyWIdgetsExtension */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		E9743F9E2F87116D0075413E /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		E9D0783B2F7E357300E31AC7 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -254,6 +352,13 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		E9743F9C2F87116D0075413E /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		E9D078392F7E357300E31AC7 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -278,6 +383,11 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
+		E9743FB12F87116F0075413E /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = E9743F9F2F87116D0075413E /* SweeplyWIdgetsExtension */;
+			targetProxy = E9743FB02F87116F0075413E /* PBXContainerItemProxy */;
+		};
 		E9D078502F7E357400E31AC7 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = E9D0783C2F7E357300E31AC7 /* SWEEPLY */;
@@ -291,6 +401,90 @@
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
+		E9743FB42F87116F0075413E /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = YCZQ7F8K2U;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = SweeplyWIdgets/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = SweeplyWIdgets;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.4;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@executable_path/../../../../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 26.3;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = SWEEPLY.SWEEPLY.SweeplyWIdgets;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = auto;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx xros xrsimulator";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2,7";
+				XROS_DEPLOYMENT_TARGET = 26.4;
+			};
+			name = Debug;
+		};
+		E9743FB52F87116F0075413E /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = YCZQ7F8K2U;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = SweeplyWIdgets/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = SweeplyWIdgets;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.4;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@executable_path/../../../../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 26.3;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = SWEEPLY.SWEEPLY.SweeplyWIdgets;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = auto;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx xros xrsimulator";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2,7";
+				XROS_DEPLOYMENT_TARGET = 26.4;
+			};
+			name = Release;
+		};
 		E9D078622F7E357400E31AC7 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -567,6 +761,15 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		E9743FB32F87116F0075413E /* Build configuration list for PBXNativeTarget "SweeplyWIdgetsExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				E9743FB42F87116F0075413E /* Debug */,
+				E9743FB52F87116F0075413E /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		E9D078382F7E357300E31AC7 /* Build configuration list for PBXProject "SWEEPLY" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (

@@ -234,6 +234,7 @@ struct RootView: View {
                 await profileStore.load(userId: uid)
             }
             await clientsStore.load(isAuthenticated: session.isAuthenticated)
+            WidgetDataWriter.write(jobs: jobsStore.jobs, invoices: invoicesStore.invoices)
         }
         .onChange(of: session.isAuthenticated) { _, authed in
             if !authed {

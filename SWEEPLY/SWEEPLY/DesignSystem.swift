@@ -3,23 +3,23 @@ import UIKit
 
 // MARK: - Brand Colors
 //
-// Natural Palette: Clay Terracotta × Warm Stone × Slate
-//
-// ┌─────────────────────────────────────────────────────────────┐
-// │  Color discipline — read before using any sweeply* color    │
-// │                                                             │
-// │  PRIMARY TEXT → Color.primary (system black/white)          │
-// │  SECONDARY TEXT → sweeplyTextSub (muted stone)               │
-// │  NUMBERS & AMOUNTS → Color.primary — never colored          │
-// │  BACKGROUNDS → sweeplyBackground (pages) / sweeplySurface   │
-// └─────────────────────────────────────────────────────────────┘
+ // Refined Palette: Blue-Gray Accent × Warm Stone × Slate
+ //
+ // ┌─────────────────────────────────────────────────────────────┐
+ // │  Color discipline — read before using any sweeply* color    │
+ // │                                                             │
+ // │  PRIMARY TEXT → Color.primary (system black/white)          │
+ // │  SECONDARY TEXT → sweeplyTextSub (muted stone)               │
+ // │  NUMBERS & AMOUNTS → Color.primary — never colored          │
+ // │  BACKGROUNDS → sweeplyBackground (pages) / sweeplySurface   │
+ // └─────────────────────────────────────────────────────────────┘
 
 extension Color {
-    /// Muted Clay/Terracotta — used sparingly for high-intent actions
+    /// Blue-Gray Accent — used for high-intent actions and interactive elements
     static let sweeplyAccent = Color(uiColor: UIColor { trait in
         return trait.userInterfaceStyle == .dark
-            ? UIColor(red: 0.65, green: 0.44, blue: 0.35, alpha: 1.0) // Lighter Clay
-            : UIColor(red: 0.557, green: 0.349, blue: 0.243, alpha: 1.0) // Deep Clay #8E593E
+            ? UIColor(red: 0.41, green: 0.53, blue: 0.63, alpha: 1.0) // Lighter Blue-Gray #6987A0
+            : UIColor(red: 0.16, green: 0.33, blue: 0.42, alpha: 1.0) // Deep Blue-Gray #28536B
     })
 
     /// Slate Charcoal — tab bar, avatar fill, dark UI chrome
@@ -43,9 +43,26 @@ extension Color {
             : .white
     })
 
-    static let sweeplySuccess     = sweeplyAccent
-    static let sweeplyWarning     = Color(red: 0.72, green: 0.55, blue: 0.35)
-    static let sweeplyDestructive = Color(red: 0.65, green: 0.25, blue: 0.22)
+    /// Vibrant Teal — success state and positive affirmations
+    static let sweeplySuccess = Color(uiColor: UIColor { trait in
+        return trait.userInterfaceStyle == .dark
+            ? UIColor(red: 0.25, green: 0.65, blue: 0.65, alpha: 1.0) // Lighter Teal
+            : UIColor(red: 0.15, green: 0.50, blue: 0.50, alpha: 1.0) // Deep Teal #268080
+    })
+
+    /// Warm Amber — warning state and attention indicators
+    static let sweeplyWarning = Color(uiColor: UIColor { trait in
+        return trait.userInterfaceStyle == .dark
+            ? UIColor(red: 0.85, green: 0.65, blue: 0.35, alpha: 1.0) // Lighter Amber
+            : UIColor(red: 0.75, green: 0.50, blue: 0.25, alpha: 1.0) // Warm Amber #BF8040
+    })
+
+    /// Deep Coral — error state and critical alerts
+    static let sweeplyDestructive = Color(uiColor: UIColor { trait in
+        return trait.userInterfaceStyle == .dark
+            ? UIColor(red: 0.80, green: 0.35, blue: 0.35, alpha: 1.0) // Lighter Coral
+            : UIColor(red: 0.70, green: 0.25, blue: 0.25, alpha: 1.0) // Deep Coral #B34040
+    })
 
     /// Muted Stone – adaptive
     static var sweeplyTextSub: Color { Color(uiColor: .secondaryLabel) }
