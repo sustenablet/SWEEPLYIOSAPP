@@ -1529,12 +1529,64 @@ struct AIChatView: View {
             )
         }
 
-        // DEFAULT
+        // DEFAULT — fall through to Groq AI if configured
+        if AIService.shared.isConfigured {
+            let context = buildBusinessContext()
+            if let aiReply = await AIService.shared.chat(userMessage: input, systemPrompt: context) {
+                return ChatMessage(role: .assistant, text: aiReply.trimmingCharacters(in: .whitespacesAndNewlines))
+            }
+        }
+
         return ChatMessage(
             role: .assistant,
-            text: "I'm not sure I caught that — I'm still learning! Try asking about your jobs, clients, invoices, or revenue. You can also say \"schedule a job\" or \"add a client\" to get started.",
+            text: "I'm not sure I caught that — try asking about your jobs, clients, invoices, or revenue. You can also say \"schedule a job\" or \"add a client\" to get started.",
             quickReplies: ["Today's jobs", "Business overview", "Help"]
         )
+    }
+
+    // MARK: - Business Context for AI
+
+    private func buildBusinessContext() -> String {
+        let businessName = profileStore.profile?.businessName ?? "your cleaning business"
+        let clientCount = clientsStore.clients.filter { $0.isActive ?? true }.count
+        let today = Calendar.current.startOfDay(for: Date())
+        let todayJobs = jobsStore.jobs.filter { Calendar.current.isDate($0.date, inSameDayAs: today) }
+        let overdueInvoices = invoicesStore.invoices.filter { $0.status == .overdue }
+        let overdueTotal = overdueInvoices.reduce(0) { $0 + $1.amount }
+        let weekStart = Calendar.current.date(byAdding: .day, value: -7, to: Date()) ?? Date()
+        let weekRevenue = invoicesStore.invoices
+            .filter { $0.status == .paid && $0.createdAt >= weekStart }
+            .reduce(0) { $0 + $1.amount }
+        let nextJob = jobsStore.jobs
+            .filter { $0.status == .scheduled && $0.date >= Date() }
+            .sorted { $0.date < $1.date }
+            .first
+
+        var todayJobsText = "none scheduled"
+        if !todayJobs.isEmpty {
+            todayJobsText = todayJobs.map { "\($0.clientName) (\($0.serviceType.rawValue))" }.joined(separator: ", ")
+        }
+
+        var nextJobText = "none upcoming"
+        if let job = nextJob {
+            let formatter = DateFormatter()
+            formatter.dateStyle = .short
+            formatter.timeStyle = .short
+            nextJobText = "\(job.clientName) on \(formatter.string(from: job.date))"
+        }
+
+        return """
+        You are Sweeply AI, a smart business assistant for \(businessName), a cleaning business.
+
+        Current business snapshot:
+        - Active clients: \(clientCount)
+        - Jobs today: \(todayJobsText)
+        - Revenue this week: \(weekRevenue.currency)
+        - Overdue invoices: \(overdueInvoices.count) totaling \(overdueTotal.currency)
+        - Next upcoming job: \(nextJobText)
+
+        You help the owner manage their cleaning business. Be friendly, practical, and concise — 2-3 sentences max unless they ask for detail. Focus on actionable advice. If asked about specific data you don't have access to, say so briefly and suggest they check the relevant screen.
+        """
     }
 
     // MARK: - Guided Job Collection

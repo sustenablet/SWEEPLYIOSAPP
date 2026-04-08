@@ -6,5 +6,7 @@
 	<string>https://oadyusmxttchunswozcy.supabase.co</string>
 	<key>SUPABASE_ANON_KEY</key>
 	<string>eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9hZHl1c214dHRjaHVuc3dvemN5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUyMjA4OTIsImV4cCI6MjA5MDc5Njg5Mn0.2qnCxMWh5_8zWk4j9yJEd-v9QUq8lZ8Tk3dBkjb2U8E</string>
+	<key>GROQ_API_KEY</key>
+	<string>ADD_YOUR_GROQ_KEY_HERE</string>
 </dict>
 </plist>
