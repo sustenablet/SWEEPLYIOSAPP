@@ -30,7 +30,7 @@ final class AppSession {
         do {
             _ = try await client.auth.signIn(email: email, password: password)
         } catch {
-            lastAuthError = error.localizedDescription
+            lastAuthError = humanizedAuthError(error)
         }
     }
 
@@ -40,8 +40,31 @@ final class AppSession {
         do {
             _ = try await client.auth.signUp(email: email, password: password)
         } catch {
-            lastAuthError = error.localizedDescription
+            lastAuthError = humanizedAuthError(error)
         }
+    }
+
+    private func humanizedAuthError(_ error: Error) -> String {
+        let msg = error.localizedDescription
+        if msg.contains("Invalid login credentials") || msg.contains("invalid_grant") {
+            return "Wrong email or password. Please try again."
+        }
+        if msg.contains("Email not confirmed") || msg.contains("email_not_confirmed") {
+            return "Check your email and confirm your account first."
+        }
+        if msg.contains("User already registered") || msg.contains("already registered") {
+            return "An account with this email already exists. Try signing in."
+        }
+        if msg.contains("Password should be at least") {
+            return "Password must be at least 6 characters."
+        }
+        if msg.lowercased().contains("network") || msg.contains("The Internet connection") {
+            return "No internet connection. Check your network and try again."
+        }
+        if msg.lowercased().contains("rate limit") || msg.lowercased().contains("too many requests") {
+            return "Too many attempts. Please wait a moment and try again."
+        }
+        return msg
     }
 
     func signOut() async {
