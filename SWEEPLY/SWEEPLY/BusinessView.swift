@@ -11,6 +11,7 @@ struct BusinessView: View {
     @State private var serviceEditorState: ServiceCatalogEditorState?
     @State private var catalogFeedbackMessage: String?
     @State private var selectedSnapshotSlide = 0
+    @State private var healthRingProgress: Double = 0
 
     private var profile: UserProfile {
         profileStore.profile ?? MockData.profile
@@ -118,6 +119,48 @@ struct BusinessView: View {
         profile.settings.hydratedServiceCatalog
     }
 
+    // MARK: - Health Score
+
+    private var healthJobScore: Double {
+        let total = businessJobs.filter { $0.status != .cancelled }.count
+        guard total > 0 else { return 0 }
+        let completed = businessJobs.filter { $0.status == .completed }.count
+        return min(Double(completed) / Double(total) * 40.0, 40.0)
+    }
+
+    private var healthInvoiceScore: Double {
+        let total = businessInvoices.count
+        guard total > 0 else { return 0 }
+        let paid = businessInvoices.filter { $0.status == .paid }.count
+        return min(Double(paid) / Double(total) * 35.0, 35.0)
+    }
+
+    private var healthClientScore: Double {
+        min(Double(totalActiveClients) * 5.0, 25.0)
+    }
+
+    private var healthScore: Double {
+        healthJobScore + healthInvoiceScore + healthClientScore
+    }
+
+    private var healthLabel: String {
+        switch healthScore {
+        case 80...100: return "Excellent"
+        case 60..<80:  return "Good"
+        case 40..<60:  return "Fair"
+        default:       return "Needs Attention"
+        }
+    }
+
+    private var healthColor: Color {
+        switch healthScore {
+        case 80...100: return .sweeplySuccess
+        case 60..<80:  return Color(red: 0.2, green: 0.72, blue: 0.45)
+        case 40..<60:  return .sweeplyWarning
+        default:       return .sweeplyDestructive
+        }
+    }
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 28) {
@@ -142,7 +185,10 @@ struct BusinessView: View {
                 }
                 .padding(.horizontal, -20)
 
-                // 2. Snapshot
+                // 2. Business Health Score
+                healthScoreCard
+
+                // 3. Snapshot
                 SectionCard {
                     VStack(alignment: .leading, spacing: 14) {
                         CardHeader(title: "Business Snapshot", subtitle: "How the operation is moving this month", action: nil)
@@ -395,12 +441,57 @@ struct BusinessView: View {
         }
         .onAppear {
             withAnimation(.easeOut(duration: 0.3)) { appeared = true }
+            withAnimation(.easeInOut(duration: 1.0).delay(0.3)) {
+                healthRingProgress = healthScore / 100.0
+            }
         }
         .sheet(item: $serviceEditorState) { editorState in
             ServiceCatalogEditorSheet(state: editorState) { result in
                 Task { await saveCatalogChange(from: result) }
             }
         }
+    }
+
+    private var healthScoreCard: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack(spacing: 16) {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Business Health")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(Color.sweeplyNavy)
+                    Text(healthLabel)
+                        .font(.system(size: 13, weight: .bold))
+                        .foregroundStyle(healthColor)
+                }
+                Spacer()
+                ZStack {
+                    Circle()
+                        .stroke(Color.sweeplyBorder, lineWidth: 6)
+                        .frame(width: 64, height: 64)
+                    Circle()
+                        .trim(from: 0, to: healthRingProgress)
+                        .stroke(healthColor, style: StrokeStyle(lineWidth: 6, lineCap: .round))
+                        .frame(width: 64, height: 64)
+                        .rotationEffect(.degrees(-90))
+                    Text("\(Int(healthScore))")
+                        .font(.system(size: 16, weight: .bold, design: .monospaced))
+                        .foregroundStyle(Color.sweeplyNavy)
+                }
+            }
+
+            VStack(spacing: 8) {
+                HealthMiniBar(label: "Jobs", value: healthJobScore, maxValue: 40, color: healthColor)
+                HealthMiniBar(label: "Invoices", value: healthInvoiceScore, maxValue: 35, color: healthColor)
+                HealthMiniBar(label: "Clients", value: healthClientScore, maxValue: 25, color: healthColor)
+            }
+        }
+        .padding(16)
+        .background(Color.sweeplySurface)
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .stroke(Color.sweeplyBorder, lineWidth: 1)
+        )
     }
 
     private func snapshotRow(title: String, value: String, detail: String, accent: Color) -> some View {
@@ -595,6 +686,37 @@ private struct KPIBlock: View {
         .background(Color.sweeplySurface)
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(Color.sweeplyBorder, lineWidth: 1))
+    }
+}
+
+private struct HealthMiniBar: View {
+    let label: String
+    let value: Double
+    let maxValue: Double
+    let color: Color
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack {
+                Text(label)
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(Color.sweeplyTextSub)
+                Spacer()
+                Text("\(Int(value))/\(Int(maxValue))")
+                    .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                    .foregroundStyle(Color.sweeplyTextSub)
+            }
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    RoundedRectangle(cornerRadius: 3)
+                        .fill(Color.sweeplyBorder.opacity(0.5))
+                    RoundedRectangle(cornerRadius: 3)
+                        .fill(color)
+                        .frame(width: maxValue > 0 ? geo.size.width * (value / maxValue) : 0)
+                }
+            }
+            .frame(height: 5)
+        }
     }
 }
 
