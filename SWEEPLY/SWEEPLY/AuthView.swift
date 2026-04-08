@@ -7,6 +7,10 @@ struct AuthView: View {
     @State private var password = ""
     @State private var isSignUp = false
     @State private var isSubmitting = false
+    @State private var showForgotPassword = false
+    @State private var resetEmail = ""
+    @State private var resetSent = false
+    @State private var resetError: String? = nil
 
     private var canSubmit: Bool {
         email.contains("@") && password.count >= 6 && !isSubmitting
@@ -127,10 +131,13 @@ struct AuthView: View {
             VStack(spacing: 4) {
                 if !isSignUp {
                     Button("Forgot password?") {
-                        // placeholder — can wire reset flow here
+                        resetEmail = email
+                        resetSent = false
+                        resetError = nil
+                        showForgotPassword = true
                     }
                     .font(.system(size: 13, weight: .medium))
-                    .foregroundStyle(Color.sweeplyAccent)
+                    .foregroundStyle(Color.sweeplyTextSub)
                     .padding(.top, 6)
                 }
 
@@ -156,6 +163,9 @@ struct AuthView: View {
         )
         .animation(.easeInOut(duration: 0.2), value: isSignUp)
         .animation(.easeInOut(duration: 0.15), value: session.lastAuthError)
+        .sheet(isPresented: $showForgotPassword) {
+            ForgotPasswordSheet(resetEmail: $resetEmail, resetSent: $resetSent, resetError: $resetError)
+        }
     }
 
     // MARK: - Tab Switcher
@@ -259,6 +269,142 @@ struct AuthView: View {
         } else {
             UINotificationFeedbackGenerator().notificationOccurred(.error)
         }
+    }
+}
+
+// MARK: - Forgot Password Sheet
+
+private struct ForgotPasswordSheet: View {
+    @Binding var resetEmail: String
+    @Binding var resetSent: Bool
+    @Binding var resetError: String?
+    @Environment(\.dismiss) private var dismiss
+    @State private var isSending = false
+
+    var body: some View {
+        VStack(spacing: 0) {
+            Capsule()
+                .fill(Color.sweeplyBorder)
+                .frame(width: 36, height: 4)
+                .padding(.top, 12)
+                .padding(.bottom, 28)
+
+            if resetSent {
+                VStack(spacing: 20) {
+                    ZStack {
+                        Circle()
+                            .fill(Color.sweeplyAccent.opacity(0.1))
+                            .frame(width: 72, height: 72)
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.system(size: 36))
+                            .foregroundStyle(Color.sweeplyAccent)
+                    }
+                    VStack(spacing: 8) {
+                        Text("Check your email")
+                            .font(.system(size: 22, weight: .bold))
+                            .foregroundStyle(Color.sweeplyNavy)
+                        Text("We sent a reset link to \(resetEmail). Check your inbox and follow the instructions.")
+                            .font(.system(size: 14))
+                            .foregroundStyle(Color.sweeplyTextSub)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 8)
+                    }
+                    Button("Done") { dismiss() }
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 52)
+                        .background(Color.sweeplyNavy)
+                        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        .padding(.top, 8)
+                }
+                .padding(.horizontal, 28)
+            } else {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Reset Password")
+                        .font(.system(size: 24, weight: .bold))
+                        .foregroundStyle(Color.sweeplyNavy)
+                    Text("Enter your email and we'll send you a reset link.")
+                        .font(.system(size: 14))
+                        .foregroundStyle(Color.sweeplyTextSub)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 28)
+
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Email")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(Color.sweeplyTextSub)
+                    TextField("you@example.com", text: $resetEmail)
+                        .textContentType(.emailAddress)
+                        .keyboardType(.emailAddress)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 13)
+                        .background(Color.sweeplyBackground)
+                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                .stroke(Color.sweeplyBorder, lineWidth: 1)
+                        )
+                }
+                .padding(.horizontal, 28)
+                .padding(.top, 24)
+
+                if let err = resetError, !err.isEmpty {
+                    HStack(spacing: 8) {
+                        Image(systemName: "exclamationmark.circle.fill")
+                            .font(.system(size: 13))
+                        Text(err)
+                            .font(.system(size: 13))
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .foregroundStyle(Color.sweeplyDestructive)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Color.sweeplyDestructive.opacity(0.08))
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                    .padding(.horizontal, 28)
+                    .padding(.top, 12)
+                }
+
+                Button {
+                    guard !resetEmail.isEmpty else { return }
+                    isSending = true
+                    Task {
+                        do {
+                            guard let client = SupabaseManager.shared else {
+                                await MainActor.run { resetError = "Not connected. Please try again."; isSending = false }
+                                return
+                            }
+                            try await client.auth.resetPasswordForEmail(resetEmail)
+                            await MainActor.run { resetSent = true; isSending = false }
+                        } catch {
+                            await MainActor.run { resetError = error.localizedDescription; isSending = false }
+                        }
+                    }
+                } label: {
+                    HStack(spacing: 10) {
+                        if isSending { ProgressView().tint(.white).scaleEffect(0.85) }
+                        Text("Send Reset Link")
+                            .font(.system(size: 16, weight: .bold))
+                    }
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 52)
+                    .background(resetEmail.contains("@") ? Color.sweeplyNavy : Color.sweeplyNavy.opacity(0.35))
+                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                }
+                .disabled(isSending || !resetEmail.contains("@"))
+                .padding(.horizontal, 28)
+                .padding(.top, 24)
+            }
+
+            Spacer()
+        }
+        .background(Color.sweeplySurface.ignoresSafeArea())
     }
 }
 

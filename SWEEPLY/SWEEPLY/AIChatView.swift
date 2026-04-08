@@ -93,10 +93,10 @@ struct JobDraft {
     var address: String? = nil
 
     var nextMissingField: String? {
-        if clientName == nil { return "Which client is this job for?" }
-        if serviceType == nil { return "What type of service? (Standard Clean, Deep Clean, Move In/Out, Post Construction, Office Clean)" }
-        if date == nil { return "What date? (e.g. tomorrow, next Thursday, April 15)" }
-        if price == nil { return "What's the price for this job?" }
+        if clientName == nil { return "Who's this job for? Pick a client or type their name." }
+        if serviceType == nil { return "What kind of clean? Pick a service type." }
+        if date == nil { return "When's it happening? You can say 'tomorrow', 'next Monday', or a specific date." }
+        if price == nil { return "How much are you charging? (e.g. 150 or $180)" }
         return nil
     }
 
@@ -1579,7 +1579,7 @@ struct AIChatView: View {
             } else if let price = Double(input.trimmingCharacters(in: .whitespacesAndNewlines).replacingOccurrences(of: "$", with: "")) {
                 updatedDraft.price = price
             } else {
-                return ChatMessage(role: .assistant, text: "What's the price for this job? (e.g. 150 or $200)")
+                return ChatMessage(role: .assistant, text: "How much are you charging? (e.g. 150 or $180)")
             }
         }
 
@@ -1602,7 +1602,7 @@ struct AIChatView: View {
     private func buildJobConfirmation(_ draft: JobDraft) -> ChatMessage {
         return ChatMessage(
             role: .assistant,
-            text: "Here's the job summary — ready to create it?",
+            text: "Here's what I've got — does this look right?",
             style: .info,
             action: .newJob,
             actionLabel: "Open Job Form",
@@ -1632,9 +1632,9 @@ struct AIChatView: View {
             return ChatMessage(
                 role: .assistant,
                 text: "I'll open the client form with \(updatedDraft.name ?? "their") details pre-filled. You can add more info before saving.",
+                style: .success,
                 action: .newClient,
                 actionLabel: "Open Client Form",
-                style: .success,
                 quickReplies: ["Add another client", "Schedule a job"]
             )
         } else {

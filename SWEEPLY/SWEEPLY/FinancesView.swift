@@ -504,8 +504,12 @@ private struct MinimalInvoiceRow: View {
         switch invoice.status {
         case .paid:    return "Paid \(ds)"
         case .unpaid:  return "Due \(ds)"
-        case .overdue: return "Due \(ds)"
+        case .overdue: return "Overdue since \(ds)"
         }
+    }
+
+    private var dueDateColor: Color {
+        invoice.status == .overdue ? Color.sweeplyDestructive : Color.sweeplyTextSub
     }
 
     var body: some View {
@@ -531,7 +535,7 @@ private struct MinimalInvoiceRow: View {
                             .foregroundStyle(Color.sweeplyBorder)
                         Text(dueDateLabel)
                             .font(.system(size: 11, weight: .regular))
-                            .foregroundStyle(Color.sweeplyTextSub)
+                            .foregroundStyle(dueDateColor)
                         Spacer(minLength: 8)
                         InvoiceStatusBadge(status: invoice.status)
                     }
