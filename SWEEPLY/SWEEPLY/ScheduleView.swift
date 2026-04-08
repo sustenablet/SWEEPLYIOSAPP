@@ -152,8 +152,9 @@ struct ScheduleView: View {
         ZStack(alignment: .bottom) {
             Map(position: $mapCameraPosition) {
                 ForEach(jobsStore.jobs) { job in
-                    if let client = clientsStore.clients.first(where: { $0.id == job.clientId }) {
-                        Annotation(job.clientName, coordinate: CLLocationCoordinate2D(latitude: client.latitude ?? 0, longitude: client.longitude ?? 0)) {
+                    if let client = clientsStore.clients.first(where: { $0.id == job.clientId }),
+                       let lat = client.latitude, let lng = client.longitude {
+                        Annotation(job.clientName, coordinate: CLLocationCoordinate2D(latitude: lat, longitude: lng)) {
                             MapPinView(
                                 status: job.status,
                                 isSelected: selectedJobId == job.id,

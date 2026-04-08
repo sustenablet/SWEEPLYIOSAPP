@@ -40,6 +40,18 @@ final class ClientsStore {
                 .value
             clients = rows.map { $0.toClient() }
             SpotlightIndexer.shared.indexClients(clients)
+
+            // Geocode any clients that have an address but no stored coordinates
+            let rowsNeedingGeocoding = rows.filter { $0.latitude == nil && !($0.address ?? "").isEmpty }
+            for (index, row) in rowsNeedingGeocoding.enumerated() {
+                if let mappedClient = clients.first(where: { $0.id == row.id }) {
+                    geocodeAndPatch(client: mappedClient, userId: row.userId)
+                }
+                // Stagger requests to respect CLGeocoder rate limits (1 req/sec max)
+                if index < rowsNeedingGeocoding.count - 1 {
+                    try? await Task.sleep(nanoseconds: 600_000_000)
+                }
+            }
         } catch {
             lastError = error.localizedDescription
             clients = []
@@ -191,9 +203,11 @@ private struct ClientRow: Decodable {
     let entryInstructions: String?
     let notes: String?
     let isActive: Bool?
+    let latitude: Double?
+    let longitude: Double?
 
     enum CodingKeys: String, CodingKey {
-        case id, name, email, phone, address, city, state, zip, notes
+        case id, name, email, phone, address, city, state, zip, notes, latitude, longitude
         case userId = "user_id"
         case preferredService = "preferred_service"
         case entryInstructions = "entry_instructions"
@@ -214,6 +228,8 @@ private struct ClientRow: Decodable {
             preferredService: svc,
             entryInstructions: entryInstructions ?? "",
             notes: notes ?? "",
+            latitude: latitude,
+            longitude: longitude,
             isActive: isActive ?? true
         )
     }
