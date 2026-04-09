@@ -154,10 +154,16 @@ struct NewClientForm: View {
                     // Address
                     VStack(alignment: .leading, spacing: 14) {
                         Text("SERVICE ADDRESS").font(.system(size: 10, weight: .bold)).foregroundStyle(Color.sweeplyTextSub).tracking(1.0)
-                        FormTextField(label: "Street Address", text: $street, placeholder: "123 Main St")
+                        AddressAutocompleteTF(
+                            label: "Street Address",
+                            street: $street,
+                            city: $city,
+                            state: $state,
+                            zip: $zip
+                        )
                         HStack(spacing: 12) {
                             FormTextField(label: "City", text: $city, placeholder: "Miami")
-                            FormTextField(label: "State", text: $state, placeholder: "FL").frame(width: 70)
+                            StatePickerField(label: "State", state: $state).frame(width: 70)
                             FormTextField(label: "ZIP", text: $zip, placeholder: "33101", keyboard: .numberPad).frame(width: 90)
                         }
                     }
@@ -203,6 +209,17 @@ struct NewClientForm: View {
             }
             .disabled(isSaving)
             .padding(24)
+        }
+        .scrollDismissesKeyboard(.interactively)
+        .toolbar {
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
+                Button("Done") {
+                    UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                }
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(Color.sweeplyNavy)
+            }
         }
         .background(Color.sweeplySurface)
         .sheet(isPresented: $showContactPicker) {

@@ -197,6 +197,7 @@ struct AIChatView: View {
     var onNewJob: (() -> Void)? = nil
     var onNewClient: (() -> Void)? = nil
     var onNewInvoice: (() -> Void)? = nil
+    var financeMode: Bool = false
 
     @State private var messages: [ChatMessage] = []
     @State private var inputText: String = ""
@@ -204,7 +205,8 @@ struct AIChatView: View {
     @State private var conversationState: ConversationState = .idle
     @State private var hasFiredProactive: Bool = false
     @State private var lastIntent: String? = nil
-    @State private var showSlashMenu: Bool = false
+    @State private var showSlashMenu: Bool = false   // kept for legacy state compat
+    @State private var showCommandPalette: Bool = false
     @State private var showHistory: Bool = false
 
     @AppStorage("aiChatOnboardingDone") private var onboardingDone: Bool = false
@@ -242,14 +244,28 @@ struct AIChatView: View {
         profileStore.profile?.fullName.components(separatedBy: " ").first ?? "there"
     }
 
-    private let chatSuggestions: [(label: String, query: String)] = [
-        ("Today's jobs",   "What's on my schedule today?"),
-        ("Revenue",        "What's my revenue this month?"),
-        ("New job",        "I want to schedule a new job"),
-        ("New client",     "Add a new client"),
-        ("Invoice",        "Create a new invoice"),
-        ("Insights",       "Give me business insights"),
-    ]
+    private var chatSuggestions: [(label: String, query: String)] {
+        if financeMode {
+            return [
+                ("Revenue",         "What's my revenue this month?"),
+                ("Overdue",         "Show my overdue invoices"),
+                ("Outstanding",     "What's my outstanding balance?"),
+                ("Best client",     "Who's my best paying client?"),
+                ("Cash flow",       "How's my cash flow this week?"),
+                ("Mark paid",       "Mark an invoice as paid"),
+                ("Collection rate", "What's my collection rate?"),
+                ("Year to date",    "What's my revenue year to date?"),
+            ]
+        }
+        return [
+            ("Today's jobs",   "What's on my schedule today?"),
+            ("Revenue",        "What's my revenue this month?"),
+            ("New job",        "I want to schedule a new job"),
+            ("New client",     "Add a new client"),
+            ("Invoice",        "Create a new invoice"),
+            ("Insights",       "Give me business insights"),
+        ]
+    }
 
     var body: some View {
         NavigationStack {
@@ -305,9 +321,9 @@ struct AIChatView: View {
 
                 suggestionsCarousel
 
-                // Slash command overlay
-                if showSlashMenu {
-                    slashCommandMenu
+                // Command palette overlay (replaces slash-triggered menu)
+                if showCommandPalette {
+                    commandPalette
                         .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
 
@@ -316,8 +332,8 @@ struct AIChatView: View {
             }
             .background(Color.sweeplyBackground.ignoresSafeArea())
             .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackground(Color.sweeplyNavy, for: .navigationBar)
-            .toolbarColorScheme(.dark, for: .navigationBar)
+            .toolbarBackground(Color.sweeplyBackground, for: .navigationBar)
+            .toolbarColorScheme(.light, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .principal) {
                     HStack(spacing: 8) {
@@ -339,44 +355,44 @@ struct AIChatView: View {
                             Circle()
                                 .fill(Color.green)
                                 .frame(width: 8, height: 8)
-                                .overlay(Circle().stroke(Color.sweeplyNavy, lineWidth: 1.5))
+                                .overlay(Circle().stroke(Color.sweeplyBackground, lineWidth: 1.5))
                                 .offset(x: 2, y: -2)
                         }
                         VStack(alignment: .leading, spacing: 0) {
                             Text("Sweeply AI")
                                 .font(.system(size: 15, weight: .bold))
-                                .foregroundStyle(.white)
+                                .foregroundStyle(Color.sweeplyNavy)
                             Text("AI · Online")
                                 .font(.system(size: 11, weight: .medium))
-                                .foregroundStyle(.white.opacity(0.6))
+                                .foregroundStyle(Color.sweeplyTextSub)
                         }
                     }
                 }
                 ToolbarItem(placement: .navigationBarLeading) {
-                    HStack(spacing: 12) {
-                        if !messages.isEmpty {
-                            Button {
-                                UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                                saveToHistory()
-                                messages = []
-                                conversationState = .idle
-                                hasFiredProactive = false
-                                chatHistoryData = Data()
-                            } label: {
-                                Text("Clear")
-                                    .font(.system(size: 13, weight: .medium))
-                                    .foregroundStyle(.white.opacity(0.75))
-                            }
+                    HStack(spacing: 4) {
+                        // History
+                        Button {
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                            showHistory = true
+                        } label: {
+                            Image(systemName: "clock.arrow.circlepath")
+                                .font(.system(size: 15, weight: .medium))
+                                .foregroundStyle(Color.sweeplyNavy)
+                                .frame(width: 36, height: 36)
                         }
-                        if !messages.isEmpty {
-                            Button {
-                                UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                                showHistory = true
-                            } label: {
-                                Image(systemName: "clock.arrow.circlepath")
-                                    .font(.system(size: 15, weight: .medium))
-                                    .foregroundStyle(.white.opacity(0.75))
-                            }
+                        // New Chat
+                        Button {
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                            saveToHistory()
+                            messages = []
+                            conversationState = .idle
+                            hasFiredProactive = false
+                            chatHistoryData = Data()
+                        } label: {
+                            Image(systemName: "square.and.pencil")
+                                .font(.system(size: 15, weight: .medium))
+                                .foregroundStyle(Color.sweeplyNavy)
+                                .frame(width: 36, height: 36)
                         }
                     }
                 }
@@ -384,7 +400,7 @@ struct AIChatView: View {
                     Button { dismiss() } label: {
                         Image(systemName: "xmark")
                             .font(.system(size: 14, weight: .semibold))
-                            .foregroundStyle(.white.opacity(0.8))
+                            .foregroundStyle(Color.sweeplyNavy)
                     }
                 }
             }
@@ -528,7 +544,7 @@ struct AIChatView: View {
                     .foregroundStyle(Color.sweeplyNavy)
             }
 
-            Text("Ask me anything about your business,\nor use a suggestion below.")
+            Text("Ask me anything about your business,\nor tap + to browse quick actions.")
                 .font(.system(size: 14))
                 .foregroundStyle(Color.sweeplyTextSub)
                 .lineSpacing(3)
@@ -572,13 +588,34 @@ struct AIChatView: View {
         .background(Color.sweeplyBackground)
     }
 
-    // MARK: - Slash Command Menu
+    // MARK: - Command Palette (replaces slash menu — now triggered by + button)
 
-    private var slashCommandMenu: some View {
+    private var commandPalette: some View {
         VStack(spacing: 0) {
-            ForEach(filteredSlashCommands, id: \.command) { cmd in
+            // Drag handle + header
+            HStack {
+                Text("Quick Actions")
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundStyle(Color.sweeplyNavy)
+                Spacer()
                 Button {
-                    withAnimation(.easeInOut(duration: 0.15)) { showSlashMenu = false }
+                    withAnimation(.easeInOut(duration: 0.15)) { showCommandPalette = false }
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 18))
+                        .foregroundStyle(Color.sweeplyTextSub.opacity(0.5))
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 12)
+            .padding(.bottom, 8)
+
+            Divider().padding(.horizontal, 12)
+
+            ForEach(slashCommands, id: \.command) { cmd in
+                Button {
+                    withAnimation(.easeInOut(duration: 0.15)) { showCommandPalette = false }
                     inputText = ""
                     sendMessage(cmd.query)
                 } label: {
@@ -609,7 +646,7 @@ struct AIChatView: View {
                 }
                 .buttonStyle(.plain)
 
-                if cmd.command != filteredSlashCommands.last?.command {
+                if cmd.command != slashCommands.last?.command {
                     Divider().padding(.leading, 60)
                 }
             }
@@ -622,34 +659,30 @@ struct AIChatView: View {
         .padding(.bottom, 4)
     }
 
-    private var filteredSlashCommands: [(command: String, icon: String, label: String, query: String)] {
-        let query = inputText.lowercased().dropFirst() // drop the "/"
-        if query.isEmpty { return slashCommands }
-        return slashCommands.filter { $0.command.dropFirst().lowercased().hasPrefix(query) || $0.label.lowercased().contains(query) }
-    }
-
     // MARK: - Input Bar
 
     private var inputBar: some View {
         HStack(spacing: 10) {
-            // Mic button
+            // Quick Actions (+) button
             Button {
-                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-                if isRecording { stopRecording() } else { startRecording() }
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                    showCommandPalette.toggle()
+                }
             } label: {
                 ZStack {
                     Circle()
-                        .fill(isRecording ? Color.red.opacity(0.12) : Color.sweeplySurface)
+                        .fill(showCommandPalette ? Color.sweeplyNavy : Color.sweeplySurface)
                         .frame(width: 36, height: 36)
-                    Image(systemName: isRecording ? "waveform" : "mic")
-                        .font(.system(size: 15, weight: .medium))
-                        .foregroundStyle(isRecording ? Color.red : Color.sweeplyTextSub)
-                        .symbolEffect(.variableColor, isActive: isRecording)
+                    Image(systemName: showCommandPalette ? "xmark" : "plus")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(showCommandPalette ? .white : Color.sweeplyTextSub)
                 }
             }
             .buttonStyle(.plain)
+            .animation(.easeInOut(duration: 0.15), value: showCommandPalette)
 
-            TextField(isRecording ? "Listening..." : "Ask Sweeply AI anything...", text: $inputText, axis: .vertical)
+            TextField(isRecording ? "Listening..." : "Ask me anything...", text: $inputText, axis: .vertical)
                 .font(.system(size: 15))
                 .lineLimit(5)
                 .padding(.horizontal, 14)
@@ -657,37 +690,46 @@ struct AIChatView: View {
                 .background(Color.sweeplySurface)
                 .clipShape(RoundedRectangle(cornerRadius: 22))
                 .overlay(RoundedRectangle(cornerRadius: 22).stroke(
-                    isRecording ? Color.red.opacity(0.4) :
-                    showSlashMenu ? Color.sweeplyAccent.opacity(0.5) : Color.sweeplyNavy.opacity(0.12),
-                    lineWidth: (isRecording || showSlashMenu) ? 1.5 : 1
+                    isRecording ? Color.red.opacity(0.4) : Color.sweeplyNavy.opacity(0.12),
+                    lineWidth: isRecording ? 1.5 : 1
                 ))
-                .onChange(of: inputText) { _, newValue in
-                    let isSlash = newValue.hasPrefix("/")
-                    withAnimation(.easeInOut(duration: 0.15)) {
-                        showSlashMenu = isSlash && !newValue.trimmingCharacters(in: .whitespaces).isEmpty
+
+            // Mic (when input is empty) or Send (when there's text)
+            if inputText.trimmingCharacters(in: .whitespaces).isEmpty {
+                Button {
+                    UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                    if isRecording { stopRecording() } else { startRecording() }
+                } label: {
+                    ZStack {
+                        Circle()
+                            .fill(isRecording ? Color.red.opacity(0.12) : Color.sweeplySurface)
+                            .frame(width: 36, height: 36)
+                        Image(systemName: isRecording ? "waveform" : "mic")
+                            .font(.system(size: 15, weight: .medium))
+                            .foregroundStyle(isRecording ? Color.red : Color.sweeplyTextSub)
+                            .symbolEffect(.variableColor, isActive: isRecording)
                     }
                 }
-
-            Button {
-                let trimmed = inputText.trimmingCharacters(in: .whitespaces)
-                guard !trimmed.isEmpty else { return }
-                withAnimation(.easeInOut(duration: 0.15)) { showSlashMenu = false }
-                if isRecording { stopRecording() }
-                sendMessage(trimmed)
-            } label: {
-                ZStack {
-                    Circle()
-                        .fill(inputText.trimmingCharacters(in: .whitespaces).isEmpty
-                              ? Color.sweeplyBorder
-                              : Color.sweeplyAccent)
-                        .frame(width: 36, height: 36)
-                    Image(systemName: "arrow.up")
-                        .font(.system(size: 14, weight: .bold))
-                        .foregroundStyle(.white)
+                .buttonStyle(.plain)
+            } else {
+                Button {
+                    let trimmed = inputText.trimmingCharacters(in: .whitespaces)
+                    guard !trimmed.isEmpty else { return }
+                    withAnimation(.easeInOut(duration: 0.15)) { showCommandPalette = false }
+                    if isRecording { stopRecording() }
+                    sendMessage(trimmed)
+                } label: {
+                    ZStack {
+                        Circle()
+                            .fill(Color.sweeplyAccent)
+                            .frame(width: 36, height: 36)
+                        Image(systemName: "arrow.up")
+                            .font(.system(size: 14, weight: .bold))
+                            .foregroundStyle(.white)
+                    }
                 }
+                .animation(.easeInOut(duration: 0.15), value: inputText.isEmpty)
             }
-            .disabled(inputText.trimmingCharacters(in: .whitespaces).isEmpty)
-            .animation(.easeInOut(duration: 0.15), value: inputText.isEmpty)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
@@ -828,6 +870,7 @@ struct AIChatView: View {
     }
 
     private func fireProactiveNudges(mainMessageMentionedOverdue: Bool) {
+        guard !financeMode else { return } // Finance mode snapshot already covers all nudges
         let overdueInvoices = invoicesStore.invoices.filter { $0.status == .overdue }
         let todayJobs = jobsStore.jobs.filter { Calendar.current.isDateInToday($0.date) && $0.status == .scheduled }.sorted { $0.date < $1.date }
 
@@ -866,6 +909,27 @@ struct AIChatView: View {
         let upcomingJobs = jobsStore.jobs.filter { $0.date > Date() && $0.status == .scheduled }.sorted { $0.date < $1.date }
         let activeClients = clientsStore.clients.filter { $0.isActive }
         let isNewUser = clientsStore.clients.isEmpty && jobsStore.jobs.isEmpty
+
+        // Finance-mode: open with an immediate financial snapshot
+        if financeMode {
+            let collected = invoicesStore.invoices.filter { $0.status == .paid }.reduce(0.0) { $0 + $1.subtotal }
+            let outstanding = invoicesStore.invoices.filter { $0.status == .unpaid }.reduce(0.0) { $0 + $1.subtotal }
+            let overdueList = invoicesStore.invoices.filter { $0.status == .overdue }
+            let overdueTotal = overdueList.reduce(0.0) { $0 + $1.subtotal }
+            let thisMonth = invoicesStore.invoices.filter {
+                $0.status == .paid && Calendar.current.isDate($0.createdAt, equalTo: Date(), toGranularity: .month)
+            }.reduce(0.0) { $0 + $1.subtotal }
+
+            var text = "Here's your financial snapshot — \(thisMonth.formatted(.currency(code: "USD"))) collected this month, \(outstanding.formatted(.currency(code: "USD"))) outstanding."
+            if !overdueList.isEmpty {
+                text += " You have \(overdueList.count) overdue invoice\(overdueList.count == 1 ? "" : "s") totaling \(overdueTotal.formatted(.currency(code: "USD"))) that need attention."
+            }
+            let style: ChatMessage.MessageStyle = overdueList.isEmpty ? .info : .warning
+            let replies = overdueList.isEmpty
+                ? ["Revenue breakdown", "Outstanding invoices", "Best paying client"]
+                : ["Show overdue", "Mark invoice paid", "Revenue breakdown"]
+            return ChatMessage(role: .assistant, text: text, style: style, quickReplies: replies)
+        }
 
         if isNewUser {
             return ChatMessage(
@@ -1316,12 +1380,31 @@ struct AIChatView: View {
             )
         }
 
+        // ARCHIVED / INACTIVE CLIENTS — must come before the general client check
+        let asksAboutArchived = lowered.contains("inactive") || lowered.contains("archived") || lowered.contains("archive")
+        if asksAboutArchived && (lowered.contains("client") || lowered.contains("customer")) {
+            let archived = clientsStore.clients.filter { !$0.isActive }
+            if archived.isEmpty {
+                return ChatMessage(role: .assistant, text: "All your clients are currently active — no archived clients.", style: .success, quickReplies: ["View all clients", "Business overview"])
+            }
+            let names = archived.prefix(4).map { $0.name }.joined(separator: ", ")
+            let overflow = archived.count > 4 ? " and \(archived.count - 4) more" : ""
+            return ChatMessage(
+                role: .assistant,
+                text: "You have \(archived.count) archived client\(archived.count == 1 ? "" : "s"): \(names)\(overflow). You can unarchive any of them from the Clients tab.",
+                style: .info,
+                action: .openClients,
+                actionLabel: "View Clients",
+                quickReplies: ["View all clients", "How do I unarchive?"]
+            )
+        }
+
         // CLIENT LIST
         if lowered.contains("client") || lowered.contains("customer") {
             let active = clientsStore.clients.filter { $0.isActive }
-            let inactive = clientsStore.clients.filter { !$0.isActive }.count
+            let archivedCount = clientsStore.clients.filter { !$0.isActive }.count
             var text = "You have \(active.count) active client\(active.count == 1 ? "" : "s")"
-            if inactive > 0 { text += " (\(inactive) archived)" }
+            if archivedCount > 0 { text += " (\(archivedCount) archived)" }
             text += "."
             if let first = active.first { text += " Most recent: \(first.name)." }
             return ChatMessage(
@@ -2374,26 +2457,6 @@ private struct MessageBubble: View {
                         )
                     }
                     .buttonStyle(.plain)
-                }
-
-                if !message.quickReplies.isEmpty {
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 6) {
-                            ForEach(message.quickReplies, id: \.self) { reply in
-                                Button { onQuickReply(reply) } label: {
-                                    Text(reply)
-                                        .font(.system(size: 12, weight: .medium))
-                                        .foregroundStyle(Color.sweeplyNavy)
-                                        .padding(.horizontal, 12)
-                                        .padding(.vertical, 6)
-                                        .background(Color.sweeplyNavy.opacity(0.06))
-                                        .clipShape(Capsule())
-                                        .overlay(Capsule().stroke(Color.sweeplyBorder, lineWidth: 1))
-                                }
-                                .buttonStyle(.plain)
-                            }
-                        }
-                    }
                 }
 
                 HStack(spacing: 4) {

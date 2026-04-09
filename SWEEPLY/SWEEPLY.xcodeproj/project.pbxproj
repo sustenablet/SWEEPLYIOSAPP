@@ -55,6 +55,7 @@
 		E9743FA02F87116D0075413E /* SweeplyWIdgetsExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = SweeplyWIdgetsExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		E9743FA22F87116D0075413E /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = /System/Library/Frameworks/WidgetKit.framework; sourceTree = "<absolute>"; };
 		E9743FA42F87116D0075413E /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = /System/Library/Frameworks/SwiftUI.framework; sourceTree = "<absolute>"; };
+		E9743FBF2F876B5D0075413E /* SweeplyWIdgetsExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = SweeplyWIdgetsExtension.entitlements; sourceTree = "<group>"; };
 		E9D0783D2F7E357300E31AC7 /* SWEEPLY.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SWEEPLY.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		E9D0784E2F7E357400E31AC7 /* SWEEPLYTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SWEEPLYTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		E9D078582F7E357400E31AC7 /* SWEEPLYUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SWEEPLYUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -153,6 +154,7 @@
 		E9D078342F7E357300E31AC7 = {
 			isa = PBXGroup;
 			children = (
+				E9743FBF2F876B5D0075413E /* SweeplyWIdgetsExtension.entitlements */,
 				E9D0783F2F7E357300E31AC7 /* SWEEPLY */,
 				E9D078512F7E357400E31AC7 /* SWEEPLYTests */,
 				E9D0785B2F7E357400E31AC7 /* SWEEPLYUITests */,
@@ -406,6 +408,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = SweeplyWIdgetsExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = YCZQ7F8K2U;
@@ -428,8 +431,9 @@
 				);
 				MACOSX_DEPLOYMENT_TARGET = 26.3;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = SWEEPLY.SWEEPLY.SweeplyWIdgets;
+				PRODUCT_BUNDLE_IDENTIFIER = SWEEPLY.APP.SWEEPLYWIDGETS;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				REGISTER_APP_GROUPS = YES;
 				SDKROOT = auto;
 				SKIP_INSTALL = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -448,6 +452,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = SweeplyWIdgetsExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = YCZQ7F8K2U;
@@ -470,8 +475,9 @@
 				);
 				MACOSX_DEPLOYMENT_TARGET = 26.3;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = SWEEPLY.SWEEPLY.SweeplyWIdgets;
+				PRODUCT_BUNDLE_IDENTIFIER = SWEEPLY.APP.SWEEPLYWIDGETS;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				REGISTER_APP_GROUPS = YES;
 				SDKROOT = auto;
 				SKIP_INSTALL = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -497,9 +503,16 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = SWEEPLY/Info.plist;
+				INFOPLIST_KEY_NSCalendarsUsageDescription = "Sweeply can sync your scheduled jobs to your iOS Calendar so you never miss an appointment.";
+				INFOPLIST_KEY_NSCalendarsWriteOnlyAccessUsageDescription = "Sweeply adds your scheduled cleaning jobs to your calendar.";
+				INFOPLIST_KEY_NSCameraUsageDescription = "Sweeply lets you take photos on-site to document your cleaning jobs.";
+				INFOPLIST_KEY_NSContactsUsageDescription = "Sweeply uses your contacts to quickly import client details when adding a new client.";
+				INFOPLIST_KEY_NSFaceIDUsageDescription = "Sweeply uses Face ID to keep your business data secure.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Sweeply uses your microphone so you can dictate messages to the AI assistant.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Sweeply lets you attach photos to jobs for better job documentation.";
+				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "Sweeply uses speech recognition to transcribe your voice into text for the AI assistant.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
-				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -507,7 +520,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = SWEEPLY.SWEEPLY;
+				PRODUCT_BUNDLE_IDENTIFIER = SWEEPLY.APP;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -531,9 +544,16 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = SWEEPLY/Info.plist;
+				INFOPLIST_KEY_NSCalendarsUsageDescription = "Sweeply can sync your scheduled jobs to your iOS Calendar so you never miss an appointment.";
+				INFOPLIST_KEY_NSCalendarsWriteOnlyAccessUsageDescription = "Sweeply adds your scheduled cleaning jobs to your calendar.";
+				INFOPLIST_KEY_NSCameraUsageDescription = "Sweeply lets you take photos on-site to document your cleaning jobs.";
+				INFOPLIST_KEY_NSContactsUsageDescription = "Sweeply uses your contacts to quickly import client details when adding a new client.";
+				INFOPLIST_KEY_NSFaceIDUsageDescription = "Sweeply uses Face ID to keep your business data secure.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Sweeply uses your microphone so you can dictate messages to the AI assistant.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Sweeply lets you attach photos to jobs for better job documentation.";
+				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "Sweeply uses speech recognition to transcribe your voice into text for the AI assistant.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
-				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -541,7 +561,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = SWEEPLY.SWEEPLY;
+				PRODUCT_BUNDLE_IDENTIFIER = SWEEPLY.APP;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;

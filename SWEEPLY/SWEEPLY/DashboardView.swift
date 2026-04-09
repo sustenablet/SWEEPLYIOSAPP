@@ -18,6 +18,8 @@ struct DashboardView: View {
     @State private var showProfileMenu = false
     @State private var showSettings = false
     @State private var showNotifications = false
+    @State private var selectedInvoiceId: UUID? = nil
+    @State private var showInvoiceDetail = false
     /// User hid the checklist after completing all steps (persisted).
     @AppStorage("dashboardPlaybookPermanentlyHidden") private var playbookPermanentlyHidden = false
     @State private var healthStats: HealthStats? = nil
@@ -235,6 +237,25 @@ struct DashboardView: View {
         .fullScreenCover(isPresented: $showSettings) {
             SettingsView()
         }
+        .sheet(isPresented: $showInvoiceDetail) {
+            if let id = selectedInvoiceId {
+                NavigationStack {
+                    InvoiceDetailView(invoiceId: id)
+                }
+                .environment(invoicesStore)
+                .environment(clientsStore)
+                .environment(profileStore)
+                .environment(session)
+            }
+        }
+        .onChange(of: showSettings) { _, isShowing in
+            if !isShowing {
+                // Re-apply tab bar after full-screen cover is dismissed (iOS resets it)
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    NotificationCenter.default.post(name: NSNotification.Name("RefreshTabBar"), object: nil)
+                }
+            }
+        }
     }
 
     // MARK: - Original Layout Essence Components
@@ -447,7 +468,10 @@ struct DashboardView: View {
                 } else {
                     VStack(spacing: 0) {
                         ForEach(Array(ongoingInvoices.prefix(3).enumerated()), id: \.element.id) { index, invoice in
-                            DashInvoiceRow(invoice: invoice, invoicesStore: invoicesStore)
+                            DashInvoiceRow(invoice: invoice, invoicesStore: invoicesStore) {
+                                selectedInvoiceId = invoice.id
+                                showInvoiceDetail = true
+                            }
                             if index < min(ongoingInvoices.count, 3) - 1 {
                                 Divider()
                             }
@@ -528,25 +552,29 @@ struct DashJobRow: View {
 struct DashInvoiceRow: View {
     let invoice: Invoice
     let invoicesStore: InvoicesStore
+    var onTap: (() -> Void)? = nil
     var body: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 3) {
-                Text(invoice.clientName).font(.system(size: 14, weight: .semibold))
-                Text(invoice.status == .overdue
-                    ? "Overdue since \(invoice.dueDate.formatted(date: .abbreviated, time: .omitted))"
-                    : "Due \(invoice.dueDate.formatted(date: .abbreviated, time: .omitted))"
-                )
-                .font(.system(size: 12)).foregroundStyle(invoice.status == .overdue ? Color.sweeplyDestructive : Color.sweeplyTextSub)
+        Button(action: { onTap?() }) {
+            HStack {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(invoice.clientName).font(.system(size: 14, weight: .semibold)).foregroundStyle(Color.sweeplyNavy)
+                    Text(invoice.status == .overdue
+                        ? "Overdue since \(invoice.dueDate.formatted(date: .abbreviated, time: .omitted))"
+                        : "Due \(invoice.dueDate.formatted(date: .abbreviated, time: .omitted))"
+                    )
+                    .font(.system(size: 12)).foregroundStyle(invoice.status == .overdue ? Color.sweeplyDestructive : Color.sweeplyTextSub)
+                }
+                Spacer()
+                HStack(spacing: 8) {
+                    Text(invoice.total.currency).font(.system(size: 14, weight: .bold, design: .monospaced)).foregroundStyle(Color.sweeplyNavy)
+                    Button("Mark Paid") { Task { await invoicesStore.markPaid(id: invoice.id) } }
+                        .font(.system(size: 11, weight: .semibold)).foregroundStyle(.white)
+                        .padding(.horizontal, 10).padding(.vertical, 5).background(Color.sweeplyNavy).clipShape(Capsule())
+                }
             }
-            Spacer()
-            HStack(spacing: 8) {
-                Text(invoice.total.currency).font(.system(size: 14, weight: .bold, design: .monospaced))
-                InvoiceStatusBadge(status: invoice.status)
-                Button("Mark Paid") { Task { await invoicesStore.markPaid(id: invoice.id) } }
-                    .font(.system(size: 11, weight: .semibold)).foregroundStyle(.white)
-                    .padding(.horizontal, 10).padding(.vertical, 5).background(Color.sweeplyNavy).clipShape(Capsule())
-            }
-        }.padding(.vertical, 10)
+        }
+        .buttonStyle(.plain)
+        .padding(.vertical, 10)
     }
 }
 

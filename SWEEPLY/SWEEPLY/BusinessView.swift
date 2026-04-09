@@ -13,6 +13,10 @@ struct BusinessView: View {
     @State private var selectedSnapshotSlide = 0
     @State private var showAIChat = false
     @State private var insightIndex = 0
+    @State private var showKPICustomizer = false
+
+    @AppStorage("kpiVisibility") private var kpiVisibilityRaw: String = ""
+    @AppStorage("kpiOrder")      private var kpiOrderRaw: String = ""
 
     private var profile: UserProfile {
         profileStore.profile ?? MockData.profile
@@ -207,6 +211,54 @@ struct BusinessView: View {
         profile.settings.hydratedServiceCatalog
     }
 
+    // MARK: - KPI Customization
+
+    private let allKPIItems: [KPIItem] = [
+        KPIItem(id: "activeClients",  title: "Active Clients",   icon: "person.2.fill",                   isDefault: true),
+        KPIItem(id: "jobsThisMonth",  title: "Jobs This Month",  icon: "briefcase.fill",                  isDefault: true),
+        KPIItem(id: "collected",      title: "Collected",        icon: "dollarsign.circle.fill",           isDefault: true),
+        KPIItem(id: "scheduled",      title: "Scheduled",        icon: "calendar",                        isDefault: true),
+        KPIItem(id: "outstanding",    title: "Outstanding",      icon: "exclamationmark.triangle.fill",   isDefault: true),
+        KPIItem(id: "avgTicket",      title: "Avg Ticket",       icon: "chart.bar.fill",                  isDefault: false),
+        KPIItem(id: "pipelineValue",  title: "Pipeline Value",   icon: "arrow.up.right.circle.fill",      isDefault: false),
+        KPIItem(id: "recurringJobs",  title: "Recurring Jobs",   icon: "repeat",                          isDefault: false),
+    ]
+
+    private var enabledKPIIds: Set<String> {
+        if kpiVisibilityRaw.isEmpty {
+            return Set(allKPIItems.filter { $0.isDefault }.map { $0.id })
+        }
+        return Set(kpiVisibilityRaw.components(separatedBy: ",").filter { !$0.isEmpty })
+    }
+
+    private var orderedKPIItems: [KPIItem] {
+        if kpiOrderRaw.isEmpty { return allKPIItems }
+        let order = kpiOrderRaw.components(separatedBy: ",").filter { !$0.isEmpty }
+        let mapped = Dictionary(uniqueKeysWithValues: allKPIItems.map { ($0.id, $0) })
+        var result = order.compactMap { mapped[$0] }
+        let missing = allKPIItems.filter { !order.contains($0.id) }
+        result.append(contentsOf: missing)
+        return result
+    }
+
+    private var visibleKPIItems: [KPIItem] {
+        orderedKPIItems.filter { enabledKPIIds.contains($0.id) }
+    }
+
+    private func kpiValue(for id: String) -> String {
+        switch id {
+        case "activeClients":  return "\(activeClientsCount)"
+        case "jobsThisMonth":  return "\(monthlyJobs.count)"
+        case "collected":      return totalRevenue.currency
+        case "scheduled":      return "\(upcomingJobs.count)"
+        case "outstanding":    return outstandingRevenue.currency
+        case "avgTicket":      return averageTicket.currency
+        case "pipelineValue":  return upcomingPipelineValue.currency
+        case "recurringJobs":  return "\(recurringJobsThisMonth)"
+        default:               return "-"
+        }
+    }
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 28) {
@@ -214,22 +266,56 @@ struct BusinessView: View {
                 PageHeader(
                     eyebrow: profile.businessName.isEmpty ? "Business" : profile.businessName.uppercased(),
                     title: "Operational Overview",
-                    subtitle: nil
+                    subtitle: "Business"
                 )
                 .padding(.top, 16)
 
                 // 1. Performance KPIs
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 12) {
-                        KPIBlock(title: "Active Clients", value: "\(activeClientsCount)", icon: "person.2.fill")
-                        KPIBlock(title: "Jobs This Month", value: "\(monthlyJobs.count)", icon: "briefcase.fill")
-                        KPIBlock(title: "Collected", value: totalRevenue.currency, icon: "dollarsign.circle.fill")
-                        KPIBlock(title: "Scheduled", value: "\(upcomingJobs.count)", icon: "calendar")
-                        KPIBlock(title: "Outstanding", value: outstandingRevenue.currency, icon: "exclamationmark.triangle.fill")
+                        ForEach(visibleKPIItems) { item in
+                            KPIBlock(title: item.title, value: kpiValue(for: item.id), icon: item.icon)
+                        }
+                        // Customization button
+                        Button {
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                            showKPICustomizer = true
+                        } label: {
+                            VStack(spacing: 6) {
+                                Image(systemName: "plus")
+                                    .font(.system(size: 18, weight: .semibold))
+                                    .foregroundStyle(Color.sweeplyAccent)
+                                Text("Customize")
+                                    .font(.system(size: 10, weight: .medium))
+                                    .foregroundStyle(Color.sweeplyTextSub)
+                            }
+                            .frame(width: 80, height: 80)
+                            .background(Color.sweeplyBackground)
+                            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                    .stroke(style: StrokeStyle(lineWidth: 1.5, dash: [4, 3]))
+                                    .foregroundStyle(Color.sweeplyBorder.opacity(0.7))
+                            )
+                        }
+                        .buttonStyle(.plain)
                     }
                     .padding(.horizontal, 20)
                 }
                 .padding(.horizontal, -20)
+                .sheet(isPresented: $showKPICustomizer) {
+                    KPICustomizerSheet(
+                        allItems: allKPIItems,
+                        enabledIds: enabledKPIIds,
+                        orderedIds: orderedKPIItems.map { $0.id },
+                        onSave: { newEnabled, newOrder in
+                            kpiVisibilityRaw = newEnabled.joined(separator: ",")
+                            kpiOrderRaw = newOrder.joined(separator: ",")
+                        }
+                    )
+                    .presentationDetents([.medium, .large])
+                    .presentationDragIndicator(.visible)
+                }
 
                 // 2. AI Preview
                 aiPreviewSection
@@ -351,7 +437,6 @@ struct BusinessView: View {
                         .frame(height: 220)
 
                         HStack(spacing: 8) {
-                            Spacer()
                             ForEach(0..<4, id: \.self) { index in
                                 Capsule()
                                     .fill(index == selectedSnapshotSlide ? Color.sweeplyNavy : Color.sweeplyBorder.opacity(0.8))
@@ -359,6 +444,9 @@ struct BusinessView: View {
                                     .animation(.easeInOut(duration: 0.2), value: selectedSnapshotSlide)
                             }
                             Spacer()
+                            Text("\(selectedSnapshotSlide + 1) / 4")
+                                .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                                .foregroundStyle(Color.sweeplyTextSub)
                         }
                     }
                 }
@@ -813,6 +901,117 @@ private struct ServiceMixRow: View {
             }
             .frame(height: 6)
         }
+    }
+}
+
+// MARK: - KPI Customization Types
+
+private struct KPIItem: Identifiable {
+    let id: String
+    let title: String
+    let icon: String
+    let isDefault: Bool
+}
+
+private struct KPICustomizerSheet: View {
+    let allItems: [KPIItem]
+    let enabledIds: Set<String>
+    let orderedIds: [String]
+    let onSave: ([String], [String]) -> Void
+    @Environment(\.dismiss) private var dismiss
+
+    @State private var localEnabled: Set<String>
+    @State private var localOrder: [String]
+
+    init(allItems: [KPIItem], enabledIds: Set<String>, orderedIds: [String], onSave: @escaping ([String], [String]) -> Void) {
+        self.allItems = allItems
+        self.enabledIds = enabledIds
+        self.orderedIds = orderedIds
+        self.onSave = onSave
+        _localEnabled = State(initialValue: enabledIds)
+        _localOrder   = State(initialValue: orderedIds)
+    }
+
+    private var visibleItems: [KPIItem] {
+        localOrder.compactMap { id in allItems.first { $0.id == id } }.filter { localEnabled.contains($0.id) }
+    }
+
+    private var hiddenItems: [KPIItem] {
+        localOrder.compactMap { id in allItems.first { $0.id == id } }.filter { !localEnabled.contains($0.id) }
+    }
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section("Shown") {
+                    ForEach(visibleItems) { item in
+                        KPIToggleRow(item: item, isEnabled: true) {
+                            localEnabled.remove(item.id)
+                        }
+                    }
+                    .onMove { from, to in
+                        var ids = visibleItems.map { $0.id }
+                        ids.move(fromOffsets: from, toOffset: to)
+                        let hiddenIds = localOrder.filter { !localEnabled.contains($0) }
+                        localOrder = ids + hiddenIds
+                    }
+                }
+                if !hiddenItems.isEmpty {
+                    Section("Add to Dashboard") {
+                        ForEach(hiddenItems) { item in
+                            KPIToggleRow(item: item, isEnabled: false) {
+                                localEnabled.insert(item.id)
+                            }
+                        }
+                    }
+                }
+            }
+            .navigationTitle("Customize KPIs")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Cancel") { dismiss() }
+                        .foregroundStyle(Color.sweeplyTextSub)
+                }
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Done") {
+                        onSave(Array(localEnabled), localOrder)
+                        dismiss()
+                    }
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(Color.sweeplyNavy)
+                }
+            }
+            .environment(\.editMode, .constant(.active))
+        }
+    }
+}
+
+private struct KPIToggleRow: View {
+    let item: KPIItem
+    let isEnabled: Bool
+    let onTap: () -> Void
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: item.icon)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(isEnabled ? Color.sweeplyAccent : Color.sweeplyTextSub)
+                .frame(width: 28, height: 28)
+                .background((isEnabled ? Color.sweeplyAccent : Color.sweeplyTextSub).opacity(0.1))
+                .clipShape(RoundedRectangle(cornerRadius: 7, style: .continuous))
+            Text(item.title)
+                .font(.system(size: 15, weight: .medium))
+                .foregroundStyle(Color.sweeplyNavy)
+            Spacer()
+            Button(action: onTap) {
+                Image(systemName: isEnabled ? "minus.circle.fill" : "plus.circle.fill")
+                    .font(.system(size: 20))
+                    .foregroundStyle(isEnabled ? Color.sweeplyDestructive : Color.sweeplyAccent)
+            }
+            .buttonStyle(.plain)
+        }
+        .contentShape(Rectangle())
     }
 }
 

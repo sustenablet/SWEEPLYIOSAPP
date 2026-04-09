@@ -82,6 +82,7 @@ struct SettingsView: View {
                 }
             }
             .background(Color.sweeplyBackground.ignoresSafeArea())
+            .scrollDismissesKeyboard(.interactively)
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -195,11 +196,17 @@ struct SettingsView: View {
             sectionLabel("BUSINESS ADDRESS")
             SectionCard {
                 VStack(spacing: 14) {
-                    SettingsField(label: "Street", text: $localProfile.settings.street)
+                    SettingsAddressField(
+                        label: "Street",
+                        street: $localProfile.settings.street,
+                        city: $localProfile.settings.city,
+                        state: $localProfile.settings.state,
+                        zip: $localProfile.settings.zip
+                    )
                     Divider()
                     HStack(spacing: 12) {
                         SettingsField(label: "City", text: $localProfile.settings.city)
-                        SettingsField(label: "State", text: $localProfile.settings.state).frame(width: 70)
+                        SettingsStatePickerField(label: "State", state: $localProfile.settings.state).frame(width: 70)
                         SettingsField(label: "ZIP", text: $localProfile.settings.zip).frame(width: 90)
                     }
                 }

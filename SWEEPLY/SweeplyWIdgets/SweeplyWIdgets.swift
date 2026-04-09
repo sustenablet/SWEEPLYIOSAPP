@@ -59,7 +59,7 @@ private func relativeDay(for date: Date) -> String {
     if cal.isDateInToday(date)     { return "Today" }
     if cal.isDateInTomorrow(date)  { return "Tomorrow" }
     let f = DateFormatter()
-    f.dateFormat = "EEE, MMM d"
+    f.dateFormat = "EEEE"
     return f.string(from: date)
 }
 
@@ -83,68 +83,106 @@ struct NextJobEntryView: View {
 
     private var accent: Color { scheme == .dark ? .tealLight : .teal }
 
+    private var deepLinkURL: URL {
+        if let job = entry.snapshot.nextJob {
+            let f = ISO8601DateFormatter()
+            f.formatOptions = [.withFullDate]
+            let dateStr = f.string(from: job.date)
+            return URL(string: "sweeply://schedule?date=\(dateStr)") ?? URL(string: "sweeply://schedule")!
+        }
+        return URL(string: "sweeply://schedule")!
+    }
+
+    private func formattedPrice(_ price: Double) -> String {
+        let f = NumberFormatter()
+        f.numberStyle = .currency
+        f.locale = .current
+        f.maximumFractionDigits = 0
+        return f.string(from: NSNumber(value: price)) ?? "$\(Int(price))"
+    }
+
     var body: some View {
         ZStack {
-            Color.stone.ignoresSafeArea()
+            Color.white.ignoresSafeArea()
 
-            VStack(alignment: .leading, spacing: 0) {
-                // Header
-                HStack(spacing: 0) {
-                    Text("SWEEPLY")
-                        .font(.system(size: 9, weight: .black, design: .rounded))
-                        .foregroundStyle(accent)
-                        .tracking(1.2)
-                    Spacer()
-                    Image(systemName: "sparkles")
-                        .font(.system(size: 9, weight: .semibold))
-                        .foregroundStyle(accent)
-                }
-                .padding(.bottom, 10)
+            if let job = entry.snapshot.nextJob {
+                VStack(alignment: .leading, spacing: 0) {
+                    // Label
+                    Text("NEXT JOB")
+                        .font(.system(size: 8, weight: .bold))
+                        .foregroundStyle(Color.charcoal.opacity(0.45))
+                        .tracking(1.4)
 
-                if let job = entry.snapshot.nextJob {
-                    Text("Next Job")
-                        .font(.system(size: 10, weight: .semibold))
-                        .foregroundStyle(Color.secondary)
-                        .padding(.bottom, 4)
+                    Spacer(minLength: 8)
 
+                    // Client name — hero text
                     Text(job.clientName)
-                        .font(.system(size: 15, weight: .bold))
+                        .font(.system(size: 19, weight: .bold))
                         .foregroundStyle(Color.charcoal)
                         .lineLimit(1)
-                        .minimumScaleFactor(0.8)
+                        .minimumScaleFactor(0.78)
 
+                    // Service type
                     Text(job.serviceType)
-                        .font(.system(size: 11))
-                        .foregroundStyle(Color.secondary)
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(Color.charcoal.opacity(0.55))
                         .lineLimit(1)
-                        .padding(.bottom, 10)
+                        .padding(.top, 2)
 
-                    Spacer()
+                    Spacer(minLength: 10)
 
-                    // Day + time
+                    // Price
+                    Text(formattedPrice(job.price))
+                        .font(.system(size: 22, weight: .bold, design: .monospaced))
+                        .foregroundStyle(Color.charcoal)
+
+                    Spacer(minLength: 6)
+
+                    // Date + time
                     HStack(spacing: 0) {
                         Text(relativeDay(for: job.date))
+                            .font(.system(size: 10, weight: .semibold))
+                            .foregroundStyle(Color.charcoal.opacity(0.5))
+                        Text("  ·  ")
+                            .foregroundStyle(Color.charcoal.opacity(0.25))
+                        Text(timeString(from: job.date))
                             .font(.system(size: 10, weight: .semibold, design: .monospaced))
                             .foregroundStyle(Color.charcoal)
                         Spacer()
-                        Text(timeString(from: job.date))
-                            .font(.system(size: 10, weight: .semibold, design: .monospaced))
-                            .foregroundStyle(accent)
                     }
-                } else {
+                }
+                .padding(14)
+            } else {
+                // All caught up state
+                VStack(alignment: .leading, spacing: 0) {
+                    Text("SCHEDULE")
+                        .font(.system(size: 8, weight: .bold))
+                        .foregroundStyle(Color.charcoal.opacity(0.45))
+                        .tracking(1.4)
+
                     Spacer()
 
-                    Text("No upcoming\njobs scheduled")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundStyle(Color.secondary)
-                        .multilineTextAlignment(.leading)
-                        .lineSpacing(3)
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 26, weight: .semibold))
+                        .foregroundStyle(Color.charcoal.opacity(0.7))
+                        .padding(.bottom, 6)
+
+                    Text("All caught up")
+                        .font(.system(size: 15, weight: .bold))
+                        .foregroundStyle(Color.charcoal)
+
+                    Text("No upcoming jobs")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(Color.charcoal.opacity(0.5))
+                        .padding(.top, 2)
 
                     Spacer()
                 }
+                .padding(14)
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .padding(14)
         }
+        .widgetURL(deepLinkURL)
     }
 }
 
@@ -154,7 +192,7 @@ struct NextJobWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: SweeplyProvider()) { entry in
             NextJobEntryView(entry: entry)
-                .containerBackground(Color.stone, for: .widget)
+                .containerBackground(Color.white, for: .widget)
         }
         .configurationDisplayName("Next Job")
         .description("Your next upcoming job at a glance.")

@@ -25,7 +25,7 @@ struct ScheduleView: View {
     @State private var showMonthPicker = false
     @State private var enabledViewModes: Set<ScheduleViewMode> = [.day, .list, .map]
     @State private var selectedJobId: UUID? = nil
-    @State private var mapCameraPosition: MapCameraPosition = .automatic
+    @State private var mapCameraPosition: MapCameraPosition = .userLocation(fallback: .automatic)
     @Namespace private var mapSelectionNamespace
     
     private var visibleViewModes: [ScheduleViewMode] {
@@ -60,13 +60,30 @@ struct ScheduleView: View {
             }
             .background(Color.sweeplyBackground.ignoresSafeArea())
             .navigationBarHidden(true)
+            .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("NavigateToScheduleDate"))) { notification in
+                if let date = notification.userInfo?["date"] as? Date {
+                    withAnimation(.easeInOut(duration: 0.25)) {
+                        selectedDay = Calendar.current.startOfDay(for: date)
+                        viewMode = .day
+                    }
+                }
+            }
+            .onChange(of: viewMode) { _, newMode in
+                guard newMode == .map else { return }
+                updateMapCamera(for: selectedDay)
+            }
+            .onChange(of: selectedDay) { _, newDay in
+                guard viewMode == .map else { return }
+                updateMapCamera(for: newDay)
+            }
             .sheet(isPresented: $showFilters) {
                 JobFiltersView(statusFilter: $statusFilter, typeFilter: $typeFilter, enabledViewModes: $enabledViewModes)
                     .presentationDetents([.large])
             }
             .sheet(isPresented: $showMonthPicker) {
-                ScheduleMonthPicker(selectedDay: $selectedDay)
-                    .presentationDetents([.large])
+                ScheduleMonthPicker(selectedDay: $selectedDay, jobs: jobsStore.jobs)
+                    .presentationDetents([.fraction(0.65)])
+                    .presentationDragIndicator(.visible)
             }
         }
     }
@@ -132,6 +149,10 @@ struct ScheduleView: View {
                                     RoundedRectangle(cornerRadius: 10, style: .continuous)
                                         .fill(Color.sweeplySurface)
                                         .shadow(color: .black.opacity(0.06), radius: 4, x: 0, y: 1)
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                                .stroke(Color.sweeplyAccent.opacity(0.3), lineWidth: 1)
+                                        )
                                 }
                             }
                         )
@@ -142,16 +163,22 @@ struct ScheduleView: View {
         .padding(4)
         .background(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(Color.sweeplyBackground)
+                .fill(Color.sweeplySurface)
+                .shadow(color: .black.opacity(0.05), radius: 2, x: 0, y: 1)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .stroke(Color.sweeplyBorder, lineWidth: 1)
         )
     }
 
     // MARK: - Map View
-    
+
     private var mapView: some View {
-        ZStack(alignment: .bottom) {
+        let dayJobs = filteredJobsForDate(selectedDay)
+        return ZStack(alignment: .bottom) {
             Map(position: $mapCameraPosition) {
-                ForEach(jobsStore.jobs) { job in
+                ForEach(dayJobs) { job in
                     if let client = clientsStore.clients.first(where: { $0.id == job.clientId }),
                        let lat = client.latitude, let lng = client.longitude {
                         Annotation(job.clientName, coordinate: CLLocationCoordinate2D(latitude: lat, longitude: lng)) {
@@ -179,8 +206,19 @@ struct ScheduleView: View {
 
             // Map Controls Overlay
             VStack {
-                HStack {
+                HStack(alignment: .top) {
+                    // Date chip — shows which day's pins are visible
+                    Text(selectedDay.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day()))
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(Color.sweeplyNavy)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(Color.sweeplySurface.opacity(0.95))
+                        .clipShape(Capsule())
+                        .shadow(color: .black.opacity(0.08), radius: 6, x: 0, y: 2)
+
                     Spacer()
+
                     VStack(spacing: 12) {
                         MapActionButton(icon: "location.fill") {
                             withAnimation {
@@ -188,7 +226,7 @@ struct ScheduleView: View {
                             }
                         }
                         MapActionButton(icon: "scope") {
-                            let coords = jobsStore.jobs.compactMap { job -> CLLocationCoordinate2D? in
+                            let coords = dayJobs.compactMap { job -> CLLocationCoordinate2D? in
                                 guard let c = clientsStore.clients.first(where: { $0.id == job.clientId }),
                                       let lat = c.latitude, let lon = c.longitude else { return nil }
                                 return CLLocationCoordinate2D(latitude: lat, longitude: lon)
@@ -209,15 +247,15 @@ struct ScheduleView: View {
                             }
                         }
                     }
-                    .padding(.trailing, 16)
-                    .padding(.top, 16)
                 }
+                .padding(.horizontal, 16)
+                .padding(.top, 16)
                 Spacer()
             }
-            
+
             // Selected Job Card
             if let selectedJobId = selectedJobId,
-               let job = jobsStore.jobs.first(where: { $0.id == selectedJobId }) {
+               let job = dayJobs.first(where: { $0.id == selectedJobId }) {
                 MapJobCard(
                     job: job,
                     onDirections: { openDirections(for: job) },
@@ -231,14 +269,32 @@ struct ScheduleView: View {
                 .transition(.move(edge: .bottom).combined(with: .opacity))
                 .zIndex(10)
             }
-            
-            if jobsStore.jobs.isEmpty {
+
+            if dayJobs.isEmpty {
                 scheduleEmptyState
                     .background(Color.sweeplyBackground.opacity(0.8))
             }
         }
     }
     
+    private func updateMapCamera(for day: Date) {
+        let jobs = filteredJobsForDate(day)
+        withAnimation(.easeInOut(duration: 0.4)) {
+            if jobs.isEmpty {
+                // No jobs — center on user with neighborhood-level zoom
+                mapCameraPosition = .userLocation(
+                    fallback: .region(MKCoordinateRegion(
+                        center: CLLocationCoordinate2D(latitude: 37.3346, longitude: -122.0090),
+                        span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
+                    ))
+                )
+            } else {
+                // Has jobs — zoom out so user location + job pins are all potentially visible
+                mapCameraPosition = .automatic
+            }
+        }
+    }
+
     private func openDirections(for job: Job) {
         let lat = clientsStore.clients.first(where: { $0.id == job.clientId })?.latitude ?? 0
         let lon = clientsStore.clients.first(where: { $0.id == job.clientId })?.longitude ?? 0
@@ -311,17 +367,29 @@ struct ScheduleView: View {
     private var listView: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
+                let startDay = calendar.startOfDay(for: selectedDay)
                 let futureJobs = jobsStore.jobs
-                    .filter { $0.date >= calendar.startOfDay(for: Date()) }
+                    .filter { $0.date >= startDay }
                     .filter { applyFilters($0) }
                     .sorted { $0.date < $1.date }
-                
+
                 let grouped = Dictionary(grouping: futureJobs) { calendar.startOfDay(for: $0.date) }
                 let sortedDates = grouped.keys.sorted()
-                
+
                 if futureJobs.isEmpty {
                     scheduleEmptyState.padding(.top, 40)
                 } else {
+                    HStack {
+                        Text("From \(selectedDay.formatted(.dateTime.month(.abbreviated).day()))")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(Color.sweeplyTextSub)
+                            .tracking(0.5)
+                        Spacer()
+                        Text("\(futureJobs.count) \(futureJobs.count == 1 ? "job" : "jobs") total")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(Color.sweeplyTextSub)
+                    }
+                    .padding(.horizontal, 4)
                     ForEach(sortedDates, id: \.self) { date in
                         VStack(alignment: .leading, spacing: 10) {
                             HStack(spacing: 8) {
@@ -564,60 +632,75 @@ private extension ScheduleView {
 
 private struct ScheduleMonthPicker: View {
     @Binding var selectedDay: Date
+    let jobs: [Job]
     @Environment(\.dismiss) private var dismiss
+    @State private var hasInteracted = false
 
     var body: some View {
         VStack(spacing: 0) {
             // Header
             HStack {
-                Button("Done") {
-                    dismiss()
-                }
-                .font(.system(size: 15, weight: .bold))
-                .foregroundStyle(Color.sweeplyNavy)
-                
-                Spacer()
-                
-                Text("Choose Date")
+                Text(monthYearTitle)
                     .font(.system(size: 17, weight: .bold))
                     .foregroundStyle(Color.sweeplyNavy)
-                
                 Spacer()
-                
-                Button("Today") {
+                Button {
                     withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                         selectedDay = Calendar.current.startOfDay(for: Date())
                     }
+                    dismiss()
+                } label: {
+                    Text("Today")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 7)
+                        .background(Color.sweeplyAccent)
+                        .clipShape(Capsule())
                 }
-                .font(.system(size: 15, weight: .semibold))
-                .foregroundStyle(Color.sweeplyAccent)
+                .buttonStyle(.plain)
             }
             .padding(.horizontal, 24)
-            .padding(.vertical, 20)
-            .background(Color.sweeplySurface)
-            
-            Divider()
-
-            DatePicker(
-                "Selected Date",
-                selection: $selectedDay,
-                displayedComponents: .date
-            )
-            .datePickerStyle(.graphical)
-            .tint(Color.sweeplyAccent)
-            .labelsHidden()
-            .padding(16)
-            .background(Color.sweeplySurface)
-            .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 20, style: .continuous)
-                    .stroke(Color.sweeplyBorder, lineWidth: 1)
-            )
-            .padding(.horizontal, 20)
             .padding(.top, 24)
-            .padding(.bottom, 40)
+            .padding(.bottom, 16)
+
+            JobberCalendarView(selectedDay: $selectedDay, jobs: jobs)
+                .padding(.horizontal, 20)
+
+            Spacer(minLength: 12)
+
+            Button {
+                dismiss()
+            } label: {
+                Text("Done")
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 54)
+                    .background(Color.sweeplyNavy)
+                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            }
+            .buttonStyle(.plain)
+            .padding(.horizontal, 20)
+            .padding(.bottom, 32)
         }
         .background(Color.sweeplyBackground.ignoresSafeArea())
+        .onChange(of: selectedDay) { _, _ in
+            guard hasInteracted else {
+                hasInteracted = true
+                return
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+                dismiss()
+            }
+        }
+        .onAppear { hasInteracted = false }
+    }
+
+    private var monthYearTitle: String {
+        let f = DateFormatter()
+        f.dateFormat = "MMMM yyyy"
+        return f.string(from: selectedDay)
     }
 }
 
