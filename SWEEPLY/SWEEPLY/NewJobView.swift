@@ -13,7 +13,7 @@ struct NewJobForm: View {
         _selectedClientId = State(initialValue: preselectClient?.id)
     }
     @State private var serviceType: ServiceType = .standard
-    @State private var date = Date()
+    @State private var date = Self.defaultJobDate()
     @State private var price: String = ""
     @State private var duration: String = ""
     @State private var recurrence: RecurrenceFrequency = .once
@@ -22,6 +22,15 @@ struct NewJobForm: View {
     @State private var showEndDatePicker = false
     @State private var isSaving = false
     @State private var showValidationErrors = false
+    @State private var saveError: String?
+
+    /// Default to the next full hour, at minimum 1 hour from now.
+    private static func defaultJobDate() -> Date {
+        var components = Calendar.current.dateComponents([.year, .month, .day, .hour], from: Date())
+        components.hour = (components.hour ?? 0) + 1
+        components.minute = 0
+        return Calendar.current.date(from: components) ?? Date().addingTimeInterval(3600)
+    }
 
     private var fallbackSettings: AppSettings {
         var settings = AppSettings()
@@ -47,7 +56,8 @@ struct NewJobForm: View {
         var errors: [String] = []
         if selectedClientId == nil { errors.append("Select a client") }
         if (Double(price) ?? 0) <= 0 { errors.append("Enter a price greater than $0") }
-        if date < Date() { errors.append("Job date must be in the future") }
+        // Allow up to 5 minutes in the past to avoid race between form open and submit
+        if date < Date().addingTimeInterval(-300) { errors.append("Job date must be in the future") }
         return errors
     }
 
@@ -76,6 +86,22 @@ struct NewJobForm: View {
             
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 32) {
+                    // Save error banner
+                    if let saveError {
+                        HStack(spacing: 10) {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .font(.system(size: 13, weight: .semibold))
+                                .foregroundStyle(Color.sweeplyDestructive)
+                            Text(saveError)
+                                .font(.system(size: 13, weight: .medium))
+                                .foregroundStyle(Color.sweeplyNavy)
+                            Spacer()
+                        }
+                        .padding(14)
+                        .background(Color.sweeplyDestructive.opacity(0.08))
+                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    }
+
                     // 1. Job Details
                     VStack(alignment: .leading, spacing: 20) {
                         SectionHeader(title: "JOB DETAILS")
@@ -395,10 +421,12 @@ struct NewJobForm: View {
     private func saveJob() async {
         guard let client = selectedClient, let userId = session.userId else { return }
         isSaving = true
-        
-        let finalPrice = Double(price) ?? 120.0
+        saveError = nil
+
+        let finalPrice    = Double(price) ?? 120.0
         let finalDuration = Double(duration) ?? 2.0
-        
+        let success: Bool
+
         if recurrence == .once {
             let newJob = Job(
                 id: UUID(),
@@ -412,7 +440,7 @@ struct NewJobForm: View {
                 address: client.address,
                 isRecurring: false
             )
-            _ = await jobsStore.insert(newJob, userId: userId)
+            success = await jobsStore.insert(newJob, userId: userId)
         } else {
             let rule = RecurrenceRule(
                 id: UUID(),
@@ -426,12 +454,18 @@ struct NewJobForm: View {
                 price: finalPrice,
                 durationHours: finalDuration
             )
-            _ = await jobsStore.insertRecurring(rule: rule, clientName: client.name, address: client.address)
+            success = await jobsStore.insertRecurring(rule: rule, clientName: client.name, address: client.address)
         }
-        
+
         isSaving = false
-        UINotificationFeedbackGenerator().notificationOccurred(.success)
-        dismiss()
+
+        if success {
+            UINotificationFeedbackGenerator().notificationOccurred(.success)
+            dismiss()
+        } else {
+            UINotificationFeedbackGenerator().notificationOccurred(.error)
+            saveError = jobsStore.lastError ?? "Failed to save the job. Please try again."
+        }
     }
 }
 
