@@ -569,7 +569,7 @@ struct SettingsView: View {
         }
         guard let client = SupabaseManager.shared else {
             feedbackStyle = .warning
-            feedbackMessage = "Supabase is not configured, so password reset is unavailable."
+            feedbackMessage = "Password reset is not available in this mode."
             return
         }
         Task {

@@ -126,44 +126,44 @@ struct DashboardView: View {
     private var healthCards: [DashboardHealthCardModel] {
         [
             DashboardHealthCardModel(
-                title: "Revenue Pulse",
-                subtitle: SupabaseManager.isConfigured && session.isAuthenticated ? "Weekly revenue from Supabase-backed jobs" : "Weekly revenue from local store data",
+                title: "Weekly Revenue",
+                subtitle: "Total earned from completed jobs this week",
                 value: (healthStats?.revenue ?? weekEarned).currency,
                 trend: healthStats?.revenue_trend ?? "+18%",
                 isPositive: healthStats?.is_rev_positive ?? true,
                 icon: "dollarsign",
                 iconColor: .sweeplyAccent,
-                footnote: "\(completedCount) completed jobs this week"
+                footnote: "\(completedCount) jobs completed this week"
             ),
             DashboardHealthCardModel(
-                title: "Visit Load",
-                subtitle: SupabaseManager.isConfigured && session.isAuthenticated ? "Weekly visit count from health RPC" : "Weekly scheduled visit count from local store",
+                title: "Weekly Jobs",
+                subtitle: "Jobs scheduled and completed this week",
                 value: "\(healthStats?.job_count ?? currentWeekJobs.count)",
                 trend: healthStats?.job_trend ?? "+5%",
                 isPositive: healthStats?.is_job_positive ?? true,
                 icon: "calendar",
                 iconColor: .sweeplyNavy,
-                footnote: "\(todayJobs.count) jobs on today’s board"
+                footnote: "\(todayJobs.count) on today’s schedule"
             ),
             DashboardHealthCardModel(
-                title: "Collections",
-                subtitle: "Open invoice balance that still needs attention",
+                title: "Outstanding Balance",
+                subtitle: "Invoices sent that haven’t been paid yet",
                 value: outstandingTotal.currency,
-                trend: overdueInvoicesCount == 0 ? "On track" : "\(overdueInvoicesCount) overdue",
+                trend: overdueInvoicesCount == 0 ? "All on track" : "\(overdueInvoicesCount) overdue",
                 isPositive: overdueInvoicesCount == 0,
                 icon: "creditcard",
                 iconColor: overdueInvoicesCount == 0 ? .sweeplyAccent : .sweeplyDestructive,
-                footnote: "\(ongoingInvoices.count) invoices still open"
+                footnote: "\(ongoingInvoices.count) open invoice\(ongoingInvoices.count == 1 ? "" : "s")"
             ),
             DashboardHealthCardModel(
-                title: "Client Activity",
-                subtitle: "Unique clients touched by this week’s scheduled work",
+                title: "Active Clients",
+                subtitle: "Clients with visits scheduled this week",
                 value: "\(activeClientsThisWeek)",
-                trend: activeClientsThisWeek > 0 ? "Active week" : "No activity",
+                trend: activeClientsThisWeek > 0 ? "Active week" : "Quiet week",
                 isPositive: activeClientsThisWeek > 0,
                 icon: "person.2",
                 iconColor: .sweeplyNavy,
-                footnote: "\(clientsStore.clients.count) total clients in the system"
+                footnote: "\(clientsStore.clients.count) total client\(clientsStore.clients.count == 1 ? "" : "s") on your roster"
             )
         ]
     }

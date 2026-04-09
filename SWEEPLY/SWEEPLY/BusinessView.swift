@@ -943,7 +943,7 @@ private struct KPICustomizerSheet: View {
     var body: some View {
         NavigationStack {
             List {
-                Section("Shown") {
+                Section("Showing on your dashboard") {
                     ForEach(visibleItems) { item in
                         KPIToggleRow(item: item, isEnabled: true) {
                             localEnabled.remove(item.id)
@@ -957,7 +957,7 @@ private struct KPICustomizerSheet: View {
                     }
                 }
                 if !hiddenItems.isEmpty {
-                    Section("Add to Dashboard") {
+                    Section("Hidden — tap to show") {
                         ForEach(hiddenItems) { item in
                             KPIToggleRow(item: item, isEnabled: false) {
                                 localEnabled.insert(item.id)
@@ -966,7 +966,9 @@ private struct KPICustomizerSheet: View {
                     }
                 }
             }
-            .navigationTitle("Customize KPIs")
+            .scrollContentBackground(.hidden)
+            .background(Color.sweeplyBackground)
+            .navigationTitle("Edit Dashboard")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
@@ -974,7 +976,7 @@ private struct KPICustomizerSheet: View {
                         .foregroundStyle(Color.sweeplyTextSub)
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Done") {
+                    Button("Save") {
                         onSave(Array(localEnabled), localOrder)
                         dismiss()
                     }

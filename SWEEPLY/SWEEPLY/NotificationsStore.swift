@@ -43,7 +43,7 @@ final class NotificationsStore {
                     AppNotification(
                         id: UUID(),
                         title: "Welcome to Sweeply",
-                        message: "Your backend notifications are now connected and fully working!",
+                        message: "You're all set — job reminders, invoice alerts, and schedule updates will appear here.",
                         kind: .system,
                         timestamp: Date(),
                         isRead: false

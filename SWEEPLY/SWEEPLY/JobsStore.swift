@@ -20,7 +20,7 @@ final class JobsStore {
     func load(isAuthenticated: Bool) async {
         guard let client = SupabaseManager.shared else {
             jobs = []
-            lastError = "Supabase is not configured."
+            lastError = "Unable to connect. Please try again."
             return
         }
         guard isAuthenticated else {

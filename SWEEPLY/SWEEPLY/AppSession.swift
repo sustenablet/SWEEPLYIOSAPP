@@ -16,7 +16,7 @@ final class AppSession {
 
     init() {
         guard SupabaseManager.shared != nil else {
-            lastAuthError = "Supabase is not configured."
+            lastAuthError = "Unable to sign in. Please try again."
             hasResolvedInitialSession = true
             return
         }

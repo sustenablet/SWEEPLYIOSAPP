@@ -17,7 +17,7 @@ final class InvoicesStore {
     func load(isAuthenticated: Bool) async {
         guard let client = SupabaseManager.shared else {
             invoices = []
-            lastError = "Supabase is not configured."
+            lastError = "Unable to connect. Please try again."
             return
         }
         guard isAuthenticated else {
