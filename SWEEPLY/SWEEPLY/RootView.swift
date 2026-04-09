@@ -18,8 +18,10 @@ struct RootView: View {
     @State private var showQuickAdd = false
     @State private var showAIChat = false
     @State private var showOnboarding = false
+    @State private var showProductTutorial = false
     @State private var isLocked = false
 
+    @AppStorage("hasSeenProductTutorial") private var hasSeenProductTutorial = false
     @AppStorage("biometricLockEnabled") private var biometricLockEnabled: Bool = false
     @AppStorage("pendingShortcut") private var pendingShortcut: String = ""
     @AppStorage("pendingSpotlightLink") private var pendingSpotlightLink: String = ""
@@ -216,6 +218,19 @@ struct RootView: View {
         .fullScreenCover(isPresented: $showOnboarding) {
             OnboardingView()
         }
+        .fullScreenCover(isPresented: $showProductTutorial) {
+            ProductTutorialView {
+                hasSeenProductTutorial = true
+                showProductTutorial = false
+            }
+            .preferredColorScheme(.dark)
+            .interactiveDismissDisabled(true)
+        }
+        .onChange(of: showOnboarding) { _, isShowing in
+            if !isShowing {
+                scheduleProductTutorialIfNeeded()
+            }
+        }
         .onChange(of: profileStore.profile?.businessName ?? "") { _, businessName in
             guard session.isAuthenticated else { return }
             if businessName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
@@ -235,6 +250,7 @@ struct RootView: View {
             }
             await clientsStore.load(isAuthenticated: session.isAuthenticated)
             WidgetDataWriter.write(jobs: jobsStore.jobs, invoices: invoicesStore.invoices)
+            scheduleProductTutorialIfNeeded()
         }
         .onChange(of: session.isAuthenticated) { _, authed in
             if !authed {
@@ -290,6 +306,21 @@ struct RootView: View {
 
             UITabBar.appearance().standardAppearance   = appearance
             UITabBar.appearance().scrollEdgeAppearance = appearance
+        }
+    }
+
+    /// Notion-style 5-page product tour once per install, after auth (and after profile onboarding if shown).
+    private func scheduleProductTutorialIfNeeded() {
+        guard session.isAuthenticated else { return }
+        guard !hasSeenProductTutorial else { return }
+        guard !showOnboarding else { return }
+        guard !showProductTutorial else { return }
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) {
+            guard session.isAuthenticated else { return }
+            guard !hasSeenProductTutorial else { return }
+            guard !showOnboarding else { return }
+            showProductTutorial = true
         }
     }
 }
