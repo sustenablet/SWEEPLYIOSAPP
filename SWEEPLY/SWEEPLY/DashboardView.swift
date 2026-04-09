@@ -18,7 +18,8 @@ struct DashboardView: View {
     @State private var showProfileMenu = false
     @State private var showSettings = false
     @State private var showNotifications = false
-    @AppStorage("playbookDismissed") private var playbookDismissed: Bool = false
+    /// User hid the checklist after completing all steps (persisted).
+    @AppStorage("dashboardPlaybookPermanentlyHidden") private var playbookPermanentlyHidden = false
     @State private var healthStats: HealthStats? = nil
     @State private var selectedHealthSlide = 0
 
@@ -190,8 +191,11 @@ struct DashboardView: View {
                 // ── Sub-sections with spacing ────────────────────
                 VStack(spacing: 12) {
                     // ── Getting Started checklist ────────────────
-                    if !playbookDismissed && !playbookDone.allSatisfy({ $0 }) {
-                        DashboardPlaybook(playbookDone: playbookDone, isDismissed: $playbookDismissed)
+                    if !playbookPermanentlyHidden {
+                        DashboardPlaybook(
+                            playbookDone: playbookDone,
+                            permanentlyHidden: $playbookPermanentlyHidden
+                        )
                     }
 
                     // ── Today's Schedule ─────────────────────────
@@ -614,7 +618,10 @@ struct TrendBadge: View {
 
 struct DashboardPlaybook: View {
     let playbookDone: [Bool]
-    @Binding var isDismissed: Bool
+    @Binding var permanentlyHidden: Bool
+
+    /// While steps are incomplete: collapsed strip vs full card. Persisted.
+    @AppStorage("dashboardPlaybookExpanded") private var playbookExpanded = true
 
     @State private var showClientForm = false
     @State private var showJobForm = false
@@ -622,11 +629,27 @@ struct DashboardPlaybook: View {
     @State private var showSettings = false
 
     private var doneCount: Int { playbookDone.filter { $0 }.count }
+    private var allDone: Bool { playbookDone.count == 4 && playbookDone.allSatisfy { $0 } }
 
     var body: some View {
+        Group {
+            if allDone {
+                completionCard
+            } else if playbookExpanded {
+                expandedCard
+            } else {
+                compactBar
+            }
+        }
+        .sheet(isPresented: $showClientForm) { NewClientForm() }
+        .sheet(isPresented: $showJobForm) { NewJobForm() }
+        .sheet(isPresented: $showInvoiceForm) { NewInvoiceView() }
+        .sheet(isPresented: $showSettings) { SettingsView() }
+    }
+
+    private var expandedCard: some View {
         SectionCard {
             VStack(alignment: .leading, spacing: 16) {
-                // Header
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Get started")
@@ -638,16 +661,20 @@ struct DashboardPlaybook: View {
                     }
                     Spacer()
                     Button {
-                        withAnimation { isDismissed = true }
+                        withAnimation(.spring(duration: 0.28)) { playbookExpanded = false }
                     } label: {
-                        Image(systemName: "xmark")
-                            .font(.system(size: 12))
+                        Image(systemName: "chevron.up")
+                            .font(.system(size: 14, weight: .semibold))
                             .foregroundStyle(Color.sweeplyTextSub)
                             .frame(width: 28, height: 28)
                     }
+                    .accessibilityLabel("Collapse get started")
                 }
 
-                // Progress bar
+                Text("Finish every step before you can remove this section.")
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(Color.sweeplyTextSub.opacity(0.9))
+
                 GeometryReader { geo in
                     ZStack(alignment: .leading) {
                         RoundedRectangle(cornerRadius: 3)
@@ -664,7 +691,6 @@ struct DashboardPlaybook: View {
                 }
                 .frame(height: 4)
 
-                // Rows
                 VStack(spacing: 10) {
                     PlaybookRow(title: "Add your first client", icon: "person.badge.plus", isDone: playbookDone[0]) {
                         if !playbookDone[0] { showClientForm = true }
@@ -681,10 +707,78 @@ struct DashboardPlaybook: View {
                 }
             }
         }
-        .sheet(isPresented: $showClientForm) { NewClientForm() }
-        .sheet(isPresented: $showJobForm) { NewJobForm() }
-        .sheet(isPresented: $showInvoiceForm) { NewInvoiceView() }
-        .sheet(isPresented: $showSettings) { SettingsView() }
+    }
+
+    private var compactBar: some View {
+        Button {
+            withAnimation(.spring(duration: 0.28)) { playbookExpanded = true }
+        } label: {
+            HStack(spacing: 12) {
+                Image(systemName: "checklist")
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundStyle(Color.sweeplyAccent)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Get started")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(Color.primary)
+                    Text("\(doneCount) of 4 complete")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(Color.sweeplyTextSub)
+                }
+                Spacer()
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(Color.sweeplyTextSub)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
+            .background(Color.sweeplySurface)
+            .clipShape(RoundedRectangle(cornerRadius: Radius.md, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: Radius.md, style: .continuous)
+                    .stroke(Color.sweeplyBorder, lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Expand get started")
+    }
+
+    private var completionCard: some View {
+        SectionCard {
+            VStack(alignment: .leading, spacing: 14) {
+                HStack {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("You're all set")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundStyle(Color.sweeplyNavy)
+                        Text("Every onboarding step is complete.")
+                            .font(.system(size: 12))
+                            .foregroundStyle(Color.sweeplyTextSub)
+                    }
+                    Spacer()
+                    Button {
+                        withAnimation(.spring(duration: 0.25)) {
+                            permanentlyHidden = true
+                        }
+                    } label: {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(Color.sweeplyTextSub)
+                            .frame(width: 28, height: 28)
+                    }
+                    .accessibilityLabel("Hide get started")
+                }
+
+                HStack(spacing: 8) {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 20))
+                        .foregroundStyle(Color.sweeplySuccess)
+                    Text("4 of 4 complete")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(Color.sweeplyTextSub)
+                }
+            }
+        }
     }
 }
 
