@@ -12,9 +12,15 @@ struct DashboardView: View {
 
     @State private var appeared = false
 
-    // Mock: pretend user is new.
-    @State private var showPlaybook: Bool = true
-    @State private var playbookDone: [Bool] = Array(repeating: false, count: 4)
+    /// Persisted checklist (manual until we wire real metrics).
+    @AppStorage("dashboardPlaybookStep0") private var playbookStep0 = false
+    @AppStorage("dashboardPlaybookStep1") private var playbookStep1 = false
+    @AppStorage("dashboardPlaybookStep2") private var playbookStep2 = false
+    @AppStorage("dashboardPlaybookStep3") private var playbookStep3 = false
+    /// Collapsed strip vs full card (only while checklist incomplete or not yet permanently hidden).
+    @AppStorage("dashboardPlaybookExpanded") private var playbookExpanded = true
+    /// User tapped hide after all steps — section stays gone.
+    @AppStorage("dashboardPlaybookHidden") private var playbookPermanentlyHidden = false
 
     @State private var showProfileDialog = false
 
@@ -72,8 +78,22 @@ struct DashboardView: View {
         invoices.filter { $0.status != .paid }.reduce(0) { $0 + $1.amount }
     }
 
+    private var playbookDone: [Bool] {
+        [playbookStep0, playbookStep1, playbookStep2, playbookStep3]
+    }
+
     private var allPlaybookDone: Bool {
         playbookDone.allSatisfy { $0 }
+    }
+
+    private func setPlaybookStep(_ index: Int, _ value: Bool) {
+        switch index {
+        case 0: playbookStep0 = value
+        case 1: playbookStep1 = value
+        case 2: playbookStep2 = value
+        case 3: playbookStep3 = value
+        default: break
+        }
     }
 
     private var completedCountAllTime: Int {
@@ -139,7 +159,7 @@ struct DashboardView: View {
             VStack(spacing: 20) {
                 headerSection
                 quickStatsRow
-                if showPlaybook && !allPlaybookDone {
+                if !playbookPermanentlyHidden {
                     playbookSection
                 }
                 statsGrid
@@ -255,21 +275,47 @@ struct DashboardView: View {
 
     // MARK: - Section 3: Getting Started Checklist
     private var playbookSection: some View {
+        Group {
+            if playbookExpanded {
+                playbookExpandedCard
+            } else {
+                playbookCompactBar
+            }
+        }
+    }
+
+    private var playbookExpandedCard: some View {
         SectionCard {
             VStack(alignment: .leading, spacing: 14) {
                 HStack(alignment: .center) {
                     Text("Get started")
                         .font(.system(size: 15, weight: .semibold))
                     Spacer()
-                    Button {
-                        withAnimation(.spring(duration: 0.25)) { showPlaybook = false }
-                    } label: {
-                        Image(systemName: "xmark")
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundStyle(Color.sweeplyTextSub)
-                            .padding(6)
+                    if allPlaybookDone {
+                        Button {
+                            withAnimation(.spring(duration: 0.25)) {
+                                playbookPermanentlyHidden = true
+                            }
+                        } label: {
+                            Image(systemName: "xmark")
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundStyle(Color.sweeplyTextSub)
+                                .padding(6)
+                        }
+                        .accessibilityLabel("Hide get started")
+                    } else {
+                        Button {
+                            withAnimation(.spring(duration: 0.28)) {
+                                playbookExpanded = false
+                            }
+                        } label: {
+                            Image(systemName: "chevron.up")
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundStyle(Color.sweeplyTextSub)
+                                .padding(6)
+                        }
+                        .accessibilityLabel("Collapse get started")
                     }
-                    .accessibilityLabel("Dismiss")
                 }
 
                 VStack(spacing: 10) {
@@ -282,8 +328,49 @@ struct DashboardView: View {
                 Text("\(playbookDoneCount) of 4 complete")
                     .font(.system(size: 12, weight: .medium))
                     .foregroundStyle(Color.sweeplyTextSub)
+
+                if !allPlaybookDone {
+                    Text("Finish every step to dismiss this section.")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(Color.sweeplyTextSub.opacity(0.85))
+                }
             }
         }
+    }
+
+    private var playbookCompactBar: some View {
+        Button {
+            withAnimation(.spring(duration: 0.28)) {
+                playbookExpanded = true
+            }
+        } label: {
+            HStack(spacing: 12) {
+                Image(systemName: "checklist")
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundStyle(Color.sweeplyAccent)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Get started")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(Color.primary)
+                    Text("\(playbookDoneCount) of 4 complete")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(Color.sweeplyTextSub)
+                }
+                Spacer()
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(Color.sweeplyTextSub)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
+            .background(Color.sweeplySurface)
+            .clipShape(RoundedRectangle(cornerRadius: Radius.md, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: Radius.md, style: .continuous)
+                    .stroke(Color.sweeplyBorder, lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
     }
 
     private var playbookDoneCount: Int { playbookDone.filter { $0 }.count }
@@ -293,7 +380,7 @@ struct DashboardView: View {
         let done = playbookDone[index]
         Button {
             withAnimation(.spring(duration: 0.25)) {
-                playbookDone[index].toggle()
+                setPlaybookStep(index, !done)
             }
         } label: {
             HStack(spacing: 12) {
