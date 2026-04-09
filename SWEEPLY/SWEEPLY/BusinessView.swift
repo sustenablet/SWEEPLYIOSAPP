@@ -9,8 +9,7 @@ struct BusinessView: View {
     @Environment(ProfileStore.self)  private var profileStore
 
     @State private var appeared = false
-    @State private var serviceEditorState: ServiceCatalogEditorState?
-    @State private var catalogFeedbackMessage: String?
+    @State private var showServiceCatalog = false
     @State private var selectedSnapshotSlide = 0
     @State private var showAIChat = false
     @State private var insightIndex = 0
@@ -472,7 +471,7 @@ struct BusinessView: View {
                     }
                 }
 
-                serviceCatalogSection
+                serviceCatalogPreviewSection
             }
             .padding(.horizontal, 20)
             .padding(.bottom, 40)
@@ -489,10 +488,8 @@ struct BusinessView: View {
         .onAppear {
             withAnimation(.easeOut(duration: 0.3)) { appeared = true }
         }
-        .sheet(item: $serviceEditorState) { editorState in
-            ServiceCatalogEditorSheet(state: editorState) { result in
-                Task { await saveCatalogChange(from: result) }
-            }
+        .sheet(isPresented: $showServiceCatalog) {
+            ServiceCatalogView()
         }
         .sheet(isPresented: $showAIChat) {
             AIChatView(
@@ -647,93 +644,72 @@ struct BusinessView: View {
         .padding(.vertical, 24)
     }
 
-    private var serviceCatalogSection: some View {
+    private var serviceCatalogPreviewSection: some View {
         SectionCard {
             VStack(alignment: .leading, spacing: 14) {
-                HStack(alignment: .center) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Service Catalog")
-                            .font(.system(size: 15, weight: .semibold))
-                            .foregroundStyle(Color.sweeplyNavy)
-                        Text("Manage the services and prices used in client and job forms.")
-                            .font(.system(size: 12))
-                            .foregroundStyle(Color.sweeplyTextSub)
-                    }
+                HStack {
+                    Text("Service Catalog")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(Color.sweeplyNavy)
                     Spacer()
                     Button {
-                        serviceEditorState = ServiceCatalogEditorState()
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        showServiceCatalog = true
                     } label: {
-                        Label("Add", systemImage: "plus")
+                        Text("View All")
                             .font(.system(size: 12, weight: .semibold))
-                            .foregroundStyle(Color.sweeplyNavy)
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 7)
-                            .background(Color.sweeplyBackground)
+                            .foregroundStyle(Color.sweeplyAccent)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .background(Color.sweeplyAccent.opacity(0.1))
                             .clipShape(Capsule())
                     }
                 }
 
-                if let catalogFeedbackMessage {
-                    Text(catalogFeedbackMessage)
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundStyle(Color.sweeplyTextSub)
-                }
-
                 if catalogServices.isEmpty {
                     overviewEmptyState(
-                        icon: "tray",
-                        title: "No services yet",
-                        message: "Create a service here and it will appear in new client and new job pickers."
+                        icon: "list.bullet.clipboard",
+                        title: "No services configured",
+                        message: "Add services to speed up job and invoice creation."
                     )
                 } else {
-                    VStack(spacing: 10) {
-                        ForEach(catalogServices) { service in
-                            ServiceCatalogRow(
-                                service: service,
-                                onEdit: { serviceEditorState = ServiceCatalogEditorState(service: service) },
-                                onDelete: { Task { await deleteCatalogService(service.id) } }
-                            )
+                    VStack(spacing: 8) {
+                        ForEach(catalogServices.prefix(3)) { service in
+                            HStack(spacing: 12) {
+                                Circle()
+                                    .fill(Color.sweeplyAccent)
+                                    .frame(width: 6, height: 6)
+                                Text(service.name)
+                                    .font(.system(size: 13, weight: .medium))
+                                    .foregroundStyle(Color.sweeplyNavy)
+                                    .lineLimit(1)
+                                Spacer()
+                                Text(service.price.currency)
+                                    .font(.system(size: 13, weight: .bold, design: .monospaced))
+                                    .foregroundStyle(Color.sweeplyTextSub)
+                            }
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 9)
+                            .background(Color.sweeplyBackground)
+                            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
                         }
+                    }
+
+                    if catalogServices.count > 3 {
+                        Button {
+                            showServiceCatalog = true
+                        } label: {
+                            let extra = catalogServices.count - 3
+                            Text("+ \(extra) more service\(extra == 1 ? "" : "s")")
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundStyle(Color.sweeplyAccent)
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(.plain)
                     }
                 }
             }
         }
-    }
-
-    private func saveCatalogChange(from editorState: ServiceCatalogEditorState) async {
-        guard let userId = session.userId else {
-            catalogFeedbackMessage = "No authenticated session was found."
-            return
-        }
-
-        var updatedProfile = profileStore.profile ?? profile
-        var services = updatedProfile.settings.hydratedServiceCatalog
-        let name = editorState.name.trimmingCharacters(in: .whitespacesAndNewlines)
-        let price = Double(editorState.priceText) ?? 0
-
-        if let serviceID = editorState.serviceID,
-           let index = services.firstIndex(where: { $0.id == serviceID }) {
-            services[index].name = name
-            services[index].price = price
-        } else {
-            services.append(BusinessService(name: name, price: price))
-        }
-
-        updatedProfile.settings.services = services
-        let success = await profileStore.save(updatedProfile, userId: userId)
-        catalogFeedbackMessage = success ? "Catalog saved." : (profileStore.lastError ?? "Unable to save catalog changes.")
-    }
-
-    private func deleteCatalogService(_ id: UUID) async {
-        guard let userId = session.userId else {
-            catalogFeedbackMessage = "No authenticated session was found."
-            return
-        }
-
-        var updatedProfile = profileStore.profile ?? profile
-        updatedProfile.settings.services = updatedProfile.settings.hydratedServiceCatalog.filter { $0.id != id }
-        let success = await profileStore.save(updatedProfile, userId: userId)
-        catalogFeedbackMessage = success ? "Catalog saved." : (profileStore.lastError ?? "Unable to save catalog changes.")
     }
 
     private func durationLabel(for duration: Double) -> String {

@@ -1,0 +1,179 @@
+import SwiftUI
+
+// MARK: - Service Catalog View
+// Standalone full-screen catalog management.
+// Presented as a sheet from BusinessView ("View All") and SettingsView (Business tab).
+
+struct ServiceCatalogView: View {
+    @Environment(\.dismiss)      private var dismiss
+    @Environment(ProfileStore.self) private var profileStore
+    @Environment(AppSession.self)   private var session
+
+    @State private var serviceEditorState: ServiceCatalogEditorState?
+    @State private var feedbackMessage: String?
+    @State private var feedbackIsSuccess = false
+
+    private var services: [BusinessService] {
+        (profileStore.profile ?? MockData.profile).settings.hydratedServiceCatalog
+    }
+
+    var body: some View {
+        NavigationStack {
+            Group {
+                if services.isEmpty {
+                    emptyState
+                } else {
+                    ScrollView {
+                        VStack(spacing: 10) {
+                            if let msg = feedbackMessage {
+                                feedbackBanner(message: msg, isSuccess: feedbackIsSuccess)
+                                    .padding(.bottom, 4)
+                            }
+
+                            ForEach(services) { service in
+                                ServiceCatalogRow(
+                                    service: service,
+                                    onEdit: {
+                                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                        serviceEditorState = ServiceCatalogEditorState(service: service)
+                                    },
+                                    onDelete: {
+                                        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                                        Task { await deleteService(service.id) }
+                                    }
+                                )
+                            }
+                        }
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 16)
+                        .padding(.bottom, 24)
+                    }
+                }
+            }
+            .background(Color.sweeplyBackground.ignoresSafeArea())
+            .navigationTitle("Service Catalog")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Done") { dismiss() }
+                        .foregroundStyle(Color.sweeplyTextSub)
+                }
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button {
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        serviceEditorState = ServiceCatalogEditorState()
+                    } label: {
+                        HStack(spacing: 5) {
+                            Image(systemName: "plus")
+                            Text("Add")
+                        }
+                        .font(.system(size: 14, weight: .semibold))
+                    }
+                    .foregroundStyle(Color.sweeplyNavy)
+                }
+            }
+            .sheet(item: $serviceEditorState) { state in
+                ServiceCatalogEditorSheet(state: state) { result in
+                    Task { await saveChange(from: result) }
+                }
+            }
+        }
+    }
+
+    // MARK: - Empty State
+
+    private var emptyState: some View {
+        VStack(spacing: 0) {
+            Spacer()
+
+            VStack(spacing: 20) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 20, style: .continuous)
+                        .fill(Color.sweeplyAccent.opacity(0.08))
+                        .frame(width: 72, height: 72)
+                    Image(systemName: "list.bullet.clipboard")
+                        .font(.system(size: 28, weight: .medium))
+                        .foregroundStyle(Color.sweeplyAccent)
+                }
+
+                VStack(spacing: 8) {
+                    Text("No services yet")
+                        .font(.system(size: 18, weight: .bold))
+                        .foregroundStyle(Color.sweeplyNavy)
+                    Text("Create your service catalog — these appear\nin new job and invoice pickers.")
+                        .font(.system(size: 14))
+                        .foregroundStyle(Color.sweeplyTextSub)
+                        .multilineTextAlignment(.center)
+                        .lineSpacing(3)
+                }
+
+                Button {
+                    serviceEditorState = ServiceCatalogEditorState()
+                } label: {
+                    Label("Add First Service", systemImage: "plus")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 24)
+                        .padding(.vertical, 13)
+                        .background(Color.sweeplyNavy)
+                        .clipShape(Capsule())
+                }
+                .buttonStyle(.plain)
+            }
+
+            Spacer()
+        }
+        .padding(.horizontal, 40)
+    }
+
+    // MARK: - Feedback Banner
+
+    @ViewBuilder
+    private func feedbackBanner(message: String, isSuccess: Bool) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: isSuccess ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(isSuccess ? Color.sweeplyAccent : Color.sweeplyWarning)
+            Text(message)
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(Color.sweeplyNavy)
+            Spacer()
+        }
+        .padding(13)
+        .background((isSuccess ? Color.sweeplyAccent : Color.sweeplyWarning).opacity(0.1))
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+    }
+
+    // MARK: - Actions
+
+    private func saveChange(from state: ServiceCatalogEditorState) async {
+        guard let userId = session.userId else { return }
+        var profile = profileStore.profile ?? MockData.profile
+        var list = profile.settings.hydratedServiceCatalog
+        let name  = state.name.trimmingCharacters(in: .whitespacesAndNewlines)
+        let price = Double(state.priceText) ?? 0
+
+        if let sid = state.serviceID, let idx = list.firstIndex(where: { $0.id == sid }) {
+            list[idx].name  = name
+            list[idx].price = price
+        } else {
+            list.append(BusinessService(name: name, price: price))
+        }
+
+        profile.settings.services = list
+        let success = await profileStore.save(profile, userId: userId)
+        feedbackIsSuccess = success
+        feedbackMessage   = success
+            ? "\(state.isEditing ? "Service updated." : "Service added.")"
+            : (profileStore.lastError ?? "Unable to save.")
+    }
+
+    private func deleteService(_ id: UUID) async {
+        guard let userId = session.userId else { return }
+        var profile = profileStore.profile ?? MockData.profile
+        profile.settings.services = profile.settings.hydratedServiceCatalog.filter { $0.id != id }
+        let success = await profileStore.save(profile, userId: userId)
+        feedbackIsSuccess = success
+        feedbackMessage   = success ? "Service removed." : (profileStore.lastError ?? "Unable to delete.")
+    }
+}
