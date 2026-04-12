@@ -5,6 +5,7 @@ struct SplashView: View {
     @State private var iconOpacity: Double = 0
     @State private var wordmarkOpacity: Double = 0
     @State private var taglineOpacity: Double = 0
+    @State private var showClipboardError: Bool = true
 
     var body: some View {
         ZStack {
@@ -41,6 +42,24 @@ struct SplashView: View {
 
                 Spacer()
 
+                if showClipboardError {
+                    HStack(spacing: 8) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .font(.system(size: 14))
+                            .foregroundStyle(.white)
+                        Text("Cannot read \"clipboard\" (this model does not support image input).")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundStyle(.white)
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+                    .background(Color.sweeplyDestructive)
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                    .padding(.horizontal, 24)
+                    .padding(.bottom, 16)
+                    .transition(.opacity.combined(with: .move(edge: .bottom)))
+                }
+
                 ProgressView()
                     .tint(Color.sweeplyAccent)
                     .opacity(taglineOpacity)
@@ -57,6 +76,12 @@ struct SplashView: View {
             }
             withAnimation(.easeOut(duration: 0.3).delay(0.5)) {
                 taglineOpacity = 1.0
+            }
+            
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
+                withAnimation(.easeInOut(duration: 0.3)) {
+                    showClipboardError = false
+                }
             }
         }
     }
