@@ -862,7 +862,6 @@ struct BusinessView: View {
         return String(format: "%.1fh", duration)
     }
 }
-
 // MARK: - Subviews
 
 private struct AIInsight {

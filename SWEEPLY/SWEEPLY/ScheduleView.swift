@@ -25,7 +25,8 @@ struct ScheduleView: View {
     @State private var showMonthPicker = false
     @State private var enabledViewModes: Set<ScheduleViewMode> = [.day, .list, .map]
     @State private var selectedJobId: UUID? = nil
-    @State private var mapCameraPosition: MapCameraPosition = .userLocation(fallback: .automatic)
+    @State private var mapCameraPosition: MapCameraPosition = .automatic
+    @State private var locationManager = LocationManager.shared
     @Namespace private var mapSelectionNamespace
     
     private var visibleViewModes: [ScheduleViewMode] {
@@ -285,15 +286,20 @@ struct ScheduleView: View {
             return CLLocationCoordinate2D(latitude: lat, longitude: lon)
         }
         
+        // Get user location or fallback to Cupertino
+        let userLocation = locationManager.location
+        let fallbackCenter = CLLocationCoordinate2D(
+            latitude: userLocation?.coordinate.latitude ?? 37.3346,
+            longitude: userLocation?.coordinate.longitude ?? -122.0090
+        )
+        
         withAnimation(.easeInOut(duration: 0.4)) {
             if jobCoords.isEmpty {
                 // No jobs — center on user with neighborhood-level zoom
-                mapCameraPosition = .userLocation(
-                    fallback: .region(MKCoordinateRegion(
-                        center: CLLocationCoordinate2D(latitude: 37.3346, longitude: -122.0090),
-                        span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
-                    ))
-                )
+                mapCameraPosition = .region(MKCoordinateRegion(
+                    center: fallbackCenter,
+                    span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
+                ))
             } else {
                 // Has jobs — center on jobs with zoom to show all pins
                 let lats = jobCoords.map(\.latitude)
