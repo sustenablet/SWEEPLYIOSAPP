@@ -5,11 +5,13 @@ struct JobFiltersView: View {
     @Binding var statusFilter: JobStatus?
     @Binding var typeFilter: String
     @Binding var enabledViewModes: Set<ScheduleViewMode>
-    
+    @Binding var showInvoices: Bool
+
     // Internal state to allow "Cancel"
     @State private var localStatus: JobStatus?
     @State private var localType: String = "All"
     @State private var localViewModes: Set<ScheduleViewMode> = [.day, .list, .map]
+    @State private var localShowInvoices: Bool = false
     
     var body: some View {
         VStack(spacing: 0) {
@@ -22,6 +24,7 @@ struct JobFiltersView: View {
                     localStatus = nil
                     localType = "All"
                     localViewModes = [.day, .list, .map]
+                    localShowInvoices = false
                 }
                 .font(.system(size: 14, weight: .semibold))
                 .foregroundStyle(Color.sweeplyAccent)
@@ -79,7 +82,7 @@ struct JobFiltersView: View {
                                 .font(.system(size: 13))
                                 .foregroundStyle(Color.sweeplyTextSub)
                         }
-                        
+
                         VStack(spacing: 1) {
                             ForEach(ScheduleViewMode.allCases, id: \.self) { mode in
                                 ToggleRow(
@@ -95,10 +98,46 @@ struct JobFiltersView: View {
                                         localViewModes.insert(mode)
                                     }
                                 }
-                                
+
                                 if mode != ScheduleViewMode.allCases.last {
                                     Divider().padding(.leading, 44)
                                 }
+                            }
+                        }
+                        .background(Color.sweeplyBackground.opacity(0.5))
+                        .clipShape(RoundedRectangle(cornerRadius: 16))
+                        .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.sweeplyBorder, lineWidth: 1))
+                    }
+
+                    // Content Type Group
+                    VStack(alignment: .leading, spacing: 16) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("SHOW CONTENT")
+                                .font(.system(size: 11, weight: .bold))
+                                .foregroundStyle(Color.sweeplyNavy)
+                                .tracking(1.0)
+                            Text("Choose what appears on your schedule")
+                                .font(.system(size: 13))
+                                .foregroundStyle(Color.sweeplyTextSub)
+                        }
+
+                        VStack(spacing: 1) {
+                            ToggleRow(
+                                label: "Jobs",
+                                icon: "briefcase.fill",
+                                isOn: true,
+                                enabled: false
+                            ) { }
+
+                            Divider().padding(.leading, 44)
+
+                            ToggleRow(
+                                label: "Invoices",
+                                icon: "doc.text.fill",
+                                isOn: localShowInvoices,
+                                enabled: true
+                            ) {
+                                localShowInvoices.toggle()
                             }
                         }
                         .background(Color.sweeplyBackground.opacity(0.5))
@@ -117,6 +156,7 @@ struct JobFiltersView: View {
                     statusFilter = localStatus
                     typeFilter = localType
                     enabledViewModes = localViewModes
+                    showInvoices = localShowInvoices
                     dismiss()
                 } label: {
                     Text("Apply Changes")
@@ -143,6 +183,7 @@ struct JobFiltersView: View {
             localStatus = statusFilter
             localType = typeFilter
             localViewModes = enabledViewModes
+            localShowInvoices = showInvoices
         }
     }
     
@@ -240,10 +281,11 @@ private struct ToggleRow: View {
     let label: String
     let icon: String
     let isOn: Bool
+    var enabled: Bool = true
     let action: () -> Void
-    
+
     var body: some View {
-        Button(action: action) {
+        Button(action: { if enabled { action() } }) {
             HStack(spacing: 12) {
                 ZStack {
                     RoundedRectangle(cornerRadius: 8)
@@ -253,16 +295,22 @@ private struct ToggleRow: View {
                         .font(.system(size: 14))
                         .foregroundStyle(Color.sweeplyNavy)
                 }
-                
+
                 Text(label)
                     .font(.system(size: 15, weight: .medium))
-                    .foregroundStyle(Color.primary)
-                
+                    .foregroundStyle(enabled ? Color.primary : Color.primary.opacity(0.4))
+
                 Spacer()
-                
-                Image(systemName: isOn ? "checkmark.circle.fill" : "circle")
-                    .font(.system(size: 22))
-                    .foregroundStyle(isOn ? Color.sweeplyAccent : Color.sweeplyBorder)
+
+                if !enabled {
+                    Text("Always on")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(Color.sweeplyTextSub)
+                } else {
+                    Image(systemName: isOn ? "checkmark.circle.fill" : "circle")
+                        .font(.system(size: 22))
+                        .foregroundStyle(isOn ? Color.sweeplyAccent : Color.sweeplyBorder)
+                }
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 12)

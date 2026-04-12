@@ -981,6 +981,91 @@ private struct ScheduleJobRow: View {
     }
 }
 
+// MARK: - Schedule Invoice Row
+
+private struct ScheduleInvoiceRow: View {
+    let invoice: Invoice
+    @State private var isPressed = false
+
+    private var statusAccentColor: Color {
+        switch invoice.status {
+        case .paid:    return Color.sweeplyAccent
+        case .unpaid:  return Color.sweeplyWarning
+        case .overdue: return Color.sweeplyDestructive
+        }
+    }
+
+    var body: some View {
+        NavigationLink(destination: InvoiceDetailView(invoiceId: invoice.id)) {
+            ZStack(alignment: .leading) {
+                Color.sweeplySurface
+
+                Capsule()
+                    .fill(statusAccentColor)
+                    .frame(width: 3)
+                    .padding(.vertical, 10)
+
+                HStack(spacing: 14) {
+                    Color.clear.frame(width: 3)
+
+                    VStack(alignment: .leading, spacing: 6) {
+                        HStack(spacing: 4) {
+                            Text(invoice.clientName)
+                                .font(.system(size: 15, weight: .bold))
+                                .foregroundStyle(Color.sweeplyNavy)
+                                .lineLimit(1)
+                                .truncationMode(.tail)
+                            Spacer()
+                            Text(invoice.total.currency)
+                                .font(.system(size: 15, weight: .bold, design: .monospaced))
+                                .foregroundStyle(Color.sweeplyNavy)
+                        }
+
+                        HStack(spacing: 6) {
+                            Image(systemName: "calendar.badge.exclamationmark")
+                                .font(.system(size: 10))
+                                .foregroundStyle(statusAccentColor.opacity(0.7))
+                            Text("Due \(invoice.dueDate.formatted(.dateTime.month(.abbreviated).day()))")
+                                .font(.system(size: 12))
+                                .foregroundStyle(Color.sweeplyTextSub)
+                        }
+
+                        HStack(spacing: 8) {
+                            Text(invoice.invoiceNumber)
+                                .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                                .foregroundStyle(Color.sweeplyTextSub)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(Color.sweeplyBackground)
+                                .clipShape(RoundedRectangle(cornerRadius: 6))
+
+                            InvoiceStatusBadge(status: invoice.status)
+                        }
+                    }
+
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(Color.sweeplyBorder)
+                }
+                .padding(.leading, 14)
+                .padding(.trailing, 16)
+                .padding(.vertical, 14)
+            }
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .overlay(RoundedRectangle(cornerRadius: 12).stroke(statusAccentColor.opacity(0.2), lineWidth: 1))
+            .shadow(color: .black.opacity(0.04), radius: 8, x: 0, y: 2)
+            .scaleEffect(isPressed ? 0.97 : 1.0)
+            .animation(.easeOut(duration: 0.12), value: isPressed)
+        }
+        .buttonStyle(.plain)
+        .simultaneousGesture(
+            DragGesture(minimumDistance: 0)
+                .onChanged { _ in isPressed = true }
+                .onEnded { _ in isPressed = false }
+        )
+    }
+}
+
 // MARK: - Week Strip
 
 struct WeekStripView: View {

@@ -53,12 +53,22 @@ final class AIService {
 
         do {
             let (data, response) = try await URLSession.shared.data(for: request)
-            guard let http = response as? HTTPURLResponse, http.statusCode == 200 else { return nil }
+            guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
+                #if DEBUG
+                if let http = response as? HTTPURLResponse {
+                    print("[AIService] Non-200 status: \(http.statusCode)")
+                }
+                #endif
+                return nil
+            }
             let json = try JSONSerialization.jsonObject(with: data) as? [String: Any]
             let choices = json?["choices"] as? [[String: Any]]
             let message = choices?.first?["message"] as? [String: Any]
             return message?["content"] as? String
         } catch {
+            #if DEBUG
+            print("[AIService] chat() failed: \(error.localizedDescription)")
+            #endif
             return nil
         }
     }

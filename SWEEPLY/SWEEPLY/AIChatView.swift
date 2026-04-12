@@ -381,21 +381,7 @@ struct AIChatView: View {
                             }
                             LazyVStack(spacing: 12) {
                                 ForEach(messages) { message in
-                                    MessageBubble(
-                                        message: message,
-                                        onAction: handleAction,
-                                        onQuickReply: sendMessage
-                                    )
-                                    .id(message.id)
-                                    .swipeActions(edge: .leading, allowsFullSwipe: true) {
-                                        Button(role: .destructive) {
-                                            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-                                            messages.removeAll { $0.id == message.id }
-                                            persistChat()
-                                        } label: {
-                                            Label("Delete", systemImage: "trash")
-                                        }
-                                    }
+                                    messageBubbleRow(message)
                                 }
                                 if isAssistantTyping {
                                     TypingIndicatorView()
@@ -435,17 +421,15 @@ struct AIChatView: View {
                     suggestionsCarousel
                 }
 
-                // Quick Actions sheet (replaces slash-triggered menu)
-                .sheet(isPresented: $showCommandPalette) {
-                    quickActionsSheet
-                        .presentationDetents([.fraction(0.5), .large])
-                        .presentationDragIndicator(.visible)
-                }
-
                 Divider()
                 inputBar
             }
             .background(Color.sweeplyBackground.ignoresSafeArea())
+            .sheet(isPresented: $showCommandPalette) {
+                quickActionsSheet
+                    .presentationDetents([.fraction(0.5), .large])
+                    .presentationDragIndicator(.visible)
+            }
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(Color.sweeplyBackground, for: .navigationBar)
             .toolbarColorScheme(.light, for: .navigationBar)
@@ -1319,6 +1303,25 @@ struct AIChatView: View {
     }
 
     // MARK: - Send Logic
+
+    @ViewBuilder
+    private func messageBubbleRow(_ message: ChatMessage) -> some View {
+        MessageBubble(
+            message: message,
+            onAction: handleAction,
+            onQuickReply: sendMessage
+        )
+        .id(message.id)
+        .swipeActions(edge: .leading, allowsFullSwipe: true) {
+            Button(role: .destructive) {
+                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                messages.removeAll { $0.id == message.id }
+                persistChat()
+            } label: {
+                Label("Delete", systemImage: "trash")
+            }
+        }
+    }
 
     private func sendMessage(_ text: String) {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
