@@ -9,6 +9,34 @@
 			<key>orderHint</key>
 			<integer>0</integer>
 		</dict>
+		<key>SweeplyWIdgetsExtension.xcscheme_^#shared#^_</key>
+		<dict>
+			<key>orderHint</key>
+			<integer>1</integer>
+		</dict>
+	</dict>
+	<key>SuppressBuildableAutocreation</key>
+	<dict>
+		<key>E9743F9F2F87116D0075413E</key>
+		<dict>
+			<key>primary</key>
+			<true/>
+		</dict>
+		<key>E9D0783C2F7E357300E31AC7</key>
+		<dict>
+			<key>primary</key>
+			<true/>
+		</dict>
+		<key>E9D0784D2F7E357400E31AC7</key>
+		<dict>
+			<key>primary</key>
+			<true/>
+		</dict>
+		<key>E9D078572F7E357400E31AC7</key>
+		<dict>
+			<key>primary</key>
+			<true/>
+		</dict>
 	</dict>
 </dict>
 </plist>

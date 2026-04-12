@@ -22,6 +22,10 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
             refreshTask.setTaskCompleted(success: true)
             AppDelegate.scheduleBackgroundRefresh()
         }
+        // Handle cold-launch via home screen shortcut
+        if let shortcut = launchOptions?[.shortcutItem] as? UIApplicationShortcutItem {
+            UserDefaults.standard.set(shortcut.type, forKey: "pendingShortcut")
+        }
         return true
     }
 
@@ -30,6 +34,16 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
         performActionFor shortcutItem: UIApplicationShortcutItem,
         completionHandler: @escaping (Bool) -> Void
     ) {
+        // Post notification directly — this fires AFTER the app is active,
+        // so RootView receives it at the right time (unlike scenePhase polling).
+        DispatchQueue.main.async {
+            NotificationCenter.default.post(
+                name: NSNotification.Name("HandleShortcutItem"),
+                object: nil,
+                userInfo: ["type": shortcutItem.type]
+            )
+        }
+        // Also write to UserDefaults for cold-launch fallback
         UserDefaults.standard.set(shortcutItem.type, forKey: "pendingShortcut")
         completionHandler(true)
     }
@@ -70,7 +84,15 @@ struct SWEEPLYApp: App {
                     AppDelegate.scheduleBackgroundRefresh()
                 }
                 .onOpenURL { url in
-                    SupabaseManager.shared?.auth.handle(url)
+                    if url.scheme == "sweeply" {
+                        if let comps = URLComponents(url: url, resolvingAgainstBaseURL: false),
+                           let dateStr = comps.queryItems?.first(where: { $0.name == "date" })?.value {
+                            UserDefaults.standard.set(dateStr, forKey: "pendingScheduleDate")
+                        }
+                        UserDefaults.standard.set(true, forKey: "pendingScheduleTab")
+                    } else {
+                        SupabaseManager.shared?.auth.handle(url)
+                    }
                 }
                 .onContinueUserActivity(CSSearchableItemActionType) { activity in
                     if let deepLink = SpotlightIndexer.deepLink(from: activity) {

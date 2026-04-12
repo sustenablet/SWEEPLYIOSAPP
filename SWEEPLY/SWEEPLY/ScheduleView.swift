@@ -279,8 +279,14 @@ struct ScheduleView: View {
     
     private func updateMapCamera(for day: Date) {
         let jobs = filteredJobsForDate(day)
+        let jobCoords = jobs.compactMap { job -> CLLocationCoordinate2D? in
+            guard let client = clientsStore.clients.first(where: { $0.id == job.clientId }),
+                  let lat = client.latitude, let lon = client.longitude else { return nil }
+            return CLLocationCoordinate2D(latitude: lat, longitude: lon)
+        }
+        
         withAnimation(.easeInOut(duration: 0.4)) {
-            if jobs.isEmpty {
+            if jobCoords.isEmpty {
                 // No jobs — center on user with neighborhood-level zoom
                 mapCameraPosition = .userLocation(
                     fallback: .region(MKCoordinateRegion(
@@ -289,8 +295,17 @@ struct ScheduleView: View {
                     ))
                 )
             } else {
-                // Has jobs — zoom out so user location + job pins are all potentially visible
-                mapCameraPosition = .automatic
+                // Has jobs — center on jobs with zoom to show all pins
+                let lats = jobCoords.map(\.latitude)
+                let lons = jobCoords.map(\.longitude)
+                
+                let centerLat = (lats.min()! + lats.max()!) / 2
+                let centerLon = (lons.min()! + lons.max()!) / 2
+                
+                mapCameraPosition = .region(MKCoordinateRegion(
+                    center: CLLocationCoordinate2D(latitude: centerLat, longitude: centerLon),
+                    span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
+                ))
             }
         }
     }

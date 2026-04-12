@@ -368,6 +368,17 @@ struct NewJobForm: View {
             .background(Color.sweeplySurface)
             .shadow(color: .black.opacity(0.04), radius: 10, x: 0, y: -5)
         }
+        .scrollDismissesKeyboard(.interactively)
+        .toolbar {
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
+                Button("Done") {
+                    UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                }
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(Color.sweeplyNavy)
+            }
+        }
         .background(Color.sweeplySurface.ignoresSafeArea())
         .onAppear {
             if selectedService == nil, let firstService = serviceCatalog.first {

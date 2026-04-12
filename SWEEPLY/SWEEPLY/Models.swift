@@ -128,6 +128,7 @@ struct BusinessService: Identifiable, Codable {
     var id = UUID()
     var name: String
     var price: Double
+    var isAddon: Bool = false  // "Extra Cost" add-ons shown separately in the catalog
 }
 
 struct Client: Identifiable {

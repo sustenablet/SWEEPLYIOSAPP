@@ -558,14 +558,128 @@ private struct LineItemRow: View {
 
 // MARK: - Service Picker Sheet
 
+// MARK: - Custom Line Item Sheet
+
+private struct CustomLineItemSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    let onAdd: (InvoiceLineItem) -> Void
+    
+    @State private var description = ""
+    @State private var quantity = "1"
+    @State private var unitPrice = ""
+    
+    private var isValid: Bool {
+        !description.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
+        Double(quantity) != nil &&
+        Double(unitPrice) != nil
+    }
+    
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 24) {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Description")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(Color.sweeplyTextSub)
+                    
+                    TextField("e.g. Extra hours, Supplies, etc.", text: $description)
+                        .font(.system(size: 17))
+                        .padding(16)
+                        .background(Color.sweeplySurface)
+                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                .stroke(Color.sweeplyBorder, lineWidth: 1)
+                        )
+                }
+                
+                HStack(spacing: 16) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Quantity")
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundStyle(Color.sweeplyTextSub)
+                        
+                        TextField("1", text: $quantity)
+                            .font(.system(size: 17))
+                            .keyboardType(.decimalPad)
+                            .padding(16)
+                            .background(Color.sweeplySurface)
+                            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                    .stroke(Color.sweeplyBorder, lineWidth: 1)
+                            )
+                    }
+                    
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Unit Price ($)")
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundStyle(Color.sweeplyTextSub)
+                        
+                        TextField("0.00", text: $unitPrice)
+                            .font(.system(size: 17))
+                            .keyboardType(.decimalPad)
+                            .padding(16)
+                            .background(Color.sweeplySurface)
+                            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                    .stroke(Color.sweeplyBorder, lineWidth: 1)
+                            )
+                    }
+                }
+                
+                if let qty = Double(quantity), let price = Double(unitPrice), qty > 0 && price > 0 {
+                    HStack {
+                        Text("Total:")
+                            .font(.system(size: 15, weight: .medium))
+                            .foregroundStyle(Color.sweeplyTextSub)
+                        Spacer()
+                        Text((qty * price).currency)
+                            .font(.system(size: 17, weight: .bold, design: .monospaced))
+                            .foregroundStyle(Color.sweeplyNavy)
+                    }
+                    .padding(16)
+                    .background(Color.sweeplyAccent.opacity(0.08))
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                }
+                
+                Spacer()
+            }
+            .padding(24)
+            .navigationTitle("Custom Line Item")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                        .foregroundStyle(Color.sweeplyTextSub)
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Add") {
+                        let qty = Double(quantity) ?? 1
+                        let price = Double(unitPrice) ?? 0
+                        onAdd(InvoiceLineItem(description: description, quantity: qty, unitPrice: price))
+                        dismiss()
+                    }
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundStyle(Color.sweeplyAccent)
+                    .disabled(!isValid)
+                }
+            }
+        }
+        .presentationDetents([.medium])
+        .presentationDragIndicator(.visible)
+    }
+}
+
+// MARK: - Service Picker Sheet
+
 private struct ServicePickerSheet: View {
     @Environment(\.dismiss) private var dismiss
     let catalog: [BusinessService]
     let onSelect: (InvoiceLineItem) -> Void
 
-    @State private var customDescription = ""
-    @State private var customPriceString = ""
-    @State private var showingCustom = false
+    @State private var showingCustomSheet = false
 
     var body: some View {
         NavigationStack {
@@ -592,36 +706,12 @@ private struct ServicePickerSheet: View {
                 }
 
                 Section {
-                    if showingCustom {
-                        VStack(alignment: .leading, spacing: 12) {
-                            TextField("Description", text: $customDescription)
-                                .font(.system(size: 15))
-                            HStack(spacing: 4) {
-                                Text("$").foregroundStyle(Color.sweeplyTextSub)
-                                TextField("Price", text: $customPriceString)
-                                    .keyboardType(.decimalPad)
-                                    .font(.system(size: 15, design: .monospaced))
-                            }
-                            Button {
-                                let price = Double(customPriceString) ?? 0
-                                onSelect(InvoiceLineItem(description: customDescription, quantity: 1, unitPrice: price))
-                                dismiss()
-                            } label: {
-                                Text("Add Custom Service")
-                                    .font(.system(size: 14, weight: .semibold))
-                                    .foregroundStyle(Color.sweeplyNavy)
-                            }
-                            .disabled(customDescription.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                        }
-                        .padding(.vertical, 4)
-                    } else {
-                        Button {
-                            withAnimation { showingCustom = true }
-                        } label: {
-                            Label("Add custom line item", systemImage: "plus.circle")
-                                .font(.system(size: 15))
-                                .foregroundStyle(Color.sweeplyNavy)
-                        }
+                    Button {
+                        showingCustomSheet = true
+                    } label: {
+                        Label("Add custom line item", systemImage: "plus.circle")
+                            .font(.system(size: 15))
+                            .foregroundStyle(Color.sweeplyAccent)
                     }
                 } header: {
                     Text("CUSTOM")
@@ -636,6 +726,12 @@ private struct ServicePickerSheet: View {
             }
         }
         .presentationDetents([.medium, .large])
+        .sheet(isPresented: $showingCustomSheet) {
+            CustomLineItemSheet { item in
+                onSelect(item)
+                dismiss()
+            }
+        }
     }
 }
 

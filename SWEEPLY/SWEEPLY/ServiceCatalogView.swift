@@ -24,23 +24,29 @@ struct ServiceCatalogView: View {
                     emptyState
                 } else {
                     ScrollView {
-                        VStack(spacing: 10) {
+                        VStack(alignment: .leading, spacing: 24) {
                             if let msg = feedbackMessage {
                                 feedbackBanner(message: msg, isSuccess: feedbackIsSuccess)
-                                    .padding(.bottom, 4)
                             }
 
-                            ForEach(services) { service in
-                                ServiceCatalogRow(
-                                    service: service,
-                                    onEdit: {
-                                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                                        serviceEditorState = ServiceCatalogEditorState(service: service)
-                                    },
-                                    onDelete: {
-                                        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-                                        Task { await deleteService(service.id) }
-                                    }
+                            let mainServices = services.filter { !$0.isAddon }
+                            let addonServices = services.filter { $0.isAddon }
+
+                            // Main Services
+                            if !mainServices.isEmpty {
+                                catalogSection(
+                                    title: "Services",
+                                    subtitle: "Primary services offered",
+                                    services: mainServices
+                                )
+                            }
+
+                            // Extra Costs
+                            if !addonServices.isEmpty {
+                                catalogSection(
+                                    title: "Extra Costs",
+                                    subtitle: "Add-ons charged on top of the main service",
+                                    services: addonServices
                                 )
                             }
                         }
@@ -76,6 +82,35 @@ struct ServiceCatalogView: View {
                 ServiceCatalogEditorSheet(state: state) { result in
                     Task { await saveChange(from: result) }
                 }
+            }
+        }
+    }
+
+    // MARK: - Section Builder
+
+    private func catalogSection(title: String, subtitle: String, services: [BusinessService]) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundStyle(Color.sweeplyNavy)
+                    .tracking(0.3)
+                Text(subtitle)
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(Color.sweeplyTextSub)
+            }
+            ForEach(services) { service in
+                ServiceCatalogRow(
+                    service: service,
+                    onEdit: {
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        serviceEditorState = ServiceCatalogEditorState(service: service)
+                    },
+                    onDelete: {
+                        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                        Task { await deleteService(service.id) }
+                    }
+                )
             }
         }
     }
@@ -154,10 +189,11 @@ struct ServiceCatalogView: View {
         let price = Double(state.priceText) ?? 0
 
         if let sid = state.serviceID, let idx = list.firstIndex(where: { $0.id == sid }) {
-            list[idx].name  = name
-            list[idx].price = price
+            list[idx].name    = name
+            list[idx].price   = price
+            list[idx].isAddon = state.isAddon
         } else {
-            list.append(BusinessService(name: name, price: price))
+            list.append(BusinessService(name: name, price: price, isAddon: state.isAddon))
         }
 
         profile.settings.services = list

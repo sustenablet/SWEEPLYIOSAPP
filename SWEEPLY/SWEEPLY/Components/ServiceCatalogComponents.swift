@@ -8,10 +8,21 @@ struct ServiceCatalogRow: View {
     var body: some View {
         HStack(spacing: 12) {
             VStack(alignment: .leading, spacing: 2) {
-                Text(service.name)
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(Color.sweeplyNavy)
-                    .lineLimit(1)
+                HStack(spacing: 6) {
+                    Text(service.name)
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(Color.sweeplyNavy)
+                        .lineLimit(1)
+                    if service.isAddon {
+                        Text("+ EXTRA")
+                            .font(.system(size: 8, weight: .bold))
+                            .foregroundStyle(Color.sweeplyAccent)
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 2)
+                            .background(Color.sweeplyAccent.opacity(0.1))
+                            .clipShape(Capsule())
+                    }
+                }
                 Text(service.price.currency)
                     .font(.system(size: 12, weight: .bold, design: .monospaced))
                     .foregroundStyle(Color.sweeplyTextSub)
@@ -53,12 +64,14 @@ struct ServiceCatalogEditorState: Identifiable {
     let serviceID: UUID?
     var name: String
     var priceText: String
+    var isAddon: Bool
 
     var isEditing: Bool { serviceID != nil }
 
-    init(service: BusinessService? = nil) {
+    init(service: BusinessService? = nil, defaultAddon: Bool = false) {
         self.serviceID = service?.id
         self.name = service?.name ?? ""
+        self.isAddon = service?.isAddon ?? defaultAddon
         if let price = service?.price {
             self.priceText = price == floor(price) ? "\(Int(price))" : String(format: "%.2f", price)
         } else {
@@ -126,6 +139,42 @@ struct ServiceCatalogEditorSheet: View {
                             .stroke(Color.sweeplyBorder, lineWidth: 1)
                     )
                 }
+
+                // Extra cost toggle
+                Button {
+                    withAnimation(.easeInOut(duration: 0.15)) { draft.isAddon.toggle() }
+                } label: {
+                    HStack(spacing: 12) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Extra Cost")
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundStyle(Color.sweeplyNavy)
+                            Text("Add-on charged on top of the main service")
+                                .font(.system(size: 11))
+                                .foregroundStyle(Color.sweeplyTextSub)
+                        }
+                        Spacer()
+                        ZStack {
+                            Capsule()
+                                .fill(draft.isAddon ? Color.sweeplyAccent : Color.sweeplyBorder)
+                                .frame(width: 44, height: 26)
+                            Circle()
+                                .fill(.white)
+                                .frame(width: 20, height: 20)
+                                .offset(x: draft.isAddon ? 9 : -9)
+                        }
+                        .animation(.easeInOut(duration: 0.15), value: draft.isAddon)
+                    }
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 12)
+                    .background(Color.sweeplyBackground)
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .stroke(draft.isAddon ? Color.sweeplyAccent.opacity(0.4) : Color.sweeplyBorder, lineWidth: 1)
+                    )
+                }
+                .buttonStyle(.plain)
 
                 Spacer()
             }

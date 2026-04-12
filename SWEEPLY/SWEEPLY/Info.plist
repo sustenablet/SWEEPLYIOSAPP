@@ -2,6 +2,10 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>BGTaskSchedulerPermittedIdentifiers</key>
+	<array>
+		<string>com.sweeply.refresh</string>
+	</array>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
@@ -13,34 +17,14 @@
 			</array>
 		</dict>
 	</array>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>fetch</string>
+	</array>
 	<key>UILaunchScreen</key>
 	<dict>
 		<key>UIColorName</key>
 		<string>LaunchBackground</string>
 	</dict>
-	<key>NSContactsUsageDescription</key>
-	<string>Sweeply uses your contacts to quickly import client details when adding a new client.</string>
-	<key>NSFaceIDUsageDescription</key>
-	<string>Sweeply uses Face ID to keep your business data secure.</string>
-	<key>NSCalendarsUsageDescription</key>
-	<string>Sweeply can sync your scheduled jobs to your iOS Calendar so you never miss an appointment.</string>
-	<key>NSCalendarsWriteOnlyAccessUsageDescription</key>
-	<string>Sweeply adds your scheduled cleaning jobs to your calendar.</string>
-	<key>NSMicrophoneUsageDescription</key>
-	<string>Sweeply uses your microphone so you can dictate messages to the AI assistant.</string>
-	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Sweeply lets you attach photos to jobs for better job documentation.</string>
-	<key>NSCameraUsageDescription</key>
-	<string>Sweeply lets you take photos on-site to document your cleaning jobs.</string>
-	<key>NSSpeechRecognitionUsageDescription</key>
-	<string>Sweeply uses speech recognition to transcribe your voice into text for the AI assistant.</string>
-	<key>UIBackgroundModes</key>
-	<array>
-		<string>fetch</string>
-	</array>
-	<key>BGTaskSchedulerPermittedIdentifiers</key>
-	<array>
-		<string>com.sweeply.refresh</string>
-	</array>
 </dict>
 </plist>

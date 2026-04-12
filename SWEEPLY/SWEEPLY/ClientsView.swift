@@ -24,6 +24,7 @@ struct ClientsView: View {
     @State private var sortOrder: ClientSortOrder = .nameAZ
     @State private var archiveHaptic = false
     @State private var newJobForClient: Client? = nil
+    @State private var viewingClientId: UUID? = nil
 
     private var displayClients: [Client] {
         let base = clientsStore.clients.filter { $0.isActive || showArchived }
@@ -65,6 +66,9 @@ struct ClientsView: View {
             }
             .background(Color.sweeplyBackground.ignoresSafeArea())
             .navigationBarHidden(true)
+            .navigationDestination(item: $viewingClientId) { id in
+                ClientDetailView(clientId: id)
+            }
             .refreshable {
                 await clientsStore.load(isAuthenticated: session.isAuthenticated)
             }
@@ -174,6 +178,7 @@ struct ClientsView: View {
                         ClientCard(
                             client: client,
                             jobCount: jobCount(for: client),
+                            onView: { viewingClientId = client.id },
                             onEdit: {
                                 editingClient = client
                                 showAddSheet = true
@@ -276,6 +281,7 @@ struct ClientsView: View {
 private struct ClientCard: View {
     let client: Client
     let jobCount: Int
+    let onView: () -> Void
     let onEdit: () -> Void
     let onDelete: () -> Void
     let onToggleArchive: () -> Void
@@ -377,6 +383,8 @@ private struct ClientCard: View {
                 }
 
                 Menu {
+                    Button { onView() } label: { Label("View Profile", systemImage: "person.fill") }
+                    Divider()
                     Button { onEdit() } label: { Label("Edit Client", systemImage: "pencil") }
                     Button { onToggleArchive() } label: {
                         Label(
@@ -412,6 +420,10 @@ private struct ClientCard: View {
                 .onChanged { _ in isPressed = true }
                 .onEnded { _ in isPressed = false }
         )
+        .onLongPressGesture(minimumDuration: 0.45) {
+            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+            onView()
+        }
     }
 }
 

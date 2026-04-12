@@ -25,6 +25,7 @@ struct RootView: View {
     @AppStorage("biometricLockEnabled") private var biometricLockEnabled: Bool = false
     @AppStorage("pendingShortcut") private var pendingShortcut: String = ""
     @AppStorage("pendingSpotlightLink") private var pendingSpotlightLink: String = ""
+    @AppStorage("pendingScheduleDate") private var pendingScheduleDate: String = ""
 
     enum Tab {
         case dashboard, schedule, clients, finances, business
@@ -57,12 +58,13 @@ struct RootView: View {
         .onChange(of: scenePhase) { _, phase in
             if phase == .background && biometricLockEnabled {
                 isLocked = true
-            } else if phase == .active && isLocked {
-                authenticate()
-            } else if phase == .active && !pendingShortcut.isEmpty {
-                handlePendingShortcut()
-            } else if phase == .active && !pendingSpotlightLink.isEmpty {
-                handleSpotlightLink()
+            } else if phase == .active {
+                applyTabBarAppearance()
+                if isLocked {
+                    authenticate()
+                } else {
+                    handlePendingActions()
+                }
             }
         }
     }
@@ -73,6 +75,32 @@ struct RootView: View {
         if link.hasPrefix("client:") {
             selectedTab = .clients
         } else if link.hasPrefix("job:") {
+            selectedTab = .schedule
+        }
+    }
+
+    private func handlePendingActions() {
+        guard session.isAuthenticated, session.hasResolvedInitialSession else { return }
+        if !pendingScheduleDate.isEmpty { handlePendingScheduleDate() }
+        if !pendingShortcut.isEmpty     { handlePendingShortcut() }
+        if !pendingSpotlightLink.isEmpty { handleSpotlightLink() }
+    }
+
+    private func handlePendingScheduleDate() {
+        let dateStr = pendingScheduleDate
+        pendingScheduleDate = ""
+        let f = ISO8601DateFormatter()
+        f.formatOptions = [.withFullDate]
+        if let date = f.date(from: dateStr) {
+            selectedTab = .schedule
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                NotificationCenter.default.post(
+                    name: NSNotification.Name("NavigateToScheduleDate"),
+                    object: nil,
+                    userInfo: ["date": date]
+                )
+            }
+        } else {
             selectedTab = .schedule
         }
     }
@@ -185,6 +213,7 @@ struct RootView: View {
             .tint(Color.sweeplyAccent)
         .onChange(of: selectedTab) { _, _ in
             UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            applyTabBarAppearance()
         }
 
             FABView(
@@ -253,7 +282,12 @@ struct RootView: View {
             scheduleProductTutorialIfNeeded()
         }
         .onChange(of: session.isAuthenticated) { _, authed in
-            if !authed {
+            if authed {
+                // Auth just resolved — handle any shortcuts/deep links that arrived early
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    handlePendingActions()
+                }
+            } else {
                 clientsStore.clear()
                 jobsStore.clear()
                 invoicesStore.clear()
@@ -272,6 +306,19 @@ struct RootView: View {
             }
             notificationManager.pendingDeepLink = nil
         }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("RefreshTabBar"))) { _ in
+            applyTabBarAppearance()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("HandleShortcutItem"))) { notification in
+            guard let type = notification.userInfo?["type"] as? String else { return }
+            pendingShortcut = ""  // clear any stale UserDefaults value
+            switch type {
+            case "com.sweeply.newjob":    showNewJob = true
+            case "com.sweeply.ai":        showAIChat = true
+            case "com.sweeply.schedule":  selectedTab = .schedule
+            default: break
+            }
+        }
         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("MarkJobComplete"))) { notification in
             if let jobId = notification.userInfo?["jobId"] as? UUID {
                 Task {
@@ -287,26 +334,30 @@ struct RootView: View {
             }
         }
         .onAppear {
-            let appearance = UITabBarAppearance()
-            appearance.configureWithOpaqueBackground()
-            appearance.backgroundColor = UIColor(Color.sweeplyNavy)
-
-            appearance.stackedLayoutAppearance.normal.iconColor   = UIColor(white: 1, alpha: 0.35)
-            appearance.stackedLayoutAppearance.normal.titleTextAttributes = [
-                .foregroundColor: UIColor(white: 1, alpha: 0.35),
-                .font: UIFont.systemFont(ofSize: 10, weight: .medium)
-            ]
-
-            let accentUIColor = UIColor(Color.sweeplyAccent)
-            appearance.stackedLayoutAppearance.selected.iconColor = accentUIColor
-            appearance.stackedLayoutAppearance.selected.titleTextAttributes = [
-                .foregroundColor: accentUIColor,
-                .font: UIFont.systemFont(ofSize: 10, weight: .semibold)
-            ]
-
-            UITabBar.appearance().standardAppearance   = appearance
-            UITabBar.appearance().scrollEdgeAppearance = appearance
+            applyTabBarAppearance()
         }
+    }
+
+    private func applyTabBarAppearance() {
+        let appearance = UITabBarAppearance()
+        appearance.configureWithOpaqueBackground()
+        appearance.backgroundColor = UIColor(Color.sweeplyNavy)
+
+        appearance.stackedLayoutAppearance.normal.iconColor = UIColor(white: 1, alpha: 0.35)
+        appearance.stackedLayoutAppearance.normal.titleTextAttributes = [
+            .foregroundColor: UIColor(white: 1, alpha: 0.35),
+            .font: UIFont.systemFont(ofSize: 10, weight: .medium)
+        ]
+
+        let accentUIColor = UIColor(Color.sweeplyAccent)
+        appearance.stackedLayoutAppearance.selected.iconColor = accentUIColor
+        appearance.stackedLayoutAppearance.selected.titleTextAttributes = [
+            .foregroundColor: accentUIColor,
+            .font: UIFont.systemFont(ofSize: 10, weight: .semibold)
+        ]
+
+        UITabBar.appearance().standardAppearance   = appearance
+        UITabBar.appearance().scrollEdgeAppearance = appearance
     }
 
     /// Notion-style 5-page product tour once per install, after auth (and after profile onboarding if shown).

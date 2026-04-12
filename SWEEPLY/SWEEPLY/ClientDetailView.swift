@@ -16,6 +16,12 @@ struct ClientDetailView: View {
     @State private var showEditSheet = false
     @State private var showDeleteConfirmation = false
     @State private var isArchiving = false
+    @State private var jobHistoryFilter: JobHistoryFilter = .upcoming
+
+    private enum JobHistoryFilter: String, CaseIterable {
+        case upcoming = "Upcoming"
+        case all = "All"
+    }
 
     private var sourceJobs: [Job] {
         jobsStore.jobs
@@ -27,6 +33,17 @@ struct ClientDetailView: View {
 
     private var clientJobs: [Job] {
         sourceJobs.filter { $0.clientId == clientId }.sorted { $0.date > $1.date }
+    }
+
+    private var upcomingClientJobs: [Job] {
+        clientJobs.filter { $0.date >= Calendar.current.startOfDay(for: Date()) }
+    }
+
+    private var filteredClientJobs: [Job] {
+        switch jobHistoryFilter {
+        case .upcoming: return upcomingClientJobs
+        case .all:      return clientJobs
+        }
     }
 
     private var clientInvoices: [Invoice] {
@@ -182,16 +199,30 @@ struct ClientDetailView: View {
                 Spacer()
             }
 
-            // Contact Info
-            VStack(alignment: .leading, spacing: 12) {
-                if !client.address.isEmpty {
-                    ContactRow(icon: "mappin.circle.fill", text: "\(client.address), \(client.city)")
+            // Contact Info + upcoming jobs indicator
+            HStack(alignment: .top, spacing: 12) {
+                VStack(alignment: .leading, spacing: 10) {
+                    if !client.address.isEmpty {
+                        ContactRow(icon: "mappin.circle.fill", text: "\(client.address), \(client.city)")
+                    }
+                    if !client.phone.isEmpty {
+                        ContactRow(icon: "phone.fill", text: client.phone)
+                    }
+                    if !client.email.isEmpty {
+                        ContactRow(icon: "envelope.fill", text: client.email)
+                    }
                 }
-                if !client.phone.isEmpty {
-                    ContactRow(icon: "phone.fill", text: client.phone)
-                }
-                if !client.email.isEmpty {
-                    ContactRow(icon: "envelope.fill", text: client.email)
+                Spacer(minLength: 8)
+                if !upcomingClientJobs.isEmpty {
+                    VStack(alignment: .trailing, spacing: 1) {
+                        Text("\(upcomingClientJobs.count)")
+                            .font(.system(size: 22, weight: .bold, design: .monospaced))
+                            .foregroundStyle(Color.sweeplyAccent)
+                        Text(upcomingClientJobs.count == 1 ? "upcoming job" : "upcoming jobs")
+                            .font(.system(size: 9, weight: .semibold))
+                            .foregroundStyle(Color.sweeplyTextSub)
+                            .multilineTextAlignment(.trailing)
+                    }
                 }
             }
             .padding(.top, 4)
@@ -343,13 +374,41 @@ struct ClientDetailView: View {
     // MARK: - Jobs Section
     private var jobsSection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            sectionHeader("Job History", count: clientJobs.count)
+            HStack(alignment: .center) {
+                sectionHeader("Job History", count: filteredClientJobs.count)
+                Spacer()
+                HStack(spacing: 4) {
+                    ForEach(JobHistoryFilter.allCases, id: \.self) { filter in
+                        Button {
+                            withAnimation(.easeInOut(duration: 0.15)) { jobHistoryFilter = filter }
+                        } label: {
+                            Text(filter.rawValue)
+                                .font(.system(size: 11, weight: jobHistoryFilter == filter ? .bold : .medium))
+                                .foregroundStyle(jobHistoryFilter == filter ? .white : Color.sweeplyTextSub)
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 5)
+                                .background(jobHistoryFilter == filter ? Color.sweeplyNavy : Color.clear)
+                                .clipShape(Capsule())
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(3)
+                .background(Color.sweeplyBackground)
+                .clipShape(Capsule())
+                .overlay(Capsule().stroke(Color.sweeplyBorder, lineWidth: 1))
+            }
 
-            if clientJobs.isEmpty {
-                emptyState(icon: "briefcase", message: "No jobs with this client yet")
+            if filteredClientJobs.isEmpty {
+                emptyState(
+                    icon: "briefcase",
+                    message: jobHistoryFilter == .upcoming
+                        ? "No upcoming jobs scheduled"
+                        : "No jobs with this client yet"
+                )
             } else {
                 VStack(spacing: 8) {
-                    ForEach(clientJobs.prefix(10)) { job in
+                    ForEach(filteredClientJobs.prefix(10)) { job in
                         DetailJobRow(job: job)
                     }
                 }

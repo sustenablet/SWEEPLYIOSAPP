@@ -3,12 +3,17 @@ import Charts
 
 struct FinancesView: View {
     @Environment(InvoicesStore.self) private var invoicesStore
+    @Environment(JobsStore.self) private var jobsStore
+    @Environment(ClientsStore.self) private var clientsStore
+    @Environment(ProfileStore.self) private var profileStore
     @Environment(AppSession.self) private var session
 
     @State private var selectedPeriod: ChartPeriod = .week
     @State private var selectedFilter: InvoiceFilter = .all
     @State private var appeared = false
     @State private var selectedBarMonth: String? = nil
+    @State private var showFinanceAI = false
+    @State private var showInvoicesList = false
 
     private var invoices: [Invoice] {
         invoicesStore.invoices
@@ -150,6 +155,20 @@ struct FinancesView: View {
         .refreshable {
             await invoicesStore.load(isAuthenticated: session.isAuthenticated)
         }
+        .sheet(isPresented: $showFinanceAI) {
+            AIChatView(financeMode: true)
+                .environment(jobsStore)
+                .environment(clientsStore)
+                .environment(invoicesStore)
+                .environment(profileStore)
+        }
+        .sheet(isPresented: $showInvoicesList) {
+            InvoicesListView()
+                .environment(invoicesStore)
+                .environment(clientsStore)
+                .environment(session)
+                .environment(profileStore)
+        }
     }
 
     // MARK: - Summary
@@ -161,7 +180,33 @@ struct FinancesView: View {
                 title: "Finances",
                 subtitle: invoicesStore.lastError?.isEmpty == false ? "Invoice sync issue" : "Overview"
             ) {
-                HeaderIconButton(systemName: "plus", foregroundColor: .white, backgroundColor: .sweeplyNavy) {}
+                HStack(spacing: 8) {
+                    Button {
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        showInvoicesList = true
+                    } label: {
+                        HStack(spacing: 5) {
+                            Image(systemName: "doc.text.fill")
+                                .font(.system(size: 13, weight: .semibold))
+                            Text("Invoices")
+                                .font(.system(size: 13, weight: .semibold))
+                        }
+                        .foregroundStyle(Color.sweeplyNavy)
+                        .padding(.horizontal, 12)
+                        .frame(height: 40)
+                        .background(Color.sweeplySurface)
+                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                .stroke(Color.sweeplyBorder, lineWidth: 1)
+                        )
+                    }
+                    .buttonStyle(.plain)
+
+                    HeaderIconButton(systemName: "sparkles", foregroundColor: .white, backgroundColor: .sweeplyNavy) {
+                        showFinanceAI = true
+                    }
+                }
             }
             .padding(.top, 8)
 
@@ -493,7 +538,7 @@ private struct BarChartView: View {
 
 // MARK: - Invoice row
 
-private struct MinimalInvoiceRow: View {
+struct MinimalInvoiceRow: View {
     let invoice: Invoice
     let invoicesStore: InvoicesStore
 
@@ -562,6 +607,179 @@ private struct MinimalInvoiceRow: View {
                 Label("Delete", systemImage: "trash")
             }
         }
+    }
+}
+
+// MARK: - Invoices List View
+
+struct InvoicesListView: View {
+    @Environment(\.dismiss) private var dismiss
+    @Environment(InvoicesStore.self) private var invoicesStore
+    @Environment(ClientsStore.self) private var clientsStore
+    @Environment(AppSession.self) private var session
+    @Environment(ProfileStore.self) private var profileStore
+
+    @State private var selectedFilter: InvoiceFilter = .all
+    @State private var searchText = ""
+
+    private enum InvoiceFilter: String, CaseIterable {
+        case all = "All"
+        case unpaid = "Unpaid"
+        case overdue = "Overdue"
+        case paid = "Paid"
+    }
+
+    private var filtered: [Invoice] {
+        let base: [Invoice]
+        switch selectedFilter {
+        case .all:     base = invoicesStore.invoices
+        case .unpaid:  base = invoicesStore.invoices.filter { $0.status == .unpaid }
+        case .overdue: base = invoicesStore.invoices.filter { $0.status == .overdue }
+        case .paid:    base = invoicesStore.invoices.filter { $0.status == .paid }
+        }
+        if searchText.isEmpty { return base.sorted { a, b in statusRank(a) < statusRank(b) } }
+        return base.filter {
+            $0.clientName.localizedCaseInsensitiveContains(searchText) ||
+            $0.invoiceNumber.localizedCaseInsensitiveContains(searchText)
+        }.sorted { a, b in statusRank(a) < statusRank(b) }
+    }
+
+    private func statusRank(_ i: Invoice) -> Int {
+        switch i.status { case .overdue: return 0; case .unpaid: return 1; case .paid: return 2 }
+    }
+
+    private func count(for filter: InvoiceFilter) -> Int {
+        switch filter {
+        case .all:     return invoicesStore.invoices.count
+        case .unpaid:  return invoicesStore.invoices.filter { $0.status == .unpaid }.count
+        case .overdue: return invoicesStore.invoices.filter { $0.status == .overdue }.count
+        case .paid:    return invoicesStore.invoices.filter { $0.status == .paid }.count
+        }
+    }
+
+    var body: some View {
+        NavigationStack {
+            ScrollView(showsIndicators: false) {
+                VStack(alignment: .leading, spacing: 16) {
+                    // Summary strip
+                    summaryStrip
+
+                    // Filter pills
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 8) {
+                            ForEach(InvoiceFilter.allCases, id: \.self) { filter in
+                                filterPill(filter)
+                            }
+                        }
+                        .padding(.horizontal, 20)
+                    }
+                    .padding(.horizontal, -20)
+
+                    // List
+                    if filtered.isEmpty {
+                        VStack(spacing: 10) {
+                            Image(systemName: selectedFilter == .all ? "doc.text" : "line.3.horizontal.decrease.circle")
+                                .font(.system(size: 32))
+                                .foregroundStyle(Color.sweeplyTextSub.opacity(0.35))
+                            Text(selectedFilter == .all ? "No invoices yet" : "No \(selectedFilter.rawValue.lowercased()) invoices")
+                                .font(.system(size: 15, weight: .medium))
+                                .foregroundStyle(Color.sweeplyTextSub)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 48)
+                    } else {
+                        VStack(spacing: 0) {
+                            ForEach(Array(filtered.enumerated()), id: \.element.id) { idx, invoice in
+                                MinimalInvoiceRow(invoice: invoice, invoicesStore: invoicesStore)
+                                if idx < filtered.count - 1 {
+                                    Divider().padding(.leading, 16)
+                                }
+                            }
+                        }
+                        .background(Color.sweeplySurface)
+                        .clipShape(RoundedRectangle(cornerRadius: 14))
+                        .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.sweeplyBorder, lineWidth: 1))
+                    }
+                }
+                .padding(.horizontal, 20)
+                .padding(.bottom, 32)
+            }
+            .searchable(text: $searchText, placement: .navigationBarDrawer(displayMode: .always), prompt: "Search invoices…")
+            .background(Color.sweeplyBackground.ignoresSafeArea())
+            .navigationTitle("Invoices")
+            .navigationBarTitleDisplayMode(.large)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button("Close") { dismiss() }
+                        .foregroundStyle(Color.sweeplyTextSub)
+                }
+            }
+        }
+    }
+
+    private var summaryStrip: some View {
+        HStack(spacing: 0) {
+            summaryCell(
+                label: "Outstanding",
+                value: invoicesStore.invoices.filter { $0.status == .unpaid }.reduce(0) { $0 + $1.total }.currency,
+                color: .sweeplyWarning
+            )
+            Divider().padding(.vertical, 10)
+            summaryCell(
+                label: "Overdue",
+                value: invoicesStore.invoices.filter { $0.status == .overdue }.reduce(0) { $0 + $1.total }.currency,
+                color: .sweeplyDestructive
+            )
+            Divider().padding(.vertical, 10)
+            summaryCell(
+                label: "Collected",
+                value: invoicesStore.invoices.filter { $0.status == .paid }.reduce(0) { $0 + $1.total }.currency,
+                color: .sweeplySuccess
+            )
+        }
+        .padding(.vertical, 12)
+        .background(Color.sweeplySurface)
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.sweeplyBorder, lineWidth: 1))
+        .padding(.top, 8)
+    }
+
+    private func summaryCell(label: String, value: String, color: Color) -> some View {
+        VStack(spacing: 3) {
+            Text(value)
+                .font(.system(size: 15, weight: .bold, design: .rounded))
+                .foregroundStyle(color)
+                .monospacedDigit()
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+            Text(label)
+                .font(.system(size: 10, weight: .medium))
+                .foregroundStyle(Color.sweeplyTextSub)
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    private func filterPill(_ filter: InvoiceFilter) -> some View {
+        let selected = selectedFilter == filter
+        return Button {
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            withAnimation(.easeInOut(duration: 0.15)) { selectedFilter = filter }
+        } label: {
+            HStack(spacing: 5) {
+                Text(filter.rawValue)
+                    .font(.system(size: 13, weight: selected ? .bold : .medium))
+                Text("\(count(for: filter))")
+                    .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                    .opacity(0.7)
+            }
+            .foregroundStyle(selected ? .white : Color.sweeplyNavy)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 8)
+            .background(selected ? Color.sweeplyNavy : Color.sweeplySurface)
+            .clipShape(Capsule())
+            .overlay(Capsule().stroke(selected ? Color.clear : Color.sweeplyBorder, lineWidth: 1))
+        }
+        .buttonStyle(.plain)
     }
 }
 

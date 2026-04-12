@@ -5,8 +5,8 @@ import WidgetKit
 // Called after stores load to push a snapshot into the shared App Group UserDefaults.
 // The widget extension reads this data via WidgetSnapshot.load().
 //
-// ⚠️ Requires App Group "group.com.sweeply.app" enabled in Signing & Capabilities
-//    for BOTH the main app target AND the SweeplyWIdgets extension target.
+// If App Groups are enabled for the app + widget targets, this writer can push
+// snapshots into the shared container. Without that capability, writes no-op.
 
 struct WidgetDataWriter {
 
