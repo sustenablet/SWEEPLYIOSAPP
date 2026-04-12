@@ -402,9 +402,53 @@ struct AIChatView: View {
                     }
                 }
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button {
-                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                        showMenu = true
+                    Menu {
+                        Button {
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                            saveToHistory()
+                            messages = []
+                            currentProjectId = nil
+                            conversationState = .idle
+                            hasFiredProactive = false
+                            chatHistoryData = Data()
+                        } label: {
+                            Label("New Chat", systemImage: "square.and.pencil")
+                        }
+                        .tint(Color.sweeplyNavy)
+                        
+                        Button {
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                            showHistory = true
+                        } label: {
+                            Label("Chat History", systemImage: "clock.arrow.circlepath")
+                        }
+                        .tint(Color.sweeplyNavy)
+                        
+                        if messages.contains(where: { $0.role == .user }) {
+                            Divider()
+                            
+                            Button {
+                                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                showProjectPicker = true
+                            } label: {
+                                Label("Assign to Project", systemImage: "folder.badge.plus")
+                            }
+                            .tint(Color.sweeplyNavy)
+                        }
+                        
+                        Divider()
+                        
+                        Button(role: .destructive) {
+                            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                            saveToHistory()
+                            messages = []
+                            currentProjectId = nil
+                            conversationState = .idle
+                            hasFiredProactive = false
+                            chatHistoryData = Data()
+                        } label: {
+                            Label("Delete Chat", systemImage: "trash")
+                        }
                     } label: {
                         Image(systemName: "line.3.horizontal")
                             .font(.system(size: 16, weight: .medium))
@@ -455,11 +499,6 @@ struct AIChatView: View {
                 )
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
-            }
-            .sheet(isPresented: $showMenu) {
-                aiChatMenu
-                    .presentationDetents([.height(320)])
-                    .presentationDragIndicator(.visible)
             }
             .sheet(isPresented: $showProjectPicker) {
                 projectPickerSheet
