@@ -305,13 +305,12 @@ struct BusinessView: View {
         case "jobsThisMonth":  return "\(filteredJobs.count)"
         case "collected":      return filteredRevenue.currency
         case "scheduled":      return "\(filteredScheduledCount)"
-        case "outstanding":   return filteredPendingRevenue.currency
+        case "outstanding":    return filteredPendingRevenue.currency
         case "avgTicket":      return filteredAverageTicket.currency
         case "pipelineValue":  return upcomingPipelineValue.currency
         case "recurringJobs":  return "\(filteredRecurringCount)"
-        default:               return "-"
+        default:                return "-"
         }
-    }
     }
 
     var body: some View {

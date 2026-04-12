@@ -21,6 +21,10 @@
 	<array>
 		<string>fetch</string>
 	</array>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Sweeply needs your location to show your position on the map and help you navigate to job sites.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>Sweeply needs your location to show your position on the map and help you navigate to job sites, even when the app is in the background.</string>
 	<key>UILaunchScreen</key>
 	<dict>
 		<key>UIColorName</key>

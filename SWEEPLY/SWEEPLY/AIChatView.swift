@@ -2629,7 +2629,12 @@ struct AIChatView: View {
 
     private func persistChat() {
         let toSave = messages.suffix(60).map { PersistedMessage(from: $0) }
-        let session = PersistedSession(savedAt: Date(), messages: toSave)
+        let session = PersistedSession(
+            id: UUID(),
+            projectId: currentProjectId,
+            savedAt: Date(),
+            messages: toSave
+        )
         if let data = try? JSONEncoder().encode(session) {
             chatHistoryData = data
             chatSavedAt = Date().timeIntervalSince1970
