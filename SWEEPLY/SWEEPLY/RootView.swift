@@ -216,6 +216,7 @@ struct RootView: View {
             applyTabBarAppearance()
         }
 
+        if selectedTab != .schedule {
             FABView(
                 selectedTab: $selectedTab,
                 onNewJob: { showNewJob = true },
@@ -224,6 +225,7 @@ struct RootView: View {
                 onAIChat: { showAIChat = true }
             )
         }
+    }
         .sheet(isPresented: $showNewJob) {
             NewJobForm()
         }
