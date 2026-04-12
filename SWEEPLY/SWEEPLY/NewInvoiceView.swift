@@ -9,7 +9,7 @@ struct NewInvoiceView: View {
 
     @State private var selectedClientId: UUID? = nil
     @State private var lineItems: [InvoiceLineItem] = []
-    @State private var dueDate: Date = Calendar.current.date(byAdding: .day, value: 30, to: Date()) ?? Date()
+    @State private var dueDate: Date = Calendar.current.date(byAdding: .day, value: 7, to: Date()) ?? Date()
     @State private var notes: String = ""
     @State private var isSubmitting = false
     @State private var errorMessage: String? = nil
@@ -19,7 +19,7 @@ struct NewInvoiceView: View {
     init() {
         _selectedClientId = State(initialValue: nil)
         _lineItems = State(initialValue: [])
-        _dueDate = State(initialValue: Calendar.current.date(byAdding: .day, value: 30, to: Date()) ?? Date())
+        _dueDate = State(initialValue: Calendar.current.date(byAdding: .day, value: 7, to: Date()) ?? Date())
         _notes = State(initialValue: "")
         _isSubmitting = State(initialValue: false)
         _errorMessage = State(initialValue: nil)
@@ -33,7 +33,7 @@ struct NewInvoiceView: View {
         _lineItems = State(initialValue: [
             InvoiceLineItem(description: prefill.serviceType.rawValue, quantity: 1, unitPrice: prefill.price)
         ])
-        _dueDate = State(initialValue: Calendar.current.date(byAdding: .day, value: 30, to: Date()) ?? Date())
+        _dueDate = State(initialValue: Calendar.current.date(byAdding: .day, value: 7, to: Date()) ?? Date())
         _notes = State(initialValue: "")
         _isSubmitting = State(initialValue: false)
         _errorMessage = State(initialValue: nil)
@@ -141,6 +141,17 @@ struct NewInvoiceView: View {
                 .frame(maxHeight: .infinity, alignment: .bottom)
             }
             .navigationBarHidden(true)
+            .scrollDismissesKeyboard(.interactively)
+            .toolbar {
+                ToolbarItemGroup(placement: .keyboard) {
+                    Spacer()
+                    Button("Done") {
+                        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                    }
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(Color.sweeplyNavy)
+                }
+            }
             .onAppear {
                 if autoInvoiceNumber.isEmpty {
                     autoInvoiceNumber = invoicesStore.nextInvoiceNumber()
@@ -337,7 +348,7 @@ struct NewInvoiceView: View {
 
                 // Net-day preset chips
                 HStack(spacing: 8) {
-                    ForEach([7, 14, 30], id: \.self) { days in
+                    ForEach([7, 14, 7], id: \.self) { days in
                         let target = Calendar.current.date(byAdding: .day, value: days, to: Calendar.current.startOfDay(for: Date())) ?? Date()
                         let dueDateDay = Calendar.current.startOfDay(for: dueDate)
                         let isSelected = dueDateDay == target
