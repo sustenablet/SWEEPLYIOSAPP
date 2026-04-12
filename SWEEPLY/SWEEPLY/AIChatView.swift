@@ -233,6 +233,10 @@ struct AIChatView: View {
     @State private var showRenameAlert: Bool = false
     @State private var renameText: String = ""
 
+    private var displayTitle: String {
+        chatTitle.isEmpty ? "Untitled chat" : chatTitle
+    }
+
     // Projects system
     @AppStorage("aiChatProjectsV1") private var projectsData: Data = Data()
     @State private var currentProjectId: UUID? = nil
@@ -479,7 +483,7 @@ struct AIChatView: View {
                                     showRenameAlert = true
                                 } label: {
                                     HStack(spacing: 3) {
-                                        Text(chatTitle.isEmpty ? "Untitled chat" : chatTitle)
+                                        Text(displayTitle)
                                             .font(.system(size: 11, weight: .medium))
                                             .foregroundStyle(chatTitle.isEmpty ? Color.sweeplyTextSub.opacity(0.5) : Color.sweeplyTextSub)
                                             .lineLimit(1)
