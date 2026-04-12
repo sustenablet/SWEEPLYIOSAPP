@@ -1,5 +1,6 @@
 import SwiftUI
 import MapKit
+import CoreLocation
 
 // MARK: - Schedule (Jobber-style day / list / map / map)
 
@@ -269,11 +270,6 @@ struct ScheduleView: View {
                 )
                 .transition(.move(edge: .bottom).combined(with: .opacity))
                 .zIndex(10)
-            }
-
-            if dayJobs.isEmpty {
-                scheduleEmptyState
-                    .background(Color.sweeplyBackground.opacity(0.8))
             }
         }
     }
