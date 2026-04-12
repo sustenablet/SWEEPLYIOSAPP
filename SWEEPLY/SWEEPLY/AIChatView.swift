@@ -353,10 +353,12 @@ struct AIChatView: View {
 
                 suggestionsCarousel
 
-                // Command palette overlay (replaces slash-triggered menu)
-                if showCommandPalette {
-                    commandPalette
-                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                // Quick Actions sheet (replaces slash-triggered menu)
+                .sheet(isPresented: $showCommandPalette) {
+                    quickActionsSheet
+                        .presentationDetents([.fraction(0.5), .large])
+                        .presentationDragIndicator(.visible)
+                        .presentationInteractivityDismiss(.interactive)
                 }
 
                 Divider()
@@ -457,7 +459,7 @@ struct AIChatView: View {
             }
             .sheet(isPresented: $showMenu) {
                 aiChatMenu
-                    .presentationDetents([.fraction(0.5), .large])
+                    .presentationDetents([.height(320)])
                     .presentationDragIndicator(.visible)
                     .presentationInteractivityDismiss(.interactive)
             }
@@ -856,9 +858,9 @@ struct AIChatView: View {
         .background(Color.sweeplyBackground)
     }
 
-    // MARK: - Command Palette (replaces slash menu — now triggered by + button)
+    // MARK: - Quick Actions Sheet (replaces slash menu — triggered by + button)
 
-    private var commandPalette: some View {
+    private var quickActionsSheet: some View {
         VStack(spacing: 0) {
             // Drag handle + header
             HStack {
@@ -934,21 +936,18 @@ struct AIChatView: View {
             // Quick Actions (+) button
             Button {
                 UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
-                    showCommandPalette.toggle()
-                }
+                showCommandPalette = true
             } label: {
                 ZStack {
                     Circle()
-                        .fill(showCommandPalette ? Color.sweeplyNavy : Color.sweeplySurface)
+                        .fill(Color.sweeplySurface)
                         .frame(width: 36, height: 36)
-                    Image(systemName: showCommandPalette ? "xmark" : "plus")
+                    Image(systemName: "plus")
                         .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(showCommandPalette ? .white : Color.sweeplyTextSub)
+                        .foregroundStyle(Color.sweeplyTextSub)
                 }
             }
             .buttonStyle(.plain)
-            .animation(.easeInOut(duration: 0.15), value: showCommandPalette)
 
             TextField(isRecording ? "Listening..." : "Ask me anything...", text: $inputText, axis: .vertical)
                 .font(.system(size: 15))
