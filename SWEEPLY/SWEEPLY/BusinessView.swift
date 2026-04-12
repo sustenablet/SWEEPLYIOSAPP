@@ -17,6 +17,11 @@ struct BusinessView: View {
 
     @AppStorage("kpiVisibility") private var kpiVisibilityRaw: String = ""
     @AppStorage("kpiOrder")      private var kpiOrderRaw: String = ""
+    @AppStorage("kpiTimeRange")  private var kpiTimeRangeRaw: String = "month"
+
+    private var selectedTimeRange: KPITimeRange {
+        KPITimeRange(rawValue: kpiTimeRangeRaw) ?? .month
+    }
 
     private var profile: UserProfile {
         profileStore.profile ?? MockData.profile
@@ -40,6 +45,55 @@ struct BusinessView: View {
         businessInvoices
             .filter { $0.status != .paid }
             .reduce(0) { $0 + $1.total }
+    }
+
+    private var filteredJobs: [Job] {
+        let calendar = Calendar.current
+        let now = Date()
+        
+        switch selectedTimeRange {
+        case .week:
+            let weekAgo = calendar.date(byAdding: .day, value: -7, to: now) ?? now
+            return businessJobs.filter { $0.date >= weekAgo }
+        case .month:
+            return businessJobs.filter { calendar.isDate($0.date, equalTo: now, toGranularity: .month) }
+        case .threeMonths:
+            let threeMonthsAgo = calendar.date(byAdding: .month, value: -3, to: now) ?? now
+            return businessJobs.filter { $0.date >= threeMonthsAgo }
+        case .all:
+            return businessJobs
+        }
+    }
+
+    // Computed metrics based on selected time range
+    private var filteredCompletedCount: Int {
+        filteredJobs.filter { $0.status == .completed }.count
+    }
+
+    private var filteredRevenue: Double {
+        filteredJobs.filter { $0.status == .completed }.reduce(0) { $0 + $1.price }
+    }
+
+    private var filteredActiveClients: Int {
+        Set(filteredJobs.map { $0.clientId }).count
+    }
+
+    private var filteredAverageTicket: Double {
+        guard filteredCompletedCount > 0 else { return 0 }
+        return filteredRevenue / Double(filteredCompletedCount)
+    }
+
+    private var filteredRecurringCount: Int {
+        filteredJobs.filter { $0.isRecurring }.count
+    }
+
+    private var filteredScheduledCount: Int {
+        filteredJobs.filter { $0.status == .scheduled }.count
+    }
+
+    private var filteredPendingRevenue: Double {
+        filteredJobs.filter { $0.status != .completed && $0.status != .cancelled }
+            .reduce(0) { $0 + $1.price }
     }
 
     private var monthlyJobs: [Job] {
@@ -247,16 +301,17 @@ struct BusinessView: View {
 
     private func kpiValue(for id: String) -> String {
         switch id {
-        case "activeClients":  return "\(activeClientsCount)"
-        case "jobsThisMonth":  return "\(monthlyJobs.count)"
-        case "collected":      return totalRevenue.currency
-        case "scheduled":      return "\(upcomingJobs.count)"
-        case "outstanding":    return outstandingRevenue.currency
-        case "avgTicket":      return averageTicket.currency
+        case "activeClients":  return "\(filteredActiveClients)"
+        case "jobsThisMonth":  return "\(filteredJobs.count)"
+        case "collected":      return filteredRevenue.currency
+        case "scheduled":      return "\(filteredScheduledCount)"
+        case "outstanding":   return filteredPendingRevenue.currency
+        case "avgTicket":      return filteredAverageTicket.currency
         case "pipelineValue":  return upcomingPipelineValue.currency
-        case "recurringJobs":  return "\(recurringJobsThisMonth)"
+        case "recurringJobs":  return "\(filteredRecurringCount)"
         default:               return "-"
         }
+    }
     }
 
     var body: some View {
@@ -308,12 +363,13 @@ struct BusinessView: View {
                         allItems: allKPIItems,
                         enabledIds: enabledKPIIds,
                         orderedIds: orderedKPIItems.map { $0.id },
-                        onSave: { newEnabled, newOrder in
+                        onSave: { newEnabled, newOrder, timeRange in
                             kpiVisibilityRaw = newEnabled.joined(separator: ",")
                             kpiOrderRaw = newOrder.joined(separator: ",")
+                            kpiTimeRangeRaw = timeRange.rawValue
                         }
                     )
-                    .presentationDetents([.medium, .large])
+                    .presentationDetents([.height(500), .large])
                     .presentationDragIndicator(.visible)
                 }
 
@@ -917,13 +973,14 @@ private struct KPICustomizerSheet: View {
     let allItems: [KPIItem]
     let enabledIds: Set<String>
     let orderedIds: [String]
-    let onSave: ([String], [String]) -> Void
+    let onSave: ([String], [String], KPITimeRange) -> Void
     @Environment(\.dismiss) private var dismiss
 
     @State private var localEnabled: Set<String>
     @State private var localOrder: [String]
+    @State private var selectedTimeRange: KPITimeRange = .month
 
-    init(allItems: [KPIItem], enabledIds: Set<String>, orderedIds: [String], onSave: @escaping ([String], [String]) -> Void) {
+    init(allItems: [KPIItem], enabledIds: Set<String>, orderedIds: [String], onSave: @escaping ([String], [String], KPITimeRange) -> Void) {
         self.allItems = allItems
         self.enabledIds = enabledIds
         self.orderedIds = orderedIds
@@ -942,31 +999,68 @@ private struct KPICustomizerSheet: View {
 
     var body: some View {
         NavigationStack {
-            List {
-                Section("Showing on your dashboard") {
-                    ForEach(visibleItems) { item in
-                        KPIToggleRow(item: item, isEnabled: true) {
-                            localEnabled.remove(item.id)
-                        }
-                    }
-                    .onMove { from, to in
-                        var ids = visibleItems.map { $0.id }
-                        ids.move(fromOffsets: from, toOffset: to)
-                        let hiddenIds = localOrder.filter { !localEnabled.contains($0) }
-                        localOrder = ids + hiddenIds
-                    }
-                }
-                if !hiddenItems.isEmpty {
-                    Section("Hidden — tap to show") {
-                        ForEach(hiddenItems) { item in
-                            KPIToggleRow(item: item, isEnabled: false) {
-                                localEnabled.insert(item.id)
+            VStack(spacing: 0) {
+                // Time range filter pills
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("Filter data")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(Color.sweeplyTextSub)
+                        .textCase(.uppercase)
+                        .tracking(0.5)
+
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 8) {
+                            ForEach(KPITimeRange.allCases, id: \.self) { range in
+                                Button {
+                                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                    selectedTimeRange = range
+                                } label: {
+                                    Text(range.label)
+                                        .font(.system(size: 13, weight: .medium))
+                                        .foregroundStyle(selectedTimeRange == range ? .white : Color.sweeplyNavy)
+                                        .padding(.horizontal, 14)
+                                        .padding(.vertical, 8)
+                                        .background(selectedTimeRange == range ? Color.sweeplyAccent : Color.sweeplyNavy.opacity(0.08))
+                                        .clipShape(Capsule())
+                                }
+                                .buttonStyle(.plain)
                             }
                         }
                     }
                 }
+                .padding(.horizontal, 16)
+                .padding(.top, 16)
+                .padding(.bottom, 12)
+
+                Divider()
+
+                List {
+                    Section("Showing on your dashboard") {
+                        ForEach(visibleItems) { item in
+                            KPIToggleRow(item: item, isEnabled: true) {
+                                localEnabled.remove(item.id)
+                            }
+                        }
+                        .onMove { from, to in
+                            var ids = visibleItems.map { $0.id }
+                            ids.move(fromOffsets: from, toOffset: to)
+                            let hiddenIds = localOrder.filter { !localEnabled.contains($0) }
+                            localOrder = ids + hiddenIds
+                        }
+                    }
+                    if !hiddenItems.isEmpty {
+                        Section("Hidden — tap to show") {
+                            ForEach(hiddenItems) { item in
+                                KPIToggleRow(item: item, isEnabled: false) {
+                                    localEnabled.insert(item.id)
+                                }
+                            }
+                        }
+                    }
+                }
+                .scrollContentBackground(.hidden)
+                .background(Color.sweeplyBackground)
             }
-            .scrollContentBackground(.hidden)
             .background(Color.sweeplyBackground)
             .navigationTitle("Edit Dashboard")
             .navigationBarTitleDisplayMode(.inline)
@@ -977,7 +1071,7 @@ private struct KPICustomizerSheet: View {
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Save") {
-                        onSave(Array(localEnabled), localOrder)
+                        onSave(Array(localEnabled), localOrder, selectedTimeRange)
                         dismiss()
                     }
                     .font(.system(size: 15, weight: .semibold))
@@ -985,6 +1079,22 @@ private struct KPICustomizerSheet: View {
                 }
             }
             .environment(\.editMode, .constant(.active))
+        }
+    }
+}
+
+enum KPITimeRange: String, CaseIterable, Codable {
+    case week = "week"
+    case month = "month"
+    case threeMonths = "threeMonths"
+    case all = "all"
+
+    var label: String {
+        switch self {
+        case .week: return "Week"
+        case .month: return "Month"
+        case .threeMonths: return "3 Months"
+        case .all: return "All"
         }
     }
 }

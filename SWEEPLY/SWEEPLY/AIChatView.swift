@@ -66,6 +66,20 @@ struct ChatMessage: Identifiable {
     }
 }
 
+// MARK: - Chat Projects
+
+struct ChatProject: Identifiable, Codable {
+    let id: UUID
+    var name: String
+    var createdAt: Date
+
+    init(name: String) {
+        self.id = UUID()
+        self.name = name
+        self.createdAt = Date()
+    }
+}
+
 // MARK: - Conversation State
 
 enum DirectAction {
@@ -181,6 +195,8 @@ private struct PersistedMessage: Codable {
 }
 
 private struct PersistedSession: Codable {
+    let id: UUID
+    var projectId: UUID?
     let savedAt: Date
     let messages: [PersistedMessage]
 }
@@ -208,6 +224,13 @@ struct AIChatView: View {
     @State private var showSlashMenu: Bool = false   // kept for legacy state compat
     @State private var showCommandPalette: Bool = false
     @State private var showHistory: Bool = false
+    @State private var showMenu: Bool = false
+    @FocusState private var isInputFocused: Bool
+
+    // Projects system
+    @AppStorage("aiChatProjectsV1") private var projectsData: Data = Data()
+    @State private var currentProjectId: UUID? = nil
+    @State private var showProjectPicker: Bool = false
 
     @AppStorage("aiChatOnboardingDone") private var onboardingDone: Bool = false
     @State private var onboardingStep: Int = 0
@@ -305,6 +328,15 @@ struct AIChatView: View {
                             .padding(.bottom, 20)
                         }
                     }
+                    .simultaneousGesture(
+                        DragGesture(minimumDistance: 50)
+                            .onEnded { value in
+                                if value.translation.height > 100 && isInputFocused {
+                                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                    isInputFocused = false
+                                }
+                            }
+                    )
                     .onChange(of: messages.count) { _, _ in
                         withAnimation(.easeOut(duration: 0.3)) {
                             if let last = messages.last {
@@ -369,31 +401,14 @@ struct AIChatView: View {
                     }
                 }
                 ToolbarItem(placement: .navigationBarLeading) {
-                    HStack(spacing: 4) {
-                        // History
-                        Button {
-                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                            showHistory = true
-                        } label: {
-                            Image(systemName: "clock.arrow.circlepath")
-                                .font(.system(size: 15, weight: .medium))
-                                .foregroundStyle(Color.sweeplyNavy)
-                                .frame(width: 36, height: 36)
-                        }
-                        // New Chat
-                        Button {
-                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                            saveToHistory()
-                            messages = []
-                            conversationState = .idle
-                            hasFiredProactive = false
-                            chatHistoryData = Data()
-                        } label: {
-                            Image(systemName: "square.and.pencil")
-                                .font(.system(size: 15, weight: .medium))
-                                .foregroundStyle(Color.sweeplyNavy)
-                                .frame(width: 36, height: 36)
-                        }
+                    Button {
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        showMenu = true
+                    } label: {
+                        Image(systemName: "line.3.horizontal")
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundStyle(Color.sweeplyNavy)
+                            .frame(width: 36, height: 36)
                     }
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
@@ -425,15 +440,265 @@ struct AIChatView: View {
                 }
             }
             .sheet(isPresented: $showHistory) {
-                ChatHistorySheet(sessions: loadSessionHistory(), onRestore: { session in
-                    restoreSession(session)
-                }, onDelete: { index in
-                    var sessions = loadSessionHistory()
-                    sessions.remove(at: index)
-                    chatSessionsData = (try? JSONEncoder().encode(sessions)) ?? Data()
-                })
+                ChatHistorySheet(
+                    sessions: loadSessionHistory(),
+                    projects: loadProjects(),
+                    onRestore: { session in
+                        restoreSession(session)
+                    },
+                    onDelete: { session in
+                        var sessions = loadSessionHistory()
+                        sessions.removeAll { $0.id == session.id }
+                        chatSessionsData = (try? JSONEncoder().encode(sessions)) ?? Data()
+                    }
+                )
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
+            }
+            .sheet(isPresented: $showMenu) {
+                aiChatMenu
+                    .presentationDetents([.height(280)])
+                    .presentationDragIndicator(.visible)
+            }
+            .sheet(isPresented: $showProjectPicker) {
+                projectPickerSheet
+                    .presentationDetents([.medium, .large])
+                    .presentationDragIndicator(.visible)
+            }
+        }
+    }
+
+    // MARK: - AI Chat Menu
+
+    private var aiChatMenu: some View {
+        VStack(spacing: 0) {
+            // Drag handle
+            RoundedRectangle(cornerRadius: 2)
+                .fill(Color.sweeplyTextSub.opacity(0.3))
+                .frame(width: 36, height: 4)
+                .padding(.top, 8)
+
+            VStack(spacing: 0) {
+                // New Chat
+                Button {
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    showMenu = false
+                    saveToHistory()
+                    messages = []
+                    currentProjectId = nil
+                    conversationState = .idle
+                    hasFiredProactive = false
+                    chatHistoryData = Data()
+                } label: {
+                    HStack(spacing: 12) {
+                        Image(systemName: "square.and.pencil")
+                            .font(.system(size: 15, weight: .medium))
+                            .foregroundStyle(Color.sweeplyNavy)
+                            .frame(width: 24)
+                        Text("New Chat")
+                            .font(.system(size: 15, weight: .medium))
+                            .foregroundStyle(Color.sweeplyNavy)
+                        Spacer()
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 14)
+                }
+                .buttonStyle(.plain)
+
+                Divider().padding(.leading, 52)
+
+                // Chat History
+                Button {
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    showMenu = false
+                    showHistory = true
+                } label: {
+                    HStack(spacing: 12) {
+                        Image(systemName: "clock.arrow.circlepath")
+                            .font(.system(size: 15, weight: .medium))
+                            .foregroundStyle(Color.sweeplyNavy)
+                            .frame(width: 24)
+                        Text("Chat History")
+                            .font(.system(size: 15, weight: .medium))
+                            .foregroundStyle(Color.sweeplyNavy)
+                        Spacer()
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 14)
+                }
+                .buttonStyle(.plain)
+
+                Divider().padding(.leading, 52)
+
+                // Add to Project
+                Button {
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    showMenu = false
+                    showProjectPicker = true
+                } label: {
+                    HStack(spacing: 12) {
+                        Image(systemName: "folder.badge.plus")
+                            .font(.system(size: 15, weight: .medium))
+                            .foregroundStyle(Color.sweeplyNavy)
+                            .frame(width: 24)
+                        Text("Add to Project")
+                            .font(.system(size: 15, weight: .medium))
+                            .foregroundStyle(Color.sweeplyNavy)
+                        Spacer()
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 14)
+                }
+                .buttonStyle(.plain)
+
+                Divider().padding(.leading, 52)
+
+                // Delete Chat (RED)
+                Button {
+                    UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                    showMenu = false
+                    saveToHistory()
+                    messages = []
+                    currentProjectId = nil
+                    conversationState = .idle
+                    hasFiredProactive = false
+                    chatHistoryData = Data()
+                } label: {
+                    HStack(spacing: 12) {
+                        Image(systemName: "trash")
+                            .font(.system(size: 15, weight: .medium))
+                            .foregroundStyle(Color.sweeplyDestructive)
+                            .frame(width: 24)
+                        Text("Delete Chat")
+                            .font(.system(size: 15, weight: .medium))
+                            .foregroundStyle(Color.sweeplyDestructive)
+                        Spacer()
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 14)
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.top, 8)
+        }
+        .background(Color.sweeplySurface)
+    }
+
+    // MARK: - Project Picker Sheet
+
+    @State private var newProjectName: String = ""
+
+    private var projectPickerSheet: some View {
+        NavigationStack {
+            VStack(spacing: 16) {
+                // Current assignment indicator
+                if let projectId = currentProjectId {
+                    let projects = loadProjects()
+                    if let project = projects.first(where: { $0.id == projectId }) {
+                        HStack {
+                            Image(systemName: "folder.fill")
+                                .foregroundStyle(Color.sweeplyAccent)
+                            Text("Currently in: \(project.name)")
+                                .font(.system(size: 13, weight: .medium))
+                                .foregroundStyle(Color.sweeplyTextSub)
+                        }
+                        .padding(.top, 8)
+                    }
+                }
+
+                // Create new project
+                HStack(spacing: 8) {
+                    TextField("New project name", text: $newProjectName)
+                        .font(.system(size: 15))
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 10)
+                        .background(Color.sweeplySurface)
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                        .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.sweeplyBorder, lineWidth: 1))
+
+                    Button {
+                        guard !newProjectName.trimmingCharacters(in: .whitespaces).isEmpty else { return }
+                        var projects = loadProjects()
+                        let project = ChatProject(name: newProjectName.trimmingCharacters(in: .whitespaces))
+                        projects.append(project)
+                        saveProjects(projects)
+                        currentProjectId = project.id
+                        newProjectName = ""
+                        showProjectPicker = false
+                    } label: {
+                        Image(systemName: "plus.circle.fill")
+                            .font(.system(size: 24))
+                            .foregroundStyle(Color.sweeplyAccent)
+                    }
+                    .disabled(newProjectName.trimmingCharacters(in: .whitespaces).isEmpty)
+                }
+                .padding(.horizontal, 16)
+
+                Divider()
+
+                // General option
+                Button {
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    currentProjectId = nil
+                    showProjectPicker = false
+                } label: {
+                    HStack {
+                        Image(systemName: "tray.fill")
+                            .font(.system(size: 14))
+                            .foregroundStyle(Color.sweeplyNavy)
+                        Text("General")
+                            .font(.system(size: 15, weight: .medium))
+                            .foregroundStyle(Color.sweeplyNavy)
+                        Spacer()
+                        if currentProjectId == nil {
+                            Image(systemName: "checkmark")
+                                .font(.system(size: 12, weight: .bold))
+                                .foregroundStyle(Color.sweeplyAccent)
+                        }
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
+                }
+                .buttonStyle(.plain)
+
+                // Existing projects
+                let projects = loadProjects()
+                ForEach(projects) { project in
+                    Button {
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        currentProjectId = project.id
+                        showProjectPicker = false
+                    } label: {
+                        HStack {
+                            Image(systemName: "folder.fill")
+                                .font(.system(size: 14))
+                                .foregroundStyle(Color.sweeplyAccent)
+                            Text(project.name)
+                                .font(.system(size: 15, weight: .medium))
+                                .foregroundStyle(Color.sweeplyNavy)
+                            Spacer()
+                            if currentProjectId == project.id {
+                                Image(systemName: "checkmark")
+                                    .font(.system(size: 12, weight: .bold))
+                                    .foregroundStyle(Color.sweeplyAccent)
+                            }
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 12)
+                    }
+                    .buttonStyle(.plain)
+                }
+
+                Spacer()
+            }
+            .navigationTitle("Add to Project")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        showProjectPicker = false
+                    }
+                }
             }
         }
     }
@@ -693,6 +958,7 @@ struct AIChatView: View {
                     isRecording ? Color.red.opacity(0.4) : Color.sweeplyNavy.opacity(0.12),
                     lineWidth: isRecording ? 1.5 : 1
                 ))
+                .focused($isInputFocused)
 
             // Mic (when input is empty) or Send (when there's text)
             if inputText.trimmingCharacters(in: .whitespaces).isEmpty {
@@ -715,8 +981,13 @@ struct AIChatView: View {
                 Button {
                     let trimmed = inputText.trimmingCharacters(in: .whitespaces)
                     guard !trimmed.isEmpty else { return }
-                    withAnimation(.easeInOut(duration: 0.15)) { showCommandPalette = false }
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    withAnimation(.easeInOut(duration: 0.15)) { 
+                        showCommandPalette = false 
+                    }
                     if isRecording { stopRecording() }
+                    inputText = ""
+                    isInputFocused = false
                     sendMessage(trimmed)
                 } label: {
                     ZStack {
@@ -2382,7 +2653,12 @@ struct AIChatView: View {
     private func saveToHistory() {
         guard !messages.isEmpty else { return }
         var sessions = loadSessionHistory()
-        let session = PersistedSession(savedAt: Date(), messages: Array(messages.suffix(60).map { PersistedMessage(from: $0) }))
+        let session = PersistedSession(
+            id: UUID(),
+            projectId: currentProjectId,
+            savedAt: Date(), 
+            messages: Array(messages.suffix(60).map { PersistedMessage(from: $0) })
+        )
         sessions.insert(session, at: 0)
         if sessions.count > 10 { sessions = Array(sessions.prefix(10)) }
         chatSessionsData = (try? JSONEncoder().encode(sessions)) ?? Data()
@@ -2392,8 +2668,17 @@ struct AIChatView: View {
         (try? JSONDecoder().decode([PersistedSession].self, from: chatSessionsData)) ?? []
     }
 
+    private func loadProjects() -> [ChatProject] {
+        (try? JSONDecoder().decode([ChatProject].self, from: projectsData)) ?? []
+    }
+
+    private func saveProjects(_ projects: [ChatProject]) {
+        projectsData = (try? JSONEncoder().encode(projects)) ?? Data()
+    }
+
     private func restoreSession(_ session: PersistedSession) {
         messages = session.messages.map { $0.toChatMessage() }
+        currentProjectId = session.projectId
         hasFiredProactive = true
         showHistory = false
     }
@@ -2610,11 +2895,23 @@ private struct MessageBubble: View {
         displayedText = ""
         let chars = Array(message.text)
         var index = 0
+        let batchSize = 3
+        let hapticGen = UIImpactFeedbackGenerator(style: .light)
+        hapticGen.prepare()
+        
         func next() {
             guard index < chars.count else { return }
-            displayedText.append(chars[index])
-            index += 1
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.016) { next() }
+            
+            // Batch append characters
+            let endIndex = min(index + batchSize, chars.count)
+            let batch = chars[index..<endIndex]
+            displayedText.append(contentsOf: batch)
+            index = endIndex
+            
+            // Haptic every batch
+            hapticGen.impactOccurred()
+            
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.025) { next() }
         }
         next()
     }
@@ -2809,8 +3106,29 @@ private struct TypingIndicatorView: View {
 
 private struct ChatHistorySheet: View {
     let sessions: [PersistedSession]
+    let projects: [ChatProject]
     let onRestore: (PersistedSession) -> Void
-    let onDelete: (Int) -> Void
+    let onDelete: (PersistedSession) -> Void
+
+    @State private var selectedFilter: String = "All"
+
+    private var filteredSessions: [PersistedSession] {
+        switch selectedFilter {
+        case "General":
+            return sessions.filter { $0.projectId == nil }
+        default:
+            if let project = projects.first(where: { $0.name == selectedFilter }) {
+                return sessions.filter { $0.projectId == project.id }
+            }
+            return sessions
+        }
+    }
+
+    private var filterOptions: [String] {
+        var options = ["All", "General"]
+        options.append(contentsOf: projects.map { $0.name })
+        return options
+    }
 
     private let dateFormatter: DateFormatter = {
         let f = DateFormatter()
@@ -2821,16 +3139,42 @@ private struct ChatHistorySheet: View {
 
     var body: some View {
         NavigationStack {
-            Group {
-                if sessions.isEmpty {
+            VStack(spacing: 0) {
+                // Filter tabs
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        ForEach(filterOptions, id: \.self) { option in
+                            Button {
+                                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                selectedFilter = option
+                            } label: {
+                                Text(option)
+                                    .font(.system(size: 13, weight: .medium))
+                                    .foregroundStyle(selectedFilter == option ? .white : Color.sweeplyNavy)
+                                    .padding(.horizontal, 14)
+                                    .padding(.vertical, 8)
+                                    .background(selectedFilter == option ? Color.sweeplyAccent : Color.sweeplyNavy.opacity(0.08))
+                                    .clipShape(Capsule())
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
+                }
+                .background(Color.sweeplySurface)
+
+                if filteredSessions.isEmpty {
                     VStack(spacing: 16) {
                         Image(systemName: "clock.arrow.circlepath")
                             .font(.system(size: 42))
                             .foregroundStyle(Color.sweeplyTextSub.opacity(0.3))
-                        Text("No chat history yet")
+                        Text("No chats in this section")
                             .font(.system(size: 16, weight: .semibold))
                             .foregroundStyle(Color.sweeplyNavy)
-                        Text("Past conversations will appear here after you clear a chat.")
+                        Text(selectedFilter == "All" 
+                             ? "Past conversations will appear here after you clear a chat."
+                             : "No chats in \(selectedFilter) yet.")
                             .font(.system(size: 13))
                             .foregroundStyle(Color.sweeplyTextSub)
                             .multilineTextAlignment(.center)
@@ -2840,43 +3184,76 @@ private struct ChatHistorySheet: View {
                     .background(Color.sweeplyBackground)
                 } else {
                     List {
-                        ForEach(Array(sessions.enumerated()), id: \.offset) { index, session in
+                        ForEach(Array(filteredSessions.enumerated()), id: \.offset) { index, session in
                             Button {
                                 UIImpactFeedbackGenerator(style: .light).impactOccurred()
                                 onRestore(session)
                             } label: {
                                 VStack(alignment: .leading, spacing: 6) {
                                     HStack {
-                                        Text(dateFormatter.string(from: session.savedAt))
-                                            .font(.system(size: 13, weight: .semibold))
-                                            .foregroundStyle(Color.sweeplyNavy)
-                                        Spacer()
-                                        Text("\(session.messages.count) messages")
-                                            .font(.system(size: 11, weight: .medium))
+                                        // Show project badge if assigned
+                                        if let projectId = session.projectId,
+                                           let project = projects.first(where: { $0.id == projectId }) {
+                                            HStack(spacing: 4) {
+                                                Image(systemName: "folder.fill")
+                                                    .font(.system(size: 9))
+                                                Text(project.name)
+                                                    .font(.system(size: 10, weight: .medium))
+                                            }
+                                            .foregroundStyle(Color.sweeplyAccent)
+                                            .padding(.horizontal, 6)
+                                            .padding(.vertical, 2)
+                                            .background(Color.sweeplyAccent.opacity(0.1))
+                                            .clipShape(Capsule())
+                                        } else {
+                                            HStack(spacing: 4) {
+                                                Image(systemName: "tray.fill")
+                                                    .font(.system(size: 9))
+                                                Text("General")
+                                                    .font(.system(size: 10, weight: .medium))
+                                            }
                                             .foregroundStyle(Color.sweeplyTextSub)
-                                            .padding(.horizontal, 8)
-                                            .padding(.vertical, 3)
+                                            .padding(.horizontal, 6)
+                                            .padding(.vertical, 2)
                                             .background(Color.sweeplyNavy.opacity(0.06))
                                             .clipShape(Capsule())
+                                        }
+                                        
+                                        Spacer()
+                                        
+                                        Text(dateFormatter.string(from: session.savedAt))
+                                            .font(.system(size: 12, weight: .medium))
+                                            .foregroundStyle(Color.sweeplyTextSub)
                                     }
+                                    
                                     if let firstUser = session.messages.first(where: { $0.role == .user }) {
                                         Text(firstUser.text)
                                             .font(.system(size: 13))
-                                            .foregroundStyle(Color.sweeplyTextSub)
+                                            .foregroundStyle(Color.sweeplyNavy)
                                             .lineLimit(2)
                                     }
+                                    
+                                    Text("\(session.messages.count) messages")
+                                        .font(.system(size: 10))
+                                        .foregroundStyle(Color.sweeplyTextSub.opacity(0.6))
                                 }
                                 .padding(.vertical, 4)
                             }
                             .buttonStyle(.plain)
-                        }
-                        .onDelete { offsets in
-                            offsets.forEach { onDelete($0) }
+                            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                                Button(role: .destructive) {
+                                    UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                                    onDelete(session)
+                                } label: {
+                                    Label("Delete", systemImage: "trash")
+                                }
+                            }
                         }
                     }
                     .listStyle(.plain)
                 }
             }
+            .background(Color.sweeplyBackground)
             .navigationTitle("Chat History")
             .navigationBarTitleDisplayMode(.inline)
         }
