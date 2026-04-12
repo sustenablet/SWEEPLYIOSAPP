@@ -362,6 +362,7 @@ struct BusinessView: View {
                         allItems: allKPIItems,
                         enabledIds: enabledKPIIds,
                         orderedIds: orderedKPIItems.map { $0.id },
+                        currentTimeRange: selectedTimeRange,
                         onSave: { newEnabled, newOrder, timeRange in
                             kpiVisibilityRaw = newEnabled.joined(separator: ",")
                             kpiOrderRaw = newOrder.joined(separator: ",")
@@ -976,15 +977,16 @@ private struct KPICustomizerSheet: View {
 
     @State private var localEnabled: Set<String>
     @State private var localOrder: [String]
-    @State private var selectedTimeRange: KPITimeRange = .month
+    @State private var selectedTimeRange: KPITimeRange
 
-    init(allItems: [KPIItem], enabledIds: Set<String>, orderedIds: [String], onSave: @escaping ([String], [String], KPITimeRange) -> Void) {
+    init(allItems: [KPIItem], enabledIds: Set<String>, orderedIds: [String], currentTimeRange: KPITimeRange, onSave: @escaping ([String], [String], KPITimeRange) -> Void) {
         self.allItems = allItems
         self.enabledIds = enabledIds
         self.orderedIds = orderedIds
         self.onSave = onSave
         _localEnabled = State(initialValue: enabledIds)
         _localOrder   = State(initialValue: orderedIds)
+        _selectedTimeRange = State(initialValue: currentTimeRange)
     }
 
     private var visibleItems: [KPIItem] {
