@@ -348,7 +348,7 @@ struct NewInvoiceView: View {
 
                 // Net-day preset chips
                 HStack(spacing: 8) {
-                    ForEach([7, 14, 7], id: \.self) { days in
+                    ForEach([7, 14, 30], id: \.self) { days in
                         let target = Calendar.current.date(byAdding: .day, value: days, to: Calendar.current.startOfDay(for: Date())) ?? Date()
                         let dueDateDay = Calendar.current.startOfDay(for: dueDate)
                         let isSelected = dueDateDay == target

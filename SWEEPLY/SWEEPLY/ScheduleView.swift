@@ -16,6 +16,7 @@ private let inProgressColor = Color(red: 0.4, green: 0.45, blue: 0.95)
 struct ScheduleView: View {
     @Environment(JobsStore.self) private var jobsStore
     @Environment(ClientsStore.self) private var clientsStore
+    @Environment(InvoicesStore.self) private var invoicesStore
     @Environment(AppSession.self) private var session
     @State private var appeared = false
     @State private var viewMode: ScheduleViewMode = .day
@@ -23,6 +24,7 @@ struct ScheduleView: View {
     @State private var showFilters = false
     @State private var statusFilter: JobStatus? = nil
     @State private var typeFilter: String = "All"
+    @State private var showInvoices: Bool = false
     @State private var showMonthPicker = false
     @State private var enabledViewModes: Set<ScheduleViewMode> = [.day, .list, .map]
     @State private var selectedJobId: UUID? = nil
@@ -79,7 +81,7 @@ struct ScheduleView: View {
                 updateMapCamera(for: newDay)
             }
             .sheet(isPresented: $showFilters) {
-                JobFiltersView(statusFilter: $statusFilter, typeFilter: $typeFilter, enabledViewModes: $enabledViewModes)
+                JobFiltersView(statusFilter: $statusFilter, typeFilter: $typeFilter, enabledViewModes: $enabledViewModes, showInvoices: $showInvoices)
                     .presentationDetents([.large])
             }
             .sheet(isPresented: $showMonthPicker) {
@@ -358,11 +360,34 @@ struct ScheduleView: View {
                     if jobsStore.isLoading && jobsStore.jobs.isEmpty {
                         SkeletonList(count: 4)
                             .padding(.top, 4)
-                    } else if filteredJobsForDate(selectedDay).isEmpty {
+                    } else if filteredJobsForDate(selectedDay).isEmpty && invoicesForDate(selectedDay).isEmpty {
                         scheduleEmptyState
                     } else {
                         ForEach(filteredJobsForDate(selectedDay)) { job in
                             ScheduleJobRow(job: job)
+                        }
+                        if showInvoices {
+                            let dayInvoices = invoicesForDate(selectedDay)
+                            if !dayInvoices.isEmpty {
+                                if !filteredJobsForDate(selectedDay).isEmpty {
+                                    HStack(spacing: 6) {
+                                        Rectangle()
+                                            .fill(Color.sweeplyBorder)
+                                            .frame(height: 1)
+                                        Text("INVOICES DUE")
+                                            .font(.system(size: 10, weight: .bold))
+                                            .foregroundStyle(Color.sweeplyTextSub)
+                                            .tracking(0.8)
+                                        Rectangle()
+                                            .fill(Color.sweeplyBorder)
+                                            .frame(height: 1)
+                                    }
+                                    .padding(.vertical, 4)
+                                }
+                                ForEach(dayInvoices) { invoice in
+                                    ScheduleInvoiceRow(invoice: invoice)
+                                }
+                            }
                         }
                     }
                 }
@@ -380,7 +405,7 @@ struct ScheduleView: View {
     }
 
     // MARK: - List View
-    
+
     private var listView: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
@@ -389,11 +414,16 @@ struct ScheduleView: View {
                     .filter { $0.date >= startDay }
                     .filter { applyFilters($0) }
                     .sorted { $0.date < $1.date }
+                let futureInvoices = showInvoices ? invoicesStore.invoices
+                    .filter { calendar.startOfDay(for: $0.dueDate) >= startDay }
+                    .sorted { $0.dueDate < $1.dueDate } : []
 
-                let grouped = Dictionary(grouping: futureJobs) { calendar.startOfDay(for: $0.date) }
-                let sortedDates = grouped.keys.sorted()
+                let groupedJobs = Dictionary(grouping: futureJobs) { calendar.startOfDay(for: $0.date) }
+                let groupedInvoices = Dictionary(grouping: futureInvoices) { calendar.startOfDay(for: $0.dueDate) }
+                let allDates = Set(groupedJobs.keys).union(Set(groupedInvoices.keys))
+                let sortedDates = allDates.sorted()
 
-                if futureJobs.isEmpty {
+                if futureJobs.isEmpty && futureInvoices.isEmpty {
                     scheduleEmptyState.padding(.top, 40)
                 } else {
                     HStack {
@@ -402,12 +432,23 @@ struct ScheduleView: View {
                             .foregroundStyle(Color.sweeplyTextSub)
                             .tracking(0.5)
                         Spacer()
-                        Text("\(futureJobs.count) \(futureJobs.count == 1 ? "job" : "jobs") total")
-                            .font(.system(size: 11, weight: .semibold))
-                            .foregroundStyle(Color.sweeplyTextSub)
+                        HStack(spacing: 4) {
+                            Text("\(futureJobs.count) \(futureJobs.count == 1 ? "job" : "jobs")")
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundStyle(Color.sweeplyTextSub)
+                            if showInvoices && !futureInvoices.isEmpty {
+                                Text("·")
+                                    .foregroundStyle(Color.sweeplyTextSub)
+                                Text("\(futureInvoices.count) \(futureInvoices.count == 1 ? "invoice" : "invoices")")
+                                    .font(.system(size: 11, weight: .semibold))
+                                    .foregroundStyle(Color.sweeplyWarning)
+                            }
+                        }
                     }
                     .padding(.horizontal, 4)
                     ForEach(sortedDates, id: \.self) { date in
+                        let dayJobs = groupedJobs[date] ?? []
+                        let dayInvoices = groupedInvoices[date] ?? []
                         VStack(alignment: .leading, spacing: 10) {
                             HStack(spacing: 8) {
                                 Text(date.formatted(.dateTime.weekday(.wide).month().day()))
@@ -423,19 +464,44 @@ struct ScheduleView: View {
                                         .clipShape(Capsule())
                                 }
                                 Spacer()
-                                let count = grouped[date]?.count ?? 0
-                                Text("\(count) \(count == 1 ? "job" : "jobs")")
-                                    .font(.system(size: 11, weight: .semibold))
-                                    .foregroundStyle(Color.sweeplyTextSub)
-                                    .padding(.horizontal, 8)
-                                    .padding(.vertical, 3)
-                                    .background(Color.sweeplyAccent.opacity(0.1))
-                                    .clipShape(Capsule())
+                                if !dayJobs.isEmpty {
+                                    Text("\(dayJobs.count) \(dayJobs.count == 1 ? "job" : "jobs")")
+                                        .font(.system(size: 11, weight: .semibold))
+                                        .foregroundStyle(Color.sweeplyTextSub)
+                                        .padding(.horizontal, 8)
+                                        .padding(.vertical, 3)
+                                        .background(Color.sweeplyAccent.opacity(0.1))
+                                        .clipShape(Capsule())
+                                }
+                                if !dayInvoices.isEmpty {
+                                    Text("\(dayInvoices.count) \(dayInvoices.count == 1 ? "invoice" : "invoices")")
+                                        .font(.system(size: 11, weight: .semibold))
+                                        .foregroundStyle(Color.sweeplyWarning)
+                                        .padding(.horizontal, 8)
+                                        .padding(.vertical, 3)
+                                        .background(Color.sweeplyWarning.opacity(0.1))
+                                        .clipShape(Capsule())
+                                }
                             }
                             .padding(.horizontal, 4)
 
-                            ForEach(grouped[date] ?? []) { job in
+                            ForEach(dayJobs) { job in
                                 ScheduleJobRow(job: job)
+                            }
+                            if !dayInvoices.isEmpty {
+                                if !dayJobs.isEmpty {
+                                    HStack(spacing: 6) {
+                                        Rectangle().fill(Color.sweeplyBorder).frame(height: 1)
+                                        Text("INVOICES DUE")
+                                            .font(.system(size: 10, weight: .bold))
+                                            .foregroundStyle(Color.sweeplyTextSub)
+                                            .tracking(0.8)
+                                        Rectangle().fill(Color.sweeplyBorder).frame(height: 1)
+                                    }
+                                }
+                                ForEach(dayInvoices) { invoice in
+                                    ScheduleInvoiceRow(invoice: invoice)
+                                }
                             }
                         }
                     }
@@ -450,27 +516,44 @@ struct ScheduleView: View {
     }
 
     // MARK: - Month View
-    
+
     private var monthView: some View {
         VStack(spacing: 0) {
             JobberCalendarView(selectedDay: $selectedDay, jobs: jobsStore.jobs)
                 .padding(.horizontal, 20)
                 .padding(.top, 12)
-            
+
             VStack(alignment: .leading, spacing: 12) {
                 Text("Jobs for \(selectedDay.formatted(.dateTime.day().month()))")
                     .font(.system(size: 14, weight: .bold))
                     .foregroundStyle(Color.sweeplyNavy)
                     .padding(.horizontal, 24)
                     .padding(.top, 20)
-                
+
                 ScrollView {
                     VStack(spacing: 12) {
-                        if filteredJobsForDate(selectedDay).isEmpty {
+                        let dayJobs = filteredJobsForDate(selectedDay)
+                        let dayInvoices = invoicesForDate(selectedDay)
+                        if dayJobs.isEmpty && dayInvoices.isEmpty {
                             scheduleEmptyState
                         } else {
-                            ForEach(filteredJobsForDate(selectedDay)) { job in
+                            ForEach(dayJobs) { job in
                                 ScheduleJobRow(job: job)
+                            }
+                            if showInvoices && !dayInvoices.isEmpty {
+                                if !dayJobs.isEmpty {
+                                    HStack(spacing: 6) {
+                                        Rectangle().fill(Color.sweeplyBorder).frame(height: 1)
+                                        Text("INVOICES DUE")
+                                            .font(.system(size: 10, weight: .bold))
+                                            .foregroundStyle(Color.sweeplyTextSub)
+                                            .tracking(0.8)
+                                        Rectangle().fill(Color.sweeplyBorder).frame(height: 1)
+                                    }
+                                }
+                                ForEach(dayInvoices) { invoice in
+                                    ScheduleInvoiceRow(invoice: invoice)
+                                }
                             }
                         }
                     }
@@ -619,7 +702,14 @@ private extension ScheduleView {
             .filter { applyFilters($0) }
             .sorted { $0.date < $1.date }
     }
-    
+
+    private func invoicesForDate(_ date: Date) -> [Invoice] {
+        guard showInvoices else { return [] }
+        return invoicesStore.invoices
+            .filter { calendar.isDate($0.dueDate, inSameDayAs: date) }
+            .sorted { $0.dueDate < $1.dueDate }
+    }
+
     private func applyFilters(_ job: Job) -> Bool {
         if let status = statusFilter, job.status != status { return false }
         if typeFilter == "Recurring" && !job.isRecurring { return false }

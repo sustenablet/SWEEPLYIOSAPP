@@ -477,6 +477,24 @@ struct AIChatView: View {
             }
             .onDisappear {
                 persistChat()
+                if !messages.isEmpty {
+                    saveToHistory()
+                }
+            }
+            .onChange(of: currentProjectId) { oldId, newId in
+                // Save current conversation under the old project before switching
+                if !messages.isEmpty {
+                    saveToHistory()
+                }
+                // Load the most recent session for the new project, or start fresh
+                let sessions = loadSessionHistory()
+                if let match = sessions.first(where: { $0.projectId == newId }) {
+                    restoreSession(match)
+                } else {
+                    messages = []
+                    hasFiredProactive = false
+                    fireProactiveMessage()
+                }
             }
             .overlay(alignment: .bottom) {
                 if showOnboarding {
@@ -485,8 +503,17 @@ struct AIChatView: View {
                 }
             }
             .sheet(isPresented: $showHistory) {
+                let history = loadSessionHistory()
+                let currentAsSession: [PersistedSession] = messages.isEmpty ? [] : [
+                    PersistedSession(
+                        id: UUID(),
+                        projectId: currentProjectId,
+                        savedAt: Date(),
+                        messages: Array(messages.suffix(60).map { PersistedMessage(from: $0) })
+                    )
+                ]
                 ChatHistorySheet(
-                    sessions: loadSessionHistory(),
+                    sessions: currentAsSession + history,
                     projects: loadProjects(),
                     onRestore: { session in
                         restoreSession(session)
@@ -895,7 +922,86 @@ struct AIChatView: View {
         .background(Color.sweeplyBackground)
     }
 
-    // MARK: - Quick Actions Sheet (replaces slash menu — triggered by + button)
+    // MARK: - Quick Actions Menu (+ button)
+
+    private var quickActionsMenu: some View {
+        Menu {
+            // Quick Create Actions
+            Button {
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                sendMessage("I want to schedule a new job")
+            } label: {
+                Label("Schedule Job", systemImage: "calendar.badge.plus")
+            }
+
+            Button {
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                sendMessage("Add a new client")
+            } label: {
+                Label("Add Client", systemImage: "person.badge.plus")
+            }
+
+            Button {
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                sendMessage("Create a new invoice")
+            } label: {
+                Label("Create Invoice", systemImage: "doc.badge.plus")
+            }
+
+            Divider()
+
+            // Quick View Actions
+            Button {
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                sendMessage("What's on my schedule today?")
+            } label: {
+                Label("Today's Schedule", systemImage: "calendar.day.timeline.left")
+            }
+
+            Button {
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                sendMessage("What's my revenue this month?")
+            } label: {
+                Label("Revenue", systemImage: "chart.line.uptrend.xyaxis")
+            }
+
+            Button {
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                sendMessage("Show my clients")
+            } label: {
+                Label("My Clients", systemImage: "person.2.fill")
+            }
+
+            Divider()
+
+            // Utilities
+            Button {
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                sendMessage("Give me business insights")
+            } label: {
+                Label("Business Insights", systemImage: "sparkles")
+            }
+
+            Button {
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                sendMessage("What can you do?")
+            } label: {
+                Label("Help & Tips", systemImage: "questionmark.circle")
+            }
+        } label: {
+            ZStack {
+                Circle()
+                    .fill(Color.sweeplySurface)
+                    .frame(width: 36, height: 36)
+                Image(systemName: "plus")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(Color.sweeplyTextSub)
+            }
+        }
+        .buttonStyle(.plain)
+    }
+
+    // MARK: - Quick Actions Sheet (legacy - kept for compatibility but no longer used)
 
     private var quickActionsSheet: some View {
         VStack(spacing: 0) {
@@ -970,21 +1076,8 @@ struct AIChatView: View {
 
     private var inputBar: some View {
         HStack(spacing: 10) {
-            // Quick Actions (+) button
-            Button {
-                UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                showCommandPalette = true
-            } label: {
-                ZStack {
-                    Circle()
-                        .fill(Color.sweeplySurface)
-                        .frame(width: 36, height: 36)
-                    Image(systemName: "plus")
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(Color.sweeplyTextSub)
-                }
-            }
-            .buttonStyle(.plain)
+            // Quick Actions (+) button with menu
+            quickActionsMenu
 
             TextField(isRecording ? "Listening..." : "Ask me anything...", text: $inputText, axis: .vertical)
                 .font(.system(size: 15))
@@ -1126,7 +1219,14 @@ struct AIChatView: View {
                         quickReplies: ["Today's jobs", "Business overview"]
                     )
                 }
-                let first = await group.next()!
+                guard let first = await group.next() else {
+                    group.cancelAll()
+                    return ChatMessage(
+                        role: .assistant,
+                        text: "Something went wrong. Please try again.",
+                        quickReplies: ["Today's jobs", "Business overview"]
+                    )
+                }
                 group.cancelAll()
                 return first
             }
@@ -2737,6 +2837,7 @@ private struct MessageBubble: View {
     let onQuickReply: (String) -> Void
 
     @State private var displayedText: String = ""
+    @State private var typewriterTask: Task<Void, Never>? = nil
     @AppStorage("aiMessageRatings") private var ratingsData: Data = Data()
 
     private func saveRating(messageId: UUID, helpful: Bool) {
@@ -2809,6 +2910,7 @@ private struct MessageBubble: View {
             }
         }
         .onAppear { startTypewriter() }
+        .onDisappear { typewriterTask?.cancel() }
         .contextMenu {
             Button {
                 UIPasteboard.general.string = message.text
@@ -2938,27 +3040,22 @@ private struct MessageBubble: View {
             return
         }
         displayedText = ""
-        let chars = Array(message.text)
-        var index = 0
-        let batchSize = 3
-        let hapticGen = UIImpactFeedbackGenerator(style: .light)
-        hapticGen.prepare()
-        
-        func next() {
-            guard index < chars.count else { return }
-            
-            // Batch append characters
-            let endIndex = min(index + batchSize, chars.count)
-            let batch = chars[index..<endIndex]
-            displayedText.append(contentsOf: batch)
-            index = endIndex
-            
-            // Haptic every batch
-            hapticGen.impactOccurred()
-            
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.025) { next() }
+        typewriterTask?.cancel()
+        typewriterTask = Task { @MainActor in
+            let chars = Array(message.text)
+            var index = 0
+            let batchSize = 3
+            while index < chars.count {
+                guard !Task.isCancelled else {
+                    displayedText = message.text
+                    return
+                }
+                let endIndex = min(index + batchSize, chars.count)
+                displayedText.append(contentsOf: chars[index..<endIndex])
+                index = endIndex
+                try? await Task.sleep(nanoseconds: 25_000_000) // 0.025s
+            }
         }
-        next()
     }
 }
 
