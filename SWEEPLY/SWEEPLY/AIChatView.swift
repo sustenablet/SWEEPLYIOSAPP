@@ -358,7 +358,6 @@ struct AIChatView: View {
                     quickActionsSheet
                         .presentationDetents([.fraction(0.5), .large])
                         .presentationDragIndicator(.visible)
-                        .presentationInteractivityDismiss(.interactive)
                 }
 
                 Divider()
@@ -461,7 +460,6 @@ struct AIChatView: View {
                 aiChatMenu
                     .presentationDetents([.height(320)])
                     .presentationDragIndicator(.visible)
-                    .presentationInteractivityDismiss(.interactive)
             }
             .sheet(isPresented: $showProjectPicker) {
                 projectPickerSheet
