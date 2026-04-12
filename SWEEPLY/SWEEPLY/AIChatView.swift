@@ -457,8 +457,9 @@ struct AIChatView: View {
             }
             .sheet(isPresented: $showMenu) {
                 aiChatMenu
-                    .presentationDetents([.height(280)])
+                    .presentationDetents([.fraction(0.5), .large])
                     .presentationDragIndicator(.visible)
+                    .presentationInteractivityDismiss(.interactive)
             }
             .sheet(isPresented: $showProjectPicker) {
                 projectPickerSheet
@@ -530,28 +531,30 @@ struct AIChatView: View {
 
                 Divider().padding(.leading, 52)
 
-                // Add to Project
-                Button {
-                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                    showMenu = false
-                    showProjectPicker = true
-                } label: {
-                    HStack(spacing: 12) {
-                        Image(systemName: "folder.badge.plus")
-                            .font(.system(size: 15, weight: .medium))
-                            .foregroundStyle(Color.sweeplyNavy)
-                            .frame(width: 24)
-                        Text("Add to Project")
-                            .font(.system(size: 15, weight: .medium))
-                            .foregroundStyle(Color.sweeplyNavy)
-                        Spacer()
+                // Add to Project - only show when user has sent at least 1 message
+                if messages.contains(where: { $0.role == .user }) {
+                    Button {
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        showMenu = false
+                        showProjectPicker = true
+                    } label: {
+                        HStack(spacing: 12) {
+                            Image(systemName: "folder.badge.plus")
+                                .font(.system(size: 15, weight: .medium))
+                                .foregroundStyle(Color.sweeplyNavy)
+                                .frame(width: 24)
+                            Text("Assign to Project")
+                                .font(.system(size: 15, weight: .medium))
+                                .foregroundStyle(Color.sweeplyNavy)
+                            Spacer()
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 14)
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 14)
-                }
-                .buttonStyle(.plain)
+                    .buttonStyle(.plain)
 
-                Divider().padding(.leading, 52)
+                    Divider().padding(.leading, 52)
+                }
 
                 // Delete Chat (RED)
                 Button {
@@ -2650,6 +2653,7 @@ struct AIChatView: View {
             return
         }
         messages = session.messages.map { $0.toChatMessage() }
+        currentProjectId = session.projectId  // Restore project assignment
         hasFiredProactive = true
     }
 
