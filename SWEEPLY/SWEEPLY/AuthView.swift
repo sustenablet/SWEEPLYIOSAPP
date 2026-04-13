@@ -39,28 +39,28 @@ struct AuthView: View {
     // MARK: - Brand Mark
 
     private var brandMark: some View {
-        VStack(spacing: 18) {
-            ZStack {
-                Circle()
-                    .fill(Color.sweeplyAccent.opacity(0.1))
-                    .frame(width: 88, height: 88)
-                Image(systemName: "sparkles")
-                    .font(.system(size: 40, weight: .medium))
-                    .foregroundStyle(Color.sweeplyAccent)
-            }
+        VStack(spacing: 22) {
+            Image("SweeplyLogo")
+                .resizable()
+                .scaledToFit()
+                .frame(width: 132, height: 132)
 
-            VStack(spacing: 6) {
-                Text("Sweeply")
-                    .font(.system(size: 38, weight: .bold))
-                    .tracking(-1.4)
-                    .foregroundStyle(Color.sweeplyNavy)
+            VStack(spacing: 8) {
+                HStack(spacing: 0) {
+                    Text("Sweep")
+                        .foregroundStyle(Color.sweeplyNavy)
+                    Text("ly")
+                        .foregroundStyle(Color.sweeplyAccent)
+                }
+                .font(.system(size: 44, weight: .bold))
+                .tracking(-1.4)
 
                 Text("Run your cleaning business.")
-                    .font(.system(size: 15, weight: .regular))
+                    .font(.system(size: 16, weight: .regular))
                     .foregroundStyle(Color.sweeplyTextSub)
             }
         }
-        .padding(.bottom, 260) // leaves room for the card
+        .padding(.bottom, 292) // leaves room for the card
     }
 
     // MARK: - Auth Card

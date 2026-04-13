@@ -25,6 +25,10 @@
 	<string>Sweeply needs your location to show your position on the map and help you navigate to job sites.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 	<string>Sweeply needs your location to show your position on the map and help you navigate to job sites, even when the app is in the background.</string>
+	<key>NSUserNotificationsUsageDescription</key>
+	<string>Sweeply sends reminders for upcoming jobs and overdue invoices so you never miss a beat.</string>
+	<key>NSFaceIDUsageDescription</key>
+	<string>Sweeply uses Face ID to protect your business data when the app lock is enabled.</string>
 	<key>UILaunchScreen</key>
 	<dict>
 		<key>UIColorName</key>

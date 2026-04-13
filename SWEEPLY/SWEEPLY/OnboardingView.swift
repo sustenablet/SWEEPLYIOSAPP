@@ -427,6 +427,11 @@ struct OnboardingView: View {
             await MainActor.run {
                 isSaving = false
                 UINotificationFeedbackGenerator().notificationOccurred(.success)
+                // Request notification permission right after onboarding — user has
+                // just set up scheduling, so the context is clear and natural.
+                if NotificationManager.shared.notificationStatus == .notDetermined {
+                    NotificationManager.shared.requestAuthorization()
+                }
             }
         }
     }

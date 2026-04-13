@@ -287,6 +287,12 @@ struct RootView: View {
             await clientsStore.load(isAuthenticated: session.isAuthenticated)
             WidgetDataWriter.write(jobs: jobsStore.jobs, invoices: invoicesStore.invoices)
             scheduleProductTutorialIfNeeded()
+            // Safety net for existing users who skipped onboarding or installed a prior
+            // build — request notification permission if we haven't asked yet.
+            if session.isAuthenticated && notificationManager.notificationStatus == .notDetermined {
+                try? await Task.sleep(for: .seconds(2))
+                notificationManager.requestAuthorization()
+            }
         }
         .onChange(of: session.isAuthenticated) { _, authed in
             if authed {
