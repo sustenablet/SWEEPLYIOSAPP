@@ -7,8 +7,10 @@ struct BusinessView: View {
     @Environment(JobsStore.self)     private var jobsStore
     @Environment(InvoicesStore.self) private var invoicesStore
     @Environment(ProfileStore.self)  private var profileStore
+    @Environment(TeamStore.self)     private var teamStore
 
     @State private var appeared = false
+    @State private var showTeam = false
     @State private var showServiceCatalog = false
     @State private var selectedSnapshotSlide = 0
     @State private var showAIChat = false
@@ -615,6 +617,66 @@ struct BusinessView: View {
                     }
                 }
 
+                // 6. Team
+                SectionCard {
+                    VStack(alignment: .leading, spacing: 14) {
+                        CardHeader(
+                            title: "Your Team",
+                            subtitle: teamStore.members.isEmpty
+                                ? "Add cleaners to your crew"
+                                : "\(teamStore.members.count) member\(teamStore.members.count == 1 ? "" : "s")",
+                            action: { showTeam = true }
+                        )
+
+                        if teamStore.members.isEmpty {
+                            overviewEmptyState(
+                                icon: "person.badge.plus",
+                                title: "No team members yet",
+                                message: "Invite cleaners to join your crew and track who's on the team."
+                            )
+                        } else {
+                            HStack(spacing: -8) {
+                                ForEach(teamStore.members.prefix(4)) { member in
+                                    ZStack {
+                                        Circle()
+                                            .fill(Color.sweeplyNavy.gradient)
+                                            .frame(width: 36, height: 36)
+                                        Text(member.initials)
+                                            .font(.system(size: 12, weight: .bold))
+                                            .foregroundStyle(.white)
+                                    }
+                                    .overlay(Circle().stroke(Color.sweeplySurface, lineWidth: 2))
+                                }
+                                if teamStore.members.count > 4 {
+                                    ZStack {
+                                        Circle()
+                                            .fill(Color.sweeplyBorder)
+                                            .frame(width: 36, height: 36)
+                                        Text("+\(teamStore.members.count - 4)")
+                                            .font(.system(size: 10, weight: .bold))
+                                            .foregroundStyle(Color.sweeplyNavy)
+                                    }
+                                    .overlay(Circle().stroke(Color.sweeplySurface, lineWidth: 2))
+                                }
+                            }
+                            .padding(.top, 4)
+
+                            Button {
+                                showTeam = true
+                            } label: {
+                                Text("Manage Team")
+                                    .font(.system(size: 13, weight: .semibold))
+                                    .foregroundStyle(Color.sweeplyNavy)
+                                    .padding(.horizontal, 16)
+                                    .padding(.vertical, 8)
+                                    .background(Color.sweeplyNavy.opacity(0.07))
+                                    .clipShape(Capsule())
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                }
+
                 serviceCatalogPreviewSection
             }
             .padding(.horizontal, 20)
@@ -631,6 +693,12 @@ struct BusinessView: View {
         }
         .onAppear {
             withAnimation(.easeOut(duration: 0.3)) { appeared = true }
+        }
+        .sheet(isPresented: $showTeam) {
+            TeamView()
+                .environment(teamStore)
+                .environment(profileStore)
+                .environment(session)
         }
         .sheet(isPresented: $showServiceCatalog) {
             ServiceCatalogView()
@@ -1131,4 +1199,8 @@ private struct KPIToggleRow: View {
     BusinessView()
         .environment(AppSession())
         .environment(ProfileStore())
+        .environment(TeamStore())
+        .environment(ClientsStore())
+        .environment(JobsStore())
+        .environment(InvoicesStore())
 }

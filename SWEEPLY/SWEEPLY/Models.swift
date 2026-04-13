@@ -271,3 +271,47 @@ struct WeeklyRevenue: Identifiable {
     var day: String
     var amount: Double
 }
+
+// MARK: - Team
+
+enum TeamRole: String, CaseIterable, Codable {
+    case owner  = "owner"
+    case member = "member"
+
+    var displayName: String {
+        switch self {
+        case .owner:  return "Owner"
+        case .member: return "Cleaner"
+        }
+    }
+}
+
+enum TeamMemberStatus: String, Codable {
+    case invited = "invited"
+    case active  = "active"
+
+    var displayName: String {
+        switch self {
+        case .invited: return "Invited"
+        case .active:  return "Active"
+        }
+    }
+}
+
+struct TeamMember: Identifiable, Codable {
+    var id      = UUID()
+    var ownerId : UUID
+    var name    : String
+    var email   : String
+    var role    : TeamRole
+    var status  : TeamMemberStatus
+    var addedAt : Date
+
+    var initials: String {
+        name.split(separator: " ")
+            .compactMap { $0.first }
+            .prefix(2)
+            .map { String($0).uppercased() }
+            .joined()
+    }
+}

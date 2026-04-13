@@ -13,6 +13,7 @@ struct DashboardView: View {
     @Environment(InvoicesStore.self) private var invoicesStore
     @Environment(ProfileStore.self) private var profileStore
     @Environment(NotificationsStore.self) private var notificationsStore
+    @Environment(TeamStore.self) private var teamStore
 
     @State private var appeared = false
     @State private var showProfileMenu = false
@@ -20,6 +21,7 @@ struct DashboardView: View {
     @State private var showNotifications = false
     @State private var selectedInvoiceId: UUID? = nil
     @State private var showInvoiceDetail = false
+    @State private var showTeam = false
     /// User hid the checklist after completing all steps (persisted).
     @AppStorage("dashboardPlaybookPermanentlyHidden") private var playbookPermanentlyHidden = false
     @State private var healthStats: HealthStats? = nil
@@ -227,9 +229,15 @@ struct DashboardView: View {
         }
         .background(Color.sweeplyBackground.ignoresSafeArea())
         .sheet(isPresented: $showProfileMenu) {
-            ProfileMenuView(showSettings: $showSettings)
-                .presentationDetents([.height(280)])
+            ProfileMenuView(showSettings: $showSettings, showTeam: $showTeam)
+                .presentationDetents([.height(320)])
                 .presentationDragIndicator(.visible)
+        }
+        .sheet(isPresented: $showTeam) {
+            TeamView()
+                .environment(teamStore)
+                .environment(profileStore)
+                .environment(session)
         }
         .sheet(isPresented: $showNotifications) {
             NotificationsView()
@@ -848,6 +856,7 @@ struct ProfileMenuView: View {
     @Environment(ProfileStore.self) private var profileStore
     @Environment(\.dismiss) private var dismiss
     @Binding var showSettings: Bool
+    @Binding var showTeam: Bool
     
     private var profile: UserProfile { profileStore.profile ?? MockData.profile }
     
@@ -888,9 +897,29 @@ struct ProfileMenuView: View {
                     .padding(.vertical, 14)
                 }
                 .buttonStyle(.plain)
-                
+
                 Divider().padding(.leading, 52)
-                
+
+                Button {
+                    dismiss()
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                        showTeam = true
+                    }
+                } label: {
+                    HStack(spacing: 12) {
+                        Image(systemName: "person.2.fill")
+                        Text("My Team")
+                        Spacer()
+                        Image(systemName: "chevron.right").font(.system(size: 12)).foregroundStyle(Color.sweeplyBorder)
+                    }
+                    .font(.system(size: 16, weight: .medium))
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 14)
+                }
+                .buttonStyle(.plain)
+
+                Divider().padding(.leading, 52)
+
                 Button {
                     Task { await session.signOut(); dismiss() }
                 } label: {

@@ -8,6 +8,7 @@ struct RootView: View {
     @Environment(InvoicesStore.self)       private var invoicesStore
     @Environment(ProfileStore.self)        private var profileStore
     @Environment(NotificationManager.self) private var notificationManager
+    @Environment(TeamStore.self)           private var teamStore
 
     @State private var selectedTab: Tab = .dashboard
     @State private var deepLinkedJobId: UUID? = nil
@@ -283,6 +284,7 @@ struct RootView: View {
             await invoicesStore.markOverdueInvoices()
             if session.isAuthenticated, let uid = session.userId {
                 await profileStore.load(userId: uid)
+                await teamStore.load(ownerId: uid)
             }
             await clientsStore.load(isAuthenticated: session.isAuthenticated)
             WidgetDataWriter.write(jobs: jobsStore.jobs, invoices: invoicesStore.invoices)
@@ -305,6 +307,7 @@ struct RootView: View {
                 jobsStore.clear()
                 invoicesStore.clear()
                 profileStore.clear()
+                teamStore.clear()
             }
         }
         .onChange(of: notificationManager.pendingDeepLink) { _, link in
