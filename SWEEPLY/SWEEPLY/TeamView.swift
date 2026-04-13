@@ -106,7 +106,7 @@ struct TeamView: View {
             }
 
             VStack(alignment: .leading, spacing: 2) {
-                Text(profileStore.profile?.businessName ?? "".isEmpty ? "You" : profileStore.profile?.businessName ?? "")
+                Text((profileStore.profile?.businessName ?? "").isEmpty ? "You" : (profileStore.profile?.businessName ?? ""))
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundStyle(Color.primary)
                 Text("Account owner")
@@ -355,7 +355,7 @@ struct InviteMemberSheet: View {
 
         let success = await teamStore.add(member)
         if success {
-            let biz = profileStore.profile?.businessName ?? "".isEmpty ? "Your team" : profileStore.profile?.businessName ?? ""
+            let biz = (profileStore.profile?.businessName ?? "").isEmpty ? "Your team" : (profileStore.profile?.businessName ?? "")
             inviteMessage = "Hi \(member.name), \(biz) has invited you to join their Sweeply team as \(role.displayName). Download the Sweeply app and you're all set!"
             showShareSheet = true
         }
