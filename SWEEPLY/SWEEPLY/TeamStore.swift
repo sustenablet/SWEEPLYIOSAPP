@@ -25,7 +25,7 @@ final class TeamStore {
         defer { isLoading = false }
 
         do {
-            let rows: [TeamMemberRow] = try await client
+            let rows: [TeamMemberDTO] = try await client
                 .from("team_members")
                 .select()
                 .eq("owner_id", value: ownerId.uuidString)
@@ -54,7 +54,7 @@ final class TeamStore {
         )
 
         do {
-            let row: TeamMemberRow = try await client
+            let row: TeamMemberDTO = try await client
                 .from("team_members")
                 .insert(insert)
                 .select()
@@ -116,7 +116,7 @@ final class TeamStore {
 
 // MARK: - DTOs
 
-private struct TeamMemberRow: Decodable {
+private struct TeamMemberDTO: Decodable {
     let id: UUID
     let ownerId: UUID
     let name: String
