@@ -20,6 +20,7 @@ struct RootView: View {
     @State private var showOnboarding = false
     @State private var showProductTutorial = false
     @State private var isLocked = false
+    @State private var minimumSplashElapsed = false
 
     @AppStorage("hasSeenProductTutorial") private var hasSeenProductTutorial = false
     @AppStorage("biometricLockEnabled") private var biometricLockEnabled: Bool = false
@@ -41,8 +42,12 @@ struct RootView: View {
         Group {
             if !SupabaseManager.isConfigured {
                 mainTabs
-            } else if !session.hasResolvedInitialSession {
+            } else if !session.hasResolvedInitialSession || !minimumSplashElapsed {
                 SplashView()
+                    .task {
+                        try? await Task.sleep(for: .seconds(2))
+                        minimumSplashElapsed = true
+                    }
             } else if session.isAuthenticated {
                 ZStack {
                     mainTabs
