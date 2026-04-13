@@ -113,12 +113,26 @@ extension Double {
         Self.currencyFormatter.string(from: NSNumber(value: self)) ?? "$0.00"
     }
 
+    /// Currency with up to 2 fraction digits; whole amounts omit trailing “.00” (e.g. `$120` vs `$120.00`).
+    var currencyWithoutTrailingZeros: String {
+        Self.currencyFlexibleFormatter.string(from: NSNumber(value: self)) ?? currency
+    }
+
     private static let currencyFormatter: NumberFormatter = {
         let formatter = NumberFormatter()
         formatter.numberStyle = .currency
         formatter.locale = .current
         formatter.maximumFractionDigits = 2
         formatter.minimumFractionDigits = 2
+        return formatter
+    }()
+
+    private static let currencyFlexibleFormatter: NumberFormatter = {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .currency
+        formatter.locale = .current
+        formatter.minimumFractionDigits = 0
+        formatter.maximumFractionDigits = 2
         return formatter
     }()
 }

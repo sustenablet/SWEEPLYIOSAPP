@@ -43,7 +43,7 @@ struct MapJobCard: View {
             HStack(spacing: 12) {
                 InfoChip(icon: "clock.fill", text: job.date.formatted(.dateTime.hour().minute()))
                 InfoChip(icon: "hourglass", text: "\(Int(job.duration)) hr")
-                InfoChip(icon: "tag.fill", text: job.price.currency)
+                InfoChip(icon: "tag.fill", text: job.price.currencyWithoutTrailingZeros)
                 
                 if job.isRecurring {
                     InfoChip(icon: "arrow.triangle.2.circlepath", text: "Recurring", color: .sweeplyAccent)
