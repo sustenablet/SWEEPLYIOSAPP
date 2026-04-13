@@ -106,12 +106,12 @@ struct TeamView: View {
             }
 
             VStack(alignment: .leading, spacing: 2) {
-                Text(profileStore.businessName.isEmpty ? "You" : profileStore.businessName)
+                Text(profileStore.profile?.businessName ?? "".isEmpty ? "You" : profileStore.profile?.businessName ?? "")
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundStyle(Color.primary)
                 Text("Account owner")
                     .font(.system(size: 13))
-                    .foregroundStyle(Color.primarySub)
+                    .foregroundStyle(Color.sweeplyTextSub)
             }
 
             Spacer()
@@ -122,7 +122,7 @@ struct TeamView: View {
     }
 
     private var ownerInitials: String {
-        let name = profileStore.businessName
+        let name = profileStore.profile?.businessName ?? ""
         if name.isEmpty { return "ME" }
         return name.split(separator: " ")
             .compactMap { $0.first }
@@ -137,13 +137,13 @@ struct TeamView: View {
         VStack(spacing: 10) {
             Image(systemName: "person.badge.plus")
                 .font(.system(size: 28, weight: .light))
-                .foregroundStyle(Color.primarySub.opacity(0.5))
+                .foregroundStyle(Color.sweeplyTextSub.opacity(0.5))
             Text("No cleaners yet")
                 .font(.system(size: 14, weight: .medium))
-                .foregroundStyle(Color.primarySub)
+                .foregroundStyle(Color.sweeplyTextSub)
             Text("Tap Invite to add your first cleaner")
                 .font(.system(size: 12))
-                .foregroundStyle(Color.primarySub.opacity(0.6))
+                .foregroundStyle(Color.sweeplyTextSub.opacity(0.6))
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 28)
@@ -156,7 +156,7 @@ struct TeamView: View {
     private func sectionHeader(_ title: String) -> some View {
         Text(title.uppercased())
             .font(.system(size: 11, weight: .semibold))
-            .foregroundStyle(Color.primarySub.opacity(0.7))
+            .foregroundStyle(Color.sweeplyTextSub.opacity(0.7))
             .padding(.top, 4)
     }
 
@@ -193,7 +193,7 @@ struct TeamMemberRow: View {
                     .foregroundStyle(Color.primary)
                 Text(member.email)
                     .font(.system(size: 12))
-                    .foregroundStyle(Color.primarySub)
+                    .foregroundStyle(Color.sweeplyTextSub)
                     .lineLimit(1)
             }
 
@@ -219,11 +219,11 @@ struct TeamMemberRow: View {
     private func statusDot(_ status: TeamMemberStatus) -> some View {
         HStack(spacing: 4) {
             Circle()
-                .fill(status == .active ? Color.sweeplySuccess : Color.primarySub.opacity(0.4))
+                .fill(status == .active ? Color.sweeplySuccess : Color.sweeplyTextSub.opacity(0.4))
                 .frame(width: 6, height: 6)
             Text(status.displayName)
                 .font(.system(size: 11))
-                .foregroundStyle(Color.primarySub)
+                .foregroundStyle(Color.sweeplyTextSub)
         }
     }
 }
@@ -309,7 +309,7 @@ struct InviteMemberSheet: View {
                             .background(
                                 canSave
                                 ? Color.sweeplyNavy
-                                : Color.primarySub.opacity(0.3),
+                                : Color.sweeplyTextSub.opacity(0.3),
                                 in: RoundedRectangle(cornerRadius: 14)
                             )
                         }
@@ -325,7 +325,7 @@ struct InviteMemberSheet: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("Cancel") { dismiss() }
-                        .foregroundStyle(Color.primarySub)
+                        .foregroundStyle(Color.sweeplyTextSub)
                 }
             }
             .sheet(isPresented: $showShareSheet) {
@@ -355,7 +355,7 @@ struct InviteMemberSheet: View {
 
         let success = await teamStore.add(member)
         if success {
-            let biz = profileStore.businessName.isEmpty ? "Your team" : profileStore.businessName
+            let biz = profileStore.profile?.businessName ?? "".isEmpty ? "Your team" : profileStore.profile?.businessName ?? ""
             inviteMessage = "Hi \(member.name), \(biz) has invited you to join their Sweeply team as \(role.displayName). Download the Sweeply app and you're all set!"
             showShareSheet = true
         }
@@ -365,7 +365,7 @@ struct InviteMemberSheet: View {
         HStack {
             Text(label)
                 .font(.system(size: 14, weight: .medium))
-                .foregroundStyle(Color.primarySub)
+                .foregroundStyle(Color.sweeplyTextSub)
                 .frame(width: 60, alignment: .leading)
             content()
         }
