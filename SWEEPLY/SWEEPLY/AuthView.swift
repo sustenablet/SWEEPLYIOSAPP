@@ -22,12 +22,11 @@ struct AuthView: View {
             // Background
             Color.sweeplyBackground.ignoresSafeArea()
 
-            // Brand area (top)
+            // Brand area (top) — single spacer below keeps the mark grouped and nearer the sheet
             VStack(spacing: 0) {
-                Spacer()
+                Spacer(minLength: 0)
                 brandMark
-                Spacer()
-                Spacer()
+                Spacer(minLength: 0)
             }
 
             // Auth card (bottom sheet)
@@ -39,13 +38,13 @@ struct AuthView: View {
     // MARK: - Brand Mark
 
     private var brandMark: some View {
-        VStack(spacing: 28) {
+        VStack(spacing: 12) {
             Image("SweeplyLogo")
                 .resizable()
                 .scaledToFit()
                 .frame(width: 200, height: 200)
 
-            VStack(spacing: 10) {
+            VStack(spacing: 6) {
                 HStack(spacing: 0) {
                     Text("Sweep")
                         .foregroundStyle(Color.sweeplyNavy)
@@ -61,7 +60,8 @@ struct AuthView: View {
             }
         }
         .padding(.horizontal, 8)
-        .padding(.bottom, 368) // leaves room for the card
+        // Reserve space for the bottom auth sheet without excess gap under the tagline.
+        .padding(.bottom, 300)
     }
 
     // MARK: - Auth Card
