@@ -112,6 +112,58 @@ final class TeamStore {
             return false
         }
     }
+
+    func updateStatus(id: UUID, status: TeamMemberStatus) async -> Bool {
+        guard let client = SupabaseManager.shared else {
+            if let idx = members.firstIndex(where: { $0.id == id }) {
+                members[idx].status = status
+            }
+            return true
+        }
+
+        do {
+            try await client
+                .from("team_members")
+                .update(TeamMemberStatusPatch(status: status.rawValue))
+                .eq("id", value: id.uuidString)
+                .execute()
+            if let idx = members.firstIndex(where: { $0.id == id }) {
+                members[idx].status = status
+            }
+            return true
+        } catch {
+            lastError = error.localizedDescription
+            return false
+        }
+    }
+
+    func updateMember(id: UUID, name: String, email: String, role: TeamRole) async -> Bool {
+        guard let client = SupabaseManager.shared else {
+            if let idx = members.firstIndex(where: { $0.id == id }) {
+                members[idx].name  = name
+                members[idx].email = email
+                members[idx].role  = role
+            }
+            return true
+        }
+
+        do {
+            try await client
+                .from("team_members")
+                .update(TeamMemberFullPatch(name: name, email: email, role: role.rawValue))
+                .eq("id", value: id.uuidString)
+                .execute()
+            if let idx = members.firstIndex(where: { $0.id == id }) {
+                members[idx].name  = name
+                members[idx].email = email
+                members[idx].role  = role
+            }
+            return true
+        } catch {
+            lastError = error.localizedDescription
+            return false
+        }
+    }
 }
 
 // MARK: - DTOs
@@ -160,5 +212,15 @@ private struct TeamMemberInsert: Encodable {
 }
 
 private struct TeamMemberPatch: Encodable {
+    let role: String
+}
+
+private struct TeamMemberStatusPatch: Encodable {
+    let status: String
+}
+
+private struct TeamMemberFullPatch: Encodable {
+    let name: String
+    let email: String
     let role: String
 }

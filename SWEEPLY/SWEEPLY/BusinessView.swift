@@ -635,6 +635,9 @@ struct BusinessView: View {
                                 message: "Invite cleaners to join your crew and track who's on the team."
                             )
                         } else {
+                            let activeCount  = teamStore.members.filter { $0.status == .active  }.count
+                            let invitedCount = teamStore.members.filter { $0.status == .invited }.count
+
                             HStack(spacing: -8) {
                                 ForEach(teamStore.members.prefix(4)) { member in
                                     ZStack {
@@ -660,6 +663,25 @@ struct BusinessView: View {
                                 }
                             }
                             .padding(.top, 4)
+
+                            // Status summary
+                            HStack(spacing: 8) {
+                                if activeCount > 0 {
+                                    Label("\(activeCount) Active", systemImage: "circle.fill")
+                                        .font(.system(size: 11, weight: .medium))
+                                        .foregroundStyle(Color.sweeplySuccess)
+                                        .labelStyle(.titleAndIcon)
+                                }
+                                if invitedCount > 0 {
+                                    if activeCount > 0 {
+                                        Text("·").foregroundStyle(Color.sweeplyTextSub.opacity(0.4))
+                                    }
+                                    Label("\(invitedCount) Invited", systemImage: "circle.fill")
+                                        .font(.system(size: 11, weight: .medium))
+                                        .foregroundStyle(Color.sweeplyTextSub)
+                                        .labelStyle(.titleAndIcon)
+                                }
+                            }
 
                             Button {
                                 showTeam = true
