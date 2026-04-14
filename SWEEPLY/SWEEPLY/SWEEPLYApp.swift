@@ -65,7 +65,8 @@ struct SWEEPLYApp: App {
     @State private var profileStore  = ProfileStore()
     @State private var notificationsStore = NotificationsStore()
     @State private var notificationManager = NotificationManager.shared
-    @State private var teamStore = TeamStore()
+    @State private var teamStore    = TeamStore()
+    @State private var expenseStore = ExpenseStore()
 
     @AppStorage("pendingShortcut") private var pendingShortcut: String = ""
 
@@ -80,6 +81,7 @@ struct SWEEPLYApp: App {
                 .environment(notificationsStore)
                 .environment(notificationManager)
                 .environment(teamStore)
+                .environment(expenseStore)
                 .onAppear {
                     notificationManager.checkAuthorizationStatus()
                     registerQuickActions()

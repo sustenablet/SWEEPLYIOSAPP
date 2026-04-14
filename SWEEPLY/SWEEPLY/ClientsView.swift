@@ -7,6 +7,37 @@ enum ClientSortOrder: String, CaseIterable {
     case mostActive = "Most Active"
 }
 
+// MARK: - Client Frequency
+
+enum ClientFrequency {
+    case none
+    case oneTime
+    case recurring
+    case weekly
+    case biweekly
+    case monthly
+
+    var label: String? {
+        switch self {
+        case .none:      return nil
+        case .oneTime:   return "One-time"
+        case .recurring: return "Recurring"
+        case .weekly:    return "Weekly"
+        case .biweekly:  return "Biweekly"
+        case .monthly:   return "Monthly"
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .none, .oneTime: return "1.circle"
+        default:              return "arrow.triangle.2.circlepath"
+        }
+    }
+
+    var isRecurring: Bool { self != .none && self != .oneTime }
+}
+
 // MARK: - Clients List View
 
 struct ClientsView: View {
@@ -49,6 +80,31 @@ struct ClientsView: View {
 
     private func jobCount(for client: Client) -> Int {
         displayJobs.filter { $0.clientId == client.id }.count
+    }
+
+    private func frequency(for client: Client) -> ClientFrequency {
+        let clientJobs = displayJobs.filter { $0.clientId == client.id }
+        guard !clientJobs.isEmpty else { return .none }
+        let hasRecurring = clientJobs.contains { $0.isRecurring }
+        guard hasRecurring else { return .oneTime }
+
+        // Estimate frequency from gap between sorted recurring job dates
+        let recurringDates = clientJobs
+            .filter { $0.isRecurring }
+            .map { $0.date }
+            .sorted()
+        guard recurringDates.count >= 2 else { return .recurring }
+        let gaps = zip(recurringDates, recurringDates.dropFirst()).map {
+            Calendar.current.dateComponents([.day], from: $0, to: $1).day ?? 0
+        }
+        let avgGap = gaps.reduce(0, +) / gaps.count
+        switch avgGap {
+        case 0...9:  return .weekly
+        case 10...18: return .weekly
+        case 19...25: return .biweekly
+        case 26...35: return .monthly
+        default:      return .recurring
+        }
     }
 
     var body: some View {
@@ -178,6 +234,7 @@ struct ClientsView: View {
                         ClientCard(
                             client: client,
                             jobCount: jobCount(for: client),
+                            frequency: frequency(for: client),
                             onView: { viewingClientId = client.id },
                             onEdit: {
                                 editingClient = client
@@ -281,6 +338,7 @@ struct ClientsView: View {
 private struct ClientCard: View {
     let client: Client
     let jobCount: Int
+    let frequency: ClientFrequency
     let onView: () -> Void
     let onEdit: () -> Void
     let onDelete: () -> Void
@@ -335,6 +393,32 @@ private struct ClientCard: View {
                                 .font(.system(size: 11, weight: .medium))
                                 .foregroundStyle(Color.sweeplyTextSub)
                         }
+                    }
+
+                    // Frequency badge
+                    if let freqLabel = frequency.label {
+                        HStack(spacing: 4) {
+                            Image(systemName: frequency.icon)
+                                .font(.system(size: 9, weight: .bold))
+                                .foregroundStyle(frequency.isRecurring ? Color.sweeplyNavy : Color.sweeplyTextSub)
+                            Text(freqLabel)
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundStyle(frequency.isRecurring ? Color.sweeplyNavy : Color.sweeplyTextSub)
+                        }
+                        .padding(.horizontal, 7)
+                        .padding(.vertical, 3)
+                        .background(
+                            frequency.isRecurring
+                            ? Color.sweeplyNavy.opacity(0.08)
+                            : Color.sweeplyBackground
+                        )
+                        .clipShape(Capsule())
+                        .overlay(
+                            Capsule().stroke(
+                                frequency.isRecurring ? Color.sweeplyNavy.opacity(0.18) : Color.sweeplyBorder,
+                                lineWidth: 1
+                            )
+                        )
                     }
 
                     if let service = client.preferredService {

@@ -7,6 +7,7 @@ struct FinancesView: View {
     @Environment(ClientsStore.self) private var clientsStore
     @Environment(ProfileStore.self) private var profileStore
     @Environment(AppSession.self) private var session
+    @Environment(ExpenseStore.self) private var expenseStore
 
     @State private var selectedPeriod: ChartPeriod = .week
     @State private var selectedFilter: InvoiceFilter = .all
@@ -14,6 +15,7 @@ struct FinancesView: View {
     @State private var selectedBarMonth: String? = nil
     @State private var showFinanceAI = false
     @State private var showInvoicesList = false
+    @State private var showExpenses = false
 
     private var invoices: [Invoice] {
         invoicesStore.invoices
@@ -140,6 +142,7 @@ struct FinancesView: View {
                 summaryBlock
                 chartSection
                 secondaryMetrics
+                expenseSummarySection
                 sixMonthChartSection
                 invoicesBlock
             }
@@ -169,6 +172,11 @@ struct FinancesView: View {
                 .environment(session)
                 .environment(profileStore)
         }
+        .sheet(isPresented: $showExpenses) {
+            ExpensesView()
+                .environment(expenseStore)
+                .environment(session)
+        }
     }
 
     // MARK: - Summary
@@ -189,6 +197,28 @@ struct FinancesView: View {
                             Image(systemName: "doc.text.fill")
                                 .font(.system(size: 13, weight: .semibold))
                             Text("Invoices")
+                                .font(.system(size: 13, weight: .semibold))
+                        }
+                        .foregroundStyle(Color.sweeplyNavy)
+                        .padding(.horizontal, 12)
+                        .frame(height: 40)
+                        .background(Color.sweeplySurface)
+                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                .stroke(Color.sweeplyBorder, lineWidth: 1)
+                        )
+                    }
+                    .buttonStyle(.plain)
+
+                    Button {
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        showExpenses = true
+                    } label: {
+                        HStack(spacing: 5) {
+                            Image(systemName: "creditcard.fill")
+                                .font(.system(size: 13, weight: .semibold))
+                            Text("Expenses")
                                 .font(.system(size: 13, weight: .semibold))
                         }
                         .foregroundStyle(Color.sweeplyNavy)
@@ -292,6 +322,127 @@ struct FinancesView: View {
             .padding(.vertical, 0)
             .padding(.horizontal, 0)
         }
+    }
+
+    // MARK: - Expense Summary
+
+    private var currentMonthInterval: DateInterval {
+        let cal = Calendar.current
+        let now = Date()
+        guard let start = cal.dateInterval(of: .month, for: now) else {
+            return DateInterval(start: now, duration: 0)
+        }
+        return start
+    }
+
+    private var monthExpenseTotal: Double {
+        expenseStore.total(in: currentMonthInterval)
+    }
+
+    private var monthCollected: Double {
+        let interval = currentMonthInterval
+        return invoices
+            .filter { $0.status == .paid && interval.contains($0.createdAt) }
+            .reduce(0) { $0 + $1.total }
+    }
+
+    private var netProfit: Double { monthCollected - monthExpenseTotal }
+
+    private var expenseSummarySection: some View {
+        SectionCard {
+            VStack(alignment: .leading, spacing: 16) {
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("This Month")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundStyle(Color.sweeplyTextSub)
+                        Text("Profit & Expenses")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundStyle(Color.primary)
+                    }
+                    Spacer()
+                    Button {
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        showExpenses = true
+                    } label: {
+                        Text("Add Expense")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(Color.sweeplyNavy)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .background(Color.sweeplyNavy.opacity(0.07))
+                            .clipShape(Capsule())
+                    }
+                    .buttonStyle(.plain)
+                }
+
+                Divider()
+
+                HStack(spacing: 0) {
+                    profitCell(
+                        title: "Revenue",
+                        value: monthCollected.currency,
+                        color: Color.sweeplyAccent
+                    )
+                    Rectangle().fill(Color.sweeplyBorder).frame(width: 1).padding(.vertical, 4)
+                    profitCell(
+                        title: "Expenses",
+                        value: monthExpenseTotal.currency,
+                        color: Color.sweeplyDestructive
+                    )
+                    Rectangle().fill(Color.sweeplyBorder).frame(width: 1).padding(.vertical, 4)
+                    profitCell(
+                        title: "Net Profit",
+                        value: netProfit.currency,
+                        color: netProfit >= 0 ? Color.sweeplySuccess : Color.sweeplyDestructive
+                    )
+                }
+
+                // Category breakdown (only if there are expenses)
+                let cats = expenseStore.byCategory(in: currentMonthInterval)
+                if !cats.isEmpty {
+                    Divider()
+                    VStack(spacing: 8) {
+                        ForEach(cats, id: \.0) { cat, amount in
+                            HStack(spacing: 10) {
+                                Image(systemName: cat.icon)
+                                    .font(.system(size: 12, weight: .medium))
+                                    .foregroundStyle(Color.sweeplyAccent)
+                                    .frame(width: 18)
+                                Text(cat.displayName)
+                                    .font(.system(size: 13, weight: .medium))
+                                    .foregroundStyle(Color.primary)
+                                Spacer()
+                                Text(amount.currency)
+                                    .font(.system(size: 13, weight: .semibold, design: .monospaced))
+                                    .foregroundStyle(Color.sweeplyNavy)
+                                // Mini bar
+                                if monthExpenseTotal > 0 {
+                                    Capsule()
+                                        .fill(Color.sweeplyAccent.opacity(0.3))
+                                        .frame(width: max(4, 50 * (amount / monthExpenseTotal)), height: 4)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private func profitCell(title: String, value: String, color: Color) -> some View {
+        VStack(spacing: 3) {
+            Text(title)
+                .font(.system(size: 10, weight: .medium))
+                .foregroundStyle(Color.sweeplyTextSub)
+            Text(value)
+                .font(.system(size: 14, weight: .bold, design: .rounded))
+                .foregroundStyle(color)
+                .monospacedDigit()
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+        }
+        .frame(maxWidth: .infinity)
     }
 
     private var divider: some View {

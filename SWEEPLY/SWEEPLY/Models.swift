@@ -272,6 +272,48 @@ struct WeeklyRevenue: Identifiable {
     var amount: Double
 }
 
+// MARK: - Expenses
+
+enum ExpenseCategory: String, CaseIterable, Codable {
+    case supplies  = "supplies"
+    case fuel      = "fuel"
+    case equipment = "equipment"
+    case insurance = "insurance"
+    case marketing = "marketing"
+    case other     = "other"
+
+    var displayName: String {
+        switch self {
+        case .supplies:  return "Supplies"
+        case .fuel:      return "Fuel"
+        case .equipment: return "Equipment"
+        case .insurance: return "Insurance"
+        case .marketing: return "Marketing"
+        case .other:     return "Other"
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .supplies:  return "cart.fill"
+        case .fuel:      return "fuelpump.fill"
+        case .equipment: return "wrench.and.screwdriver.fill"
+        case .insurance: return "shield.fill"
+        case .marketing: return "megaphone.fill"
+        case .other:     return "ellipsis.circle.fill"
+        }
+    }
+}
+
+struct Expense: Identifiable, Codable {
+    var id       = UUID()
+    var userId   : UUID
+    var amount   : Double
+    var category : ExpenseCategory
+    var notes    : String
+    var date     : Date
+}
+
 // MARK: - Team
 
 enum TeamRole: String, CaseIterable, Codable {

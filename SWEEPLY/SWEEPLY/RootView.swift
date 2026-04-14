@@ -9,6 +9,7 @@ struct RootView: View {
     @Environment(ProfileStore.self)        private var profileStore
     @Environment(NotificationManager.self) private var notificationManager
     @Environment(TeamStore.self)           private var teamStore
+    @Environment(ExpenseStore.self)        private var expenseStore
 
     @State private var selectedTab: Tab = .dashboard
     @State private var deepLinkedJobId: UUID? = nil
@@ -285,6 +286,7 @@ struct RootView: View {
             if session.isAuthenticated, let uid = session.userId {
                 await profileStore.load(userId: uid)
                 await teamStore.load(ownerId: uid)
+                await expenseStore.load(userId: uid)
             }
             await clientsStore.load(isAuthenticated: session.isAuthenticated)
             WidgetDataWriter.write(jobs: jobsStore.jobs, invoices: invoicesStore.invoices)
@@ -308,6 +310,7 @@ struct RootView: View {
                 invoicesStore.clear()
                 profileStore.clear()
                 teamStore.clear()
+                expenseStore.clear()
             }
         }
         .onChange(of: notificationManager.pendingDeepLink) { _, link in
