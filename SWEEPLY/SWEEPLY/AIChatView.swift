@@ -86,6 +86,8 @@ enum DirectAction {
     case markJobComplete(Job)
     case markInvoicePaid(Invoice)
     case rescheduleJob(Job, Date)
+    case cancelJob(Job)
+    case startJob(Job)
 }
 
 enum ConversationState {
@@ -206,13 +208,14 @@ private struct PersistedSession: Codable {
 
 struct AIChatView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(AppSession.self) private var session
     @Environment(JobsStore.self) private var jobsStore
     @Environment(ClientsStore.self) private var clientsStore
     @Environment(InvoicesStore.self) private var invoicesStore
     @Environment(ProfileStore.self) private var profileStore
 
     var onNewJob: ((JobDraft?) -> Void)? = nil
-    var onNewClient: (() -> Void)? = nil
+    var onNewClient: ((ClientDraft?) -> Void)? = nil
     var onNewInvoice: (() -> Void)? = nil
     var financeMode: Bool = false
 
@@ -221,6 +224,7 @@ struct AIChatView: View {
     @State private var isAssistantTyping: Bool = false
     @State private var conversationState: ConversationState = .idle
     @State private var pendingJobDraft: JobDraft? = nil
+    @State private var pendingClientDraft: ClientDraft? = nil
     @State private var hasFiredProactive: Bool = false
     @State private var lastIntent: String? = nil
     @State private var showSlashMenu: Bool = false   // kept for legacy state compat
@@ -1404,7 +1408,9 @@ struct AIChatView: View {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { onNewJob?(draft) }
         case .newClient:
             dismiss()
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { onNewClient?() }
+            let clientDraft = pendingClientDraft
+            pendingClientDraft = nil
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { onNewClient?(clientDraft) }
         case .newInvoice:
             dismiss()
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { onNewInvoice?() }
@@ -1439,7 +1445,7 @@ struct AIChatView: View {
         let todayJobs = jobsStore.jobs.filter { Calendar.current.isDateInToday($0.date) && $0.status == .scheduled }.sorted { $0.date < $1.date }
 
         // Nudge 1: overdue invoices not already mentioned
-        if overdueInvoices.count >= 2 && !mainMessageMentionedOverdue {
+        if overdueInvoices.count >= 1 && !mainMessageMentionedOverdue {
             let total = overdueInvoices.reduce(0.0) { $0 + $1.subtotal }
             let nudge = ChatMessage(
                 role: .assistant,
@@ -1834,7 +1840,7 @@ struct AIChatView: View {
         // THIS WEEK / UPCOMING
         if lowered.contains("this week") || lowered.contains("next 7") || (lowered.contains("upcoming") && !lowered.contains("add")) || lowered == "upcoming schedule" {
             if let weekOut = Calendar.current.date(byAdding: .day, value: 7, to: Date()) {
-                let weekJobs = jobsStore.jobs.filter { $0.date >= Date() && $0.date <= weekOut && $0.status == .scheduled }.sorted { $0.date < $1.date }
+                let weekJobs = jobsStore.jobs.filter { $0.date >= Date() && $0.date <= weekOut && ($0.status == .scheduled || $0.status == .inProgress) }.sorted { $0.date < $1.date }
                 if weekJobs.isEmpty {
                     return ChatMessage(role: .assistant, text: "Nothing scheduled this week. Want to book some jobs?", action: .newJob, actionLabel: "Schedule a Job", quickReplies: ["Check next week", "View all jobs"])
                 }
@@ -1898,7 +1904,7 @@ struct AIChatView: View {
 
         // JOBS GENERAL
         if lowered.contains("job") || lowered.contains("schedule") || lowered.contains("appointment") {
-            let upcoming = jobsStore.jobs.filter { $0.date >= Date() && $0.status == .scheduled }.sorted { $0.date < $1.date }
+            let upcoming = jobsStore.jobs.filter { $0.date >= Date() && ($0.status == .scheduled || $0.status == .inProgress) }.sorted { $0.date < $1.date }
             if upcoming.isEmpty {
                 return ChatMessage(role: .assistant, text: "No upcoming jobs scheduled. Ready to book one?", action: .newJob, actionLabel: "Schedule a Job", quickReplies: ["Add a job", "View completed jobs"])
             }
@@ -2338,13 +2344,12 @@ struct AIChatView: View {
                 return jobsStore.jobs.filter { $0.status == .scheduled }.sorted { $0.date < $1.date }.first
             }()
             if let job = matchedJob {
-                Task { await jobsStore.updateStatus(id: job.id, status: .cancelled) }
-                UINotificationFeedbackGenerator().notificationOccurred(.warning)
+                conversationState = .awaitingDirectAction(.cancelJob(job))
                 return ChatMessage(
                     role: .assistant,
-                    text: "Done — I've cancelled the \(job.serviceType.rawValue) for \(job.clientName) on \(job.date.formatted(date: .abbreviated, time: .omitted)).",
+                    text: "Cancel the \(job.serviceType.rawValue) for \(job.clientName) on \(job.date.formatted(date: .abbreviated, time: .omitted))? This can't be undone.",
                     style: .warning,
-                    quickReplies: ["Schedule a new job", "Business overview"]
+                    quickReplies: ["Yes, cancel it", "No, keep it"]
                 )
             } else {
                 return ChatMessage(
@@ -2369,13 +2374,12 @@ struct AIChatView: View {
                 return todayJobs.first ?? jobsStore.jobs.filter { $0.status == .scheduled }.sorted { $0.date < $1.date }.first
             }()
             if let job = matchedJob {
-                Task { await jobsStore.updateStatus(id: job.id, status: .inProgress) }
-                UINotificationFeedbackGenerator().notificationOccurred(.success)
+                conversationState = .awaitingDirectAction(.startJob(job))
                 return ChatMessage(
                     role: .assistant,
-                    text: "Job started! \(job.serviceType.rawValue) for \(job.clientName) is now in progress. I'll be here when you're done.",
-                    style: .success,
-                    quickReplies: ["Mark complete", "Today's jobs"]
+                    text: "Start the \(job.serviceType.rawValue) for \(job.clientName) now?",
+                    style: .info,
+                    quickReplies: ["Yes, start it", "Not yet"]
                 )
             } else {
                 return ChatMessage(
@@ -2400,6 +2404,14 @@ struct AIChatView: View {
             if let client = targetClient {
                 let lastJob = jobsStore.jobs.filter { $0.clientId == client.id }.sorted { $0.date > $1.date }.first
                 if let last = lastJob {
+                    var rebookDraft = JobDraft()
+                    rebookDraft.clientName = client.name
+                    rebookDraft.matchedClientId = client.id
+                    rebookDraft.serviceType = last.serviceType
+                    rebookDraft.price = last.price
+                    rebookDraft.duration = last.duration
+                    rebookDraft.address = last.address
+                    pendingJobDraft = rebookDraft
                     return ChatMessage(
                         role: .assistant,
                         text: "Opening the job form pre-filled for \(client.name) — same service (\(last.serviceType.rawValue), \(last.price.formatted(.currency(code: "USD")))).\n\nJust pick a new date and you're set.",
@@ -2577,13 +2589,15 @@ struct AIChatView: View {
 
         if updatedDraft.isComplete {
             conversationState = .idle
+            pendingClientDraft = updatedDraft
             return ChatMessage(
                 role: .assistant,
-                text: "I'll open the client form with \(updatedDraft.name ?? "their") details pre-filled. You can add more info before saving.",
+                text: "Here's what I've got — tap Open Client Form to save.",
                 style: .success,
                 action: .newClient,
                 actionLabel: "Open Client Form",
-                quickReplies: ["Add another client", "Schedule a job"]
+                quickReplies: ["Add another client", "Schedule a job"],
+                contextCard: .confirmClient(updatedDraft)
             )
         } else {
             conversationState = .collectingClient(updatedDraft)
@@ -2638,7 +2652,7 @@ struct AIChatView: View {
                     quickReplies: ["Create invoice for \(job.clientName.components(separatedBy: " ").first ?? job.clientName)", "View schedule"]
                 )
             case .markInvoicePaid(let invoice):
-                await invoicesStore.markPaid(id: invoice.id, userId: nil)
+                await invoicesStore.markPaid(id: invoice.id, userId: session.userId)
                 UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                 return ChatMessage(
                     role: .assistant,
@@ -2655,6 +2669,24 @@ struct AIChatView: View {
                     text: "Done! Rescheduled to \(newDate.formatted(date: .abbreviated, time: .shortened)).",
                     style: .success,
                     quickReplies: ["View schedule", "Today's jobs"]
+                )
+            case .cancelJob(let job):
+                await jobsStore.updateStatus(id: job.id, status: .cancelled)
+                UINotificationFeedbackGenerator().notificationOccurred(.warning)
+                return ChatMessage(
+                    role: .assistant,
+                    text: "Done — cancelled the \(job.serviceType.rawValue) for \(job.clientName) on \(job.date.formatted(date: .abbreviated, time: .omitted)).",
+                    style: .warning,
+                    quickReplies: ["Schedule a new job", "Business overview"]
+                )
+            case .startJob(let job):
+                await jobsStore.updateStatus(id: job.id, status: .inProgress)
+                UINotificationFeedbackGenerator().notificationOccurred(.success)
+                return ChatMessage(
+                    role: .assistant,
+                    text: "Job started! \(job.serviceType.rawValue) for \(job.clientName) is now in progress.",
+                    style: .success,
+                    quickReplies: ["Mark complete", "Today's jobs"]
                 )
             }
         }
@@ -3198,8 +3230,8 @@ private struct MessageBubble: View {
             }
         case .confirmJob(let draft):
             JobConfirmCard(draft: draft)
-        case .confirmClient:
-            EmptyView()
+        case .confirmClient(let draft):
+            ClientConfirmCard(draft: draft)
         }
     }
 
@@ -3350,6 +3382,56 @@ private struct JobConfirmCard: View {
                 }
                 if let price = draft.price {
                     confirmRow(icon: "dollarsign.circle", label: "Price", value: price.formatted(.currency(code: "USD")))
+                }
+            }
+        }
+        .padding(14)
+        .background(Color.sweeplyAccent.opacity(0.05))
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.sweeplyAccent.opacity(0.2), lineWidth: 1))
+    }
+
+    private func confirmRow(icon: String, label: String, value: String) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: icon)
+                .font(.system(size: 11))
+                .foregroundStyle(Color.sweeplyAccent)
+                .frame(width: 16)
+            Text(label)
+                .font(.system(size: 12))
+                .foregroundStyle(Color.sweeplyTextSub)
+            Spacer()
+            Text(value)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(Color.sweeplyNavy)
+        }
+    }
+}
+
+// MARK: - Client Confirmation Card
+
+private struct ClientConfirmCard: View {
+    let draft: ClientDraft
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("CLIENT SUMMARY")
+                .font(.system(size: 10, weight: .bold))
+                .foregroundStyle(Color.sweeplyTextSub)
+                .tracking(0.8)
+
+            VStack(spacing: 8) {
+                if let name = draft.name {
+                    confirmRow(icon: "person.fill", label: "Name", value: name)
+                }
+                if let phone = draft.phone, !phone.isEmpty {
+                    confirmRow(icon: "phone.fill", label: "Phone", value: phone)
+                }
+                if let email = draft.email, !email.isEmpty {
+                    confirmRow(icon: "envelope.fill", label: "Email", value: email)
+                }
+                if let address = draft.address, !address.isEmpty {
+                    confirmRow(icon: "mappin.circle.fill", label: "Address", value: address)
                 }
             }
         }

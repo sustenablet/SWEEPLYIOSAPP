@@ -15,6 +15,18 @@ struct NewClientForm: View {
     @State private var lastName = ""
     @State private var email = ""
     @State private var phone = ""
+
+    init(editingClient: Client? = nil, draft: ClientDraft? = nil) {
+        self.editingClient = editingClient
+        if let draft, editingClient == nil {
+            let parts = (draft.name ?? "").components(separatedBy: " ")
+            _firstName = State(initialValue: parts.first ?? "")
+            _lastName = State(initialValue: parts.dropFirst().joined(separator: " "))
+            _phone = State(initialValue: draft.phone ?? "")
+            _email = State(initialValue: draft.email ?? "")
+            _street = State(initialValue: draft.address ?? "")
+        }
+    }
     @State private var preferredService: ServiceType? = nil
     @State private var street = ""
     @State private var city = ""
