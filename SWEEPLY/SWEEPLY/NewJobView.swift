@@ -8,14 +8,20 @@ struct NewJobForm: View {
     @Environment(JobsStore.self)     private var jobsStore
 
     @State private var selectedClientId: UUID? = nil
-
-    init(preselectClient: Client? = nil) {
-        _selectedClientId = State(initialValue: preselectClient?.id)
-    }
     @State private var serviceType: ServiceType = .standard
     @State private var date = Self.defaultJobDate()
     @State private var price: String = ""
     @State private var duration: String = ""
+
+    init(preselectClient: Client? = nil, draft: JobDraft? = nil) {
+        _selectedClientId = State(initialValue: preselectClient?.id ?? draft?.matchedClientId)
+        if let draft {
+            _serviceType = State(initialValue: draft.serviceType ?? .standard)
+            _date = State(initialValue: draft.date ?? Self.defaultJobDate())
+            _price = State(initialValue: draft.price.map { String(format: "%.0f", $0) } ?? "")
+            _duration = State(initialValue: draft.duration > 0 ? String(format: "%.0f", draft.duration) : "")
+        }
+    }
     @State private var recurrence: RecurrenceFrequency = .once
     @State private var customInterval: String = "7"
     @State private var endDate: Date = Date().addingTimeInterval(86400 * 30)

@@ -17,6 +17,7 @@ struct RootView: View {
     @State private var showNewJob = false
     @State private var showNewClient = false
     @State private var showNewInvoice = false
+    @State private var pendingJobDraft: JobDraft? = nil
     @State private var showQuickAdd = false
     @State private var showAIChat = false
     @State private var showOnboarding = false
@@ -233,8 +234,8 @@ struct RootView: View {
             )
         }
     }
-        .sheet(isPresented: $showNewJob) {
-            NewJobForm()
+        .sheet(isPresented: $showNewJob, onDismiss: { pendingJobDraft = nil }) {
+            NewJobForm(draft: pendingJobDraft)
         }
         .sheet(isPresented: $showNewClient) {
             NewClientForm()
@@ -244,7 +245,10 @@ struct RootView: View {
         }
         .sheet(isPresented: $showAIChat) {
             AIChatView(
-                onNewJob: { showNewJob = true },
+                onNewJob: { draft in
+                    pendingJobDraft = draft
+                    showNewJob = true
+                },
                 onNewClient: { showNewClient = true },
                 onNewInvoice: { showNewInvoice = true }
             )

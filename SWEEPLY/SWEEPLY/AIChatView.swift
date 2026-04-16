@@ -211,7 +211,7 @@ struct AIChatView: View {
     @Environment(InvoicesStore.self) private var invoicesStore
     @Environment(ProfileStore.self) private var profileStore
 
-    var onNewJob: (() -> Void)? = nil
+    var onNewJob: ((JobDraft?) -> Void)? = nil
     var onNewClient: (() -> Void)? = nil
     var onNewInvoice: (() -> Void)? = nil
     var financeMode: Bool = false
@@ -220,6 +220,7 @@ struct AIChatView: View {
     @State private var inputText: String = ""
     @State private var isAssistantTyping: Bool = false
     @State private var conversationState: ConversationState = .idle
+    @State private var pendingJobDraft: JobDraft? = nil
     @State private var hasFiredProactive: Bool = false
     @State private var lastIntent: String? = nil
     @State private var showSlashMenu: Bool = false   // kept for legacy state compat
@@ -1398,7 +1399,9 @@ struct AIChatView: View {
             dismiss()
         case .newJob:
             dismiss()
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { onNewJob?() }
+            let draft = pendingJobDraft
+            pendingJobDraft = nil
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { onNewJob?(draft) }
         case .newClient:
             dismiss()
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { onNewClient?() }
@@ -1556,6 +1559,7 @@ struct AIChatView: View {
         case .awaitingJobConfirmation(let draft):
             if lowered.contains("yes") || lowered.contains("confirm") || lowered.contains("create") || lowered.contains("book") || lowered.contains("looks good") || lowered == "yep" || lowered == "yup" || lowered == "ok" || lowered == "okay" {
                 conversationState = .idle
+                pendingJobDraft = draft
                 return ChatMessage(
                     role: .assistant,
                     text: "I'll open the job form with those details ready to go. Just tap Save to confirm.",
@@ -1876,6 +1880,7 @@ struct AIChatView: View {
 
             if draft.isComplete {
                 conversationState = .awaitingJobConfirmation(draft)
+                pendingJobDraft = draft
                 return buildJobConfirmation(draft)
             } else {
                 conversationState = .collectingJob(draft)
@@ -2527,6 +2532,7 @@ struct AIChatView: View {
 
         if updatedDraft.isComplete {
             conversationState = .awaitingJobConfirmation(updatedDraft)
+            pendingJobDraft = updatedDraft
             return buildJobConfirmation(updatedDraft)
         } else {
             conversationState = .collectingJob(updatedDraft)
