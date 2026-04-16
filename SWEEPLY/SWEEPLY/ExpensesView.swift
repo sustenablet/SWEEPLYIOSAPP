@@ -8,12 +8,18 @@ struct ExpensesView: View {
     @Environment(\.dismiss)          private var dismiss
 
     @State private var showAddSheet  = false
-    @State private var deleteTarget  : Expense? = nil
     @State private var selectedMonth : Date = Date()
+    @State private var appeared      = false
 
     private var monthLabel: String {
         let f = DateFormatter()
         f.dateFormat = "MMMM yyyy"
+        return f.string(from: selectedMonth)
+    }
+
+    private var shortMonthLabel: String {
+        let f = DateFormatter()
+        f.dateFormat = "MMM yyyy"
         return f.string(from: selectedMonth)
     }
 
@@ -38,33 +44,46 @@ struct ExpensesView: View {
         expenseStore.byCategory(in: monthInterval)
     }
 
+    private var canGoForward: Bool {
+        (Calendar.current.date(byAdding: .month, value: 1, to: selectedMonth) ?? Date()) <= Date()
+    }
+
     var body: some View {
         NavigationStack {
-            ZStack {
+            ZStack(alignment: .bottom) {
                 Color.sweeplyBackground.ignoresSafeArea()
 
                 ScrollView(showsIndicators: false) {
-                    VStack(spacing: 20) {
-                        // Month picker
-                        monthStepper
+                    VStack(spacing: 0) {
+                        heroHeader
+                            .padding(.bottom, 24)
 
-                        // Summary card
-                        summaryCard
+                        VStack(spacing: 16) {
+                            if !categoryBreakdown.isEmpty {
+                                categoryCard
+                            }
 
-                        // Expense list
-                        if monthExpenses.isEmpty {
-                            emptyState
-                        } else {
-                            expenseList
+                            if monthExpenses.isEmpty {
+                                emptyState
+                            } else {
+                                expenseListSection
+                            }
                         }
-
-                        Spacer(minLength: 40)
+                        .padding(.horizontal, 20)
+                        .padding(.bottom, 100)
                     }
-                    .padding(.horizontal, 20)
-                    .padding(.top, 12)
                 }
+
+                // Floating add button
+                addButton
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 24)
             }
-            .navigationTitle("Expenses")
+            .opacity(appeared ? 1 : 0)
+            .offset(y: appeared ? 0 : 8)
+            .onAppear {
+                withAnimation(.easeOut(duration: 0.22)) { appeared = true }
+            }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
@@ -72,15 +91,10 @@ struct ExpensesView: View {
                         .font(.system(size: 15, weight: .medium))
                         .foregroundStyle(Color.sweeplyNavy)
                 }
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button {
-                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                        showAddSheet = true
-                    } label: {
-                        Image(systemName: "plus")
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundStyle(Color.sweeplyNavy)
-                    }
+                ToolbarItem(placement: .principal) {
+                    Text("Expenses")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(Color.sweeplyNavy)
                 }
             }
             .sheet(isPresented: $showAddSheet) {
@@ -90,143 +104,195 @@ struct ExpensesView: View {
         }
     }
 
-    // MARK: - Month stepper
+    // MARK: - Hero header
 
-    private var monthStepper: some View {
-        HStack {
-            Button {
-                selectedMonth = Calendar.current.date(byAdding: .month, value: -1, to: selectedMonth) ?? selectedMonth
-            } label: {
-                Image(systemName: "chevron.left")
+    private var heroHeader: some View {
+        VStack(spacing: 0) {
+            // Month navigator
+            HStack(spacing: 20) {
+                Button {
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    selectedMonth = Calendar.current.date(byAdding: .month, value: -1, to: selectedMonth) ?? selectedMonth
+                } label: {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(Color.sweeplyNavy)
+                        .frame(width: 32, height: 32)
+                        .background(Color.sweeplySurface)
+                        .clipShape(Circle())
+                        .overlay(Circle().stroke(Color.sweeplyBorder, lineWidth: 1))
+                }
+
+                Text(shortMonthLabel)
                     .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(Color.sweeplyNavy)
+                    .foregroundStyle(Color.sweeplyTextSub)
+                    .frame(minWidth: 90)
+
+                Button {
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    let next = Calendar.current.date(byAdding: .month, value: 1, to: selectedMonth) ?? selectedMonth
+                    if next <= Date() { selectedMonth = next }
+                } label: {
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(canGoForward ? Color.sweeplyNavy : Color.sweeplyTextSub.opacity(0.25))
+                        .frame(width: 32, height: 32)
+                        .background(canGoForward ? Color.sweeplySurface : Color.clear)
+                        .clipShape(Circle())
+                        .overlay(Circle().stroke(canGoForward ? Color.sweeplyBorder : Color.clear, lineWidth: 1))
+                }
+                .disabled(!canGoForward)
             }
+            .padding(.top, 8)
+            .padding(.bottom, 20)
 
-            Spacer()
+            // Big total
+            VStack(spacing: 6) {
+                Text("Total Spent")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(Color.sweeplyTextSub)
+                    .textCase(.uppercase)
+                    .tracking(0.8)
 
-            Text(monthLabel)
-                .font(.system(size: 15, weight: .semibold))
-                .foregroundStyle(Color.primary)
+                Text(monthTotal.currency)
+                    .font(.system(size: 44, weight: .bold, design: .rounded))
+                    .foregroundStyle(monthTotal > 0 ? Color.sweeplyDestructive : Color.sweeplyTextSub.opacity(0.4))
+                    .monospacedDigit()
+                    .contentTransition(.numericText())
+                    .animation(.spring(duration: 0.3), value: monthTotal)
 
-            Spacer()
-
-            Button {
-                let next = Calendar.current.date(byAdding: .month, value: 1, to: selectedMonth) ?? selectedMonth
-                if next <= Date() { selectedMonth = next }
-            } label: {
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(
-                        Calendar.current.date(byAdding: .month, value: 1, to: selectedMonth).map { $0 <= Date() }
-                        == true ? Color.sweeplyNavy : Color.sweeplyTextSub.opacity(0.3)
-                    )
-            }
-            .disabled((Calendar.current.date(byAdding: .month, value: 1, to: selectedMonth) ?? Date()) > Date())
-        }
-        .padding(.horizontal, 4)
-    }
-
-    // MARK: - Summary card
-
-    private var summaryCard: some View {
-        SectionCard {
-            VStack(alignment: .leading, spacing: 16) {
-                HStack(alignment: .firstTextBaseline) {
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text("Total Expenses")
-                            .font(.system(size: 12, weight: .medium))
-                            .foregroundStyle(Color.sweeplyTextSub)
-                        Text(monthTotal.currency)
-                            .font(.system(size: 30, weight: .semibold, design: .rounded))
-                            .foregroundStyle(monthTotal > 0 ? Color.sweeplyDestructive : Color.primary)
-                            .monospacedDigit()
-                    }
-                    Spacer()
-                    Text("\(monthExpenses.count) item\(monthExpenses.count == 1 ? "" : "s")")
-                        .font(.system(size: 12, weight: .medium))
+                if !monthExpenses.isEmpty {
+                    Text("\(monthExpenses.count) expense\(monthExpenses.count == 1 ? "" : "s") in \(shortMonthLabel)")
+                        .font(.system(size: 13))
                         .foregroundStyle(Color.sweeplyTextSub)
                 }
+            }
+            .padding(.bottom, 24)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, 20)
+        .background(
+            LinearGradient(
+                colors: [Color.sweeplySurface, Color.sweeplyBackground],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+        )
+    }
 
-                if !categoryBreakdown.isEmpty {
-                    Divider()
+    // MARK: - Category breakdown card
 
-                    VStack(spacing: 10) {
-                        ForEach(categoryBreakdown, id: \.0) { cat, amount in
-                            HStack(spacing: 10) {
-                                Image(systemName: cat.icon)
-                                    .font(.system(size: 13))
-                                    .foregroundStyle(Color.sweeplyAccent)
-                                    .frame(width: 20)
-                                Text(cat.displayName)
-                                    .font(.system(size: 13, weight: .medium))
-                                    .foregroundStyle(Color.primary)
-                                Spacer()
-                                Text(amount.currency)
-                                    .font(.system(size: 13, weight: .semibold, design: .monospaced))
-                                    .foregroundStyle(Color.sweeplyNavy)
-                                // Progress bar
-                                Capsule()
-                                    .fill(Color.sweeplyAccent.opacity(0.25))
-                                    .overlay(alignment: .leading) {
-                                        Capsule()
-                                            .fill(Color.sweeplyAccent)
-                                            .frame(width: max(4, 60 * (amount / monthTotal)))
-                                    }
-                                    .frame(width: 60, height: 4)
-                            }
-                        }
-                    }
+    private var categoryCard: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text("By Category")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(Color.sweeplyTextSub)
+                .textCase(.uppercase)
+                .tracking(0.6)
+                .padding(.horizontal, 16)
+                .padding(.top, 16)
+
+            VStack(spacing: 12) {
+                ForEach(categoryBreakdown, id: \.0) { cat, amount in
+                    categoryRow(cat: cat, amount: amount)
                 }
             }
+            .padding(.horizontal, 16)
+            .padding(.bottom, 16)
+        }
+        .background(Color.sweeplySurface)
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(Color.sweeplyBorder, lineWidth: 1))
+    }
+
+    private func categoryRow(cat: ExpenseCategory, amount: Double) -> some View {
+        let pct = monthTotal > 0 ? amount / monthTotal : 0
+        return VStack(spacing: 6) {
+            HStack(spacing: 10) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .fill(categoryColor(cat).opacity(0.12))
+                        .frame(width: 32, height: 32)
+                    Image(systemName: cat.icon)
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(categoryColor(cat))
+                }
+                Text(cat.displayName)
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundStyle(Color.primary)
+                Spacer()
+                Text(amount.currency)
+                    .font(.system(size: 14, weight: .bold, design: .monospaced))
+                    .foregroundStyle(Color.sweeplyNavy)
+                Text("\(Int(pct * 100))%")
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(Color.sweeplyTextSub)
+                    .frame(width: 30, alignment: .trailing)
+            }
+
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    Capsule().fill(Color.sweeplyBorder.opacity(0.5)).frame(height: 3)
+                    Capsule()
+                        .fill(categoryColor(cat))
+                        .frame(width: max(4, geo.size.width * pct), height: 3)
+                }
+            }
+            .frame(height: 3)
         }
     }
 
     // MARK: - Expense list
 
-    private var expenseList: some View {
-        VStack(spacing: 0) {
-            ForEach(Array(monthExpenses.enumerated()), id: \.element.id) { idx, expense in
-                expenseRow(expense)
-                if idx < monthExpenses.count - 1 {
-                    Divider().padding(.leading, 54)
+    private var expenseListSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Transactions")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(Color.sweeplyTextSub)
+                .textCase(.uppercase)
+                .tracking(0.6)
+
+            VStack(spacing: 0) {
+                ForEach(Array(monthExpenses.enumerated()), id: \.element.id) { idx, expense in
+                    expenseRow(expense)
+                    if idx < monthExpenses.count - 1 {
+                        Divider().padding(.leading, 62)
+                    }
                 }
             }
+            .background(Color.sweeplySurface)
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(Color.sweeplyBorder, lineWidth: 1))
         }
-        .background(Color.sweeplySurface, in: RoundedRectangle(cornerRadius: 14))
-        .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.sweeplyBorder, lineWidth: 1))
     }
 
     private func expenseRow(_ expense: Expense) -> some View {
         HStack(spacing: 14) {
             ZStack {
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .fill(Color.sweeplyAccent.opacity(0.1))
-                    .frame(width: 40, height: 40)
+                RoundedRectangle(cornerRadius: 11, style: .continuous)
+                    .fill(categoryColor(expense.category).opacity(0.12))
+                    .frame(width: 42, height: 42)
                 Image(systemName: expense.category.icon)
-                    .font(.system(size: 15, weight: .medium))
-                    .foregroundStyle(Color.sweeplyAccent)
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundStyle(categoryColor(expense.category))
             }
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(expense.category.displayName)
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(Color.primary)
-                if !expense.notes.isEmpty {
-                    Text(expense.notes)
-                        .font(.system(size: 12))
-                        .foregroundStyle(Color.sweeplyTextSub)
-                        .lineLimit(1)
-                } else {
-                    Text(expense.date.formatted(date: .abbreviated, time: .omitted))
-                        .font(.system(size: 12))
-                        .foregroundStyle(Color.sweeplyTextSub)
-                }
+                Text(expense.notes.isEmpty
+                     ? expense.date.formatted(date: .abbreviated, time: .omitted)
+                     : expense.notes)
+                    .font(.system(size: 12))
+                    .foregroundStyle(Color.sweeplyTextSub)
+                    .lineLimit(1)
             }
 
             Spacer()
 
             VStack(alignment: .trailing, spacing: 2) {
-                Text(expense.amount.currency)
+                Text("−\(expense.amount.currency)")
                     .font(.system(size: 15, weight: .bold, design: .monospaced))
                     .foregroundStyle(Color.sweeplyDestructive)
                 if !expense.notes.isEmpty {
@@ -250,32 +316,62 @@ struct ExpensesView: View {
     // MARK: - Empty state
 
     private var emptyState: some View {
-        VStack(spacing: 12) {
-            Image(systemName: "creditcard")
-                .font(.system(size: 36, weight: .light))
-                .foregroundStyle(Color.sweeplyTextSub.opacity(0.35))
-            Text("No expenses in \(monthLabel)")
-                .font(.system(size: 15, weight: .medium))
-                .foregroundStyle(Color.sweeplyTextSub)
-            Text("Track what you spend on supplies,\nfuel, equipment, and more.")
-                .font(.system(size: 13))
-                .foregroundStyle(Color.sweeplyTextSub.opacity(0.6))
-                .multilineTextAlignment(.center)
-            Button {
-                showAddSheet = true
-            } label: {
-                Text("Add Expense")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 10)
-                    .background(Color.sweeplyNavy, in: RoundedRectangle(cornerRadius: 10))
+        VStack(spacing: 14) {
+            ZStack {
+                Circle()
+                    .fill(Color.sweeplyBorder.opacity(0.4))
+                    .frame(width: 72, height: 72)
+                Image(systemName: "creditcard")
+                    .font(.system(size: 28, weight: .light))
+                    .foregroundStyle(Color.sweeplyTextSub.opacity(0.5))
             }
-            .buttonStyle(.plain)
-            .padding(.top, 4)
+            VStack(spacing: 6) {
+                Text("No expenses in \(shortMonthLabel)")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(Color.sweeplyNavy)
+                Text("Track supplies, fuel, equipment,\nand every business cost here.")
+                    .font(.system(size: 13))
+                    .foregroundStyle(Color.sweeplyTextSub)
+                    .multilineTextAlignment(.center)
+            }
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 48)
+        .padding(.vertical, 56)
+    }
+
+    // MARK: - Floating add button
+
+    private var addButton: some View {
+        Button {
+            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+            showAddSheet = true
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: "plus")
+                    .font(.system(size: 15, weight: .bold))
+                Text("Add Expense")
+                    .font(.system(size: 16, weight: .semibold))
+            }
+            .foregroundStyle(.white)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 16)
+            .background(Color.sweeplyNavy, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .shadow(color: Color.sweeplyNavy.opacity(0.3), radius: 12, x: 0, y: 6)
+        }
+        .buttonStyle(.plain)
+    }
+
+    // MARK: - Helpers
+
+    private func categoryColor(_ cat: ExpenseCategory) -> Color {
+        switch cat {
+        case .supplies:    return Color(hue: 0.58, saturation: 0.70, brightness: 0.75)
+        case .fuel:        return Color(hue: 0.08, saturation: 0.80, brightness: 0.82)
+        case .equipment:   return Color(hue: 0.55, saturation: 0.60, brightness: 0.65)
+        case .insurance:   return Color(hue: 0.35, saturation: 0.65, brightness: 0.68)
+        case .marketing:   return Color(hue: 0.78, saturation: 0.55, brightness: 0.75)
+        case .other:       return Color(hue: 0.40, saturation: 0.45, brightness: 0.60)
+        }
     }
 }
 

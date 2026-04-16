@@ -188,54 +188,37 @@ struct FinancesView: View {
                 title: "Finances",
                 subtitle: invoicesStore.lastError?.isEmpty == false ? "Invoice sync issue" : "Overview"
             ) {
-                HStack(spacing: 8) {
+                Menu {
                     Button {
                         UIImpactFeedbackGenerator(style: .light).impactOccurred()
                         showInvoicesList = true
                     } label: {
-                        HStack(spacing: 5) {
-                            Image(systemName: "doc.text.fill")
-                                .font(.system(size: 13, weight: .semibold))
-                            Text("Invoices")
-                                .font(.system(size: 13, weight: .semibold))
-                        }
-                        .foregroundStyle(Color.sweeplyNavy)
-                        .padding(.horizontal, 12)
-                        .frame(height: 40)
-                        .background(Color.sweeplySurface)
-                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                .stroke(Color.sweeplyBorder, lineWidth: 1)
-                        )
+                        Label("Invoices", systemImage: "doc.text.fill")
                     }
-                    .buttonStyle(.plain)
-
                     Button {
                         UIImpactFeedbackGenerator(style: .light).impactOccurred()
                         showExpenses = true
                     } label: {
-                        HStack(spacing: 5) {
-                            Image(systemName: "creditcard.fill")
-                                .font(.system(size: 13, weight: .semibold))
-                            Text("Expenses")
-                                .font(.system(size: 13, weight: .semibold))
-                        }
+                        Label("Expenses", systemImage: "creditcard.fill")
+                    }
+                    Divider()
+                    Button {
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        showFinanceAI = true
+                    } label: {
+                        Label("Finance AI", systemImage: "sparkles")
+                    }
+                } label: {
+                    Image(systemName: "line.3.horizontal")
+                        .font(.system(size: 16, weight: .semibold))
                         .foregroundStyle(Color.sweeplyNavy)
-                        .padding(.horizontal, 12)
-                        .frame(height: 40)
+                        .frame(width: 40, height: 40)
                         .background(Color.sweeplySurface)
                         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                         .overlay(
                             RoundedRectangle(cornerRadius: 12, style: .continuous)
                                 .stroke(Color.sweeplyBorder, lineWidth: 1)
                         )
-                    }
-                    .buttonStyle(.plain)
-
-                    HeaderIconButton(systemName: "sparkles", foregroundColor: .white, backgroundColor: .sweeplyNavy) {
-                        showFinanceAI = true
-                    }
                 }
             }
             .padding(.top, 8)
