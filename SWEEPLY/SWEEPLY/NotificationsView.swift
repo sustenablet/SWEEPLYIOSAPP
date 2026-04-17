@@ -155,6 +155,8 @@ struct NotificationsView: View {
             .padding(.horizontal, 20)
             .padding(.vertical, 4)
         }
+        .frame(height: 48)
+        .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
     }
     
     private func tabIcon(_ tab: NotificationTab) -> String {
