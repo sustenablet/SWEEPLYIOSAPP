@@ -15,6 +15,7 @@ struct SettingsView: View {
     @State private var feedbackMessage: String?
     @State private var feedbackStyle: SettingsFeedbackStyle = .info
     @State private var showServiceCatalog = false
+    @State private var showJobExtras = false
 
     private var canSave: Bool {
         !isSaving && validationMessage == nil && hasUnsavedChanges
@@ -105,6 +106,9 @@ struct SettingsView: View {
             .onAppear { hydrateLocalProfile() }
             .sheet(isPresented: $showServiceCatalog) {
                 ServiceCatalogView()
+            }
+            .sheet(isPresented: $showJobExtras) {
+                ServiceCatalogView(addonsOnly: true)
             }
         }
     }
@@ -258,12 +262,25 @@ struct SettingsView: View {
                 title: "Manage Services",
                 subtitle: catalogServiceCountLabel
             ) { showServiceCatalog = true }
+            settingsNavRow(
+                icon: "sparkles",
+                iconBg: Color.sweeplyWarning,
+                title: "Job Extras",
+                subtitle: extrasCountLabel
+            ) { showJobExtras = true }
         }
     }
 
     private var catalogServiceCountLabel: String {
-        let count = (profileStore.profile ?? MockData.profile).settings.hydratedServiceCatalog.count
+        let count = (profileStore.profile ?? MockData.profile).settings.hydratedServiceCatalog
+            .filter { !$0.isAddon }.count
         return "\(count) service\(count == 1 ? "" : "s") configured"
+    }
+
+    private var extrasCountLabel: String {
+        let count = (profileStore.profile ?? MockData.profile).settings.hydratedServiceCatalog
+            .filter { $0.isAddon }.count
+        return count == 0 ? "No extras yet" : "\(count) extra\(count == 1 ? "" : "s") configured"
     }
 
     private var preferencesSection: some View {

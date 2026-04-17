@@ -65,13 +65,15 @@ struct ServiceCatalogEditorState: Identifiable {
     var name: String
     var priceText: String
     var isAddon: Bool
+    var lockedAddon: Bool?
 
     var isEditing: Bool { serviceID != nil }
 
-    init(service: BusinessService? = nil, defaultAddon: Bool = false) {
+    init(service: BusinessService? = nil, defaultAddon: Bool = false, lockedAddon: Bool? = nil) {
         self.serviceID = service?.id
         self.name = service?.name ?? ""
         self.isAddon = service?.isAddon ?? defaultAddon
+        self.lockedAddon = lockedAddon
         if let price = service?.price {
             self.priceText = price == floor(price) ? "\(Int(price))" : String(format: "%.2f", price)
         } else {
@@ -140,41 +142,43 @@ struct ServiceCatalogEditorSheet: View {
                     )
                 }
 
-                // Extra cost toggle
-                Button {
-                    withAnimation(.easeInOut(duration: 0.15)) { draft.isAddon.toggle() }
-                } label: {
-                    HStack(spacing: 12) {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Extra Cost")
-                                .font(.system(size: 14, weight: .semibold))
-                                .foregroundStyle(Color.sweeplyNavy)
-                            Text("Add-on charged on top of the main service")
-                                .font(.system(size: 11))
-                                .foregroundStyle(Color.sweeplyTextSub)
+                // Extra cost toggle — hidden when type is locked by context
+                if draft.lockedAddon == nil {
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.15)) { draft.isAddon.toggle() }
+                    } label: {
+                        HStack(spacing: 12) {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Extra Cost")
+                                    .font(.system(size: 14, weight: .semibold))
+                                    .foregroundStyle(Color.sweeplyNavy)
+                                Text("Add-on charged on top of the main service")
+                                    .font(.system(size: 11))
+                                    .foregroundStyle(Color.sweeplyTextSub)
+                            }
+                            Spacer()
+                            ZStack {
+                                Capsule()
+                                    .fill(draft.isAddon ? Color.sweeplyAccent : Color.sweeplyBorder)
+                                    .frame(width: 44, height: 26)
+                                Circle()
+                                    .fill(.white)
+                                    .frame(width: 20, height: 20)
+                                    .offset(x: draft.isAddon ? 9 : -9)
+                            }
+                            .animation(.easeInOut(duration: 0.15), value: draft.isAddon)
                         }
-                        Spacer()
-                        ZStack {
-                            Capsule()
-                                .fill(draft.isAddon ? Color.sweeplyAccent : Color.sweeplyBorder)
-                                .frame(width: 44, height: 26)
-                            Circle()
-                                .fill(.white)
-                                .frame(width: 20, height: 20)
-                                .offset(x: draft.isAddon ? 9 : -9)
-                        }
-                        .animation(.easeInOut(duration: 0.15), value: draft.isAddon)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 12)
+                        .background(Color.sweeplyBackground)
+                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                .stroke(draft.isAddon ? Color.sweeplyAccent.opacity(0.4) : Color.sweeplyBorder, lineWidth: 1)
+                        )
                     }
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 12)
-                    .background(Color.sweeplyBackground)
-                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .stroke(draft.isAddon ? Color.sweeplyAccent.opacity(0.4) : Color.sweeplyBorder, lineWidth: 1)
-                    )
+                    .buttonStyle(.plain)
                 }
-                .buttonStyle(.plain)
 
                 Spacer()
             }

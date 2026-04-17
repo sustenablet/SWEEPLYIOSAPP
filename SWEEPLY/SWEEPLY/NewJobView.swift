@@ -23,6 +23,9 @@ struct NewJobForm: View {
     @State private var isSaving = false
     @State private var showValidationErrors = false
     @State private var saveError: String?
+    @State private var selectedExtras: [BusinessService] = []
+    @State private var showExtrasPicker = false
+    @State private var baseServicePrice: Double = 0
 
     /// Default to the next full hour, at minimum 1 hour from now.
     private static func defaultJobDate() -> Date {
@@ -42,7 +45,16 @@ struct NewJobForm: View {
 
     private var serviceCatalog: [BusinessService] {
         let settings = profileStore.profile?.settings ?? fallbackSettings
-        return settings.hydratedServiceCatalog
+        return settings.hydratedServiceCatalog.filter { !$0.isAddon }
+    }
+
+    private var extrasCatalog: [BusinessService] {
+        let settings = profileStore.profile?.settings ?? fallbackSettings
+        return settings.hydratedServiceCatalog.filter { $0.isAddon }
+    }
+
+    private var extrasTotalPrice: Double {
+        selectedExtras.reduce(0) { $0 + $1.price }
     }
 
     private var selectedServiceLabel: String {
@@ -326,11 +338,76 @@ struct NewJobForm: View {
                             .transition(.opacity.combined(with: .move(edge: .top)))
                         }
                     }
+                    // 5. Extras
+                    if !extrasCatalog.isEmpty {
+                        VStack(alignment: .leading, spacing: 16) {
+                            SectionHeader(title: "EXTRAS (OPTIONAL)")
+
+                            if !selectedExtras.isEmpty {
+                                VStack(spacing: 8) {
+                                    ForEach(selectedExtras) { extra in
+                                        HStack(spacing: 10) {
+                                            Image(systemName: "sparkles")
+                                                .font(.system(size: 12, weight: .semibold))
+                                                .foregroundStyle(Color.sweeplyWarning)
+                                                .frame(width: 20)
+                                            Text(extra.name)
+                                                .font(.system(size: 14, weight: .medium))
+                                                .foregroundStyle(Color.sweeplyNavy)
+                                            Spacer()
+                                            Text(extra.price.currency)
+                                                .font(.system(size: 13, weight: .bold, design: .monospaced))
+                                                .foregroundStyle(Color.sweeplyNavy)
+                                            Button {
+                                                selectedExtras.removeAll { $0.id == extra.id }
+                                                recalculateTotalPrice()
+                                            } label: {
+                                                Image(systemName: "xmark.circle.fill")
+                                                    .font(.system(size: 16))
+                                                    .foregroundStyle(Color.sweeplyTextSub.opacity(0.5))
+                                            }
+                                            .buttonStyle(.plain)
+                                        }
+                                        .padding(.horizontal, 12)
+                                        .padding(.vertical, 10)
+                                        .background(Color.sweeplySurface)
+                                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                                        .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.sweeplyBorder, lineWidth: 1))
+                                    }
+                                }
+                            }
+
+                            Button {
+                                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                showExtrasPicker = true
+                            } label: {
+                                HStack(spacing: 8) {
+                                    Image(systemName: "plus.circle.fill")
+                                        .font(.system(size: 14, weight: .semibold))
+                                    Text("Add Extra")
+                                        .font(.system(size: 14, weight: .semibold))
+                                }
+                                .foregroundStyle(Color.sweeplyWarning)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 12)
+                                .background(Color.sweeplyWarning.opacity(0.08))
+                                .clipShape(RoundedRectangle(cornerRadius: 12))
+                                .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.sweeplyWarning.opacity(0.25), lineWidth: 1))
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
                 }
                 .padding(.horizontal, 24)
                 .padding(.bottom, 40)
             }
-            
+            .sheet(isPresented: $showExtrasPicker) {
+                ExtrasPickerSheet(catalog: extrasCatalog, selected: selectedExtras) { picked in
+                    selectedExtras = picked
+                    recalculateTotalPrice()
+                }
+            }
+
             // Footer Actions
             HStack(spacing: 12) {
                 Button("Cancel") { dismiss() }
@@ -394,17 +471,20 @@ struct NewJobForm: View {
 
     private func applyPricingHierarchy() {
         let settings = profileStore.profile?.settings ?? fallbackSettings
-        
-        // 1. Search in Catalog
+
         if let service = selectedService {
-            price = service.price == floor(service.price) ? "\(Int(service.price))" : String(format: "%.2f", service.price)
+            baseServicePrice = service.price
             duration = "\(Int(settings.defaultDuration > 0 ? settings.defaultDuration : 2))"
         } else {
-            // 2. Business Default
-            let rate = settings.defaultRate > 0 ? settings.defaultRate : 120
-            price = "\(Int(rate))"
+            baseServicePrice = settings.defaultRate > 0 ? settings.defaultRate : 120
             duration = "\(Int(settings.defaultDuration > 0 ? settings.defaultDuration : 2))"
         }
+        recalculateTotalPrice()
+    }
+
+    private func recalculateTotalPrice() {
+        let total = baseServicePrice + extrasTotalPrice
+        price = total == floor(total) ? "\(Int(total))" : String(format: "%.2f", total)
     }
 
     private func generateNextOccurrences(from startDate: Date, recurrence: RecurrenceFrequency, interval: Int, count: Int) -> [Date] {
@@ -495,6 +575,74 @@ private struct SectionHeader: View {
             Rectangle()
                 .fill(Color.sweeplyBorder)
                 .frame(height: 1)
+        }
+    }
+}
+
+private struct ExtrasPickerSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    let catalog: [BusinessService]
+    let selected: [BusinessService]
+    let onConfirm: ([BusinessService]) -> Void
+
+    @State private var localSelected: Set<UUID> = []
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section {
+                    ForEach(catalog) { extra in
+                        Button {
+                            if localSelected.contains(extra.id) {
+                                localSelected.remove(extra.id)
+                            } else {
+                                localSelected.insert(extra.id)
+                                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                            }
+                        } label: {
+                            HStack(spacing: 12) {
+                                Image(systemName: localSelected.contains(extra.id) ? "checkmark.circle.fill" : "circle")
+                                    .font(.system(size: 18))
+                                    .foregroundStyle(localSelected.contains(extra.id) ? Color.sweeplyWarning : Color.sweeplyBorder)
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(extra.name)
+                                        .font(.system(size: 15))
+                                        .foregroundStyle(Color.sweeplyNavy)
+                                }
+                                Spacer()
+                                Text(extra.price.currency)
+                                    .font(.system(size: 14, design: .monospaced))
+                                    .foregroundStyle(Color.sweeplyTextSub)
+                            }
+                        }
+                        .buttonStyle(.plain)
+                    }
+                } header: {
+                    Text("JOB EXTRAS")
+                }
+            }
+            .navigationTitle("Add Extras")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                        .foregroundStyle(Color.sweeplyTextSub)
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") {
+                        let picked = catalog.filter { localSelected.contains($0.id) }
+                        onConfirm(picked)
+                        dismiss()
+                    }
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundStyle(Color.sweeplyNavy)
+                }
+            }
+        }
+        .presentationDetents([.medium, .large])
+        .presentationDragIndicator(.visible)
+        .onAppear {
+            localSelected = Set(selected.map(\.id))
         }
     }
 }

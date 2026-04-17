@@ -9,13 +9,29 @@ struct ServiceCatalogView: View {
     @Environment(ProfileStore.self) private var profileStore
     @Environment(AppSession.self)   private var session
 
+    var addonsOnly: Bool = false
+
     @State private var serviceEditorState: ServiceCatalogEditorState?
     @State private var feedbackMessage: String?
     @State private var feedbackIsSuccess = false
 
     private var services: [BusinessService] {
         (profileStore.profile ?? MockData.profile).settings.hydratedServiceCatalog
+            .filter { $0.isAddon == addonsOnly }
     }
+
+    private var navTitle: String { addonsOnly ? "Job Extras" : "Service Catalog" }
+    private var sectionTitle: String { addonsOnly ? "Extras" : "Services" }
+    private var sectionSubtitle: String {
+        addonsOnly ? "Add-ons charged on top of the main service" : "Primary services offered"
+    }
+    private var emptyTitle: String { addonsOnly ? "No extras yet" : "No services yet" }
+    private var emptyBody: String {
+        addonsOnly
+            ? "Add small add-ons like laundry, dishes, or window cleaning — these appear as extras when booking a job."
+            : "Create your service catalog — these appear\nin new job and invoice pickers."
+    }
+    private var emptyButtonLabel: String { addonsOnly ? "Add First Extra" : "Add First Service" }
 
     var body: some View {
         NavigationStack {
@@ -29,26 +45,11 @@ struct ServiceCatalogView: View {
                                 feedbackBanner(message: msg, isSuccess: feedbackIsSuccess)
                             }
 
-                            let mainServices = services.filter { !$0.isAddon }
-                            let addonServices = services.filter { $0.isAddon }
-
-                            // Main Services
-                            if !mainServices.isEmpty {
-                                catalogSection(
-                                    title: "Services",
-                                    subtitle: "Primary services offered",
-                                    services: mainServices
-                                )
-                            }
-
-                            // Extra Costs
-                            if !addonServices.isEmpty {
-                                catalogSection(
-                                    title: "Extra Costs",
-                                    subtitle: "Add-ons charged on top of the main service",
-                                    services: addonServices
-                                )
-                            }
+                            catalogSection(
+                                title: sectionTitle,
+                                subtitle: sectionSubtitle,
+                                services: services
+                            )
                         }
                         .padding(.horizontal, 20)
                         .padding(.vertical, 16)
@@ -57,7 +58,7 @@ struct ServiceCatalogView: View {
                 }
             }
             .background(Color.sweeplyBackground.ignoresSafeArea())
-            .navigationTitle("Service Catalog")
+            .navigationTitle(navTitle)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
@@ -67,7 +68,7 @@ struct ServiceCatalogView: View {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button {
                         UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                        serviceEditorState = ServiceCatalogEditorState()
+                        serviceEditorState = ServiceCatalogEditorState(defaultAddon: addonsOnly, lockedAddon: addonsOnly)
                     } label: {
                         HStack(spacing: 5) {
                             Image(systemName: "plus")
@@ -104,7 +105,7 @@ struct ServiceCatalogView: View {
                     service: service,
                     onEdit: {
                         UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                        serviceEditorState = ServiceCatalogEditorState(service: service)
+                        serviceEditorState = ServiceCatalogEditorState(service: service, lockedAddon: addonsOnly)
                     },
                     onDelete: {
                         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
@@ -132,10 +133,10 @@ struct ServiceCatalogView: View {
                 }
 
                 VStack(spacing: 8) {
-                    Text("No services yet")
+                    Text(emptyTitle)
                         .font(.system(size: 18, weight: .bold))
                         .foregroundStyle(Color.sweeplyNavy)
-                    Text("Create your service catalog — these appear\nin new job and invoice pickers.")
+                    Text(emptyBody)
                         .font(.system(size: 14))
                         .foregroundStyle(Color.sweeplyTextSub)
                         .multilineTextAlignment(.center)
@@ -143,9 +144,9 @@ struct ServiceCatalogView: View {
                 }
 
                 Button {
-                    serviceEditorState = ServiceCatalogEditorState()
+                    serviceEditorState = ServiceCatalogEditorState(defaultAddon: addonsOnly, lockedAddon: addonsOnly)
                 } label: {
-                    Label("Add First Service", systemImage: "plus")
+                    Label(emptyButtonLabel, systemImage: "plus")
                         .font(.system(size: 15, weight: .semibold))
                         .foregroundStyle(.white)
                         .padding(.horizontal, 24)

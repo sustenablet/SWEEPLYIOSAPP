@@ -681,28 +681,61 @@ private struct ServicePickerSheet: View {
 
     @State private var showingCustomSheet = false
 
+    private var mainServices: [BusinessService] { catalog.filter { !$0.isAddon } }
+    private var extras: [BusinessService] { catalog.filter { $0.isAddon } }
+
     var body: some View {
         NavigationStack {
             List {
-                Section {
-                    ForEach(catalog) { service in
-                        Button {
-                            onSelect(InvoiceLineItem(description: service.name, quantity: 1, unitPrice: service.price))
-                            dismiss()
-                        } label: {
-                            HStack {
-                                Text(service.name)
-                                    .font(.system(size: 15))
-                                    .foregroundStyle(Color.sweeplyNavy)
-                                Spacer()
-                                Text(service.price.currency)
-                                    .font(.system(size: 14, design: .monospaced))
-                                    .foregroundStyle(Color.sweeplyTextSub)
+                if !mainServices.isEmpty {
+                    Section {
+                        ForEach(mainServices) { service in
+                            Button {
+                                onSelect(InvoiceLineItem(description: service.name, quantity: 1, unitPrice: service.price))
+                                dismiss()
+                            } label: {
+                                HStack {
+                                    Text(service.name)
+                                        .font(.system(size: 15))
+                                        .foregroundStyle(Color.sweeplyNavy)
+                                    Spacer()
+                                    Text(service.price.currency)
+                                        .font(.system(size: 14, design: .monospaced))
+                                        .foregroundStyle(Color.sweeplyTextSub)
+                                }
                             }
                         }
+                    } header: {
+                        Text("SERVICES")
                     }
-                } header: {
-                    Text("FROM YOUR CATALOG")
+                }
+
+                if !extras.isEmpty {
+                    Section {
+                        ForEach(extras) { extra in
+                            Button {
+                                onSelect(InvoiceLineItem(description: extra.name, quantity: 1, unitPrice: extra.price))
+                                dismiss()
+                            } label: {
+                                HStack {
+                                    HStack(spacing: 6) {
+                                        Image(systemName: "sparkles")
+                                            .font(.system(size: 11, weight: .semibold))
+                                            .foregroundStyle(Color.sweeplyWarning)
+                                        Text(extra.name)
+                                            .font(.system(size: 15))
+                                            .foregroundStyle(Color.sweeplyNavy)
+                                    }
+                                    Spacer()
+                                    Text(extra.price.currency)
+                                        .font(.system(size: 14, design: .monospaced))
+                                        .foregroundStyle(Color.sweeplyTextSub)
+                                }
+                            }
+                        }
+                    } header: {
+                        Text("EXTRAS")
+                    }
                 }
 
                 Section {
