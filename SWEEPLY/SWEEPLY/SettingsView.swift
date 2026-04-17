@@ -285,6 +285,8 @@ struct SettingsView: View {
 
     private var preferencesSection: some View {
         VStack(alignment: .leading, spacing: 6) {
+
+            // MARK: Notifications
             sectionLabel("NOTIFICATIONS")
             settingsGroup {
                 HStack(spacing: 14) {
@@ -293,7 +295,9 @@ struct SettingsView: View {
                         Text("Push Notifications")
                             .font(.system(size: 15))
                             .foregroundStyle(Color.primary)
-                        Text("Job reminders, invoice alerts")
+                        Text(notificationManager.isAuthorized
+                             ? "Enabled — job reminders & alerts"
+                             : "Tap to enable job reminders")
                             .font(.system(size: 12))
                             .foregroundStyle(Color.sweeplyTextSub)
                     }
@@ -306,78 +310,77 @@ struct SettingsView: View {
                     .tint(Color.sweeplyAccent)
                 }
                 .padding(.horizontal, 16)
-                .padding(.vertical, 12)
+                .padding(.vertical, 14)
 
                 if notificationManager.isAuthorized {
                     Divider().padding(.leading, 58)
-                    VStack(alignment: .leading, spacing: 10) {
-                        Text("REMINDER TIMING")
-                            .font(.system(size: 10, weight: .bold))
-                            .foregroundStyle(Color.sweeplyTextSub)
-                            .tracking(0.8)
-                        HStack(spacing: 6) {
-                            reminderChip(label: "1 hr before", icon: "clock")
-                            reminderChip(label: "Morning of",  icon: "sunrise")
-                            reminderChip(label: "Day before",  icon: "calendar")
+                    Button {
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        notificationManager.sendTestNotification()
+                    } label: {
+                        HStack(spacing: 14) {
+                            settingsIcon("paperplane.fill", color: Color.sweeplyAccent)
+                            Text("Send Test Notification")
+                                .font(.system(size: 15))
+                                .foregroundStyle(Color.primary)
+                            Spacer()
+                            Text("5s")
+                                .font(.system(size: 12, design: .monospaced))
+                                .foregroundStyle(Color.sweeplyTextSub)
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundStyle(Color.sweeplyBorder)
                         }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 14)
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.bottom, 14)
+                    .buttonStyle(.plain)
                 }
             }
 
-            if notificationManager.isAuthorized {
+            // MARK: Language
+            sectionLabel("LANGUAGE").padding(.top, 16)
+            settingsGroup {
                 Button {
-                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                    notificationManager.sendTestNotification()
+                    if let url = URL(string: UIApplication.openSettingsURLString) {
+                        UIApplication.shared.open(url)
+                    }
                 } label: {
                     HStack(spacing: 14) {
-                        settingsIcon("bell.badge", color: Color.sweeplyAccent)
-                        Text("Send Test Notification")
-                            .font(.system(size: 15))
-                            .foregroundStyle(Color.primary)
+                        settingsIcon("globe", color: Color(red: 0.2, green: 0.5, blue: 0.9))
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("App Language")
+                                .font(.system(size: 15))
+                                .foregroundStyle(Color.primary)
+                            Text("Managed by iOS Settings")
+                                .font(.system(size: 12))
+                                .foregroundStyle(Color.sweeplyTextSub)
+                        }
                         Spacer()
-                        Text("5s delay")
+                        Text(systemLanguageLabel)
                             .font(.system(size: 13))
                             .foregroundStyle(Color.sweeplyTextSub)
+                        Image(systemName: "arrow.up.right.square")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundStyle(Color.sweeplyBorder)
+                            .padding(.leading, 2)
                     }
                     .padding(.horizontal, 16)
-                    .padding(.vertical, 12)
-                    .background(Color.sweeplySurface)
-                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                    .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(Color.sweeplyBorder, lineWidth: 1))
+                    .padding(.vertical, 14)
                 }
                 .buttonStyle(.plain)
             }
 
-            sectionLabel("LANGUAGE").padding(.top, 16)
-            settingsGroup {
-                HStack(spacing: 14) {
-                    settingsIcon("globe", color: Color(red: 0.2, green: 0.5, blue: 0.9))
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("App Language")
-                            .font(.system(size: 15))
-                            .foregroundStyle(Color.primary)
-                        Text("Choose your preferred language")
-                            .font(.system(size: 12))
-                            .foregroundStyle(Color.sweeplyTextSub)
-                    }
-                    Spacer()
-                    LanguagePicker()
-                }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 12)
-            }
-
+            // MARK: Security & Sync
             sectionLabel("SECURITY & SYNC").padding(.top, 16)
             settingsGroup {
                 HStack(spacing: 14) {
                     settingsIcon("faceid", color: Color.sweeplyNavy)
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Require Face ID")
+                        Text("Face ID Lock")
                             .font(.system(size: 15))
                             .foregroundStyle(Color.primary)
-                        Text("Locks app when it goes to background")
+                        Text("Require Face ID when returning to app")
                             .font(.system(size: 12))
                             .foregroundStyle(Color.sweeplyTextSub)
                     }
@@ -385,14 +388,14 @@ struct SettingsView: View {
                     BiometricToggle()
                 }
                 .padding(.horizontal, 16)
-                .padding(.vertical, 12)
+                .padding(.vertical, 14)
 
                 Divider().padding(.leading, 58)
 
                 HStack(spacing: 14) {
                     settingsIcon("calendar.badge.plus", color: Color(red: 0.2, green: 0.5, blue: 0.9))
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Sync Jobs to Calendar")
+                        Text("Sync to Calendar")
                             .font(.system(size: 15))
                             .foregroundStyle(Color.primary)
                         Text("Adds scheduled jobs to your Calendar app")
@@ -403,9 +406,16 @@ struct SettingsView: View {
                     CalendarToggle()
                 }
                 .padding(.horizontal, 16)
-                .padding(.vertical, 12)
+                .padding(.vertical, 14)
             }
         }
+    }
+
+    private var systemLanguageLabel: String {
+        let code = Locale.current.language.languageCode?.identifier ?? "en"
+        if code.hasPrefix("pt") { return "🇧🇷 Português" }
+        if code.hasPrefix("es") { return "🇪🇸 Español" }
+        return "🇺🇸 English"
     }
 
     private var accountSection: some View {
@@ -558,19 +568,6 @@ struct SettingsView: View {
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(.white)
         }
-    }
-
-    @ViewBuilder
-    private func reminderChip(label: String, icon: String) -> some View {
-        HStack(spacing: 4) {
-            Image(systemName: icon).font(.system(size: 10))
-            Text(label).font(.system(size: 11, weight: .medium))
-        }
-        .foregroundStyle(Color.sweeplyNavy)
-        .padding(.horizontal, 10)
-        .padding(.vertical, 6)
-        .background(Color.sweeplyNavy.opacity(0.08))
-        .clipShape(Capsule())
     }
 
     @ViewBuilder

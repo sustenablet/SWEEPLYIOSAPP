@@ -232,7 +232,7 @@ struct DashboardView: View {
         .background(Color.sweeplyBackground.ignoresSafeArea())
         .sheet(isPresented: $showProfileMenu) {
             ProfileMenuView(showSettings: $showSettings, showTeam: $showTeam)
-                .presentationDetents([.height(340)])
+                .presentationDetents([.height(278)])
                 .presentationDragIndicator(.hidden)
                 .presentationCornerRadius(28)
         }
@@ -880,165 +880,120 @@ struct ProfileMenuView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // ── Dark identity hero ───────────────────────────────
-            VStack(alignment: .leading, spacing: 0) {
-                // Drag handle
-                Capsule()
-                    .fill(Color.white.opacity(0.25))
-                    .frame(width: 36, height: 4)
-                    .frame(maxWidth: .infinity)
-                    .padding(.top, 12)
-                    .padding(.bottom, 24)
+            // Drag handle
+            Capsule()
+                .fill(Color.sweeplyBorder)
+                .frame(width: 32, height: 4)
+                .padding(.top, 10)
+                .padding(.bottom, 20)
 
-                HStack(spacing: 16) {
-                    // Avatar
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 18, style: .continuous)
-                            .fill(Color.white.opacity(0.12))
-                            .frame(width: 64, height: 64)
-                        RoundedRectangle(cornerRadius: 18, style: .continuous)
-                            .stroke(Color.white.opacity(0.18), lineWidth: 1)
-                            .frame(width: 64, height: 64)
-                        Text(initials)
-                            .font(.system(size: 24, weight: .bold))
-                            .foregroundStyle(.white)
-                    }
+            // Identity row
+            HStack(spacing: 14) {
+                ZStack {
+                    Circle()
+                        .fill(Color.sweeplyNavy)
+                        .frame(width: 50, height: 50)
+                    Text(initials)
+                        .font(.system(size: 19, weight: .bold))
+                        .foregroundStyle(.white)
+                }
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(profile.fullName)
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundStyle(Color.sweeplyNavy)
+                        .lineLimit(1)
+                    Text(profile.email)
+                        .font(.system(size: 12))
+                        .foregroundStyle(Color.sweeplyTextSub)
+                        .lineLimit(1)
+                }
+                Spacer()
+                if !profile.businessName.isEmpty {
+                    Text(profile.businessName)
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(Color.sweeplyAccent)
+                        .padding(.horizontal, 9)
+                        .padding(.vertical, 4)
+                        .background(Color.sweeplyAccent.opacity(0.1))
+                        .clipShape(Capsule())
+                        .overlay(Capsule().stroke(Color.sweeplyAccent.opacity(0.25), lineWidth: 1))
+                }
+            }
+            .padding(.horizontal, 20)
+            .padding(.bottom, 18)
 
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(profile.fullName)
-                            .font(.system(size: 18, weight: .bold))
-                            .foregroundStyle(.white)
-                            .lineLimit(1)
-                        Text(profile.email)
-                            .font(.system(size: 12))
-                            .foregroundStyle(.white.opacity(0.55))
-                            .lineLimit(1)
-                        if !profile.businessName.isEmpty {
-                            Text(profile.businessName)
-                                .font(.system(size: 11, weight: .semibold))
-                                .foregroundStyle(Color.sweeplyAccent)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 3)
-                                .background(Color.sweeplyAccent.opacity(0.15))
-                                .clipShape(Capsule())
-                                .overlay(Capsule().stroke(Color.sweeplyAccent.opacity(0.3), lineWidth: 1))
-                                .padding(.top, 2)
-                        }
-                    }
+            Divider()
 
+            // Menu rows
+            profileMenuRow(
+                icon: "gearshape.fill",
+                iconColor: Color.sweeplyNavy,
+                label: "Settings"
+            ) {
+                dismiss()
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) { showSettings = true }
+            }
+
+            Divider().padding(.leading, 54)
+
+            profileMenuRow(
+                icon: "person.2.fill",
+                iconColor: Color.sweeplyAccent,
+                label: "My Team"
+            ) {
+                dismiss()
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { showTeam = true }
+            }
+
+            Divider()
+
+            // Sign out
+            Button {
+                Task { await session.signOut(); dismiss() }
+            } label: {
+                HStack(spacing: 12) {
+                    Image(systemName: "rectangle.portrait.and.arrow.right")
+                        .font(.system(size: 14, weight: .medium))
+                    Text("Sign Out")
+                        .font(.system(size: 15, weight: .semibold))
                     Spacer()
                 }
-                .padding(.horizontal, 24)
-                .padding(.bottom, 28)
-            }
-            .background(Color.sweeplyNavy)
-
-            // ── Action tiles ─────────────────────────────────────
-            VStack(spacing: 0) {
-                HStack(spacing: 12) {
-                    ProfileActionTile(
-                        icon: "gearshape.fill",
-                        label: "Settings",
-                        iconBg: Color.sweeplyNavy.opacity(0.08),
-                        iconFg: Color.sweeplyNavy
-                    ) {
-                        dismiss()
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) { showSettings = true }
-                    }
-
-                    ProfileActionTile(
-                        icon: "person.2.fill",
-                        label: "My Team",
-                        iconBg: Color.sweeplyAccent.opacity(0.10),
-                        iconFg: Color.sweeplyAccent
-                    ) {
-                        dismiss()
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { showTeam = true }
-                    }
-                }
+                .foregroundStyle(Color.sweeplyDestructive)
                 .padding(.horizontal, 20)
-                .padding(.top, 20)
-                .padding(.bottom, 16)
-
-                // ── Sign out ─────────────────────────────────────
-                Button {
-                    Task { await session.signOut(); dismiss() }
-                } label: {
-                    HStack(spacing: 10) {
-                        Image(systemName: "rectangle.portrait.and.arrow.right")
-                            .font(.system(size: 14, weight: .semibold))
-                        Text("Sign Out")
-                            .font(.system(size: 14, weight: .semibold))
-                        Spacer()
-                        Image(systemName: "chevron.right")
-                            .font(.system(size: 11, weight: .semibold))
-                            .opacity(0.4)
-                    }
-                    .foregroundStyle(Color.sweeplyDestructive)
-                    .padding(.horizontal, 18)
-                    .padding(.vertical, 14)
-                    .background(Color.sweeplyDestructive.opacity(0.06))
-                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 14, style: .continuous)
-                            .stroke(Color.sweeplyDestructive.opacity(0.18), lineWidth: 1)
-                    )
-                }
-                .buttonStyle(.plain)
-                .padding(.horizontal, 20)
-                .padding(.bottom, 32)
+                .padding(.vertical, 16)
             }
-            .background(Color.sweeplyBackground)
+            .buttonStyle(.plain)
         }
-        .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
         .background(Color.sweeplyBackground)
+    }
+
+    @ViewBuilder
+    private func profileMenuRow(icon: String, iconColor: Color, label: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 14) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .fill(iconColor.opacity(0.1))
+                        .frame(width: 32, height: 32)
+                    Image(systemName: icon)
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundStyle(iconColor)
+                }
+                Text(label)
+                    .font(.system(size: 15))
+                    .foregroundStyle(Color.primary)
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(Color.sweeplyBorder)
+            }
+            .padding(.horizontal, 20)
+            .padding(.vertical, 14)
+        }
+        .buttonStyle(.plain)
     }
 
     private var initials: String {
         profile.fullName.split(separator: " ").compactMap { $0.first }.map { String($0) }.joined()
-    }
-}
-
-private struct ProfileActionTile: View {
-    let icon: String
-    let label: String
-    let iconBg: Color
-    let iconFg: Color
-    let action: () -> Void
-
-    @State private var isPressed = false
-
-    var body: some View {
-        Button(action: action) {
-            VStack(spacing: 10) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .fill(iconBg)
-                        .frame(width: 52, height: 52)
-                    Image(systemName: icon)
-                        .font(.system(size: 20, weight: .semibold))
-                        .foregroundStyle(iconFg)
-                }
-                Text(label)
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(Color.sweeplyNavy)
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 18)
-            .background(Color.sweeplySurface)
-            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .stroke(Color.sweeplyBorder, lineWidth: 1)
-            )
-            .scaleEffect(isPressed ? 0.96 : 1.0)
-            .animation(.easeOut(duration: 0.12), value: isPressed)
-        }
-        .buttonStyle(.plain)
-        .simultaneousGesture(
-            DragGesture(minimumDistance: 0)
-                .onChanged { _ in isPressed = true }
-                .onEnded { _ in isPressed = false }
-        )
     }
 }
