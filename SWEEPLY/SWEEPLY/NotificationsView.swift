@@ -137,32 +137,22 @@ struct NotificationsView: View {
     // MARK: - Tab Selector
 
     private var tabSelector: some View {
-        ScrollViewReader { proxy in
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 8) {
-                    ForEach(NotificationTab.allCases, id: \.self) { tab in
-                        TabButton(
-                            title: tabLabel(tab),
-                            icon: tabIcon(tab),
-                            isSelected: selectedTab == tab,
-                            action: {
-                                withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
-                                    selectedTab = tab
-                                }
-                            }
-                        )
-                        .id(tab)
+        HStack(spacing: 8) {
+            ForEach(NotificationTab.allCases, id: \.self) { tab in
+                TabButton(
+                    title: tabLabel(tab),
+                    icon: tabIcon(tab),
+                    isSelected: selectedTab == tab,
+                    action: {
+                        withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
+                            selectedTab = tab
+                        }
                     }
-                }
-                .padding(.horizontal, 20)
-                .padding(.vertical, 4)
-            }
-            .onChange(of: selectedTab) { _, newTab in
-                withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
-                    proxy.scrollTo(newTab, anchor: .center)
-                }
+                )
             }
         }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 4)
     }
     
     private func tabIcon(_ tab: NotificationTab) -> String {
@@ -207,7 +197,6 @@ private struct TabButton: View {
                 if isSelected {
                     RoundedRectangle(cornerRadius: 20)
                         .fill(Color.sweeplyNavy)
-                        .shadow(color: Color.sweeplyNavy.opacity(0.3), radius: 8, x: 0, y: 4)
                 } else {
                     RoundedRectangle(cornerRadius: 20)
                         .fill(Color.sweeplySurface)
