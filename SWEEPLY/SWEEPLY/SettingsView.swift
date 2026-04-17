@@ -350,6 +350,25 @@ struct SettingsView: View {
                 .buttonStyle(.plain)
             }
 
+            sectionLabel("LANGUAGE").padding(.top, 16)
+            settingsGroup {
+                HStack(spacing: 14) {
+                    settingsIcon("globe", color: Color(red: 0.2, green: 0.5, blue: 0.9))
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("App Language")
+                            .font(.system(size: 15))
+                            .foregroundStyle(Color.primary)
+                        Text("Choose your preferred language")
+                            .font(.system(size: 12))
+                            .foregroundStyle(Color.sweeplyTextSub)
+                    }
+                    Spacer()
+                    LanguagePicker()
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+            }
+
             sectionLabel("SECURITY & SYNC").padding(.top, 16)
             settingsGroup {
                 HStack(spacing: 14) {

@@ -197,24 +197,24 @@ struct RootView: View {
                     onViewAllSchedule: { selectedTab = .schedule },
                     onViewAllFinances: { selectedTab = .finances }
                 )
-                    .tabItem { Label("Dashboard", systemImage: "square.grid.2x2.fill") }
+                    .tabItem { Label("Dashboard".translated(), systemImage: "square.grid.2x2.fill") }
                     .tag(Tab.dashboard)
 
                 ScheduleView()
-                    .tabItem { Label("Schedule", systemImage: "calendar") }
+                    .tabItem { Label("Schedule".translated(), systemImage: "calendar") }
                     .tag(Tab.schedule)
 
                 ClientsView()
-                    .tabItem { Label("Clients", systemImage: "person.2.fill") }
+                    .tabItem { Label("Clients".translated(), systemImage: "person.2.fill") }
                     .tag(Tab.clients)
 
                 FinancesView()
-                    .tabItem { Label("Finances", systemImage: "chart.line.uptrend.xyaxis") }
+                    .tabItem { Label("Finances".translated(), systemImage: "chart.line.uptrend.xyaxis") }
                     .tag(Tab.finances)
                     .badge(overdueInvoiceCount > 0 ? overdueInvoiceCount : 0)
 
                 BusinessView()
-                    .tabItem { Label("Business", systemImage: "building.2.fill") }
+                    .tabItem { Label("Business".translated(), systemImage: "building.2.fill") }
                     .tag(Tab.business)
             }
             .tint(Color.sweeplyAccent)
