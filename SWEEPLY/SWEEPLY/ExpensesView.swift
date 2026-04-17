@@ -9,6 +9,7 @@ struct ExpensesView: View {
 
     @State private var showAddSheet  = false
     @State private var selectedMonth : Date = Date()
+    @State private var selectedDay  : Date? = nil
     @State private var appeared      = false
 
     private var monthLabel: String {
@@ -36,6 +37,18 @@ struct ExpensesView: View {
             .sorted { $0.date > $1.date }
     }
 
+    private var filteredExpenses: [Expense] {
+        if let day = selectedDay {
+            let cal = Calendar.current
+            return monthExpenses.filter { cal.isDate($0.date, inSameDayAs: day) }
+        }
+        return monthExpenses
+    }
+
+    private var filteredTotal: Double {
+        filteredExpenses.reduce(0) { $0 + $1.amount }
+    }
+
     private var monthTotal: Double {
         monthExpenses.reduce(0) { $0 + $1.amount }
     }
@@ -46,6 +59,113 @@ struct ExpensesView: View {
 
     private var canGoForward: Bool {
         (Calendar.current.date(byAdding: .month, value: 1, to: selectedMonth) ?? Date()) <= Date()
+    }
+
+    private var daysInMonth: [Date] {
+        let cal = Calendar.current
+        guard let interval = cal.dateInterval(of: .month, for: selectedMonth) else {
+            return []
+        }
+        
+        var days: [Date] = []
+        var current = interval.start
+        while current < interval.end {
+            days.append(current)
+            current = cal.date(byAdding: .day, value: 1, to: current) ?? current
+        }
+        
+        let firstWeekday = cal.component(.weekday, from: interval.start)
+        let paddingDays = firstWeekday - 1
+        var paddedDays: [Date] = []
+        for i in 0..<paddingDays {
+            if let paddingDate = cal.date(byAdding: .day, value: -i - 1, to: interval.start) {
+                paddedDays.insert(paddingDate, at: 0)
+            }
+        }
+        
+        return paddedDays + days
+    }
+
+    private func hasExpense(on date: Date) -> Bool {
+        let cal = Calendar.current
+        return monthExpenses.contains { cal.isDate($0.date, inSameDayAs: date) }
+    }
+
+    private func dayNumber(_ date: Date) -> String {
+        let cal = Calendar.current
+        return "\(cal.component(.day, from: date))"
+    }
+
+    private func selectDay(_ date: Date) {
+        let cal = Calendar.current
+        let now = Date()
+        
+        if cal.component(.month, from: date) == cal.component(.month, from: selectedMonth) {
+            if let selected = selectedDay, cal.isDate(selected, inSameDayAs: date) {
+                selectedDay = nil
+            } else if date <= now {
+                selectedDay = date
+            }
+        }
+    }
+
+    private func isSameMonth(_ date: Date) -> Bool {
+        let cal = Calendar.current
+        return cal.component(.month, from: date) == cal.component(.month, from: selectedMonth)
+    }
+
+    private func isToday(_ date: Date) -> Bool {
+        Calendar.current.isDateInToday(date)
+    }
+
+    private func isSelected(_ date: Date) -> Bool {
+        guard let selected = selectedDay else { return false }
+        let cal = Calendar.current
+        return cal.isDate(date, inSameDayAs: selected)
+    }
+
+    private func isFuture(_ date: Date) -> Bool {
+        let cal = Calendar.current
+        let now = Date()
+        return date > now
+    }
+
+    @ViewBuilder
+    private var totalLabel: some View {
+        if selectedDay != nil {
+            Text("Day Total")
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(Color.sweeplyTextSub)
+                .textCase(.uppercase)
+                .tracking(0.8)
+        } else {
+            Text("Total Spent")
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(Color.sweeplyTextSub)
+                .textCase(.uppercase)
+                .tracking(0.8)
+        }
+    }
+
+    @ViewBuilder
+    private var expenseCountLabel: some View {
+        if selectedDay != nil {
+            if let day = selectedDay {
+                Text(dayName(day))
+                    .font(.system(size: 13))
+                    .foregroundStyle(Color.sweeplyTextSub)
+            }
+        } else {
+            Text("\(monthExpenses.count) expense\(monthExpenses.count == 1 ? "" : "s") in \(shortMonthLabel)")
+                .font(.system(size: 13))
+                .foregroundStyle(Color.sweeplyTextSub)
+        }
+    }
+
+    private func dayName(_ date: Date) -> String {
+        let f = DateFormatter()
+        f.dateFormat = "EEEE, MMM d"
+        return f.string(from: date)
     }
 
     var body: some View {
@@ -63,7 +183,7 @@ struct ExpensesView: View {
                                 categoryCard
                             }
 
-                            if monthExpenses.isEmpty {
+                            if filteredExpenses.isEmpty {
                                 emptyState
                             } else {
                                 expenseListSection
@@ -104,7 +224,7 @@ struct ExpensesView: View {
         }
     }
 
-    // MARK: - Hero header
+    // MARK: - Hero header with calendar
 
     private var heroHeader: some View {
         VStack(spacing: 0) {
@@ -113,6 +233,7 @@ struct ExpensesView: View {
                 Button {
                     UIImpactFeedbackGenerator(style: .light).impactOccurred()
                     selectedMonth = Calendar.current.date(byAdding: .month, value: -1, to: selectedMonth) ?? selectedMonth
+                    selectedDay = nil
                 } label: {
                     Image(systemName: "chevron.left")
                         .font(.system(size: 13, weight: .semibold))
@@ -144,27 +265,25 @@ struct ExpensesView: View {
                 .disabled(!canGoForward)
             }
             .padding(.top, 8)
-            .padding(.bottom, 20)
+            .padding(.bottom, 16)
+
+            // Calendar grid
+            calendarGrid
+                .padding(.bottom, 20)
 
             // Big total
             VStack(spacing: 6) {
-                Text("Total Spent")
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(Color.sweeplyTextSub)
-                    .textCase(.uppercase)
-                    .tracking(0.8)
+                totalLabel
 
-                Text(monthTotal.currency)
+                Text(filteredTotal.currency)
                     .font(.system(size: 44, weight: .bold, design: .rounded))
-                    .foregroundStyle(monthTotal > 0 ? Color.sweeplyDestructive : Color.sweeplyTextSub.opacity(0.4))
+                    .foregroundStyle(filteredTotal > 0 ? Color.sweeplyDestructive : Color.sweeplyTextSub.opacity(0.4))
                     .monospacedDigit()
                     .contentTransition(.numericText())
-                    .animation(.spring(duration: 0.3), value: monthTotal)
+                    .animation(.spring(duration: 0.3), value: filteredTotal)
 
-                if !monthExpenses.isEmpty {
-                    Text("\(monthExpenses.count) expense\(monthExpenses.count == 1 ? "" : "s") in \(shortMonthLabel)")
-                        .font(.system(size: 13))
-                        .foregroundStyle(Color.sweeplyTextSub)
+                if !filteredExpenses.isEmpty {
+                    expenseCountLabel
                 }
             }
             .padding(.bottom, 24)
@@ -178,6 +297,73 @@ struct ExpensesView: View {
                 endPoint: .bottom
             )
         )
+    }
+
+    // MARK: - Calendar grid
+
+    private var calendarGrid: some View {
+        VStack(spacing: 4) {
+            // Day headers
+            HStack(spacing: 0) {
+                ForEach(["S", "M", "T", "W", "T", "F", "S"], id: \.self) { day in
+                    Text(day)
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundStyle(Color.sweeplyTextSub)
+                        .frame(maxWidth: .infinity)
+                }
+            }
+
+            // Days grid
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 4), count: 7), spacing: 4) {
+                ForEach(daysInMonth, id: \.self) { date in
+                    calendarDayCell(date)
+                }
+            }
+        }
+    }
+
+    private func calendarDayCell(_ date: Date) -> some View {
+        let inCurrentMonth = isSameMonth(date)
+        let today = isToday(date)
+        let selected = isSelected(date)
+        let hasExp = inCurrentMonth && hasExpense(on: date)
+        let future = isFuture(date)
+
+        return Button {
+            if inCurrentMonth && !future {
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                selectDay(date)
+            }
+        } label: {
+            VStack(spacing: 2) {
+                Text(dayNumber(date))
+                    .font(.system(size: 14, weight: selected ? .bold : (today ? .semibold : .medium)))
+                    .foregroundStyle(selected ? .white : (today ? Color.sweeplyNavy : (inCurrentMonth ? Color.primary : Color.sweeplyTextSub.opacity(0.25))))
+
+                if hasExp && inCurrentMonth {
+                    Circle()
+                        .fill(selected ? Color.white : Color.sweeplyAccent)
+                        .frame(width: 4, height: 4)
+                } else {
+                    Circle()
+                        .fill(Color.clear)
+                        .frame(width: 4, height: 4)
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 8)
+            .background {
+                if selected {
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(Color.sweeplyNavy)
+                } else if today && inCurrentMonth {
+                    RoundedRectangle(cornerRadius: 8)
+                        .stroke(Color.sweeplyNavy, lineWidth: 1)
+                }
+            }
+        }
+        .buttonStyle(.plain)
+        .disabled(!inCurrentMonth || future)
     }
 
     // MARK: - Category breakdown card
@@ -244,18 +430,31 @@ struct ExpensesView: View {
 
     // MARK: - Expense list
 
-    private var expenseListSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
+    @ViewBuilder
+    private var expenseListTitle: some View {
+        if selectedDay != nil {
+            Text("Day's Expenses")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(Color.sweeplyTextSub)
+                .textCase(.uppercase)
+                .tracking(0.6)
+        } else {
             Text("Transactions")
                 .font(.system(size: 12, weight: .semibold))
                 .foregroundStyle(Color.sweeplyTextSub)
                 .textCase(.uppercase)
                 .tracking(0.6)
+        }
+    }
+
+    private var expenseListSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            expenseListTitle
 
             VStack(spacing: 0) {
-                ForEach(Array(monthExpenses.enumerated()), id: \.element.id) { idx, expense in
+                ForEach(Array(filteredExpenses.enumerated()), id: \.element.id) { idx, expense in
                     expenseRow(expense)
-                    if idx < monthExpenses.count - 1 {
+                    if idx < filteredExpenses.count - 1 {
                         Divider().padding(.leading, 62)
                     }
                 }
@@ -388,6 +587,7 @@ struct AddExpenseSheet: View {
     @State private var notes    = ""
     @State private var date     = Date()
     @State private var isSaving = false
+    @FocusState private var isAmountFocused: Bool
 
     private var parsedAmount: Double? {
         let cleaned = amount.replacingOccurrences(of: ",", with: ".")
@@ -402,6 +602,9 @@ struct AddExpenseSheet: View {
         NavigationStack {
             ZStack {
                 Color.sweeplyBackground.ignoresSafeArea()
+                    .onTapGesture {
+                        isAmountFocused = false
+                    }
 
                 ScrollView {
                     VStack(spacing: 20) {
@@ -419,6 +622,7 @@ struct AddExpenseSheet: View {
                                         .font(.system(size: 36, weight: .bold, design: .rounded))
                                         .keyboardType(.decimalPad)
                                         .foregroundStyle(Color.primary)
+                                        .focused($isAmountFocused)
                                 }
                             }
                         }
