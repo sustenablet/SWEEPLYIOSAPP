@@ -36,6 +36,17 @@ enum ClientFrequency {
     }
 
     var isRecurring: Bool { self != .none && self != .oneTime }
+
+    var color: Color {
+        switch self {
+        case .none:      return Color.sweeplyTextSub.opacity(0.5)
+        case .oneTime:   return Color.sweeplyTextSub
+        case .recurring: return Color.sweeplyAccent
+        case .weekly:    return Color.green
+        case .biweekly:  return Color.orange
+        case .monthly:   return Color.blue
+        }
+    }
 }
 
 // MARK: - Clients List View
@@ -395,54 +406,47 @@ private struct ClientCard: View {
                         }
                     }
 
-                    // Frequency badge
-                    if let freqLabel = frequency.label {
-                        HStack(spacing: 4) {
-                            Image(systemName: frequency.icon)
-                                .font(.system(size: 9, weight: .bold))
-                                .foregroundStyle(frequency.isRecurring ? Color.sweeplyNavy : Color.sweeplyTextSub)
-                            Text(freqLabel)
-                                .font(.system(size: 11, weight: .semibold))
-                                .foregroundStyle(frequency.isRecurring ? Color.sweeplyNavy : Color.sweeplyTextSub)
+                    // Frequency badge + Service (same row)
+                    HStack(spacing: 6) {
+                        if let freqLabel = frequency.label {
+                            HStack(spacing: 4) {
+                                Image(systemName: frequency.icon)
+                                    .font(.system(size: 9, weight: .bold))
+                                    .foregroundStyle(frequency.color)
+                                Text(freqLabel)
+                                    .font(.system(size: 11, weight: .semibold))
+                                    .foregroundStyle(frequency.color)
+                            }
+                            .padding(.horizontal, 7)
+                            .padding(.vertical, 4)
+                            .background(frequency.color.opacity(0.12))
+                            .clipShape(Capsule())
                         }
-                        .padding(.horizontal, 7)
-                        .padding(.vertical, 3)
-                        .background(
-                            frequency.isRecurring
-                            ? Color.sweeplyNavy.opacity(0.08)
-                            : Color.sweeplyBackground
-                        )
-                        .clipShape(Capsule())
-                        .overlay(
-                            Capsule().stroke(
-                                frequency.isRecurring ? Color.sweeplyNavy.opacity(0.18) : Color.sweeplyBorder,
-                                lineWidth: 1
-                            )
-                        )
-                    }
 
-                    if let service = client.preferredService {
-                        HStack(spacing: 4) {
-                            Image(systemName: "star.fill")
-                                .font(.system(size: 9, weight: .bold))
-                                .foregroundStyle(Color.sweeplyAccent)
-                            Text(service.rawValue)
-                                .font(.system(size: 12, weight: .medium))
-                                .foregroundStyle(Color.sweeplyTextSub)
-                        }
-                    } else if !client.address.isEmpty {
-                        HStack(spacing: 4) {
-                            Image(systemName: "mappin")
-                                .font(.system(size: 10))
-                                .foregroundStyle(Color.sweeplyTextSub)
-                            Text([client.address, client.city].filter { !$0.isEmpty }.joined(separator: ", "))
-                                .font(.system(size: 12))
-                                .foregroundStyle(Color.sweeplyTextSub)
-                                .lineLimit(1)
-                                .truncationMode(.tail)
+                        if let service = client.preferredService {
+                            HStack(spacing: 4) {
+                                Image(systemName: "star.fill")
+                                    .font(.system(size: 9, weight: .bold))
+                                    .foregroundStyle(Color.sweeplyAccent)
+                                Text(service.rawValue)
+                                    .font(.system(size: 12, weight: .medium))
+                                    .foregroundStyle(Color.sweeplyTextSub)
+                            }
+                        } else if !client.address.isEmpty {
+                            HStack(spacing: 4) {
+                                Image(systemName: "mappin")
+                                    .font(.system(size: 10))
+                                    .foregroundStyle(Color.sweeplyTextSub)
+                                Text([client.address, client.city].filter { !$0.isEmpty }.joined(separator: ", "))
+                                    .font(.system(size: 12))
+                                    .foregroundStyle(Color.sweeplyTextSub)
+                                    .lineLimit(1)
+                                    .truncationMode(.tail)
+                            }
                         }
                     }
 
+                    // Phone (above service)
                     if !client.phone.isEmpty {
                         HStack(spacing: 4) {
                             Image(systemName: "phone")
