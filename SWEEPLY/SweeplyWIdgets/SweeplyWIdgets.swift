@@ -5,11 +5,12 @@ import SwiftUI
 
 private extension Color {
     static let teal        = Color(red: 0.157, green: 0.325, blue: 0.420)     // #28536B light mode
-    static let tealLight   = Color(red: 0.302, green: 0.561, blue: 0.659)     // #4D8FA8 dark mode
+    static let tealLight   = Color(red: 0.302, green: 0.561, blue: 0.659)     // #4DFA8 dark mode
     static let charcoal    = Color(red: 0.15,  green: 0.15,  blue: 0.18)
     static let stone       = Color(red: 0.965, green: 0.961, blue: 0.945)
     static let amber       = Color(red: 0.72,  green: 0.55,  blue: 0.35)
     static let coral       = Color(red: 0.70,  green: 0.25,  blue: 0.25)
+    static let mutedText   = Color(red: 0.45,  green: 0.45,  blue: 0.48)      // Medium gray for secondary text
 
     @available(iOSApplicationExtension 16.0, *)
     static func adaptiveTeal(_ scheme: ColorScheme) -> Color {
@@ -235,7 +236,7 @@ struct TodayScheduleEntryView: View {
                             .foregroundStyle(accent.opacity(0.5))
                         Text("All clear today")
                             .font(.system(size: 11, weight: .semibold))
-                            .foregroundStyle(Color.secondary)
+                            .foregroundStyle(Color.mutedText)
                     }
                     Spacer()
                 }
@@ -252,7 +253,7 @@ struct TodayScheduleEntryView: View {
                     HStack {
                         Text("7-day revenue")
                             .font(.system(size: 9))
-                            .foregroundStyle(Color.secondary)
+                            .foregroundStyle(Color.mutedText)
                         Spacer()
                         Text(formattedCurrency(entry.snapshot.weekRevenue))
                             .font(.system(size: 10, weight: .bold, design: .monospaced))
@@ -285,7 +286,7 @@ private struct TodayJobRow: View {
 
             Text(timeString(from: job.date))
                 .font(.system(size: 10, weight: .medium, design: .monospaced))
-                .foregroundStyle(Color.secondary)
+                .foregroundStyle(Color.mutedText)
                 .frame(width: 52, alignment: .leading)
 
             Text(job.clientName)
@@ -295,11 +296,11 @@ private struct TodayJobRow: View {
 
             Text("·")
                 .font(.system(size: 10))
-                .foregroundStyle(Color.secondary)
+                .foregroundStyle(Color.mutedText)
 
             Text(job.serviceType)
                 .font(.system(size: 10))
-                .foregroundStyle(Color.secondary)
+                .foregroundStyle(Color.mutedText)
                 .lineLimit(1)
 
             Spacer()
@@ -357,7 +358,7 @@ struct LargeScheduleEntryView: View {
                         .foregroundStyle(accent)
                     Text("job\(count == 1 ? "" : "s") today")
                         .font(.system(size: 8, weight: .semibold))
-                        .foregroundStyle(Color.secondary)
+                        .foregroundStyle(Color.mutedText)
                 }
             }
             .padding(.bottom, 12)
@@ -375,10 +376,10 @@ struct LargeScheduleEntryView: View {
                             .foregroundStyle(accent.opacity(0.45))
                         Text("No jobs today")
                             .font(.system(size: 14, weight: .semibold))
-                            .foregroundStyle(Color.secondary)
+                            .foregroundStyle(Color.mutedText)
                         Text("Enjoy the day off")
                             .font(.system(size: 11))
-                            .foregroundStyle(Color.secondary.opacity(0.7))
+                            .foregroundStyle(Color.mutedText.opacity(0.7))
                     }
                     Spacer()
                 }
@@ -399,7 +400,7 @@ struct LargeScheduleEntryView: View {
                 if overflow > 0 {
                     Text("+ \(overflow) more job\(overflow == 1 ? "" : "s")")
                         .font(.system(size: 10, weight: .medium))
-                        .foregroundStyle(Color.secondary)
+                        .foregroundStyle(Color.mutedText)
                         .padding(.top, 6)
                 }
             }
@@ -429,7 +430,7 @@ struct LargeScheduleEntryView: View {
         VStack(alignment: .leading, spacing: 1) {
             Text(label.uppercased())
                 .font(.system(size: 7, weight: .bold))
-                .foregroundStyle(Color.secondary)
+                .foregroundStyle(Color.mutedText)
                 .tracking(0.6)
             Text(value)
                 .font(.system(size: 12, weight: .bold, design: .monospaced))
@@ -465,7 +466,7 @@ private struct LargeJobRow: View {
 
             Text(timeString(from: job.date))
                 .font(.system(size: 10, weight: .medium, design: .monospaced))
-                .foregroundStyle(Color.secondary)
+                .foregroundStyle(Color.mutedText)
                 .frame(width: 54, alignment: .leading)
 
             VStack(alignment: .leading, spacing: 1) {
@@ -475,7 +476,7 @@ private struct LargeJobRow: View {
                     .lineLimit(1)
                 Text(job.serviceType)
                     .font(.system(size: 9, weight: .medium))
-                    .foregroundStyle(Color.secondary)
+                    .foregroundStyle(Color.mutedText)
                     .lineLimit(1)
             }
 
