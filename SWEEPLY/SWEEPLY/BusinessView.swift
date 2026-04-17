@@ -12,10 +12,17 @@ struct BusinessView: View {
     @State private var appeared = false
     @State private var showTeam = false
     @State private var showServiceCatalog = false
+    @State private var showExtrasCatalog = false
     @State private var selectedSnapshotSlide = 0
     @State private var showAIChat = false
     @State private var insightIndex = 0
     @State private var showKPICustomizer = false
+    @State private var serviceTab: ServiceTab = .services
+
+    enum ServiceTab {
+        case services
+        case extras
+    }
 
     @AppStorage("kpiVisibility") private var kpiVisibilityRaw: String = ""
     @AppStorage("kpiOrder")      private var kpiOrderRaw: String = ""
@@ -265,6 +272,12 @@ struct BusinessView: View {
 
     private var catalogServices: [BusinessService] {
         profile.settings.hydratedServiceCatalog
+            .filter { !$0.isAddon }
+    }
+
+    private var catalogExtras: [BusinessService] {
+        profile.settings.hydratedServiceCatalog
+            .filter { $0.isAddon }
     }
 
     // MARK: - KPI Customization
@@ -725,6 +738,9 @@ struct BusinessView: View {
         .sheet(isPresented: $showServiceCatalog) {
             ServiceCatalogView()
         }
+        .sheet(isPresented: $showExtrasCatalog) {
+            ServiceCatalogView(addonsOnly: true)
+        }
         .sheet(isPresented: $showAIChat) {
             AIChatView(
                 onNewJob: nil,
@@ -900,15 +916,28 @@ struct BusinessView: View {
                     }
                 }
 
-                if catalogServices.isEmpty {
+                HStack(spacing: 4) {
+                    serviceTabButton(.services, label: "Services", count: catalogServices.count)
+                    serviceTabButton(.extras, label: "Extras", count: catalogExtras.count)
+                }
+
+                let displayServices = serviceTab == .services ? catalogServices : catalogExtras
+                let emptyMessage = serviceTab == .services 
+                    ? "No services configured" 
+                    : "No extras configured"
+                let emptySubMessage = serviceTab == .services
+                    ? "Add services to speed up job and invoice creation."
+                    : "Add extras like laundry, dishes, or window cleaning."
+
+                if displayServices.isEmpty {
                     overviewEmptyState(
-                        icon: "list.bullet.clipboard",
-                        title: "No services configured",
-                        message: "Add services to speed up job and invoice creation."
+                        icon: serviceTab == .services ? "list.bullet.clipboard" : "sparkles",
+                        title: emptyMessage,
+                        message: emptySubMessage
                     )
                 } else {
                     VStack(spacing: 8) {
-                        ForEach(catalogServices.prefix(3)) { service in
+                        ForEach(displayServices.prefix(3)) { service in
                             HStack(spacing: 12) {
                                 Circle()
                                     .fill(Color.sweeplyAccent)
@@ -929,12 +958,16 @@ struct BusinessView: View {
                         }
                     }
 
-                    if catalogServices.count > 3 {
+                    if displayServices.count > 3 {
                         Button {
-                            showServiceCatalog = true
+                            if serviceTab == .extras {
+                                showExtrasCatalog = true
+                            } else {
+                                showServiceCatalog = true
+                            }
                         } label: {
-                            let extra = catalogServices.count - 3
-                            Text("+ \(extra) more service\(extra == 1 ? "" : "s")")
+                            let extra = displayServices.count - 3
+                            Text("+ \(extra) more")
                                 .font(.system(size: 12, weight: .medium))
                                 .foregroundStyle(Color.sweeplyAccent)
                                 .frame(maxWidth: .infinity)
@@ -944,6 +977,32 @@ struct BusinessView: View {
                 }
             }
         }
+    }
+
+    private func serviceTabButton(_ tab: ServiceTab, label: String, count: Int) -> some View {
+        Button {
+            withAnimation(.spring(duration: 0.2)) {
+                serviceTab = tab
+            }
+        } label: {
+            HStack(spacing: 4) {
+                Text(label)
+                    .font(.system(size: 12, weight: serviceTab == tab ? .bold : .medium))
+                Text("(\(count))")
+                    .font(.system(size: 11))
+                    .foregroundStyle(Color.sweeplyTextSub)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+            .background(serviceTab == tab ? Color.sweeplyNavy : Color.clear)
+            .foregroundStyle(serviceTab == tab ? .white : Color.sweeplyNavy)
+            .clipShape(Capsule())
+            .overlay(
+                Capsule()
+                    .stroke(serviceTab == tab ? Color.clear : Color.sweeplyBorder, lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
     }
 
     private func durationLabel(for duration: Double) -> String {
