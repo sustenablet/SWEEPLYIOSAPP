@@ -13,5 +13,6 @@ struct SweeplyWIdgetsBundle: WidgetBundle {
     var body: some Widget {
         NextJobWidget()
         TodayScheduleWidget()
+        LargeScheduleWidget()
     }
 }
