@@ -3,15 +3,22 @@ import SwiftUI
 struct NotificationsView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(NotificationsStore.self) private var notificationsStore
+    @Environment(JobsStore.self) private var jobsStore
+    @Environment(InvoicesStore.self) private var invoicesStore
+    @Environment(ClientsStore.self) private var clientsStore
     @Environment(AppSession.self) private var session
-    @Environment(NotificationManager.self) private var notificationManager
 
     @State private var selectedTab: NotificationTab = .all
+    @State private var selectedJobId: UUID? = nil
+    @State private var selectedInvoiceId: UUID? = nil
+    @State private var showJobDetail: Bool = false
+    @State private var showInvoiceDetail: Bool = false
     
     enum NotificationTab: String, CaseIterable {
         case all = "All"
         case unread = "Unread"
         case schedule = "Schedule"
+        case jobs = "Jobs"
         case billing = "Billing"
     }
 
@@ -27,6 +34,8 @@ struct NotificationsView: View {
             return notificationsStore.notifications.filter { !$0.isRead }
         case .schedule:
             return notificationsStore.notifications.filter { $0.kind == .schedule }
+        case .jobs:
+            return notificationsStore.notifications.filter { $0.kind == .jobs }
         case .billing:
             return notificationsStore.notifications.filter { $0.kind == .billing }
         }
@@ -39,14 +48,12 @@ struct NotificationsView: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
-                // Tab Selector
                 tabSelector
                     .padding(.top, 8)
                     .padding(.bottom, 16)
                 
                 Divider()
                 
-                // Content
                 if sortedNotifications.isEmpty {
                     emptyState
                 } else {
@@ -80,53 +87,154 @@ struct NotificationsView: View {
                     }
                 }
             }
+            .onAppear {
+                Task {
+                    await notificationsStore.load(isAuthenticated: session.isAuthenticated, userId: session.userId)
+                }
+            }
             .refreshable {
                 await notificationsStore.load(isAuthenticated: session.isAuthenticated, userId: session.userId)
             }
+            .sheet(isPresented: $showJobDetail) {
+                if let jobId = selectedJobId {
+                    NavigationStack {
+                        JobDetailView(jobId: jobId)
+                    }
+                    .environment(jobsStore)
+                    .environment(clientsStore)
+                    .environment(session)
+                }
+            }
+            .sheet(isPresented: $showInvoiceDetail) {
+                if let invoiceId = selectedInvoiceId {
+                    NavigationStack {
+                        InvoiceDetailView(invoiceId: invoiceId)
+                    }
+                    .environment(invoicesStore)
+                    .environment(clientsStore)
+                    .environment(session)
+                }
+            }
+        }
+    }
+
+    private func handleNotificationTap(_ notification: AppNotification) {
+        if !notification.isRead {
+            Task {
+                await notificationsStore.markAsRead(id: notification.id, isAuthenticated: session.isAuthenticated)
+            }
+        }
+        
+        if let jobId = notification.jobId {
+            selectedJobId = jobId
+            showJobDetail = true
+        } else if let invoiceId = notification.invoiceId {
+            selectedInvoiceId = invoiceId
+            showInvoiceDetail = true
         }
     }
 
     // MARK: - Tab Selector
 
     private var tabSelector: some View {
-        HStack(spacing: 4) {
-            ForEach(NotificationTab.allCases, id: \.self) { tab in
-                Button {
-                    withAnimation(.easeInOut(duration: 0.2)) {
-                        selectedTab = tab
+        ScrollViewReader { proxy in
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    ForEach(NotificationTab.allCases, id: \.self) { tab in
+                        TabButton(
+                            title: tabLabel(tab),
+                            icon: tabIcon(tab),
+                            isSelected: selectedTab == tab,
+                            action: {
+                                withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
+                                    selectedTab = tab
+                                }
+                            }
+                        )
+                        .id(tab)
                     }
-                } label: {
-                    Text(tabLabel(tab))
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(selectedTab == tab ? .white : Color.sweeplyTextSub)
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 8)
-                        .background(selectedTab == tab ? Color.sweeplyNavy : Color.clear)
-                        .clipShape(Capsule())
+                }
+                .padding(.horizontal, 20)
+                .padding(.vertical, 4)
+            }
+            .onChange(of: selectedTab) { _, newTab in
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
+                    proxy.scrollTo(newTab, anchor: .center)
                 }
             }
         }
-        .padding(6)
-        .background(Color.sweeplySurface)
-        .clipShape(Capsule())
-        .overlay(Capsule().stroke(Color.sweeplyBorder, lineWidth: 1))
-        .padding(.horizontal, 20)
     }
     
-    private func tabLabel(_ tab: NotificationTab) -> String {
+    private func tabIcon(_ tab: NotificationTab) -> String {
         switch tab {
-        case .all:
-            return "All"
-        case .unread:
-            return unreadCount > 0 ? "Unread (\(unreadCount))" : "Unread"
-        case .schedule:
-            return "Schedule"
-        case .billing:
-            return "Billing"
+        case .all: return "bell.fill"
+        case .unread: return "envelope.open.fill"
+        case .schedule: return "calendar"
+        case .jobs: return "briefcase.fill"
+        case .billing: return "creditcard.fill"
         }
     }
+    
+    private func tabCount(_ tab: NotificationTab) -> Int? {
+        switch tab {
+        case .unread: return unreadCount > 0 ? unreadCount : nil
+        default: return nil
+        }
+    }
+    
 
-    // MARK: - Notifications List
+
+// MARK: - Custom Tab Button
+
+private struct TabButton: View {
+    let title: String
+    let icon: String
+    let isSelected: Bool
+    let action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 6) {
+                Image(systemName: icon)
+                    .font(.system(size: 12, weight: .medium))
+                
+                Text(title)
+                    .font(.system(size: 13, weight: .semibold))
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+            .background {
+                if isSelected {
+                    RoundedRectangle(cornerRadius: 20)
+                        .fill(Color.sweeplyNavy)
+                        .shadow(color: Color.sweeplyNavy.opacity(0.3), radius: 8, x: 0, y: 4)
+                } else {
+                    RoundedRectangle(cornerRadius: 20)
+                        .fill(Color.sweeplySurface)
+                }
+            }
+            .foregroundStyle(isSelected ? .white : Color.sweeplyTextSub)
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+private func tabLabel(_ tab: NotificationTab) -> String {
+    switch tab {
+    case .all:
+        return "All"
+    case .unread:
+        return unreadCount > 0 ? "Unread (\(unreadCount))" : "Unread"
+    case .schedule:
+        return "Schedule"
+    case .jobs:
+        return "Jobs"
+    case .billing:
+        return "Billing"
+    }
+}
+
+// MARK: - Notifications List
 
     private var notificationsList: some View {
         ScrollView {
@@ -154,6 +262,9 @@ struct NotificationsView: View {
                             Task {
                                 await notificationsStore.delete(id: notification.id)
                             }
+                        },
+                        onTap: {
+                            handleNotificationTap(notification)
                         }
                     )
                 }
@@ -167,11 +278,47 @@ struct NotificationsView: View {
     // MARK: - Empty State
 
     private var emptyState: some View {
-        EmptyStateView(
-            icon: emptyIcon,
-            title: emptyTitle,
-            subtitle: emptyMessage
-        )
+        ScrollView {
+            VStack(spacing: 24) {
+                Spacer()
+                    .frame(height: 60)
+                
+                ZStack {
+                    Circle()
+                        .fill(kindColorForTab(selectedTab).opacity(0.1))
+                        .frame(width: 88, height: 88)
+                    Image(systemName: emptyIcon)
+                        .font(.system(size: 34, weight: .regular))
+                        .foregroundStyle(kindColorForTab(selectedTab))
+                }
+                
+                VStack(spacing: 8) {
+                    Text(emptyTitle)
+                        .font(.system(size: 17, weight: .bold))
+                        .foregroundStyle(Color.sweeplyNavy)
+                        .multilineTextAlignment(.center)
+                    Text(emptyMessage)
+                        .font(.system(size: 14, weight: .regular))
+                        .foregroundStyle(Color.sweeplyTextSub)
+                        .multilineTextAlignment(.center)
+                        .lineSpacing(2)
+                }
+                .padding(.horizontal, 32)
+                
+                Spacer()
+            }
+            .frame(maxWidth: .infinity)
+        }
+    }
+    
+    private func kindColorForTab(_ tab: NotificationTab) -> Color {
+        switch tab {
+        case .all: return Color.sweeplyTextSub
+        case .unread: return Color.sweeplyNavy
+        case .schedule: return Color.sweeplyNavy
+        case .jobs: return Color.sweeplyAccent
+        case .billing: return Color.sweeplySuccess
+        }
     }
     
     private var emptyIcon: String {
@@ -179,6 +326,7 @@ struct NotificationsView: View {
         case .all: return "bell.slash"
         case .unread: return "envelope.open"
         case .schedule: return "calendar.badge.exclamationmark"
+        case .jobs: return "briefcase.fill"
         case .billing: return "creditcard.slash"
         }
     }
@@ -188,6 +336,7 @@ struct NotificationsView: View {
         case .all: return "No notifications"
         case .unread: return "All caught up"
         case .schedule: return "No schedule updates"
+        case .jobs: return "No job updates"
         case .billing: return "No billing activity"
         }
     }
@@ -197,6 +346,7 @@ struct NotificationsView: View {
         case .all: return "You're up to date. New notifications will appear here."
         case .unread: return "You've read everything. Check back later for updates."
         case .schedule: return "No schedule changes or updates at the moment."
+        case .jobs: return "No job updates at the moment."
         case .billing: return "No invoice or payment activity to show."
         }
     }
@@ -209,10 +359,12 @@ private struct NotificationRow: View {
     let onMarkRead: () -> Void
     let onMarkUnread: () -> Void
     let onDelete: () -> Void
+    let onTap: () -> Void
 
     private var kindIcon: String {
         switch notification.kind {
         case .schedule: return "calendar"
+        case .jobs: return "briefcase.fill"
         case .billing:  return "creditcard"
         case .profile:  return "person.fill"
         case .system:   return "bell.fill"
@@ -222,7 +374,8 @@ private struct NotificationRow: View {
     private var kindColor: Color {
         switch notification.kind {
         case .schedule: return Color.sweeplyNavy
-        case .billing:  return Color.sweeplyAccent
+        case .jobs: return Color.sweeplyAccent
+        case .billing:  return Color.sweeplySuccess
         case .profile:  return Color.sweeplyTextSub
         case .system:   return Color.sweeplyBorder
         }
@@ -318,10 +471,7 @@ private struct NotificationRow: View {
         )
         .contentShape(Rectangle())
         .onTapGesture {
-            if !notification.isRead {
-                UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                onMarkRead()
-            }
+            onTap()
         }
         .contextMenu {
             if notification.isRead {
