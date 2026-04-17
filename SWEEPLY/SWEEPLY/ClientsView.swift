@@ -59,6 +59,7 @@ struct ClientsView: View {
     @State private var search = ""
     @State private var showAddSheet = false
     @State private var editingClient: Client? = nil
+    @State private var editSheetClient: Client? = nil
     @State private var deleteTarget: Client? = nil
     @State private var appeared = false
     @State private var showFilters = false
@@ -149,7 +150,10 @@ struct ClientsView: View {
             await clientsStore.load(isAuthenticated: session.isAuthenticated)
         }
         .sheet(isPresented: $showAddSheet) {
-            NewClientForm(editingClient: editingClient)
+            NewClientForm()
+        }
+        .sheet(item: $editSheetClient) { client in
+            NewClientForm(editingClient: client)
         }
         .sheet(isPresented: $showFilters) {
             ClientFiltersSheet(showArchived: $showArchived, sortOrder: $sortOrder)
@@ -190,7 +194,6 @@ struct ClientsView: View {
                         showFilters = true
                     }
                     HeaderIconButton(systemName: "plus", foregroundColor: .white, backgroundColor: .sweeplyNavy) {
-                        editingClient = nil
                         showAddSheet = true
                     }
                 }
@@ -248,8 +251,7 @@ struct ClientsView: View {
                             frequency: frequency(for: client),
                             onView: { viewingClientId = client.id },
                             onEdit: {
-                                editingClient = client
-                                showAddSheet = true
+                                editSheetClient = client
                             },
                             onDelete: { deleteTarget = client },
                             onToggleArchive: {
@@ -406,6 +408,29 @@ private struct ClientCard: View {
                         }
                     }
 
+                    // Phone / email
+                    if !client.phone.isEmpty {
+                        HStack(spacing: 4) {
+                            Image(systemName: "phone")
+                                .font(.system(size: 10))
+                                .foregroundStyle(Color.sweeplyTextSub)
+                            Text(client.phone)
+                                .font(.system(size: 12))
+                                .foregroundStyle(Color.sweeplyTextSub)
+                        }
+                    } else if !client.email.isEmpty {
+                        HStack(spacing: 4) {
+                            Image(systemName: "envelope")
+                                .font(.system(size: 10))
+                                .foregroundStyle(Color.sweeplyTextSub)
+                            Text(client.email)
+                                .font(.system(size: 12))
+                                .foregroundStyle(Color.sweeplyTextSub)
+                                .lineLimit(1)
+                                .truncationMode(.tail)
+                        }
+                    }
+
                     // Frequency badge + Service (same row)
                     HStack(spacing: 6) {
                         if let freqLabel = frequency.label {
@@ -443,29 +468,6 @@ private struct ClientCard: View {
                                     .lineLimit(1)
                                     .truncationMode(.tail)
                             }
-                        }
-                    }
-
-                    // Phone (above service)
-                    if !client.phone.isEmpty {
-                        HStack(spacing: 4) {
-                            Image(systemName: "phone")
-                                .font(.system(size: 10))
-                                .foregroundStyle(Color.sweeplyTextSub)
-                            Text(client.phone)
-                                .font(.system(size: 12))
-                                .foregroundStyle(Color.sweeplyTextSub)
-                        }
-                    } else if !client.email.isEmpty {
-                        HStack(spacing: 4) {
-                            Image(systemName: "envelope")
-                                .font(.system(size: 10))
-                                .foregroundStyle(Color.sweeplyTextSub)
-                            Text(client.email)
-                                .font(.system(size: 12))
-                                .foregroundStyle(Color.sweeplyTextSub)
-                                .lineLimit(1)
-                                .truncationMode(.tail)
                         }
                     }
                 }

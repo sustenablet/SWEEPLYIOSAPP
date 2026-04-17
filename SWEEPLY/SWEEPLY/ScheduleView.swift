@@ -28,6 +28,7 @@ struct ScheduleView: View {
     @State private var showMonthPicker = false
     @State private var enabledViewModes: Set<ScheduleViewMode> = [.day, .list, .map]
     @State private var selectedJobId: UUID? = nil
+    @State private var showJobDetail: Bool = false
     @State private var mapCameraPosition: MapCameraPosition = .automatic
     @State private var locationManager = LocationManager.shared
     @Namespace private var mapSelectionNamespace
@@ -88,6 +89,15 @@ struct ScheduleView: View {
                 ScheduleMonthPicker(selectedDay: $selectedDay, jobs: jobsStore.jobs)
                     .presentationDetents([.fraction(0.65)])
                     .presentationDragIndicator(.visible)
+            }
+            .sheet(isPresented: $showJobDetail) {
+                if let jobId = selectedJobId,
+                   let job = jobsStore.jobs.first(where: { $0.id == jobId }) {
+                    JobDetailView(jobId: job.id)
+                        .onDisappear {
+                            selectedJobId = nil
+                        }
+                }
             }
         }
     }
@@ -263,7 +273,9 @@ struct ScheduleView: View {
                 MapJobCard(
                     job: job,
                     onDirections: { openDirections(for: job) },
-                    onDetails: { /* Navigation handled via state or proxy if needed */ },
+                    onDetails: {
+                        self.showJobDetail = true
+                    },
                     onDismiss: {
                         withAnimation(.spring(response: 0.3, dampingFraction: 0.9)) {
                             self.selectedJobId = nil
@@ -407,97 +419,54 @@ struct ScheduleView: View {
     // MARK: - List View
 
     private var listView: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 24) {
-                let startDay = calendar.startOfDay(for: selectedDay)
-                let futureJobs = jobsStore.jobs
-                    .filter { $0.date >= startDay }
-                    .filter { applyFilters($0) }
-                    .sorted { $0.date < $1.date }
-                let futureInvoices = showInvoices ? invoicesStore.invoices
-                    .filter { calendar.startOfDay(for: $0.dueDate) >= startDay }
-                    .sorted { $0.dueDate < $1.dueDate } : []
+        VStack(spacing: 0) {
+            HStack(spacing: 0) {
+                HStack(spacing: 4) {
+                    Text("\(filteredJobsForDate(selectedDay).count)")
+                        .font(.system(size: 13, weight: .bold, design: .monospaced))
+                        .foregroundStyle(Color.sweeplyAccent)
+                    Text(filteredJobsForDate(selectedDay).count == 1 ? "job" : "jobs")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(Color.sweeplyTextSub)
+                }
+                Spacer()
+                Text(dayRevenue(selectedDay).currency)
+                    .font(.system(size: 13, weight: .bold, design: .monospaced))
+                    .foregroundStyle(Color.sweeplyNavy)
+            }
+            .padding(.horizontal, 24)
+            .padding(.vertical, 10)
+            .background(Color.sweeplySurface)
+            .overlay(Rectangle().frame(height: 1).foregroundStyle(Color.sweeplyBorder), alignment: .bottom)
 
-                let groupedJobs = Dictionary(grouping: futureJobs) { calendar.startOfDay(for: $0.date) }
-                let groupedInvoices = Dictionary(grouping: futureInvoices) { calendar.startOfDay(for: $0.dueDate) }
-                let allDates = Set(groupedJobs.keys).union(Set(groupedInvoices.keys))
-                let sortedDates = allDates.sorted()
-
-                if futureJobs.isEmpty && futureInvoices.isEmpty {
-                    scheduleEmptyState.padding(.top, 40)
-                } else {
-                    HStack {
-                        Text("From \(selectedDay.formatted(.dateTime.month(.abbreviated).day()))")
-                            .font(.system(size: 11, weight: .semibold))
-                            .foregroundStyle(Color.sweeplyTextSub)
-                            .tracking(0.5)
-                        Spacer()
-                        HStack(spacing: 4) {
-                            Text("\(futureJobs.count) \(futureJobs.count == 1 ? "job" : "jobs")")
-                                .font(.system(size: 11, weight: .semibold))
-                                .foregroundStyle(Color.sweeplyTextSub)
-                            if showInvoices && !futureInvoices.isEmpty {
-                                Text("·")
-                                    .foregroundStyle(Color.sweeplyTextSub)
-                                Text("\(futureInvoices.count) \(futureInvoices.count == 1 ? "invoice" : "invoices")")
-                                    .font(.system(size: 11, weight: .semibold))
-                                    .foregroundStyle(Color.sweeplyWarning)
-                            }
+            ScrollView {
+                VStack(spacing: 12) {
+                    if jobsStore.isLoading && jobsStore.jobs.isEmpty {
+                        SkeletonList(count: 4)
+                            .padding(.top, 4)
+                    } else if filteredJobsForDate(selectedDay).isEmpty && invoicesForDate(selectedDay).isEmpty {
+                        scheduleEmptyState
+                    } else {
+                        ForEach(filteredJobsForDate(selectedDay)) { job in
+                            ScheduleJobRow(job: job)
                         }
-                    }
-                    .padding(.horizontal, 4)
-                    ForEach(sortedDates, id: \.self) { date in
-                        let dayJobs = groupedJobs[date] ?? []
-                        let dayInvoices = groupedInvoices[date] ?? []
-                        VStack(alignment: .leading, spacing: 10) {
-                            HStack(spacing: 8) {
-                                Text(date.formatted(.dateTime.weekday(.wide).month().day()))
-                                    .font(.system(size: 13, weight: .bold))
-                                    .foregroundStyle(Color.sweeplyNavy)
-                                if calendar.isDateInToday(date) {
-                                    Text("Today")
-                                        .font(.system(size: 10, weight: .bold))
-                                        .foregroundStyle(.white)
-                                        .padding(.horizontal, 7)
-                                        .padding(.vertical, 3)
-                                        .background(Color.sweeplyAccent)
-                                        .clipShape(Capsule())
-                                }
-                                Spacer()
-                                if !dayJobs.isEmpty {
-                                    Text("\(dayJobs.count) \(dayJobs.count == 1 ? "job" : "jobs")")
-                                        .font(.system(size: 11, weight: .semibold))
-                                        .foregroundStyle(Color.sweeplyTextSub)
-                                        .padding(.horizontal, 8)
-                                        .padding(.vertical, 3)
-                                        .background(Color.sweeplyAccent.opacity(0.1))
-                                        .clipShape(Capsule())
-                                }
-                                if !dayInvoices.isEmpty {
-                                    Text("\(dayInvoices.count) \(dayInvoices.count == 1 ? "invoice" : "invoices")")
-                                        .font(.system(size: 11, weight: .semibold))
-                                        .foregroundStyle(Color.sweeplyWarning)
-                                        .padding(.horizontal, 8)
-                                        .padding(.vertical, 3)
-                                        .background(Color.sweeplyWarning.opacity(0.1))
-                                        .clipShape(Capsule())
-                                }
-                            }
-                            .padding(.horizontal, 4)
-
-                            ForEach(dayJobs) { job in
-                                ScheduleJobRow(job: job)
-                            }
+                        if showInvoices {
+                            let dayInvoices = invoicesForDate(selectedDay)
                             if !dayInvoices.isEmpty {
-                                if !dayJobs.isEmpty {
+                                if !filteredJobsForDate(selectedDay).isEmpty {
                                     HStack(spacing: 6) {
-                                        Rectangle().fill(Color.sweeplyBorder).frame(height: 1)
+                                        Rectangle()
+                                            .fill(Color.sweeplyBorder)
+                                            .frame(height: 1)
                                         Text("INVOICES DUE")
                                             .font(.system(size: 10, weight: .bold))
                                             .foregroundStyle(Color.sweeplyTextSub)
                                             .tracking(0.8)
-                                        Rectangle().fill(Color.sweeplyBorder).frame(height: 1)
+                                        Rectangle()
+                                            .fill(Color.sweeplyBorder)
+                                            .frame(height: 1)
                                     }
+                                    .padding(.vertical, 4)
                                 }
                                 ForEach(dayInvoices) { invoice in
                                     ScheduleInvoiceRow(invoice: invoice)
@@ -506,12 +475,12 @@ struct ScheduleView: View {
                         }
                     }
                 }
+                .padding(20)
+                .padding(.bottom, 100)
             }
-            .padding(20)
-            .padding(.bottom, 100)
-        }
-        .refreshable {
-            await jobsStore.load(isAuthenticated: session.isAuthenticated)
+            .refreshable {
+                await jobsStore.load(isAuthenticated: session.isAuthenticated)
+            }
         }
     }
 

@@ -195,6 +195,7 @@ struct Job: Identifiable, Codable {
     var address: String
     var isRecurring: Bool
     var recurrenceRuleId: UUID? = nil
+    var recurrenceFrequency: RecurrenceFrequency? = nil
 }
 
 struct RecurrenceRule: Identifiable, Codable {

@@ -22,6 +22,8 @@ struct DashboardView: View {
     @State private var selectedInvoiceId: UUID? = nil
     @State private var showInvoiceDetail = false
     @State private var showTeam = false
+    @State private var showInvoicesList = false
+    @State private var invoicesPreselectedFilter: String = "overdue"
     /// User hid the checklist after completing all steps (persisted).
     @AppStorage("dashboardPlaybookPermanentlyHidden") private var playbookPermanentlyHidden = false
     @State private var healthStats: HealthStats? = nil
@@ -230,8 +232,9 @@ struct DashboardView: View {
         .background(Color.sweeplyBackground.ignoresSafeArea())
         .sheet(isPresented: $showProfileMenu) {
             ProfileMenuView(showSettings: $showSettings, showTeam: $showTeam)
-                .presentationDetents([.height(320)])
-                .presentationDragIndicator(.visible)
+                .presentationDetents([.height(340)])
+                .presentationDragIndicator(.hidden)
+                .presentationCornerRadius(28)
         }
         .sheet(isPresented: $showTeam) {
             TeamView()
@@ -245,17 +248,26 @@ struct DashboardView: View {
         .fullScreenCover(isPresented: $showSettings) {
             SettingsView()
         }
-        .sheet(isPresented: $showInvoiceDetail) {
-            if let id = selectedInvoiceId {
+.sheet(isPresented: $showInvoiceDetail) {
+                if let id = selectedInvoiceId {
+                    NavigationStack {
+                        InvoiceDetailView(invoiceId: id)
+                    }
+                    .environment(invoicesStore)
+                    .environment(clientsStore)
+                    .environment(profileStore)
+                    .environment(session)
+                }
+            }
+            .sheet(isPresented: $showInvoicesList) {
                 NavigationStack {
-                    InvoiceDetailView(invoiceId: id)
+                    InvoicesListView(preselectedFilter: "Overdue")
                 }
                 .environment(invoicesStore)
                 .environment(clientsStore)
-                .environment(profileStore)
                 .environment(session)
+                .environment(profileStore)
             }
-        }
         .onChange(of: showSettings) { _, isShowing in
             if !isShowing {
                 // Re-apply tab bar after full-screen cover is dismissed (iOS resets it)
@@ -460,7 +472,7 @@ struct DashboardView: View {
     private var outstandingInvoicesSection: some View {
         SectionCard {
             VStack(alignment: .leading, spacing: 14) {
-                CardHeader(title: "Outstanding Invoices", action: onViewAllFinances)
+                CardHeader(title: "Outstanding Invoices", action: { showInvoicesList = true })
                 
                 if ongoingInvoices.isEmpty {
                     VStack(spacing: 8) {
@@ -519,12 +531,18 @@ private struct DashStatBox: View {
 struct DashJobRow: View {
     let job: Job
     let jobsStore: JobsStore
+    @Environment(ClientsStore.self) private var clientsStore
+    
+    private var clientCity: String {
+        clientsStore.clients.first(where: { $0.id == job.clientId })?.city ?? job.address
+    }
+    
     var body: some View {
         HStack(spacing: 12) {
-            VStack(alignment: .trailing, spacing: 1) {
-                Text(timeStr).font(.system(size: 13, weight: .semibold, design: .monospaced))
-                Text(amPm).font(.system(size: 10)).foregroundStyle(Color.sweeplyTextSub)
-            }.frame(width: 36, alignment: .trailing)
+            Text(timeStr)
+                .font(.system(size: 13, weight: .semibold, design: .monospaced))
+                .foregroundStyle(Color.sweeplyNavy)
+                .frame(width: 50, alignment: .trailing)
             Circle().fill(statusColor).frame(width: 7, height: 7)
             VStack(alignment: .leading, spacing: 2) {
                 HStack {
@@ -537,7 +555,7 @@ struct DashJobRow: View {
                         Button("Cancel Job", systemImage: "xmark", role: .destructive) { Task { await jobsStore.updateStatus(id: job.id, status: .cancelled) } }
                     } label: { Image(systemName: "ellipsis").font(.system(size: 14)).foregroundStyle(Color.sweeplyTextSub).padding(.leading, 8) }
                 }
-                Text("\(job.serviceType.rawValue) · \(durationStr) · \(job.address)").font(.system(size: 12)).foregroundStyle(Color.sweeplyTextSub).lineLimit(1)
+                Text("\(job.serviceType.rawValue) · \(durationStr) · \(clientCity)").font(.system(size: 12)).foregroundStyle(Color.sweeplyTextSub).lineLimit(1)
             }
         }.padding(.vertical, 10)
     }
@@ -857,89 +875,170 @@ struct ProfileMenuView: View {
     @Environment(\.dismiss) private var dismiss
     @Binding var showSettings: Bool
     @Binding var showTeam: Bool
-    
+
     private var profile: UserProfile { profileStore.profile ?? MockData.profile }
-    
+
     var body: some View {
-        VStack(spacing: 24) {
-            // Branded Identity Card
-            VStack(spacing: 16) {
-                ZStack {
-                    Circle().fill(Color.sweeplyNavy.gradient).frame(width: 80, height: 80)
-                    Text(initials).font(.system(size: 32, weight: .bold)).foregroundStyle(.white)
+        VStack(spacing: 0) {
+            // ── Dark identity hero ───────────────────────────────
+            VStack(alignment: .leading, spacing: 0) {
+                // Drag handle
+                Capsule()
+                    .fill(Color.white.opacity(0.25))
+                    .frame(width: 36, height: 4)
+                    .frame(maxWidth: .infinity)
+                    .padding(.top, 12)
+                    .padding(.bottom, 24)
+
+                HStack(spacing: 16) {
+                    // Avatar
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 18, style: .continuous)
+                            .fill(Color.white.opacity(0.12))
+                            .frame(width: 64, height: 64)
+                        RoundedRectangle(cornerRadius: 18, style: .continuous)
+                            .stroke(Color.white.opacity(0.18), lineWidth: 1)
+                            .frame(width: 64, height: 64)
+                        Text(initials)
+                            .font(.system(size: 24, weight: .bold))
+                            .foregroundStyle(.white)
+                    }
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(profile.fullName)
+                            .font(.system(size: 18, weight: .bold))
+                            .foregroundStyle(.white)
+                            .lineLimit(1)
+                        Text(profile.email)
+                            .font(.system(size: 12))
+                            .foregroundStyle(.white.opacity(0.55))
+                            .lineLimit(1)
+                        if !profile.businessName.isEmpty {
+                            Text(profile.businessName)
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundStyle(Color.sweeplyAccent)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 3)
+                                .background(Color.sweeplyAccent.opacity(0.15))
+                                .clipShape(Capsule())
+                                .overlay(Capsule().stroke(Color.sweeplyAccent.opacity(0.3), lineWidth: 1))
+                                .padding(.top, 2)
+                        }
+                    }
+
+                    Spacer()
                 }
-                VStack(spacing: 4) {
-                    Text(profile.fullName).font(.system(size: 20, weight: .bold))
-                    Text(profile.email).font(.system(size: 14)).foregroundStyle(Color.sweeplyTextSub)
-                    Text(profile.businessName).font(.system(size: 14, weight: .semibold)).foregroundStyle(Color.sweeplyAccent).padding(.top, 4)
-                }
+                .padding(.horizontal, 24)
+                .padding(.bottom, 28)
             }
-            .padding(.top, 32)
-            
-            Divider()
-            
-            // Actions
-            VStack(spacing: 8) {
-                Button {
-                    dismiss()
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                        showSettings = true
+            .background(Color.sweeplyNavy)
+
+            // ── Action tiles ─────────────────────────────────────
+            VStack(spacing: 0) {
+                HStack(spacing: 12) {
+                    ProfileActionTile(
+                        icon: "gearshape.fill",
+                        label: "Settings",
+                        iconBg: Color.sweeplyNavy.opacity(0.08),
+                        iconFg: Color.sweeplyNavy
+                    ) {
+                        dismiss()
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) { showSettings = true }
                     }
-                } label: {
-                    HStack(spacing: 12) {
-                        Image(systemName: "gearshape.fill")
-                        Text("Settings")
-                        Spacer()
-                        Image(systemName: "chevron.right").font(.system(size: 12)).foregroundStyle(Color.sweeplyBorder)
+
+                    ProfileActionTile(
+                        icon: "person.2.fill",
+                        label: "My Team",
+                        iconBg: Color.sweeplyAccent.opacity(0.10),
+                        iconFg: Color.sweeplyAccent
+                    ) {
+                        dismiss()
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { showTeam = true }
                     }
-                    .font(.system(size: 16, weight: .medium))
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 14)
                 }
-                .buttonStyle(.plain)
+                .padding(.horizontal, 20)
+                .padding(.top, 20)
+                .padding(.bottom, 16)
 
-                Divider().padding(.leading, 52)
-
-                Button {
-                    dismiss()
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
-                        showTeam = true
-                    }
-                } label: {
-                    HStack(spacing: 12) {
-                        Image(systemName: "person.2.fill")
-                        Text("My Team")
-                        Spacer()
-                        Image(systemName: "chevron.right").font(.system(size: 12)).foregroundStyle(Color.sweeplyBorder)
-                    }
-                    .font(.system(size: 16, weight: .medium))
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 14)
-                }
-                .buttonStyle(.plain)
-
-                Divider().padding(.leading, 52)
-
+                // ── Sign out ─────────────────────────────────────
                 Button {
                     Task { await session.signOut(); dismiss() }
                 } label: {
-                    HStack(spacing: 12) {
+                    HStack(spacing: 10) {
                         Image(systemName: "rectangle.portrait.and.arrow.right")
+                            .font(.system(size: 14, weight: .semibold))
                         Text("Sign Out")
+                            .font(.system(size: 14, weight: .semibold))
                         Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 11, weight: .semibold))
+                            .opacity(0.4)
                     }
-                    .font(.system(size: 16, weight: .medium))
                     .foregroundStyle(Color.sweeplyDestructive)
-                    .padding(.horizontal, 20)
+                    .padding(.horizontal, 18)
                     .padding(.vertical, 14)
+                    .background(Color.sweeplyDestructive.opacity(0.06))
+                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .stroke(Color.sweeplyDestructive.opacity(0.18), lineWidth: 1)
+                    )
                 }
                 .buttonStyle(.plain)
+                .padding(.horizontal, 20)
+                .padding(.bottom, 32)
             }
+            .background(Color.sweeplyBackground)
         }
-        .background(Color.sweeplySurface)
+        .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
+        .background(Color.sweeplyBackground)
     }
-    
+
     private var initials: String {
         profile.fullName.split(separator: " ").compactMap { $0.first }.map { String($0) }.joined()
+    }
+}
+
+private struct ProfileActionTile: View {
+    let icon: String
+    let label: String
+    let iconBg: Color
+    let iconFg: Color
+    let action: () -> Void
+
+    @State private var isPressed = false
+
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: 10) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .fill(iconBg)
+                        .frame(width: 52, height: 52)
+                    Image(systemName: icon)
+                        .font(.system(size: 20, weight: .semibold))
+                        .foregroundStyle(iconFg)
+                }
+                Text(label)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(Color.sweeplyNavy)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 18)
+            .background(Color.sweeplySurface)
+            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .stroke(Color.sweeplyBorder, lineWidth: 1)
+            )
+            .scaleEffect(isPressed ? 0.96 : 1.0)
+            .animation(.easeOut(duration: 0.12), value: isPressed)
+        }
+        .buttonStyle(.plain)
+        .simultaneousGesture(
+            DragGesture(minimumDistance: 0)
+                .onChanged { _ in isPressed = true }
+                .onEnded { _ in isPressed = false }
+        )
     }
 }

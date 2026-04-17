@@ -35,7 +35,7 @@ final class JobsStore {
         do {
             let rows: [JobRow] = try await client
                 .from("jobs")
-                .select()
+                .select("*, recurrence_rules(frequency)")
                 .order("scheduled_at", ascending: false)
                 .execute()
                 .value
@@ -321,6 +321,10 @@ struct HealthStats: Decodable {
 
 // MARK: - DTOs
 
+private struct RecurrenceRuleEmbed: Decodable {
+    let frequency: String
+}
+
 private struct JobRow: Decodable {
     let id: UUID
     let userId: UUID
@@ -334,6 +338,7 @@ private struct JobRow: Decodable {
     let address: String
     let isRecurring: Bool
     let recurrence_rule_id: UUID?
+    let recurrence_rules: RecurrenceRuleEmbed?
 
     enum CodingKeys: String, CodingKey {
         case id, address, price, status
@@ -345,6 +350,7 @@ private struct JobRow: Decodable {
         case durationHours = "duration_hours"
         case isRecurring  = "is_recurring"
         case recurrence_rule_id
+        case recurrence_rules
     }
 
     func toJob() -> Job {
@@ -359,7 +365,8 @@ private struct JobRow: Decodable {
             status: JobStatus(rawValue: status) ?? .scheduled,
             address: address,
             isRecurring: isRecurring,
-            recurrenceRuleId: recurrence_rule_id
+            recurrenceRuleId: recurrence_rule_id,
+            recurrenceFrequency: recurrence_rules.flatMap { RecurrenceFrequency(rawValue: $0.frequency) }
         )
     }
 }

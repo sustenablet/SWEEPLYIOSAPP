@@ -262,6 +262,14 @@ struct JobDetailView: View {
             SectionCard {
                 VStack(alignment: .leading, spacing: 14) {
                     JobInfoRow(icon: "mappin.and.ellipse", title: "Location", value: job.address.isEmpty ? "No address provided" : job.address)
+                    if job.isRecurring {
+                        Divider()
+                        JobInfoRow(
+                            icon: "arrow.triangle.2.circlepath",
+                            title: "Recurring",
+                            value: job.recurrenceFrequency?.displayName ?? "Recurring"
+                        )
+                    }
                     Divider()
                     JobInfoRow(icon: "clock.fill", title: "Est. Duration", value: "\(Int(job.duration)) Hours")
                     Divider()
