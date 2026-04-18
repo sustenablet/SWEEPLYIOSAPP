@@ -212,31 +212,57 @@ final class AppSession {
 
         struct MemberRow: Decodable {
             let id: UUID
+            let ownerId: UUID
             let status: String
             let role: String
-            let profiles: ProfileEmbed?
+            enum CodingKeys: String, CodingKey {
+                case id, status, role
+                case ownerId = "owner_id"
+            }
+        }
 
-            struct ProfileEmbed: Decodable {
-                let businessName: String?
-                enum CodingKeys: String, CodingKey { case businessName = "business_name" }
+        struct ProfileRow: Decodable {
+            let id: UUID
+            let businessName: String?
+            enum CodingKeys: String, CodingKey {
+                case id
+                case businessName = "business_name"
             }
         }
 
         do {
+            // Step 1: get all team_member rows for this user
             let rows: [MemberRow] = try await client
                 .from("team_members")
-                .select("id, status, role, profiles!owner_id(business_name)")
+                .select("id, owner_id, status, role")
                 .eq("cleaner_user_id", value: userId.uuidString)
                 .execute()
                 .value
 
+            guard !rows.isEmpty else {
+                pendingInvites = []
+                activeMemberships = []
+                return
+            }
+
+            // Step 2: fetch owner profiles for business names
+            let ownerIds = Array(Set(rows.map { $0.ownerId.uuidString }))
+            let profiles: [ProfileRow] = (try? await client
+                .from("profiles")
+                .select("id, business_name")
+                .in("id", values: ownerIds)
+                .execute()
+                .value) ?? []
+
+            let profileMap = Dictionary(uniqueKeysWithValues: profiles.map { ($0.id, $0.businessName ?? "A Team") })
+
             pendingInvites = rows
                 .filter { $0.status == "invited" }
-                .map { PendingInvite(id: $0.id, businessName: $0.profiles?.businessName ?? "A Team", role: $0.role) }
+                .map { PendingInvite(id: $0.id, businessName: profileMap[$0.ownerId] ?? "A Team", role: $0.role) }
 
             activeMemberships = rows
                 .filter { $0.status == "active" }
-                .map { TeamMembership(id: $0.id, businessName: $0.profiles?.businessName ?? "A Team", role: $0.role) }
+                .map { TeamMembership(id: $0.id, businessName: profileMap[$0.ownerId] ?? "A Team", role: $0.role) }
 
             // If user was in a membership that's no longer active, reset to own business
             if case .memberOf(let m) = currentViewMode {
