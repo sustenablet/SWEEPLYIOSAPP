@@ -5,18 +5,18 @@ struct CleanerRootView: View {
 
     let membership: TeamMembership
 
-    @State private var selectedTab: Tab = .today
+    @State private var selectedTab: Tab = .dashboard
 
-    enum Tab { case today, upcoming, profile }
+    enum Tab { case dashboard, upcoming, profile }
 
     var body: some View {
         TabView(selection: $selectedTab) {
-            CleanerHomeView(membership: membership)
-                .tabItem { Label("Today", systemImage: "calendar.badge.clock") }
-                .tag(Tab.today)
+            CleanerDashboardView(membership: membership)
+                .tabItem { Label("Dashboard", systemImage: "square.grid.2x2.fill") }
+                .tag(Tab.dashboard)
 
             CleanerUpcomingView(membership: membership)
-                .tabItem { Label("Upcoming", systemImage: "list.bullet.below.rectangle") }
+                .tabItem { Label("Upcoming", systemImage: "calendar") }
                 .tag(Tab.upcoming)
 
             CleanerProfileView(membership: membership)
