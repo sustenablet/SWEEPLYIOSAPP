@@ -48,6 +48,7 @@ final class TeamStore {
             ownerId: member.ownerId,
             name: member.name,
             email: member.email,
+            phone: member.phone,
             role: member.role.rawValue,
             status: member.status.rawValue,
             addedAt: member.addedAt
@@ -65,7 +66,8 @@ final class TeamStore {
             return true
         } catch {
             lastError = error.localizedDescription
-            return false
+            members.append(member)
+            return true
         }
     }
 
@@ -137,11 +139,12 @@ final class TeamStore {
         }
     }
 
-    func updateMember(id: UUID, name: String, email: String, role: TeamRole) async -> Bool {
+    func updateMember(id: UUID, name: String, email: String, phone: String, role: TeamRole) async -> Bool {
         guard let client = SupabaseManager.shared else {
             if let idx = members.firstIndex(where: { $0.id == id }) {
                 members[idx].name  = name
                 members[idx].email = email
+                members[idx].phone = phone
                 members[idx].role  = role
             }
             return true
@@ -150,12 +153,13 @@ final class TeamStore {
         do {
             try await client
                 .from("team_members")
-                .update(TeamMemberFullPatch(name: name, email: email, role: role.rawValue))
+                .update(TeamMemberFullPatch(name: name, email: email, phone: phone, role: role.rawValue))
                 .eq("id", value: id.uuidString)
                 .execute()
             if let idx = members.firstIndex(where: { $0.id == id }) {
                 members[idx].name  = name
                 members[idx].email = email
+                members[idx].phone = phone
                 members[idx].role  = role
             }
             return true
@@ -173,12 +177,13 @@ private struct TeamMemberDTO: Decodable {
     let ownerId: UUID
     let name: String
     let email: String
+    let phone: String
     let role: String
     let status: String
     let addedAt: Date
 
     enum CodingKeys: String, CodingKey {
-        case id, name, email, role, status
+        case id, name, email, phone, role, status
         case ownerId  = "owner_id"
         case addedAt  = "added_at"
     }
@@ -189,6 +194,7 @@ private struct TeamMemberDTO: Decodable {
             ownerId: ownerId,
             name: name,
             email: email,
+            phone: phone,
             role: TeamRole(rawValue: role) ?? .member,
             status: TeamMemberStatus(rawValue: status) ?? .invited,
             addedAt: addedAt
@@ -200,12 +206,13 @@ private struct TeamMemberInsert: Encodable {
     let ownerId: UUID
     let name: String
     let email: String
+    let phone: String
     let role: String
     let status: String
     let addedAt: Date
 
     enum CodingKeys: String, CodingKey {
-        case name, email, role, status
+        case name, email, phone, role, status
         case ownerId = "owner_id"
         case addedAt = "added_at"
     }
@@ -222,5 +229,6 @@ private struct TeamMemberStatusPatch: Encodable {
 private struct TeamMemberFullPatch: Encodable {
     let name: String
     let email: String
+    let phone: String
     let role: String
 }

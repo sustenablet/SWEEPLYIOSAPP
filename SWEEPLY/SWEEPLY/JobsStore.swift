@@ -66,7 +66,9 @@ final class JobsStore {
                 status: job.status.rawValue,
                 address: job.address,
                 isRecurring: job.isRecurring,
-                recurrence_rule_id: job.recurrenceRuleId
+                recurrence_rule_id: job.recurrenceRuleId,
+                assignedMemberId: job.assignedMemberId,
+                assignedMemberName: job.assignedMemberName
             )
             let inserted: JobRow = try await client
                 .from("jobs")
@@ -108,7 +110,9 @@ final class JobsStore {
                 status: job.status.rawValue,
                 address: job.address,
                 isRecurring: job.isRecurring,
-                recurrence_rule_id: job.recurrenceRuleId
+                recurrence_rule_id: job.recurrenceRuleId,
+                assignedMemberId: job.assignedMemberId,
+                assignedMemberName: job.assignedMemberName
             )
             let refreshed: JobRow = try await client
                 .from("jobs")
@@ -339,18 +343,22 @@ private struct JobRow: Decodable {
     let isRecurring: Bool
     let recurrence_rule_id: UUID?
     let recurrence_rules: RecurrenceRuleEmbed?
+    let assignedMemberId: UUID?
+    let assignedMemberName: String?
 
     enum CodingKeys: String, CodingKey {
         case id, address, price, status
-        case userId       = "user_id"
-        case clientId     = "client_id"
-        case clientName   = "client_name"
-        case serviceType  = "service_type"
-        case scheduledAt  = "scheduled_at"
-        case durationHours = "duration_hours"
-        case isRecurring  = "is_recurring"
+        case userId            = "user_id"
+        case clientId          = "client_id"
+        case clientName        = "client_name"
+        case serviceType       = "service_type"
+        case scheduledAt       = "scheduled_at"
+        case durationHours     = "duration_hours"
+        case isRecurring       = "is_recurring"
         case recurrence_rule_id
         case recurrence_rules
+        case assignedMemberId  = "assigned_member_id"
+        case assignedMemberName = "assigned_member_name"
     }
 
     func toJob() -> Job {
@@ -366,7 +374,9 @@ private struct JobRow: Decodable {
             address: address,
             isRecurring: isRecurring,
             recurrenceRuleId: recurrence_rule_id,
-            recurrenceFrequency: recurrence_rules.flatMap { RecurrenceFrequency(rawValue: $0.frequency) }
+            recurrenceFrequency: recurrence_rules.flatMap { RecurrenceFrequency(rawValue: $0.frequency) },
+            assignedMemberId: assignedMemberId,
+            assignedMemberName: assignedMemberName
         )
     }
 }
@@ -382,16 +392,20 @@ private struct JobRowPatch: Encodable {
     let address: String
     let isRecurring: Bool
     let recurrence_rule_id: UUID?
+    let assignedMemberId: UUID?
+    let assignedMemberName: String?
 
     enum CodingKeys: String, CodingKey {
         case address, price, status
-        case clientId      = "client_id"
-        case clientName    = "client_name"
-        case serviceType   = "service_type"
-        case scheduledAt   = "scheduled_at"
-        case durationHours = "duration_hours"
-        case isRecurring   = "is_recurring"
+        case clientId           = "client_id"
+        case clientName         = "client_name"
+        case serviceType        = "service_type"
+        case scheduledAt        = "scheduled_at"
+        case durationHours      = "duration_hours"
+        case isRecurring        = "is_recurring"
         case recurrence_rule_id
+        case assignedMemberId   = "assigned_member_id"
+        case assignedMemberName = "assigned_member_name"
     }
 }
 
@@ -407,17 +421,21 @@ private struct JobRowInsert: Encodable {
     let address: String
     let isRecurring: Bool
     let recurrence_rule_id: UUID?
+    let assignedMemberId: UUID?
+    let assignedMemberName: String?
 
     enum CodingKeys: String, CodingKey {
         case address, price, status
-        case userId        = "user_id"
-        case clientId      = "client_id"
-        case clientName    = "client_name"
-        case serviceType   = "service_type"
-        case scheduledAt   = "scheduled_at"
-        case durationHours = "duration_hours"
-        case isRecurring   = "is_recurring"
+        case userId             = "user_id"
+        case clientId           = "client_id"
+        case clientName         = "client_name"
+        case serviceType        = "service_type"
+        case scheduledAt        = "scheduled_at"
+        case durationHours      = "duration_hours"
+        case isRecurring        = "is_recurring"
         case recurrence_rule_id
+        case assignedMemberId   = "assigned_member_id"
+        case assignedMemberName = "assigned_member_name"
     }
 }
 

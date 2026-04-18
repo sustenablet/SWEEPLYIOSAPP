@@ -5,9 +5,11 @@ struct JobDetailView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(JobsStore.self) private var jobsStore
     @Environment(ClientsStore.self) private var clientsStore
+    @Environment(TeamStore.self) private var teamStore
 
     let jobId: UUID
-    @State private var showInvoiceSheet = false
+    @State private var showInvoiceSheet   = false
+    @State private var showReassignSheet  = false
 
     // Photo attachments
     @State private var photoItems: [PhotosPickerItem] = []
@@ -274,7 +276,47 @@ struct JobDetailView: View {
                     JobInfoRow(icon: "clock.fill", title: "Est. Duration", value: "\(Int(job.duration)) Hours")
                     Divider()
                     JobInfoRow(icon: "tag.fill", title: "Price", value: job.price.currency)
+                    Divider()
+
+                    // Assigned cleaner row
+                    HStack(spacing: 12) {
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 8)
+                                .fill(Color.sweeplyAccent.opacity(0.1))
+                                .frame(width: 32, height: 32)
+                            Image(systemName: "person.fill")
+                                .font(.system(size: 14))
+                                .foregroundStyle(Color.sweeplyAccent)
+                        }
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Assigned To")
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundStyle(Color.sweeplyTextSub)
+                            Text(job.assignedMemberName ?? "Unassigned")
+                                .font(.system(size: 14, weight: .medium))
+                                .foregroundStyle(job.assignedMemberName != nil ? Color.sweeplyNavy : Color.sweeplyTextSub)
+                        }
+                        Spacer()
+                        Button {
+                            showReassignSheet = true
+                        } label: {
+                            Image(systemName: "pencil")
+                                .font(.system(size: 13, weight: .semibold))
+                                .foregroundStyle(Color.sweeplyNavy.opacity(0.5))
+                                .frame(width: 28, height: 28)
+                                .background(Color.sweeplyBorder.opacity(0.4))
+                                .clipShape(Circle())
+                        }
+                        .buttonStyle(.plain)
+                    }
                 }
+            }
+        }
+        .sheet(isPresented: $showReassignSheet) {
+            if let job {
+                ReassignCleanerSheet(job: job)
+                    .environment(teamStore)
+                    .environment(jobsStore)
             }
         }
     }
@@ -429,6 +471,115 @@ private struct PhotoIndex: Identifiable {
     let id = UUID()
     let value: Int
     init(_ value: Int) { self.value = value }
+}
+
+// MARK: - Reassign Cleaner Sheet
+
+struct ReassignCleanerSheet: View {
+    @Environment(\.dismiss)   private var dismiss
+    @Environment(TeamStore.self)  private var teamStore
+    @Environment(JobsStore.self)  private var jobsStore
+
+    let job: Job
+    @State private var selectedId: UUID? = nil
+    @State private var isSaving = false
+
+    private var activeCleaners: [TeamMember] {
+        teamStore.members.filter { $0.role == .member && $0.status == .active }
+    }
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                Color.sweeplyBackground.ignoresSafeArea()
+                ScrollView {
+                    VStack(spacing: 8) {
+                        // Unassigned option
+                        cleanerRow(name: "Unassigned", initials: nil, isSelected: selectedId == nil) {
+                            selectedId = nil
+                        }
+                        Divider().padding(.leading, 54)
+                        ForEach(activeCleaners) { cleaner in
+                            cleanerRow(name: cleaner.name, initials: cleaner.initials, isSelected: selectedId == cleaner.id) {
+                                selectedId = cleaner.id
+                            }
+                            if cleaner.id != activeCleaners.last?.id {
+                                Divider().padding(.leading, 54)
+                            }
+                        }
+                    }
+                    .background(Color.sweeplySurface, in: RoundedRectangle(cornerRadius: 14))
+                    .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.sweeplyBorder, lineWidth: 1))
+                    .padding(20)
+                }
+            }
+            .navigationTitle("Assign Cleaner")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Cancel") { dismiss() }.foregroundStyle(Color.sweeplyTextSub)
+                }
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button {
+                        Task { await save() }
+                    } label: {
+                        if isSaving {
+                            ProgressView().scaleEffect(0.8)
+                        } else {
+                            Text("Save").font(.system(size: 15, weight: .semibold)).foregroundStyle(Color.sweeplyNavy)
+                        }
+                    }
+                    .disabled(isSaving)
+                }
+            }
+        }
+        .onAppear {
+            selectedId = job.assignedMemberId
+        }
+    }
+
+    private func cleanerRow(name: String, initials: String?, isSelected: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 12) {
+                ZStack {
+                    Circle()
+                        .fill(initials != nil ? Color.sweeplyAccent.opacity(0.15) : Color.sweeplyBorder.opacity(0.4))
+                        .frame(width: 34, height: 34)
+                    if let initials {
+                        Text(initials)
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundStyle(Color.sweeplyAccent)
+                    } else {
+                        Image(systemName: "person.slash")
+                            .font(.system(size: 14))
+                            .foregroundStyle(Color.sweeplyTextSub)
+                    }
+                }
+                Text(name)
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundStyle(Color.sweeplyNavy)
+                Spacer()
+                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                    .font(.system(size: 20))
+                    .foregroundStyle(isSelected ? Color.sweeplyAccent : Color.sweeplyBorder)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+        }
+        .buttonStyle(.plain)
+    }
+
+    @MainActor
+    private func save() async {
+        isSaving = true
+        defer { isSaving = false }
+        let name = activeCleaners.first { $0.id == selectedId }?.name
+        var updated = job
+        updated.assignedMemberId   = selectedId
+        updated.assignedMemberName = name
+        let ok = await jobsStore.update(updated)
+        if ok { dismiss() }
+    }
 }
 
 // MARK: - Full screen photo viewer

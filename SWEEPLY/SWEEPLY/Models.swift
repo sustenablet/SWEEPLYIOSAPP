@@ -199,6 +199,8 @@ struct Job: Identifiable, Codable {
     var isRecurring: Bool
     var recurrenceRuleId: UUID? = nil
     var recurrenceFrequency: RecurrenceFrequency? = nil
+    var assignedMemberId: UUID? = nil
+    var assignedMemberName: String? = nil
 }
 
 struct RecurrenceRule: Identifiable, Codable {
@@ -333,13 +335,15 @@ enum TeamRole: String, CaseIterable, Codable {
 }
 
 enum TeamMemberStatus: String, Codable {
-    case invited = "invited"
-    case active  = "active"
+    case invited  = "invited"
+    case active   = "active"
+    case inactive = "inactive"
 
     var displayName: String {
         switch self {
-        case .invited: return "Invited"
-        case .active:  return "Active"
+        case .invited:  return "Invited"
+        case .active:   return "Active"
+        case .inactive: return "Inactive"
         }
     }
 }
@@ -349,6 +353,7 @@ struct TeamMember: Identifiable, Codable {
     var ownerId : UUID
     var name    : String
     var email   : String
+    var phone   : String = ""
     var role    : TeamRole
     var status  : TeamMemberStatus
     var addedAt : Date

@@ -6,6 +6,7 @@ struct NewJobForm: View {
     @Environment(ClientsStore.self)  private var clientsStore
     @Environment(ProfileStore.self)  private var profileStore
     @Environment(JobsStore.self)     private var jobsStore
+    @Environment(TeamStore.self)     private var teamStore
 
     @State private var selectedClientId: UUID? = nil
 
@@ -26,6 +27,7 @@ struct NewJobForm: View {
     @State private var selectedExtras: [BusinessService] = []
     @State private var showExtrasPicker = false
     @State private var baseServicePrice: Double = 0
+    @State private var assignedMemberId: UUID? = nil
 
     /// Default to the next full hour, at minimum 1 hour from now.
     private static func defaultJobDate() -> Date {
@@ -55,6 +57,15 @@ struct NewJobForm: View {
 
     private var extrasTotalPrice: Double {
         selectedExtras.reduce(0) { $0 + $1.price }
+    }
+
+    private var activeCleaners: [TeamMember] {
+        teamStore.members.filter { $0.role == .member && $0.status == .active }
+    }
+
+    private var assignedMember: TeamMember? {
+        guard let id = assignedMemberId else { return nil }
+        return activeCleaners.first { $0.id == id }
     }
 
     private var selectedServiceLabel: String {
@@ -397,6 +408,57 @@ struct NewJobForm: View {
                             .buttonStyle(.plain)
                         }
                     }
+                    // 4. Assign Cleaner (only if there are active cleaners)
+                    if !activeCleaners.isEmpty {
+                        VStack(alignment: .leading, spacing: 12) {
+                            SectionHeader(title: "ASSIGN CLEANER")
+
+                            Menu {
+                                Button {
+                                    assignedMemberId = nil
+                                } label: {
+                                    Label("Unassigned", systemImage: "person.slash")
+                                }
+                                Divider()
+                                ForEach(activeCleaners) { cleaner in
+                                    Button {
+                                        assignedMemberId = cleaner.id
+                                    } label: {
+                                        Label(cleaner.name, systemImage: "person.fill")
+                                    }
+                                }
+                            } label: {
+                                HStack(spacing: 10) {
+                                    ZStack {
+                                        Circle()
+                                            .fill(assignedMember != nil ? Color.sweeplyAccent.opacity(0.15) : Color.sweeplyBorder.opacity(0.4))
+                                            .frame(width: 32, height: 32)
+                                        if let m = assignedMember {
+                                            Text(m.initials)
+                                                .font(.system(size: 11, weight: .bold))
+                                                .foregroundStyle(Color.sweeplyAccent)
+                                        } else {
+                                            Image(systemName: "person.fill")
+                                                .font(.system(size: 13))
+                                                .foregroundStyle(Color.sweeplyTextSub)
+                                        }
+                                    }
+                                    Text(assignedMember?.name ?? "Unassigned")
+                                        .font(.system(size: 15, weight: .medium))
+                                        .foregroundStyle(assignedMember != nil ? Color.sweeplyNavy : Color.sweeplyTextSub)
+                                    Spacer()
+                                    Image(systemName: "chevron.up.chevron.down")
+                                        .font(.system(size: 12, weight: .semibold))
+                                        .foregroundStyle(Color.sweeplyTextSub)
+                                }
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 12)
+                                .background(Color.sweeplySurface)
+                                .clipShape(RoundedRectangle(cornerRadius: 12))
+                                .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.sweeplyBorder, lineWidth: 1))
+                            }
+                        }
+                    }
                 }
                 .padding(.horizontal, 24)
                 .padding(.bottom, 40)
@@ -529,7 +591,9 @@ struct NewJobForm: View {
                 price: finalPrice,
                 status: .scheduled,
                 address: client.address,
-                isRecurring: false
+                isRecurring: false,
+                assignedMemberId: assignedMemberId,
+                assignedMemberName: assignedMember?.name
             )
             success = await jobsStore.insert(newJob, userId: userId)
         } else {

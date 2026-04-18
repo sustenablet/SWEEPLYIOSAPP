@@ -87,6 +87,11 @@ struct SWEEPLYApp: App {
                     registerQuickActions()
                     AppDelegate.scheduleBackgroundRefresh()
                     LocationManager.shared.requestPermission()
+                    Task {
+                        if appSession.isAuthenticated, let uid = appSession.userId {
+                            await teamStore.load(ownerId: uid)
+                        }
+                    }
                 }
                 .onOpenURL { url in
                     if url.scheme == "sweeply" {

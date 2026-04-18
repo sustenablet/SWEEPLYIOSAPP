@@ -14,9 +14,10 @@ struct TeamView: View {
 
     @Environment(\.dismiss) private var dismiss
 
-    private var cleaners: [TeamMember] { teamStore.members.filter { $0.role == .member } }
-    private var activeCount: Int  { teamStore.members.filter { $0.status == .active  }.count }
-    private var invitedCount: Int { teamStore.members.filter { $0.status == .invited }.count }
+    private var cleaners: [TeamMember]  { teamStore.members.filter { $0.role == .member } }
+    private var activeCount: Int   { teamStore.members.filter { $0.status == .active   }.count }
+    private var invitedCount: Int  { teamStore.members.filter { $0.status == .invited  }.count }
+    private var inactiveCount: Int { teamStore.members.filter { $0.status == .inactive }.count }
 
     var body: some View {
         NavigationStack {
@@ -129,6 +130,8 @@ struct TeamView: View {
             statCell(value: "\(activeCount)", label: "Active")
             statDivider
             statCell(value: "\(invitedCount)", label: "Invited")
+            statDivider
+            statCell(value: "\(inactiveCount)", label: "Inactive")
         }
         .padding(.vertical, 14)
         .background(Color.sweeplySurface, in: RoundedRectangle(cornerRadius: 14))
@@ -318,6 +321,7 @@ struct EditMemberSheet: View {
 
     @State private var name     : String
     @State private var email    : String
+    @State private var phone    : String
     @State private var role     : TeamRole
     @State private var isSaving = false
     @State private var showDeleteConfirm = false
@@ -328,12 +332,14 @@ struct EditMemberSheet: View {
         self.member = member
         _name  = State(initialValue: member.name)
         _email = State(initialValue: member.email)
+        _phone = State(initialValue: member.phone)
         _role  = State(initialValue: member.role)
     }
 
     private var hasChanges: Bool {
         name.trimmingCharacters(in: .whitespaces) != member.name ||
         email.trimmingCharacters(in: .whitespaces).lowercased() != member.email ||
+        phone.trimmingCharacters(in: .whitespaces) != member.phone ||
         role != member.role
     }
 
@@ -378,6 +384,14 @@ struct EditMemberSheet: View {
 
                             Divider().padding(.leading, 80)
 
+                            editFieldRow(label: "Phone") {
+                                TextField("(555) 000-0000", text: $phone)
+                                    .font(.system(size: 15))
+                                    .keyboardType(.phonePad)
+                            }
+
+                            Divider().padding(.leading, 80)
+
                             editFieldRow(label: "Role") {
                                 Picker("Role", selection: $role) {
                                     ForEach(TeamRole.allCases.filter { $0 != .owner }, id: \.self) { r in
@@ -391,9 +405,9 @@ struct EditMemberSheet: View {
                         .background(Color.sweeplySurface, in: RoundedRectangle(cornerRadius: 14))
                         .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.sweeplyBorder, lineWidth: 1))
 
-                        // Status + Resend actions
-                        if member.status == .invited {
-                            VStack(spacing: 10) {
+                        // Status actions
+                        VStack(spacing: 10) {
+                            if member.status == .invited || member.status == .inactive {
                                 actionButton(
                                     title: "Mark as Active",
                                     icon: "checkmark.circle",
@@ -408,7 +422,26 @@ struct EditMemberSheet: View {
                                         }
                                     }
                                 }
+                            }
 
+                            if member.status == .active {
+                                actionButton(
+                                    title: "Mark as Inactive",
+                                    icon: "moon.circle",
+                                    color: Color.sweeplyTextSub
+                                ) {
+                                    Task {
+                                        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                                        let ok = await teamStore.updateStatus(id: member.id, status: .inactive)
+                                        if ok {
+                                            UINotificationFeedbackGenerator().notificationOccurred(.success)
+                                            dismiss()
+                                        }
+                                    }
+                                }
+                            }
+
+                            if member.status == .invited {
                                 actionButton(
                                     title: "Resend Invite",
                                     icon: "paperplane",
@@ -505,6 +538,7 @@ struct EditMemberSheet: View {
             id: member.id,
             name: name.trimmingCharacters(in: .whitespaces),
             email: email.trimmingCharacters(in: .whitespaces).lowercased(),
+            phone: phone.trimmingCharacters(in: .whitespaces),
             role: role
         )
         if ok {
@@ -548,7 +582,7 @@ struct EditMemberSheet: View {
     private func statusDot(_ status: TeamMemberStatus) -> some View {
         HStack(spacing: 5) {
             Circle()
-                .fill(status == .active ? Color.sweeplySuccess : Color.sweeplyTextSub.opacity(0.4))
+                .fill(status == .active ? Color.sweeplySuccess : status == .inactive ? Color.sweeplyWarning : Color.sweeplyTextSub.opacity(0.4))
                 .frame(width: 6, height: 6)
             Text(status.displayName)
                 .font(.system(size: 12, weight: .medium))
@@ -568,6 +602,7 @@ struct InviteMemberSheet: View {
 
     @State private var name    = ""
     @State private var email   = ""
+    @State private var phone   = ""
     @State private var role    = TeamRole.member
     @State private var isSaving = false
     @State private var showShareSheet = false
@@ -594,6 +629,14 @@ struct InviteMemberSheet: View {
                                     .keyboardType(.emailAddress)
                                     .autocapitalization(.none)
                                     .autocorrectionDisabled()
+                            }
+
+                            Divider().padding(.leading, 80)
+
+                            fieldRow(label: "Phone") {
+                                TextField("(555) 000-0000", text: $phone)
+                                    .font(.system(size: 15))
+                                    .keyboardType(.phonePad)
                             }
 
                             Divider().padding(.leading, 80)
@@ -665,6 +708,7 @@ struct InviteMemberSheet: View {
             ownerId: ownerId,
             name: name.trimmingCharacters(in: .whitespaces),
             email: email.trimmingCharacters(in: .whitespaces).lowercased(),
+            phone: phone.trimmingCharacters(in: .whitespaces),
             role: role,
             status: .invited,
             addedAt: Date()
