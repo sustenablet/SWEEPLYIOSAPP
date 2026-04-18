@@ -753,8 +753,12 @@ struct InvoicesListView: View {
     @Environment(AppSession.self) private var session
     @Environment(ProfileStore.self) private var profileStore
 
-    @State private var selectedFilter: InvoiceFilter = .all
+    @State private var selectedFilter: InvoiceFilter
     @State private var searchText = ""
+
+    init(preselectedFilter: String = "all") {
+        _selectedFilter = State(initialValue: InvoiceFilter(rawValue: preselectedFilter) ?? .all)
+    }
 
     private enum InvoiceFilter: String, CaseIterable {
         case all = "All"

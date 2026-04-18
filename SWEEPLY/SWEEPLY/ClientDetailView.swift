@@ -58,6 +58,30 @@ struct ClientDetailView: View {
         clientInvoices.filter { $0.status != .paid }.reduce(0) { $0 + $1.total }
     }
 
+    private var clientFrequency: ClientFrequency? {
+        let clientJobs = sourceJobs.filter { $0.clientId == clientId }
+        guard !clientJobs.isEmpty else { return nil }
+        let hasRecurring = clientJobs.contains { $0.isRecurring }
+        guard hasRecurring else { return .oneTime }
+
+        let recurringDates = clientJobs
+            .filter { $0.isRecurring }
+            .map { $0.date }
+            .sorted()
+        guard recurringDates.count >= 2 else { return .recurring }
+
+        let gaps = zip(recurringDates, recurringDates.dropFirst()).map {
+            Calendar.current.dateComponents([.day], from: $0, to: $1).day ?? 0
+        }
+        let avgGap = gaps.reduce(0, +) / gaps.count
+        switch avgGap {
+        case 0...18:  return .weekly
+        case 19...25: return .biweekly
+        case 26...35: return .monthly
+        default:      return .recurring
+        }
+    }
+
     var body: some View {
         Group {
             if let client {
@@ -195,6 +219,22 @@ struct ClientDetailView: View {
                     .padding(.vertical, 4)
                     .background((client.isActive ? Color.sweeplySuccess : Color.sweeplyTextSub).opacity(0.1))
                     .clipShape(Capsule())
+
+                    // Frequency Badge
+                    if let freqLabel = clientFrequency?.label {
+                        HStack(spacing: 4) {
+                            Image(systemName: clientFrequency?.icon ?? "arrow.triangle.2.circlepath")
+                                .font(.system(size: 9, weight: .bold))
+                                .foregroundStyle(clientFrequency?.color ?? Color.sweeplyAccent)
+                            Text(freqLabel)
+                                .font(.system(size: 11, weight: .bold))
+                                .foregroundStyle(clientFrequency?.color ?? Color.sweeplyAccent)
+                        }
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background((clientFrequency?.color ?? Color.sweeplyAccent).opacity(0.12))
+                        .clipShape(Capsule())
+                    }
                 }
                 Spacer()
             }

@@ -103,8 +103,11 @@ struct AppSettings: Codable {
         BusinessService(name: ServiceType.moveInOut.rawValue, price: 320),
         BusinessService(name: ServiceType.postConstruction.rawValue, price: 380),
         BusinessService(name: ServiceType.office.rawValue, price: 350),
-        BusinessService(name: "Clean Windows", price: 40),
-        BusinessService(name: "Do Laundry", price: 30)
+        BusinessService(name: "Clean Windows", price: 40, isAddon: true),
+        BusinessService(name: "Do Laundry", price: 30, isAddon: true),
+        BusinessService(name: "Clean Dishes", price: 15, isAddon: true),
+        BusinessService(name: "Inside Fridge", price: 25, isAddon: true),
+        BusinessService(name: "Inside Oven", price: 30, isAddon: true),
     ]
 
     var hydratedServiceCatalog: [BusinessService] {

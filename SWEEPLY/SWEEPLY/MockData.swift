@@ -148,11 +148,37 @@ enum MockData {
     static let notifications: [AppNotification] = [
         AppNotification(
             id: UUID(),
-            title: "Today's route is live",
-            message: "Jobs scheduled for today are ready.",
+            title: "Job Reminder",
+            message: "Standard clean at 123 Main St is scheduled for today at 9:00 AM.",
+            kind: .jobs,
+            timestamp: Date().addingTimeInterval(-3600),
+            isRead: false,
+            jobId: nil
+        ),
+        AppNotification(
+            id: UUID(),
+            title: "Invoice Due Soon",
+            message: "Invoice #INV-001 for ABC Corp is due in 3 days.",
+            kind: .billing,
+            timestamp: Date().addingTimeInterval(-7200),
+            isRead: false,
+            invoiceId: nil
+        ),
+        AppNotification(
+            id: UUID(),
+            title: "Schedule Updated",
+            message: "Job moved from Monday to Wednesday.",
             kind: .schedule,
-            timestamp: Date(),
-            isRead: false
+            timestamp: Date().addingTimeInterval(-86400),
+            isRead: true
+        ),
+        AppNotification(
+            id: UUID(),
+            title: "Payment Received",
+            message: "Invoice #INV-002 for XYZ Inc has been paid.",
+            kind: .billing,
+            timestamp: Date().addingTimeInterval(-172800),
+            isRead: true
         ),
         AppNotification(
             id: UUID(),

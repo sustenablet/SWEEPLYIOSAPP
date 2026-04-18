@@ -18,6 +18,7 @@ struct SplashView: View {
                     .opacity(contentOpacity)
 
                 Spacer()
+                    .frame(height: 120)
 
                 ProgressView()
                     .tint(Color.sweeplyAccent)

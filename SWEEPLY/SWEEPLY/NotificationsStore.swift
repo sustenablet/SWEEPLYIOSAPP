@@ -31,7 +31,9 @@ final class NotificationsStore {
                     message: remote.message,
                     kind: AppNotification.Kind(rawValue: remote.kind) ?? .system,
                     timestamp: remote.createdAt,
-                    isRead: remote.isRead
+                    isRead: remote.isRead,
+                    jobId: remote.jobId,
+                    invoiceId: remote.invoiceId
                 )
             }
             self.isLoaded = true
@@ -137,6 +139,8 @@ struct RemoteNotification: Codable, Identifiable {
     let kind: String
     let isRead: Bool
     let createdAt: Date
+    let jobId: UUID?
+    let invoiceId: UUID?
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -146,12 +150,15 @@ struct RemoteNotification: Codable, Identifiable {
         case kind
         case isRead = "is_read"
         case createdAt = "created_at"
+        case jobId = "job_id"
+        case invoiceId = "invoice_id"
     }
 }
 
 struct AppNotification: Identifiable {
     enum Kind: String, Codable {
         case schedule
+        case jobs
         case billing
         case profile
         case system
@@ -163,4 +170,6 @@ struct AppNotification: Identifiable {
     let kind: Kind
     let timestamp: Date
     var isRead: Bool = false
+    var jobId: UUID? = nil
+    var invoiceId: UUID? = nil
 }
