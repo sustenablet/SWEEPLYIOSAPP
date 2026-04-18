@@ -458,7 +458,7 @@ struct AIChatView: View {
                                 .offset(x: 2, y: -2)
                         }
                         VStack(alignment: .leading, spacing: 1) {
-                            Text("Sweeply AI")
+                            Text(financeMode ? "Finance AI" : "Sweeply AI")
                                 .font(.system(size: 15, weight: .bold))
                                 .foregroundStyle(Color.sweeplyNavy)
                             if messages.contains(where: { $0.role == .user }) {
@@ -2463,6 +2463,36 @@ struct AIChatView: View {
             formatter.dateStyle = .short
             formatter.timeStyle = .short
             nextJobText = "\(job.clientName) on \(formatter.string(from: job.date))"
+        }
+
+        if financeMode {
+            let allInvoices = invoicesStore.invoices
+            let paid = allInvoices.filter { $0.status == .paid }
+            let unpaid = allInvoices.filter { $0.status == .unpaid }
+            let overdue = allInvoices.filter { $0.status == .overdue }
+            let totalCollected = paid.reduce(0) { $0 + $1.amount }
+            let totalOutstanding = unpaid.reduce(0) { $0 + $1.amount }
+            let totalOverdue = overdue.reduce(0) { $0 + $1.amount }
+            let monthStart = Calendar.current.date(from: Calendar.current.dateComponents([.year, .month], from: Date())) ?? Date()
+            let thisMonth = paid.filter { $0.createdAt >= monthStart }.reduce(0) { $0 + $1.amount }
+            let collectionRate = allInvoices.isEmpty ? 0 : Int((Double(paid.count) / Double(allInvoices.count)) * 100)
+            let avgInvoice = allInvoices.isEmpty ? 0 : allInvoices.reduce(0) { $0 + $1.amount } / Double(allInvoices.count)
+
+            return """
+            You are Finance AI, a financial analyst assistant embedded in Sweeply for \(businessName), a cleaning business.
+
+            Live financial data:
+            - Total collected (all time): \(totalCollected.currency)
+            - Collected this month: \(thisMonth.currency)
+            - Outstanding (unpaid): \(totalOutstanding.currency) across \(unpaid.count) invoice\(unpaid.count == 1 ? "" : "s")
+            - Overdue: \(totalOverdue.currency) across \(overdue.count) invoice\(overdue.count == 1 ? "" : "s")
+            - Revenue this week: \(weekRevenue.currency)
+            - Collection rate: \(collectionRate)%
+            - Average invoice value: \(avgInvoice.currency)
+            - Total invoices: \(allInvoices.count)
+
+            Your focus is purely financial: revenue, invoices, cash flow, collection rate, outstanding balances, and financial health. Be concise and data-driven — lead with the numbers. If asked about non-financial topics, gently redirect to finances. Never suggest creating jobs or managing schedules — that's outside your scope here.
+            """
         }
 
         return """

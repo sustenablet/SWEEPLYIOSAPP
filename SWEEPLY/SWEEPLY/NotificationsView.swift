@@ -137,22 +137,26 @@ struct NotificationsView: View {
     // MARK: - Tab Selector
 
     private var tabSelector: some View {
-        HStack(spacing: 8) {
-            ForEach(NotificationTab.allCases, id: \.self) { tab in
-                TabButton(
-                    title: tabLabel(tab),
-                    icon: tabIcon(tab),
-                    isSelected: selectedTab == tab,
-                    action: {
-                        withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
-                            selectedTab = tab
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(NotificationTab.allCases, id: \.self) { tab in
+                    TabButton(
+                        title: tabLabel(tab),
+                        icon: tabIcon(tab),
+                        isSelected: selectedTab == tab,
+                        action: {
+                            withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
+                                selectedTab = tab
+                            }
                         }
-                    }
-                )
+                    )
+                }
             }
+            .padding(.horizontal, 20)
+            .padding(.vertical, 4)
         }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 4)
+        .frame(height: 48)
+        .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
     }
     
     private func tabIcon(_ tab: NotificationTab) -> String {
