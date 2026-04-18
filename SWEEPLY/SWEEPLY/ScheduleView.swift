@@ -20,18 +20,34 @@ struct ScheduleView: View {
     @Environment(AppSession.self) private var session
     @State private var appeared = false
     @AppStorage("scheduleViewModeRaw") private var viewModeRaw: String = ScheduleViewMode.day.rawValue
+    @AppStorage("scheduleEnabledModes") private var enabledModesRaw: String = "Day,List"
 
     private var viewMode: ScheduleViewMode {
         get { ScheduleViewMode(rawValue: viewModeRaw) ?? .day }
         set { viewModeRaw = newValue.rawValue }
     }
+
+    private var enabledViewModes: Set<ScheduleViewMode> {
+        get {
+            let modes = enabledModesRaw.split(separator: ",").compactMap { ScheduleViewMode(rawValue: String($0)) }
+            return modes.isEmpty ? [.day, .list] : Set(modes)
+        }
+    }
+
+    private func setEnabledViewModes(_ modes: Set<ScheduleViewMode>) {
+        enabledModesRaw = modes.map(\.rawValue).joined(separator: ",")
+        // If current view mode was removed, switch to first available
+        if !modes.contains(viewMode), let first = ScheduleViewMode.allCases.first(where: { modes.contains($0) }) {
+            viewModeRaw = first.rawValue
+        }
+    }
+
     @State private var selectedDay: Date = Calendar.current.startOfDay(for: Date())
     @State private var showFilters = false
     @State private var statusFilter: JobStatus? = nil
     @State private var typeFilter: String = "All"
     @State private var showInvoices: Bool = false
     @State private var showMonthPicker = false
-    @State private var enabledViewModes: Set<ScheduleViewMode> = [.day, .list, .month, .map]
     @State private var selectedJobId: UUID? = nil
     @State private var showJobDetail: Bool = false
     @State private var mapCameraPosition: MapCameraPosition = .automatic
@@ -87,7 +103,7 @@ struct ScheduleView: View {
                 updateMapCamera(for: newDay)
             }
             .sheet(isPresented: $showFilters) {
-                JobFiltersView(statusFilter: $statusFilter, typeFilter: $typeFilter, enabledViewModes: $enabledViewModes, showInvoices: $showInvoices)
+                JobFiltersView(statusFilter: $statusFilter, typeFilter: $typeFilter, enabledViewModes: Binding(get: { enabledViewModes }, set: { setEnabledViewModes($0) }), showInvoices: $showInvoices)
                     .presentationDetents([.large])
             }
             .sheet(isPresented: $showMonthPicker) {
