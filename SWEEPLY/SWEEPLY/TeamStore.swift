@@ -63,6 +63,8 @@ final class TeamStore {
                 .execute()
                 .value
             members.append(row.toMember())
+            // Link immediately if the invited email already has an account
+            try? await client.rpc("link_existing_cleaner", params: ["invite_id": row.id.uuidString])
             return true
         } catch {
             lastError = error.localizedDescription
