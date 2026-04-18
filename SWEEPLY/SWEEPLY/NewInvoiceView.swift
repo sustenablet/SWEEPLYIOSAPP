@@ -235,14 +235,27 @@ struct NewInvoiceView: View {
                     UIImpactFeedbackGenerator(style: .light).impactOccurred()
                     showingServicePicker = true
                 } label: {
-                    HStack {
-                        Image(systemName: "plus.circle.fill")
-                            .font(.system(size: 18))
-                            .foregroundStyle(Color.sweeplyAccent)
-                        Text("Add your first service")
-                            .font(.system(size: 15, weight: .medium))
-                            .foregroundStyle(Color.sweeplyNavy)
+                    HStack(spacing: 12) {
+                        ZStack {
+                            Circle()
+                                .fill(Color.sweeplyAccent.opacity(0.12))
+                                .frame(width: 38, height: 38)
+                            Image(systemName: "plus")
+                                .font(.system(size: 15, weight: .bold))
+                                .foregroundStyle(Color.sweeplyAccent)
+                        }
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Select a service or extra")
+                                .font(.system(size: 15, weight: .semibold))
+                                .foregroundStyle(Color.sweeplyNavy)
+                            Text("Choose from your catalog to build the invoice")
+                                .font(.system(size: 12))
+                                .foregroundStyle(Color.sweeplyTextSub)
+                        }
                         Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(Color.sweeplyBorder)
                     }
                     .padding(16)
                     .background(Color.sweeplySurface)
@@ -250,7 +263,7 @@ struct NewInvoiceView: View {
                     .overlay(
                         RoundedRectangle(cornerRadius: 12)
                             .strokeBorder(
-                                Color.sweeplyAccent.opacity(0.5),
+                                Color.sweeplyAccent.opacity(0.4),
                                 style: StrokeStyle(lineWidth: 1.5, dash: [6, 4])
                             )
                     )
@@ -679,8 +692,6 @@ private struct ServicePickerSheet: View {
     let catalog: [BusinessService]
     let onSelect: (InvoiceLineItem) -> Void
 
-    @State private var showingCustomSheet = false
-
     private var mainServices: [BusinessService] { catalog.filter { !$0.isAddon } }
     private var extras: [BusinessService] { catalog.filter { $0.isAddon } }
 
@@ -738,17 +749,6 @@ private struct ServicePickerSheet: View {
                     }
                 }
 
-                Section {
-                    Button {
-                        showingCustomSheet = true
-                    } label: {
-                        Label("Add custom line item", systemImage: "plus.circle")
-                            .font(.system(size: 15))
-                            .foregroundStyle(Color.sweeplyAccent)
-                    }
-                } header: {
-                    Text("CUSTOM")
-                }
             }
             .navigationTitle("Add Service")
             .navigationBarTitleDisplayMode(.inline)
@@ -759,12 +759,6 @@ private struct ServicePickerSheet: View {
             }
         }
         .presentationDetents([.medium, .large])
-        .sheet(isPresented: $showingCustomSheet) {
-            CustomLineItemSheet { item in
-                onSelect(item)
-                dismiss()
-            }
-        }
     }
 }
 
