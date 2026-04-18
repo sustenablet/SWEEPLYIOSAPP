@@ -103,7 +103,7 @@ final class AppSession {
     // MARK: - Invite actions
 
     func acceptInvite(memberId: UUID) async {
-        guard let client = SupabaseManager.shared else { return }
+        guard let client = SupabaseManager.shared, let uid = userId else { return }
         do {
             struct StatusPatch: Encodable { let status: String }
             try await client
@@ -111,8 +111,10 @@ final class AppSession {
                 .update(StatusPatch(status: "active"))
                 .eq("id", value: memberId.uuidString)
                 .execute()
-            await resolveTeamMemberships(userId: userId!)
-        } catch {}
+            await resolveTeamMemberships(userId: uid)
+        } catch {
+            print("[AppSession] acceptInvite error: \(error)")
+        }
     }
 
     func declineInvite(memberId: UUID) async {
