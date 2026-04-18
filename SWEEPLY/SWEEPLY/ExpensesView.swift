@@ -182,12 +182,7 @@ struct ExpensesView: View {
                             if !categoryBreakdown.isEmpty {
                                 categoryCard
                             }
-
-                            if filteredExpenses.isEmpty {
-                                emptyState
-                            } else {
-                                expenseListSection
-                            }
+                            expenseListSection
                         }
                         .padding(.horizontal, 20)
                         .padding(.bottom, 100)
@@ -449,19 +444,21 @@ struct ExpensesView: View {
 
     private var expenseListSection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            expenseListTitle
+            if !filteredExpenses.isEmpty {
+                expenseListTitle
 
-            VStack(spacing: 0) {
-                ForEach(Array(filteredExpenses.enumerated()), id: \.element.id) { idx, expense in
-                    expenseRow(expense)
-                    if idx < filteredExpenses.count - 1 {
-                        Divider().padding(.leading, 62)
+                VStack(spacing: 0) {
+                    ForEach(Array(filteredExpenses.enumerated()), id: \.element.id) { idx, expense in
+                        expenseRow(expense)
+                        if idx < filteredExpenses.count - 1 {
+                            Divider().padding(.leading, 62)
+                        }
                     }
                 }
+                .background(Color.sweeplySurface)
+                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(Color.sweeplyBorder, lineWidth: 1))
             }
-            .background(Color.sweeplySurface)
-            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(Color.sweeplyBorder, lineWidth: 1))
         }
     }
 

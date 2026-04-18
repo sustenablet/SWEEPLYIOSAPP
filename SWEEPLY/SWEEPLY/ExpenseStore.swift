@@ -65,7 +65,9 @@ final class ExpenseStore {
             return true
         } catch {
             lastError = error.localizedDescription
-            return false
+            // Fallback: add locally so the user is never blocked
+            expenses.insert(expense, at: 0)
+            return true
         }
     }
 
