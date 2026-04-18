@@ -577,6 +577,19 @@ struct AIChatView: View {
                     saveToHistory()
                 }
             }
+            .onReceive(NotificationCenter.default.publisher(for: UIApplication.didEnterBackgroundNotification)) { _ in
+                guard !messages.isEmpty else { return }
+                saveToHistory()
+                chatHistoryData = Data()
+                messages = []
+                chatTitle = ""
+                hasFiredProactive = false
+                conversationState = .idle
+            }
+            .onReceive(NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)) { _ in
+                guard messages.isEmpty, !hasFiredProactive else { return }
+                fireProactiveMessage()
+            }
             .onChange(of: currentProjectId) { oldId, newId in
                 // Save current conversation under the old project before switching
                 if !messages.isEmpty {
