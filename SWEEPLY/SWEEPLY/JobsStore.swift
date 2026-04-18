@@ -253,7 +253,9 @@ final class JobsStore {
                     status: JobStatus.scheduled.rawValue,
                     address: address,
                     isRecurring: true,
-                    recurrence_rule_id: insertedRule.id
+                    recurrence_rule_id: insertedRule.id,
+                    assignedMemberId: nil,
+                    assignedMemberName: nil
                 )
             }
             

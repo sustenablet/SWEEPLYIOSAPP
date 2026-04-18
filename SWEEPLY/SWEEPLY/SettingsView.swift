@@ -420,6 +420,43 @@ struct SettingsView: View {
 
     private var accountSection: some View {
         VStack(alignment: .leading, spacing: 6) {
+            if !session.activeMemberships.isEmpty {
+                sectionLabel("MY TEAMS")
+                settingsGroup {
+                    VStack(spacing: 0) {
+                        ForEach(Array(session.activeMemberships.enumerated()), id: \.element.id) { idx, membership in
+                            Button {
+                                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                                session.switchToMembership(membership)
+                            } label: {
+                                HStack(spacing: 14) {
+                                    settingsIcon("building.2.fill", color: Color.sweeplyAccent)
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(membership.businessName)
+                                            .font(.system(size: 15))
+                                            .foregroundStyle(Color.primary)
+                                        Text(membership.role.capitalized)
+                                            .font(.system(size: 12))
+                                            .foregroundStyle(Color.sweeplyTextSub)
+                                    }
+                                    Spacer()
+                                    Text("Switch")
+                                        .font(.system(size: 13, weight: .semibold))
+                                        .foregroundStyle(Color.sweeplyAccent)
+                                }
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 12)
+                            }
+                            .buttonStyle(.plain)
+                            if idx < session.activeMemberships.count - 1 {
+                                Divider().padding(.leading, 58)
+                            }
+                        }
+                    }
+                }
+                .padding(.bottom, 10)
+            }
+
             sectionLabel("ACCOUNT")
             settingsGroup {
                 Button { resetPassword() } label: {

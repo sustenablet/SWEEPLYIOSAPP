@@ -26,6 +26,11 @@ struct TeamView: View {
 
                 ScrollView {
                     VStack(spacing: 16) {
+                        // Pending invites for this user
+                        if !session.pendingInvites.isEmpty {
+                            pendingInvitesSection
+                        }
+
                         // Stats strip
                         statsStrip
 
@@ -119,6 +124,104 @@ struct TeamView: View {
                 Text("This will remove them from your roster. You can invite them again anytime.")
             }
         }
+    }
+
+    // MARK: - Pending invites (for current user)
+
+    @State private var acceptingInviteId: UUID? = nil
+    @State private var decliningInviteId: UUID? = nil
+
+    private var pendingInvitesSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("TEAM INVITES")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(Color.sweeplyTextSub)
+                .tracking(0.5)
+                .padding(.horizontal, 20)
+
+            VStack(spacing: 10) {
+                ForEach(session.pendingInvites) { invite in
+                    pendingInviteCard(invite)
+                }
+            }
+            .padding(.horizontal, 20)
+        }
+    }
+
+    private func pendingInviteCard(_ invite: PendingInvite) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 12) {
+                ZStack {
+                    Circle()
+                        .fill(Color.sweeplyAccent.opacity(0.12))
+                        .frame(width: 42, height: 42)
+                    Image(systemName: "building.2.fill")
+                        .font(.system(size: 16))
+                        .foregroundStyle(Color.sweeplyAccent)
+                }
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(invite.businessName)
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(Color.primary)
+                    Text("Invited you as \(invite.role.capitalized)")
+                        .font(.system(size: 13))
+                        .foregroundStyle(Color.sweeplyTextSub)
+                }
+                Spacer()
+            }
+            HStack(spacing: 10) {
+                Button {
+                    UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                    decliningInviteId = invite.id
+                    Task {
+                        await session.declineInvite(memberId: invite.id)
+                        decliningInviteId = nil
+                    }
+                } label: {
+                    Text(decliningInviteId == invite.id ? "Declining…" : "Decline")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundStyle(Color.sweeplyTextSub)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 10)
+                        .background(Color.sweeplyBorder.opacity(0.5))
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                }
+                .disabled(acceptingInviteId != nil || decliningInviteId != nil)
+
+                Button {
+                    UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                    acceptingInviteId = invite.id
+                    Task {
+                        await session.acceptInvite(memberId: invite.id)
+                        acceptingInviteId = nil
+                    }
+                } label: {
+                    HStack(spacing: 6) {
+                        if acceptingInviteId == invite.id {
+                            ProgressView().tint(.white).scaleEffect(0.75)
+                        } else {
+                            Image(systemName: "checkmark")
+                                .font(.system(size: 13, weight: .semibold))
+                        }
+                        Text(acceptingInviteId == invite.id ? "Joining…" : "Accept")
+                            .font(.system(size: 14, weight: .semibold))
+                    }
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 10)
+                    .background(Color.sweeplyAccent)
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                }
+                .disabled(acceptingInviteId != nil || decliningInviteId != nil)
+            }
+        }
+        .padding(14)
+        .background(Color.sweeplySurface)
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .overlay(
+            RoundedRectangle(cornerRadius: 14)
+                .stroke(Color.sweeplyAccent.opacity(0.2), lineWidth: 1)
+        )
     }
 
     // MARK: - Stats strip

@@ -313,8 +313,8 @@ struct JobDetailView: View {
             }
         }
         .sheet(isPresented: $showReassignSheet) {
-            if let job {
-                ReassignCleanerSheet(job: job)
+            if let currentJob = jobsStore.jobs.first(where: { $0.id == jobId }) {
+                ReassignCleanerSheet(job: currentJob)
                     .environment(teamStore)
                     .environment(jobsStore)
             }

@@ -2,12 +2,45 @@ import Foundation
 import Observation
 import Supabase
 
+// MARK: - Team membership models
+
+struct PendingInvite: Identifiable {
+    let id: UUID          // team_members.id
+    let businessName: String
+    let role: String
+}
+
+struct TeamMembership: Identifiable {
+    let id: UUID          // team_members.id
+    let businessName: String
+    let role: String
+}
+
+enum ViewMode: Equatable {
+    case ownBusiness
+    case memberOf(TeamMembership)
+
+    static func == (lhs: ViewMode, rhs: ViewMode) -> Bool {
+        switch (lhs, rhs) {
+        case (.ownBusiness, .ownBusiness): return true
+        case (.memberOf(let a), .memberOf(let b)): return a.id == b.id
+        default: return false
+        }
+    }
+}
+
+// MARK: - AppSession
+
 @Observable
 @MainActor
 final class AppSession {
     var isAuthenticated: Bool = false
     var userId: UUID?
     var lastAuthError: String?
+
+    var currentViewMode: ViewMode = .ownBusiness
+    var pendingInvites: [PendingInvite] = []
+    var activeMemberships: [TeamMembership] = []
 
     /// Becomes true after the first auth state is resolved (session or no session).
     var hasResolvedInitialSession: Bool = false
@@ -23,6 +56,8 @@ final class AppSession {
         authTask = Task { await observeAuth() }
         Task { await refreshSession() }
     }
+
+    // MARK: - Auth
 
     func signIn(email: String, password: String) async {
         guard let client = SupabaseManager.shared else { return }
@@ -43,6 +78,60 @@ final class AppSession {
             lastAuthError = humanizedAuthError(error)
         }
     }
+
+    func signOut() async {
+        guard let client = SupabaseManager.shared else { return }
+        lastAuthError = nil
+        do {
+            try await client.auth.signOut()
+            resetTeamState()
+        } catch {
+            lastAuthError = error.localizedDescription
+        }
+    }
+
+    // MARK: - View mode switching
+
+    func switchToOwnBusiness() {
+        currentViewMode = .ownBusiness
+    }
+
+    func switchToMembership(_ membership: TeamMembership) {
+        currentViewMode = .memberOf(membership)
+    }
+
+    // MARK: - Invite actions
+
+    func acceptInvite(memberId: UUID) async {
+        guard let client = SupabaseManager.shared else { return }
+        do {
+            struct StatusPatch: Encodable { let status: String }
+            try await client
+                .from("team_members")
+                .update(StatusPatch(status: "active"))
+                .eq("id", value: memberId.uuidString)
+                .execute()
+            await resolveTeamMemberships(userId: userId!)
+        } catch {}
+    }
+
+    func declineInvite(memberId: UUID) async {
+        guard let client = SupabaseManager.shared else { return }
+        do {
+            struct DeclinePatch: Encodable {
+                let cleanerUserId: String?
+                enum CodingKeys: String, CodingKey { case cleanerUserId = "cleaner_user_id" }
+            }
+            try await client
+                .from("team_members")
+                .update(DeclinePatch(cleanerUserId: nil))
+                .eq("id", value: memberId.uuidString)
+                .execute()
+            pendingInvites.removeAll { $0.id == memberId }
+        } catch {}
+    }
+
+    // MARK: - Internal auth flow
 
     private func humanizedAuthError(_ error: Error) -> String {
         let msg = error.localizedDescription
@@ -67,16 +156,6 @@ final class AppSession {
         return msg
     }
 
-    func signOut() async {
-        guard let client = SupabaseManager.shared else { return }
-        lastAuthError = nil
-        do {
-            try await client.auth.signOut()
-        } catch {
-            lastAuthError = error.localizedDescription
-        }
-    }
-
     private func refreshSession() async {
         guard let client = SupabaseManager.shared else {
             hasResolvedInitialSession = true
@@ -84,7 +163,7 @@ final class AppSession {
         }
         do {
             let session = try await client.auth.session
-            apply(session: session)
+            await apply(session: session)
         } catch {
             isAuthenticated = false
             userId = nil
@@ -98,11 +177,12 @@ final class AppSession {
             switch event {
             case .initialSession, .signedIn, .tokenRefreshed, .userUpdated:
                 if let session {
-                    apply(session: session)
+                    await apply(session: session)
                 }
             case .signedOut, .userDeleted:
                 isAuthenticated = false
                 userId = nil
+                resetTeamState()
             case .passwordRecovery, .mfaChallengeVerified:
                 break
             @unknown default:
@@ -112,9 +192,61 @@ final class AppSession {
         }
     }
 
-    private func apply(session: Session) {
+    private func apply(session: Session) async {
         userId = session.user.id
         isAuthenticated = true
         lastAuthError = nil
+        await resolveTeamMemberships(userId: session.user.id)
+    }
+
+    private func resetTeamState() {
+        currentViewMode = .ownBusiness
+        pendingInvites = []
+        activeMemberships = []
+    }
+
+    // MARK: - Team membership resolution
+
+    private func resolveTeamMemberships(userId: UUID) async {
+        guard let client = SupabaseManager.shared else { return }
+
+        struct MemberRow: Decodable {
+            let id: UUID
+            let status: String
+            let role: String
+            let profiles: ProfileEmbed?
+
+            struct ProfileEmbed: Decodable {
+                let businessName: String?
+                enum CodingKeys: String, CodingKey { case businessName = "business_name" }
+            }
+        }
+
+        do {
+            let rows: [MemberRow] = try await client
+                .from("team_members")
+                .select("id, status, role, profiles!owner_id(business_name)")
+                .eq("cleaner_user_id", value: userId.uuidString)
+                .execute()
+                .value
+
+            pendingInvites = rows
+                .filter { $0.status == "invited" }
+                .map { PendingInvite(id: $0.id, businessName: $0.profiles?.businessName ?? "A Team", role: $0.role) }
+
+            activeMemberships = rows
+                .filter { $0.status == "active" }
+                .map { TeamMembership(id: $0.id, businessName: $0.profiles?.businessName ?? "A Team", role: $0.role) }
+
+            // If user was in a membership that's no longer active, reset to own business
+            if case .memberOf(let m) = currentViewMode {
+                if !activeMemberships.contains(where: { $0.id == m.id }) {
+                    currentViewMode = .ownBusiness
+                }
+            }
+        } catch {
+            pendingInvites = []
+            activeMemberships = []
+        }
     }
 }

@@ -52,7 +52,12 @@ struct RootView: View {
                     }
             } else if session.isAuthenticated {
                 ZStack {
-                    mainTabs
+                    switch session.currentViewMode {
+                    case .ownBusiness:
+                        mainTabs
+                    case .memberOf(let membership):
+                        CleanerRootView(membership: membership)
+                    }
                     if isLocked {
                         biometricLockOverlay
                     }

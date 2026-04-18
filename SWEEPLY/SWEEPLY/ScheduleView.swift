@@ -74,7 +74,7 @@ struct ScheduleView: View {
                 if let date = notification.userInfo?["date"] as? Date {
                     withAnimation(.easeInOut(duration: 0.25)) {
                         selectedDay = Calendar.current.startOfDay(for: date)
-                        viewMode = .day
+                        viewModeRaw = ScheduleViewMode.day.rawValue
                     }
                 }
             }
@@ -149,32 +149,34 @@ struct ScheduleView: View {
         return f.string(from: selectedDay)
     }
 
+    @ViewBuilder
+    private func modeTabBackground(isSelected: Bool) -> some View {
+        if isSelected {
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(Color.sweeplySurface)
+                .shadow(color: .black.opacity(0.06), radius: 4, x: 0, y: 1)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .stroke(Color.sweeplyAccent.opacity(0.3), lineWidth: 1)
+                )
+        }
+    }
+
     // MARK: Day / List / Map segment
 
     private var modeSegment: some View {
         HStack(spacing: 4) {
             ForEach(visibleViewModes, id: \.self) { mode in
                 Button {
-                    withAnimation(.easeInOut(duration: 0.2)) { viewMode = mode }
+                    withAnimation(.easeInOut(duration: 0.2)) { viewModeRaw = mode.rawValue }
                 } label: {
+                    let isSelected = viewMode == mode
                     Text(mode.rawValue)
-                        .font(.system(size: 14, weight: viewMode == mode ? .semibold : .medium))
-                        .foregroundStyle(viewMode == mode ? Color.sweeplyNavy : Color.sweeplyTextSub)
+                        .font(.system(size: 14, weight: isSelected ? .semibold : .medium))
+                        .foregroundStyle(isSelected ? Color.sweeplyNavy : Color.sweeplyTextSub)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 10)
-                        .background(
-                            Group {
-                                if viewMode == mode {
-                                    RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                        .fill(Color.sweeplySurface)
-                                        .shadow(color: .black.opacity(0.06), radius: 4, x: 0, y: 1)
-                                        .overlay(
-                                            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                                .stroke(Color.sweeplyAccent.opacity(0.3), lineWidth: 1)
-                                        )
-                                }
-                            }
-                        )
+                        .background(modeTabBackground(isSelected: isSelected))
                 }
                 .buttonStyle(.plain)
             }
