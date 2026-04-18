@@ -344,16 +344,22 @@ struct ScheduleView: View {
         }
     }
 
-    // MARK: - Day View
+    // MARK: - Day View (Timeline)
+
+    private let timelineHourHeight: CGFloat = 68
+    private let timelineStartHour: Int = 6
+    private let timelineEndHour: Int = 21
 
     private var dayView: some View {
-        VStack(spacing: 0) {
+        let jobs = filteredJobsForDate(selectedDay)
+        return VStack(spacing: 0) {
+            // Stats bar
             HStack(spacing: 0) {
                 HStack(spacing: 4) {
-                    Text("\(filteredJobsForDate(selectedDay).count)")
+                    Text("\(jobs.count)")
                         .font(.system(size: 13, weight: .bold, design: .monospaced))
                         .foregroundStyle(Color.sweeplyAccent)
-                    Text(filteredJobsForDate(selectedDay).count == 1 ? "job" : "jobs")
+                    Text(jobs.count == 1 ? "job" : "jobs")
                         .font(.system(size: 13, weight: .semibold))
                         .foregroundStyle(Color.sweeplyTextSub)
                 }
@@ -368,43 +374,72 @@ struct ScheduleView: View {
             .overlay(Rectangle().frame(height: 1).foregroundStyle(Color.sweeplyBorder), alignment: .bottom)
 
             ScrollView {
-                VStack(spacing: 12) {
-                    if jobsStore.isLoading && jobsStore.jobs.isEmpty {
-                        SkeletonList(count: 4)
-                            .padding(.top, 4)
-                    } else if filteredJobsForDate(selectedDay).isEmpty && invoicesForDate(selectedDay).isEmpty {
-                        scheduleEmptyState
-                    } else {
-                        ForEach(filteredJobsForDate(selectedDay)) { job in
-                            ScheduleJobRow(job: job)
-                        }
-                        if showInvoices {
-                            let dayInvoices = invoicesForDate(selectedDay)
-                            if !dayInvoices.isEmpty {
-                                if !filteredJobsForDate(selectedDay).isEmpty {
-                                    HStack(spacing: 6) {
-                                        Rectangle()
-                                            .fill(Color.sweeplyBorder)
-                                            .frame(height: 1)
-                                        Text("INVOICES DUE")
-                                            .font(.system(size: 10, weight: .bold))
-                                            .foregroundStyle(Color.sweeplyTextSub)
-                                            .tracking(0.8)
-                                        Rectangle()
-                                            .fill(Color.sweeplyBorder)
-                                            .frame(height: 1)
-                                    }
-                                    .padding(.vertical, 4)
+                if jobsStore.isLoading && jobsStore.jobs.isEmpty {
+                    SkeletonList(count: 4).padding(.top, 16).padding(.horizontal, 20)
+                } else if jobs.isEmpty {
+                    scheduleEmptyState
+                } else {
+                    // Timeline grid
+                    let hours = Array(timelineStartHour...timelineEndHour)
+                    let totalHeight = CGFloat(hours.count) * timelineHourHeight
+
+                    ZStack(alignment: .topLeading) {
+                        // Hour grid rows
+                        VStack(spacing: 0) {
+                            ForEach(hours, id: \.self) { hour in
+                                HStack(alignment: .top, spacing: 0) {
+                                    Text(timelineHourLabel(hour))
+                                        .font(.system(size: 10, weight: .medium, design: .monospaced))
+                                        .foregroundStyle(Color.sweeplyTextSub.opacity(0.55))
+                                        .frame(width: 44, alignment: .trailing)
+                                        .padding(.top, -5)
+                                    Rectangle()
+                                        .fill(Color.sweeplyBorder.opacity(0.45))
+                                        .frame(height: 0.5)
+                                        .padding(.leading, 10)
+                                        .padding(.top, 1)
                                 }
-                                ForEach(dayInvoices) { invoice in
-                                    ScheduleInvoiceRow(invoice: invoice)
-                                }
+                                .frame(height: timelineHourHeight, alignment: .top)
                             }
                         }
+
+                        // Current time indicator (today only)
+                        if calendar.isDateInToday(selectedDay) {
+                            let now = Date()
+                            let nowHour = Calendar.current.component(.hour, from: now)
+                            let nowMinute = Calendar.current.component(.minute, from: now)
+                            let yNow = CGFloat(nowHour - timelineStartHour) * timelineHourHeight
+                                     + CGFloat(nowMinute) / 60.0 * timelineHourHeight
+                            HStack(spacing: 0) {
+                                Circle()
+                                    .fill(Color.red)
+                                    .frame(width: 8, height: 8)
+                                    .padding(.leading, 40)
+                                Rectangle()
+                                    .fill(Color.red.opacity(0.7))
+                                    .frame(height: 1.5)
+                            }
+                            .offset(y: max(0, yNow) + timelineHourHeight * 0.5)
+                        }
+
+                        // Job blocks
+                        ForEach(jobs) { job in
+                            let jobHour = Calendar.current.component(.hour, from: job.date)
+                            let jobMinute = Calendar.current.component(.minute, from: job.date)
+                            let yOffset = CGFloat(jobHour - timelineStartHour) * timelineHourHeight
+                                        + CGFloat(jobMinute) / 60.0 * timelineHourHeight
+                            let blockHeight = max(CGFloat(job.duration) * timelineHourHeight, 56)
+                            TimelineJobBlock(job: job)
+                                .frame(height: blockHeight)
+                                .padding(.leading, 58)
+                                .offset(y: max(0, yOffset))
+                        }
                     }
+                    .frame(height: totalHeight)
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 16)
+                    .padding(.bottom, 100)
                 }
-                .padding(20)
-                .padding(.bottom, 100)
             }
             .refreshable {
                 await jobsStore.load(isAuthenticated: session.isAuthenticated)
@@ -412,25 +447,50 @@ struct ScheduleView: View {
         }
     }
 
+    private func timelineHourLabel(_ hour: Int) -> String {
+        let h = hour % 12 == 0 ? 12 : hour % 12
+        let suffix = hour < 12 ? "am" : "pm"
+        return "\(h)\(suffix)"
+    }
+
     private func dayRevenue(_ date: Date) -> Double {
         filteredJobsForDate(date).reduce(0) { $0 + $1.price }
     }
 
-    // MARK: - List View
+    // MARK: - List View (Multi-day Agenda)
+
+    private var upcomingGroupedJobs: [(date: Date, jobs: [Job])] {
+        let today = calendar.startOfDay(for: Date())
+        let upcoming = jobsStore.jobs
+            .filter { applyFilters($0) && calendar.startOfDay(for: $0.date) >= today }
+            .sorted { $0.date < $1.date }
+        let grouped = Dictionary(grouping: upcoming) { calendar.startOfDay(for: $0.date) }
+        return grouped
+            .map { (date: $0.key, jobs: $0.value.sorted { $0.date < $1.date }) }
+            .sorted { $0.date < $1.date }
+    }
+
+    private func agendaDateLabel(_ date: Date) -> String {
+        if calendar.isDateInToday(date) { return "Today" }
+        if calendar.isDateInTomorrow(date) { return "Tomorrow" }
+        return date.formatted(.dateTime.weekday(.wide).month(.abbreviated).day())
+    }
 
     private var listView: some View {
         VStack(spacing: 0) {
+            // Stats bar — upcoming totals
             HStack(spacing: 0) {
+                let allUpcoming = upcomingGroupedJobs.flatMap { $0.jobs }
                 HStack(spacing: 4) {
-                    Text("\(filteredJobsForDate(selectedDay).count)")
+                    Text("\(allUpcoming.count)")
                         .font(.system(size: 13, weight: .bold, design: .monospaced))
                         .foregroundStyle(Color.sweeplyAccent)
-                    Text(filteredJobsForDate(selectedDay).count == 1 ? "job" : "jobs")
+                    Text(allUpcoming.count == 1 ? "upcoming job" : "upcoming jobs")
                         .font(.system(size: 13, weight: .semibold))
                         .foregroundStyle(Color.sweeplyTextSub)
                 }
                 Spacer()
-                Text(dayRevenue(selectedDay).currency)
+                Text(allUpcoming.reduce(0) { $0 + $1.price }.currency)
                     .font(.system(size: 13, weight: .bold, design: .monospaced))
                     .foregroundStyle(Color.sweeplyNavy)
             }
@@ -440,43 +500,57 @@ struct ScheduleView: View {
             .overlay(Rectangle().frame(height: 1).foregroundStyle(Color.sweeplyBorder), alignment: .bottom)
 
             ScrollView {
-                VStack(spacing: 12) {
-                    if jobsStore.isLoading && jobsStore.jobs.isEmpty {
-                        SkeletonList(count: 4)
-                            .padding(.top, 4)
-                    } else if filteredJobsForDate(selectedDay).isEmpty && invoicesForDate(selectedDay).isEmpty {
-                        scheduleEmptyState
-                    } else {
-                        ForEach(filteredJobsForDate(selectedDay)) { job in
-                            ScheduleJobRow(job: job)
-                        }
-                        if showInvoices {
-                            let dayInvoices = invoicesForDate(selectedDay)
-                            if !dayInvoices.isEmpty {
-                                if !filteredJobsForDate(selectedDay).isEmpty {
-                                    HStack(spacing: 6) {
-                                        Rectangle()
-                                            .fill(Color.sweeplyBorder)
-                                            .frame(height: 1)
-                                        Text("INVOICES DUE")
-                                            .font(.system(size: 10, weight: .bold))
-                                            .foregroundStyle(Color.sweeplyTextSub)
-                                            .tracking(0.8)
-                                        Rectangle()
-                                            .fill(Color.sweeplyBorder)
-                                            .frame(height: 1)
+                if jobsStore.isLoading && jobsStore.jobs.isEmpty {
+                    SkeletonList(count: 4).padding(.top, 16).padding(.horizontal, 20)
+                } else if upcomingGroupedJobs.isEmpty {
+                    VStack(spacing: 12) {
+                        Image(systemName: "calendar.badge.clock")
+                            .font(.system(size: 44))
+                            .foregroundStyle(Color.sweeplyTextSub.opacity(0.3))
+                        Text("No upcoming jobs")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundStyle(Color.sweeplyTextSub)
+                        Text("Schedule a job to see it here.")
+                            .font(.system(size: 13))
+                            .foregroundStyle(Color.sweeplyTextSub.opacity(0.6))
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 60)
+                } else {
+                    LazyVStack(alignment: .leading, spacing: 0, pinnedViews: [.sectionHeaders]) {
+                        ForEach(upcomingGroupedJobs, id: \.date) { group in
+                            Section {
+                                VStack(spacing: 8) {
+                                    ForEach(group.jobs) { job in
+                                        ScheduleJobRow(job: job)
                                     }
-                                    .padding(.vertical, 4)
                                 }
-                                ForEach(dayInvoices) { invoice in
-                                    ScheduleInvoiceRow(invoice: invoice)
+                                .padding(.horizontal, 20)
+                                .padding(.bottom, 16)
+                            } header: {
+                                HStack(spacing: 8) {
+                                    Text(agendaDateLabel(group.date))
+                                        .font(.system(size: 13, weight: .bold))
+                                        .foregroundStyle(calendar.isDateInToday(group.date) ? Color.sweeplyAccent : Color.sweeplyNavy)
+                                    Text("·")
+                                        .foregroundStyle(Color.sweeplyBorder)
+                                    Text(group.jobs.reduce(0) { $0 + $1.price }.currency)
+                                        .font(.system(size: 12, weight: .semibold, design: .monospaced))
+                                        .foregroundStyle(Color.sweeplyTextSub)
+                                    Spacer()
+                                    Text("\(group.jobs.count) job\(group.jobs.count == 1 ? "" : "s")")
+                                        .font(.system(size: 11, weight: .medium))
+                                        .foregroundStyle(Color.sweeplyTextSub.opacity(0.7))
                                 }
+                                .padding(.horizontal, 20)
+                                .padding(.vertical, 10)
+                                .background(Color.sweeplyBackground)
+                                .overlay(Rectangle().frame(height: 1).foregroundStyle(Color.sweeplyBorder.opacity(0.5)), alignment: .bottom)
                             }
                         }
                     }
+                    .padding(.bottom, 100)
                 }
-                .padding(20)
-                .padding(.bottom, 100)
             }
             .refreshable {
                 await jobsStore.load(isAuthenticated: session.isAuthenticated)
@@ -702,6 +776,76 @@ private extension ScheduleView {
         .padding(.vertical, 60)
     }
 
+}
+
+// MARK: - Timeline Job Block
+
+private struct TimelineJobBlock: View {
+    let job: Job
+
+    private var accentColor: Color {
+        switch job.serviceType {
+        case .standard:         return Color.sweeplyAccent
+        case .deep:             return Color.sweeplyNavy
+        case .moveInOut:        return Color.sweeplyWarning
+        case .postConstruction: return Color.gray
+        case .office:           return Color.sweeplyNavy
+        case .custom:           return Color.sweeplyAccent
+        }
+    }
+
+    private func timeString(from date: Date) -> String {
+        let f = DateFormatter()
+        f.timeStyle = .short
+        f.dateStyle = .none
+        return f.string(from: date)
+    }
+
+    var body: some View {
+        NavigationLink(destination: JobDetailView(jobId: job.id)) {
+            ZStack(alignment: .leading) {
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill(accentColor.opacity(0.08))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .stroke(accentColor.opacity(0.25), lineWidth: 1)
+                    )
+                HStack(spacing: 0) {
+                    RoundedRectangle(cornerRadius: 3, style: .continuous)
+                        .fill(accentColor)
+                        .frame(width: 4)
+                        .padding(.vertical, 8)
+                        .padding(.leading, 6)
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(job.clientName)
+                            .font(.system(size: 13, weight: .bold))
+                            .foregroundStyle(Color.sweeplyNavy)
+                            .lineLimit(1)
+                        Text(job.serviceType.rawValue)
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundStyle(accentColor)
+                            .lineLimit(1)
+                        HStack(spacing: 4) {
+                            Text(timeString(from: job.date))
+                                .font(.system(size: 10, design: .monospaced))
+                                .foregroundStyle(Color.sweeplyTextSub)
+                            Text("·")
+                                .foregroundStyle(Color.sweeplyTextSub.opacity(0.4))
+                            Text(job.price.currency)
+                                .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                                .foregroundStyle(Color.sweeplyNavy)
+                        }
+                    }
+                    .padding(.leading, 8)
+                    .padding(.vertical, 8)
+                    Spacer()
+                    StatusBadge(status: job.status)
+                        .padding(.trailing, 10)
+                }
+            }
+        }
+        .buttonStyle(.plain)
+    }
 }
 
 // MARK: - Row Components
