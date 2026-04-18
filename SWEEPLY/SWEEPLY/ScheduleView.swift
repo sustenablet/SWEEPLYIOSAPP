@@ -26,7 +26,7 @@ struct ScheduleView: View {
     @State private var typeFilter: String = "All"
     @State private var showInvoices: Bool = false
     @State private var showMonthPicker = false
-    @State private var enabledViewModes: Set<ScheduleViewMode> = [.day, .list, .map]
+    @State private var enabledViewModes: Set<ScheduleViewMode> = [.day, .list, .month, .map]
     @State private var selectedJobId: UUID? = nil
     @State private var showJobDetail: Bool = false
     @State private var mapCameraPosition: MapCameraPosition = .automatic

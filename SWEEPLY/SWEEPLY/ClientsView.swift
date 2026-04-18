@@ -42,7 +42,7 @@ enum ClientFrequency {
         case .none:      return Color.sweeplyTextSub.opacity(0.5)
         case .oneTime:   return Color.sweeplyTextSub
         case .recurring: return Color.sweeplyAccent
-        case .weekly:    return Color.green
+        case .weekly:    return Color(red: 0.25, green: 0.65, blue: 0.45)  // Soft sage green
         case .biweekly:  return Color.orange
         case .monthly:   return Color.blue
         }
