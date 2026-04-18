@@ -561,52 +561,52 @@ struct ScheduleView: View {
     // MARK: - Month View
 
     private var monthView: some View {
-        VStack(spacing: 0) {
-            JobberCalendarView(selectedDay: $selectedDay, jobs: jobsStore.jobs)
-                .padding(.horizontal, 20)
-                .padding(.top, 12)
+        ScrollView {
+            VStack(alignment: .leading, spacing: 0) {
+                JobberCalendarView(selectedDay: $selectedDay, jobs: jobsStore.jobs)
+                    .padding(.horizontal, 20)
+                    .padding(.top, 12)
 
-            VStack(alignment: .leading, spacing: 12) {
                 Text("Jobs for \(selectedDay.formatted(.dateTime.day().month()))")
                     .font(.system(size: 14, weight: .bold))
                     .foregroundStyle(Color.sweeplyNavy)
                     .padding(.horizontal, 24)
                     .padding(.top, 20)
+                    .padding(.bottom, 12)
 
-                ScrollView {
+                let dayJobs = filteredJobsForDate(selectedDay)
+                let dayInvoices = invoicesForDate(selectedDay)
+
+                if dayJobs.isEmpty && dayInvoices.isEmpty {
+                    scheduleEmptyState
+                } else {
                     VStack(spacing: 12) {
-                        let dayJobs = filteredJobsForDate(selectedDay)
-                        let dayInvoices = invoicesForDate(selectedDay)
-                        if dayJobs.isEmpty && dayInvoices.isEmpty {
-                            scheduleEmptyState
-                        } else {
-                            ForEach(dayJobs) { job in
-                                ScheduleJobRow(job: job)
+                        ForEach(dayJobs) { job in
+                            ScheduleJobRow(job: job)
+                        }
+                        if showInvoices && !dayInvoices.isEmpty {
+                            if !dayJobs.isEmpty {
+                                HStack(spacing: 6) {
+                                    Rectangle().fill(Color.sweeplyBorder).frame(height: 1)
+                                    Text("INVOICES DUE")
+                                        .font(.system(size: 10, weight: .bold))
+                                        .foregroundStyle(Color.sweeplyTextSub)
+                                        .tracking(0.8)
+                                    Rectangle().fill(Color.sweeplyBorder).frame(height: 1)
+                                }
                             }
-                            if showInvoices && !dayInvoices.isEmpty {
-                                if !dayJobs.isEmpty {
-                                    HStack(spacing: 6) {
-                                        Rectangle().fill(Color.sweeplyBorder).frame(height: 1)
-                                        Text("INVOICES DUE")
-                                            .font(.system(size: 10, weight: .bold))
-                                            .foregroundStyle(Color.sweeplyTextSub)
-                                            .tracking(0.8)
-                                        Rectangle().fill(Color.sweeplyBorder).frame(height: 1)
-                                    }
-                                }
-                                ForEach(dayInvoices) { invoice in
-                                    ScheduleInvoiceRow(invoice: invoice)
-                                }
+                            ForEach(dayInvoices) { invoice in
+                                ScheduleInvoiceRow(invoice: invoice)
                             }
                         }
                     }
                     .padding(.horizontal, 20)
-                    .padding(.bottom, 100)
-                }
-                .refreshable {
-                    await jobsStore.load(isAuthenticated: session.isAuthenticated)
                 }
             }
+            .padding(.bottom, 100)
+        }
+        .refreshable {
+            await jobsStore.load(isAuthenticated: session.isAuthenticated)
         }
     }
 }
@@ -634,16 +634,6 @@ struct JobberCalendarView: View {
                 .foregroundStyle(Color.sweeplyNavy)
             }
             .padding(.horizontal, 10)
-
-            // Days of week labels
-            HStack {
-                ForEach(["S", "M", "T", "W", "T", "F", "S"], id: \.self) { day in
-                    Text(day)
-                        .font(.system(size: 11, weight: .bold))
-                        .foregroundStyle(Color.sweeplyTextSub)
-                        .frame(maxWidth: .infinity)
-                }
-            }
 
             // Days grid
             let days = daysInMonth()
