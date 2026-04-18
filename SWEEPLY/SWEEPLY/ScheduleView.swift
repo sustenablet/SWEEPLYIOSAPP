@@ -19,7 +19,12 @@ struct ScheduleView: View {
     @Environment(InvoicesStore.self) private var invoicesStore
     @Environment(AppSession.self) private var session
     @State private var appeared = false
-    @State private var viewMode: ScheduleViewMode = .day
+    @AppStorage("scheduleViewModeRaw") private var viewModeRaw: String = ScheduleViewMode.day.rawValue
+
+    private var viewMode: ScheduleViewMode {
+        get { ScheduleViewMode(rawValue: viewModeRaw) ?? .day }
+        set { viewModeRaw = newValue.rawValue }
+    }
     @State private var selectedDay: Date = Calendar.current.startOfDay(for: Date())
     @State private var showFilters = false
     @State private var statusFilter: JobStatus? = nil

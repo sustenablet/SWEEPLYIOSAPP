@@ -20,14 +20,17 @@ struct JobFiltersView: View {
                 Text("Filters")
                     .font(.system(size: 20, weight: .bold))
                 Spacer()
-                Button("Clear") {
-                    localStatus = nil
-                    localType = "All"
-                    localViewModes = [.day, .list, .map]
-                    localShowInvoices = false
+                Button {
+                    dismiss()
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(Color.sweeplyNavy)
+                        .frame(width: 32, height: 32)
+                        .background(Color.sweeplyBorder.opacity(0.5))
+                        .clipShape(Circle())
                 }
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(Color.sweeplyAccent)
+                .buttonStyle(.plain)
             }
             .padding(24)
             
