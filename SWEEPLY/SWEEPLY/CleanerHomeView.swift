@@ -4,11 +4,17 @@ struct CleanerHomeView: View {
     @Environment(AppSession.self) private var session
     @Environment(JobsStore.self)  private var jobsStore
 
+    let membership: TeamMembership
+
     @State private var selectedJobId: UUID? = nil
 
     private var todaysJobs: [Job] {
         jobsStore.jobs
-            .filter { Calendar.current.isDateInToday($0.date) && $0.status != .cancelled }
+            .filter {
+                Calendar.current.isDateInToday($0.date)
+                && $0.status != .cancelled
+                && $0.assignedMemberId == membership.id
+            }
             .sorted { $0.date < $1.date }
     }
 

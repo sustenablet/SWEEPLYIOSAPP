@@ -112,6 +112,10 @@ final class AppSession {
                 .eq("id", value: memberId.uuidString)
                 .execute()
             await resolveTeamMemberships(userId: uid)
+            // Auto-switch to the accepted team view
+            if let membership = activeMemberships.first(where: { $0.id == memberId }) {
+                currentViewMode = .memberOf(membership)
+            }
         } catch {
             print("[AppSession] acceptInvite error: \(error)")
         }

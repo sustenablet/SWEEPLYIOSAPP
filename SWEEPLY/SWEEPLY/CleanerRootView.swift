@@ -11,11 +11,11 @@ struct CleanerRootView: View {
 
     var body: some View {
         TabView(selection: $selectedTab) {
-            CleanerHomeView()
+            CleanerHomeView(membership: membership)
                 .tabItem { Label("Today", systemImage: "calendar.badge.clock") }
                 .tag(Tab.today)
 
-            CleanerUpcomingView()
+            CleanerUpcomingView(membership: membership)
                 .tabItem { Label("Upcoming", systemImage: "list.bullet.below.rectangle") }
                 .tag(Tab.upcoming)
 

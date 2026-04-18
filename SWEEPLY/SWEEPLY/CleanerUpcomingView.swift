@@ -3,13 +3,19 @@ import SwiftUI
 struct CleanerUpcomingView: View {
     @Environment(JobsStore.self) private var jobsStore
 
+    let membership: TeamMembership
+
     @State private var selectedJobId: UUID? = nil
 
     private var upcomingJobs: [Job] {
         let start = Calendar.current.startOfDay(for: Date()).addingTimeInterval(86400)
         let end   = start.addingTimeInterval(86400 * 7)
         return jobsStore.jobs
-            .filter { $0.date >= start && $0.date < end && $0.status != .cancelled }
+            .filter {
+                $0.date >= start && $0.date < end
+                && $0.status != .cancelled
+                && $0.assignedMemberId == membership.id
+            }
             .sorted { $0.date < $1.date }
     }
 

@@ -303,6 +303,9 @@ struct RootView: View {
                 notificationManager.requestAuthorization()
             }
         }
+        .onChange(of: session.currentViewMode) { _, _ in
+            Task { await jobsStore.load(isAuthenticated: session.isAuthenticated) }
+        }
         .onChange(of: session.isAuthenticated) { _, authed in
             if authed {
                 // Auth just resolved — handle any shortcuts/deep links that arrived early
