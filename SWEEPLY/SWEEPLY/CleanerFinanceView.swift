@@ -6,8 +6,10 @@ struct CleanerFinanceView: View {
 
     let membership: TeamMembership
 
-    @State private var selectedPeriod: Period = .month
+    @AppStorage("cleanerFinancePeriod") private var selectedPeriodRaw: String = "This Month"
     @State private var appeared = false
+
+    private var selectedPeriod: Period { Period(rawValue: selectedPeriodRaw) ?? .month }
 
     enum Period: String, CaseIterable {
         case week  = "This Week"
@@ -105,7 +107,7 @@ struct CleanerFinanceView: View {
             ForEach(Period.allCases, id: \.self) { period in
                 Button {
                     UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                    withAnimation(.spring(duration: 0.2)) { selectedPeriod = period }
+                    withAnimation(.spring(duration: 0.2)) { selectedPeriodRaw = period.rawValue }
                 } label: {
                     Text(period == .week ? "Wk" : period == .month ? "Mo" : "All")
                         .font(.system(size: 12, weight: selectedPeriod == period ? .bold : .medium))

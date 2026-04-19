@@ -63,8 +63,13 @@ struct ClientsView: View {
     @State private var deleteTarget: Client? = nil
     @State private var appeared = false
     @State private var showFilters = false
-    @State private var showArchived = false
-    @State private var sortOrder: ClientSortOrder = .nameAZ
+    @AppStorage("clientsShowArchived") private var showArchived = false
+    @AppStorage("clientsSortOrderRaw") private var sortOrderRaw: String = ClientSortOrder.nameAZ.rawValue
+
+    private var sortOrder: ClientSortOrder { ClientSortOrder(rawValue: sortOrderRaw) ?? .nameAZ }
+    private var sortOrderBinding: Binding<ClientSortOrder> {
+        Binding(get: { ClientSortOrder(rawValue: sortOrderRaw) ?? .nameAZ }, set: { sortOrderRaw = $0.rawValue })
+    }
     @State private var archiveHaptic = false
     @State private var newJobForClient: Client? = nil
     @State private var viewingClientId: UUID? = nil
@@ -156,7 +161,7 @@ struct ClientsView: View {
             NewClientForm(editingClient: client)
         }
         .sheet(isPresented: $showFilters) {
-            ClientFiltersSheet(showArchived: $showArchived, sortOrder: $sortOrder)
+            ClientFiltersSheet(showArchived: $showArchived, sortOrder: sortOrderBinding)
                 .presentationDetents([.medium])
         }
         .sheet(item: $newJobForClient) { client in

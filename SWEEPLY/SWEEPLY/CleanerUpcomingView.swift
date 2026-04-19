@@ -15,9 +15,12 @@ struct CleanerUpcomingView: View {
     let membership: TeamMembership
 
     @State private var selectedDay: Date = Calendar.current.startOfDay(for: Date())
-    @State private var viewMode: CleanerScheduleMode = .day
-    @State private var statusFilter: JobStatus? = nil
+    @AppStorage("cleanerScheduleViewMode")    private var viewModeRaw: String = CleanerScheduleMode.day.rawValue
+    @AppStorage("cleanerScheduleStatusFilter") private var statusFilterRaw: String = ""
     @State private var showMonthPicker = false
+
+    private var viewMode: CleanerScheduleMode { CleanerScheduleMode(rawValue: viewModeRaw) ?? .day }
+    private var statusFilter: JobStatus? { JobStatus(rawValue: statusFilterRaw) }
     @State private var selectedJobId: UUID? = nil
 
     private let calendar: Calendar = {
@@ -141,10 +144,10 @@ struct CleanerUpcomingView: View {
     private func cycleStatusFilter() {
         withAnimation(.spring(duration: 0.2)) {
             switch statusFilter {
-            case nil:         statusFilter = .scheduled
-            case .scheduled:  statusFilter = .inProgress
-            case .inProgress: statusFilter = .completed
-            default:          statusFilter = nil
+            case nil:         statusFilterRaw = JobStatus.scheduled.rawValue
+            case .scheduled:  statusFilterRaw = JobStatus.inProgress.rawValue
+            case .inProgress: statusFilterRaw = JobStatus.completed.rawValue
+            default:          statusFilterRaw = ""
             }
         }
     }
@@ -160,7 +163,7 @@ struct CleanerUpcomingView: View {
                 .foregroundStyle(color)
             Spacer()
             Button {
-                withAnimation(.spring(duration: 0.2)) { statusFilter = nil }
+                withAnimation(.spring(duration: 0.2)) { statusFilterRaw = "" }
                 UIImpactFeedbackGenerator(style: .light).impactOccurred()
             } label: {
                 HStack(spacing: 4) {
@@ -199,7 +202,7 @@ struct CleanerUpcomingView: View {
         HStack(spacing: 4) {
             ForEach(CleanerScheduleMode.allCases, id: \.self) { mode in
                 Button {
-                    withAnimation(.easeInOut(duration: 0.2)) { viewMode = mode }
+                    withAnimation(.easeInOut(duration: 0.2)) { viewModeRaw = mode.rawValue }
                 } label: {
                     let isSelected = viewMode == mode
                     Text(mode.rawValue)

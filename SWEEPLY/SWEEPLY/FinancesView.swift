@@ -10,8 +10,14 @@ struct FinancesView: View {
     @Environment(ExpenseStore.self) private var expenseStore
     @Environment(TeamStore.self)    private var teamStore
 
-    @State private var selectedPeriod: ChartPeriod = .week
-    @State private var selectedFilter: InvoiceFilter = .all
+    @AppStorage("financesChartPeriod")   private var selectedPeriodRaw: String = ChartPeriod.week.rawValue
+    @AppStorage("financesInvoiceFilter") private var selectedFilterRaw: String = InvoiceFilter.all.rawValue
+
+    private var selectedPeriod: ChartPeriod { ChartPeriod(rawValue: selectedPeriodRaw) ?? .week }
+    private var selectedPeriodBinding: Binding<ChartPeriod> {
+        Binding(get: { ChartPeriod(rawValue: selectedPeriodRaw) ?? .week }, set: { selectedPeriodRaw = $0.rawValue })
+    }
+    private var selectedFilter: InvoiceFilter { InvoiceFilter(rawValue: selectedFilterRaw) ?? .all }
     @State private var appeared = false
     @State private var selectedBarMonth: String? = nil
     @State private var showFinanceAI = false
@@ -277,7 +283,7 @@ struct FinancesView: View {
                         .font(.system(size: 15, weight: .semibold))
                         .foregroundStyle(Color.sweeplyNavy)
                     Spacer()
-                    Picker("", selection: $selectedPeriod) {
+                    Picker("", selection: selectedPeriodBinding) {
                         ForEach(ChartPeriod.allCases, id: \.self) { p in
                             Text(p.rawValue).tag(p)
                         }
@@ -589,7 +595,7 @@ struct FinancesView: View {
         let selected = selectedFilter == filter
         return Button {
             UIImpactFeedbackGenerator(style: .light).impactOccurred()
-            withAnimation(.easeInOut(duration: 0.2)) { selectedFilter = filter }
+            withAnimation(.easeInOut(duration: 0.2)) { selectedFilterRaw = filter.rawValue }
         } label: {
             VStack(spacing: 8) {
                 HStack(spacing: 6) {

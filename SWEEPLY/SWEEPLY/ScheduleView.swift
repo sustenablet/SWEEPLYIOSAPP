@@ -44,9 +44,18 @@ struct ScheduleView: View {
 
     @State private var selectedDay: Date = Calendar.current.startOfDay(for: Date())
     @State private var showFilters = false
-    @State private var statusFilter: JobStatus? = nil
-    @State private var typeFilter: String = "All"
-    @State private var showInvoices: Bool = false
+    @AppStorage("scheduleShowInvoices")   private var showInvoices: Bool = false
+    @AppStorage("scheduleTypeFilter")     private var typeFilter: String = "All"
+    @AppStorage("scheduleStatusFilterRaw") private var statusFilterRaw: String = ""
+
+    private var statusFilter: JobStatus? {
+        get { JobStatus(rawValue: statusFilterRaw) }
+        set { statusFilterRaw = newValue?.rawValue ?? "" }
+    }
+
+    private var statusFilterBinding: Binding<JobStatus?> {
+        Binding(get: { JobStatus(rawValue: statusFilterRaw) }, set: { statusFilterRaw = $0?.rawValue ?? "" })
+    }
     @State private var showMonthPicker = false
     @State private var selectedJobId: UUID? = nil
     @State private var showJobDetail: Bool = false
@@ -103,7 +112,7 @@ struct ScheduleView: View {
                 updateMapCamera(for: newDay)
             }
             .sheet(isPresented: $showFilters) {
-                JobFiltersView(statusFilter: $statusFilter, typeFilter: $typeFilter, enabledViewModes: Binding(get: { enabledViewModes }, set: { setEnabledViewModes($0) }), showInvoices: $showInvoices)
+                JobFiltersView(statusFilter: statusFilterBinding, typeFilter: $typeFilter, enabledViewModes: Binding(get: { enabledViewModes }, set: { setEnabledViewModes($0) }), showInvoices: $showInvoices)
                     .presentationDetents([.large])
             }
             .sheet(isPresented: $showMonthPicker) {
