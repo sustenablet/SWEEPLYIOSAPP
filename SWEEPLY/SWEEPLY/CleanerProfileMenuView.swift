@@ -8,10 +8,18 @@ struct CleanerProfileMenuView: View {
     let membership: TeamMembership
     @Binding var showSettings: Bool
 
-    private var profile: UserProfile { profileStore.profile ?? MockData.profile }
+    private var displayName: String {
+        guard let name = profileStore.profile?.fullName, !name.isEmpty else { return "Team Member" }
+        return name
+    }
+
+    private var displayEmail: String {
+        profileStore.profile?.email ?? ""
+    }
 
     private var initials: String {
-        profile.fullName.split(separator: " ").compactMap { $0.first }.map { String($0) }.joined()
+        displayName == "Team Member" ? "?" :
+        displayName.split(separator: " ").compactMap { $0.first }.map { String($0) }.joined()
     }
 
     var body: some View {
@@ -28,19 +36,25 @@ struct CleanerProfileMenuView: View {
                     Circle()
                         .fill(Color.sweeplyNavy)
                         .frame(width: 50, height: 50)
-                    Text(initials.isEmpty ? "?" : initials)
-                        .font(.system(size: 19, weight: .bold))
-                        .foregroundStyle(.white)
+                    if profileStore.profile == nil {
+                        ProgressView().tint(.white).scaleEffect(0.7)
+                    } else {
+                        Text(initials)
+                            .font(.system(size: 19, weight: .bold))
+                            .foregroundStyle(.white)
+                    }
                 }
                 VStack(alignment: .leading, spacing: 3) {
-                    Text(profile.fullName.isEmpty ? "Team Member" : profile.fullName)
+                    Text(displayName)
                         .font(.system(size: 16, weight: .bold))
                         .foregroundStyle(Color.sweeplyNavy)
                         .lineLimit(1)
-                    Text(profile.email)
-                        .font(.system(size: 12))
-                        .foregroundStyle(Color.sweeplyTextSub)
-                        .lineLimit(1)
+                    if !displayEmail.isEmpty {
+                        Text(displayEmail)
+                            .font(.system(size: 12))
+                            .foregroundStyle(Color.sweeplyTextSub)
+                            .lineLimit(1)
+                    }
                 }
                 Spacer()
                 Text(membership.businessName)

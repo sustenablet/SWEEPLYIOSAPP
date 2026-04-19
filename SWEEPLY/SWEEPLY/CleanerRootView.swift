@@ -1,7 +1,8 @@
 import SwiftUI
 
 struct CleanerRootView: View {
-    @Environment(AppSession.self) private var session
+    @Environment(AppSession.self)   private var session
+    @Environment(ProfileStore.self) private var profileStore
 
     let membership: TeamMembership
 
@@ -28,6 +29,12 @@ struct CleanerRootView: View {
             UIImpactFeedbackGenerator(style: .light).impactOccurred()
         }
         .onAppear { applyTabBarAppearance() }
+        .task {
+            // Ensure profile is loaded when entering member view (handles app-restore race condition)
+            if profileStore.profile == nil, let uid = session.userId {
+                await profileStore.load(userId: uid)
+            }
+        }
     }
 
     private func applyTabBarAppearance() {
