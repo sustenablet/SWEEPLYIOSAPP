@@ -675,7 +675,7 @@ struct FinancesView: View {
                             paymentAmount = ""
                             paymentNotes = ""
                         }
-                    }
+                    }}
                 )
             }
         }
@@ -781,7 +781,7 @@ struct FinancesView: View {
             let dailyTotals = Dictionary(grouping: jobs) { job in
                 cal.startOfDay(for: job.date)
             }
-            return dailyTotals.values.reduce(0.0) { _ in member.payRateAmount }
+            return dailyTotals.values.reduce(0.0) { acc, _ in acc + member.payRateAmount }
         case .perWeek:
             return member.payRateAmount
         case .custom:
