@@ -12,6 +12,10 @@ struct ExpensesView: View {
     @State private var selectedDay  : Date? = nil
     @State private var appeared      = false
 
+    private var canAddExpense: Bool {
+        session.userId != nil
+    }
+
     private var monthLabel: String {
         let f = DateFormatter()
         f.dateFormat = "MMMM yyyy"
@@ -212,10 +216,12 @@ struct ExpensesView: View {
                         .foregroundStyle(Color.sweeplyNavy)
                 }
             }
-            .sheet(isPresented: $showAddSheet) {
-                AddExpenseSheet(userId: session.userId ?? UUID())
-                    .environment(expenseStore)
-            }
+.sheet(isPresented: $showAddSheet) {
+                if let uid = session.userId {
+                    AddExpenseSheet(userId: uid)
+                        .environment(expenseStore)
+                }
+        }
         }
     }
 
@@ -566,6 +572,7 @@ struct ExpensesView: View {
 
     private var addButton: some View {
         Button {
+            guard canAddExpense else { return }
             UIImpactFeedbackGenerator(style: .medium).impactOccurred()
             showAddSheet = true
         } label: {
@@ -575,13 +582,14 @@ struct ExpensesView: View {
                 Text("Add Expense")
                     .font(.system(size: 16, weight: .semibold))
             }
-            .foregroundStyle(.white)
+            .foregroundStyle(canAddExpense ? .white : .white.opacity(0.5))
             .frame(maxWidth: .infinity)
             .padding(.vertical, 16)
             .background(Color.sweeplyNavy, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
             .shadow(color: Color.sweeplyNavy.opacity(0.3), radius: 12, x: 0, y: 6)
         }
         .buttonStyle(.plain)
+        .disabled(!canAddExpense)
     }
 
     // MARK: - Helpers
