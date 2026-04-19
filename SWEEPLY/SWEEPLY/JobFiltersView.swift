@@ -192,9 +192,9 @@ struct JobFiltersView: View {
     
     private func iconFor(mode: ScheduleViewMode) -> String {
         switch mode {
-        case .day: return "calendar"
+        case .day: return "calendar.badge.clock"
         case .list: return "list.bullet"
-        case .month: return "calendar.badge.month"
+        case .month: return "calendar"
         case .map: return "map.fill"
         }
     }

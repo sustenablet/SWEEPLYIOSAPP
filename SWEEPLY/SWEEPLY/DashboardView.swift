@@ -127,7 +127,7 @@ struct DashboardView: View {
         invoicesStore.invoices.filter { $0.status == .overdue }.count
     }
 
-    private var healthCards: [DashboardHealthCardModel] {
+private var healthCards: [DashboardHealthCardModel] {
         [
             DashboardHealthCardModel(
                 title: "Weekly Revenue",
@@ -137,7 +137,8 @@ struct DashboardView: View {
                 isPositive: healthStats?.is_rev_positive ?? true,
                 icon: "dollarsign",
                 iconColor: .sweeplyAccent,
-                footnote: "\(completedCount) jobs completed this week"
+                footnote: "\(completedCount) jobs completed this week",
+                showTrendBadge: false
             ),
             DashboardHealthCardModel(
                 title: "Weekly Jobs",
@@ -147,17 +148,19 @@ struct DashboardView: View {
                 isPositive: healthStats?.is_job_positive ?? true,
                 icon: "calendar",
                 iconColor: .sweeplyNavy,
-                footnote: "\(todayJobs.count) on today’s schedule"
+                footnote: "\(todayJobs.count) on today's schedule",
+                showTrendBadge: true
             ),
             DashboardHealthCardModel(
                 title: "Outstanding Balance",
-                subtitle: "Invoices sent that haven’t been paid yet",
+                subtitle: "Invoices sent that haven't been paid yet",
                 value: outstandingTotal.currency,
                 trend: overdueInvoicesCount == 0 ? "All on track" : "\(overdueInvoicesCount) overdue",
                 isPositive: overdueInvoicesCount == 0,
                 icon: "creditcard",
                 iconColor: overdueInvoicesCount == 0 ? .sweeplyAccent : .sweeplyDestructive,
-                footnote: "\(ongoingInvoices.count) open invoice\(ongoingInvoices.count == 1 ? "" : "s")"
+                footnote: "\(ongoingInvoices.count) open invoice\(ongoingInvoices.count == 1 ? "" : "s")",
+                showTrendBadge: true
             ),
             DashboardHealthCardModel(
                 title: "Active Clients",
@@ -167,7 +170,8 @@ struct DashboardView: View {
                 isPositive: activeClientsThisWeek > 0,
                 icon: "person.2",
                 iconColor: .sweeplyNavy,
-                footnote: "\(clientsStore.clients.count) total client\(clientsStore.clients.count == 1 ? "" : "s") on your roster"
+                footnote: "\(clientsStore.clients.count) total client\(clientsStore.clients.count == 1 ? "" : "s") on your roster",
+                showTrendBadge: true
             )
         ]
     }
@@ -613,6 +617,7 @@ struct DashboardHealthCardModel {
     let icon: String
     let iconColor: Color
     let footnote: String
+    var showTrendBadge: Bool = true
 }
 
 struct DashboardHealthSlide: View {
@@ -626,7 +631,9 @@ struct DashboardHealthSlide: View {
                         .font(.system(size: 18, weight: .semibold))
                         .foregroundStyle(Color.sweeplyNavy)
                     Spacer()
-                    TrendBadge(value: card.trend, isPositive: card.isPositive)
+                    if card.showTrendBadge {
+                        TrendBadge(value: card.trend, isPositive: card.isPositive)
+                    }
                 }
                 Text(card.subtitle)
                     .font(.system(size: 12))
@@ -906,18 +913,19 @@ struct ProfileMenuView: View {
                         .font(.system(size: 12))
                         .foregroundStyle(Color.sweeplyTextSub)
                         .lineLimit(1)
+                    if !profile.businessName.isEmpty {
+                        Text(profile.businessName)
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(Color.sweeplyAccent)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 5)
+                            .background(Color.sweeplyAccent.opacity(0.1))
+                            .clipShape(Capsule())
+                            .overlay(Capsule().stroke(Color.sweeplyAccent.opacity(0.25), lineWidth: 1))
+                            .padding(.top, 4)
+                    }
                 }
                 Spacer()
-                if !profile.businessName.isEmpty {
-                    Text(profile.businessName)
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(Color.sweeplyAccent)
-                        .padding(.horizontal, 9)
-                        .padding(.vertical, 4)
-                        .background(Color.sweeplyAccent.opacity(0.1))
-                        .clipShape(Capsule())
-                        .overlay(Capsule().stroke(Color.sweeplyAccent.opacity(0.25), lineWidth: 1))
-                }
             }
             .padding(.horizontal, 20)
             .padding(.bottom, 18)

@@ -115,7 +115,8 @@ struct CleanerDashboardView: View {
                 isPositive: weekCompleted > 0,
                 icon: "dollarsign",
                 iconColor: .sweeplyAccent,
-                footnote: "\(weekCompleted) job\(weekCompleted == 1 ? "" : "s") completed this week"
+                footnote: "\(weekCompleted) job\(weekCompleted == 1 ? "" : "s") completed this week",
+                showTrendBadge: false
             ),
             DashboardHealthCardModel(
                 title: "This Month",
