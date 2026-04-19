@@ -629,6 +629,11 @@ struct FinancesView: View {
 
     // MARK: - Team Payroll
 
+    @State private var showPaymentSheet = false
+    @State private var selectedPaymentMember: TeamMember?
+    @State private var paymentAmount = ""
+    @State private var paymentNotes = ""
+
     private var teamPayrollSection: some View {
         SectionCard {
             VStack(alignment: .leading, spacing: 14) {
@@ -657,11 +662,29 @@ struct FinancesView: View {
                 }
             }
         }
+        .sheet(isPresented: $showPaymentSheet) {
+            if let member = selectedPaymentMember {
+                PaymentSheet(
+                    member: member,
+                    amount: $paymentAmount,
+                    notes: $paymentNotes,
+                    onPay: { Task {
+                        let ok = await processPayment(member: member)
+                        if ok {
+                            showPaymentSheet = false
+                            paymentAmount = ""
+                            paymentNotes = ""
+                        }
+                    }
+                )
+            }
+        }
     }
 
     private func payrollRow(member: TeamMember) -> some View {
         let jobs = completedJobsThisMonth(for: member)
-        let amount = earnedThisMonth(for: member)
+        let grossAmount = earnedThisMonth(for: member)
+        let rateAmount = calculateEarningsWithRate(for: member)
         let nameInitials = member.name.split(separator: " ").compactMap { $0.first }.map { String($0) }.joined()
         let initStr = String(nameInitials.prefix(2))
 
@@ -679,21 +702,55 @@ struct FinancesView: View {
                 Text(member.name)
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(Color.primary)
-                Text(member.role.rawValue.capitalized)
-                    .font(.system(size: 12))
-                    .foregroundStyle(Color.sweeplyTextSub)
+                if member.payRateEnabled && member.payRateAmount > 0 {
+                    Text(member.payRateDescription)
+                        .font(.system(size: 11))
+                        .foregroundStyle(Color.sweeplyAccent)
+                } else {
+                    Text("Rate not set")
+                        .font(.system(size: 11))
+                        .foregroundStyle(Color.sweeplyTextSub)
+                }
             }
 
             Spacer()
 
             VStack(alignment: .trailing, spacing: 2) {
-                Text(amount.currency)
-                    .font(.system(size: 15, weight: .bold, design: .monospaced))
-                    .foregroundStyle(Color.sweeplyNavy)
+                if member.payRateEnabled && member.payRateAmount > 0 && grossAmount > rateAmount {
+                    HStack(spacing: 4) {
+                        Text(rateAmount.currency)
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundStyle(Color.sweeplyTextSub)
+                        Image(systemName: "arrow.right")
+                            .font(.system(size: 9))
+                        Text(grossAmount.currency)
+                            .font(.system(size: 13, weight: .bold, design: .monospaced))
+                            .foregroundStyle(Color.sweeplyNavy)
+                    }
+                } else {
+                    Text(grossAmount.currency)
+                        .font(.system(size: 15, weight: .bold, design: .monospaced))
+                        .foregroundStyle(Color.sweeplyNavy)
+                }
                 Text("\(jobs.count) job\(jobs.count == 1 ? "" : "s")")
                     .font(.system(size: 11))
                     .foregroundStyle(Color.sweeplyTextSub)
             }
+
+            Button {
+                selectedPaymentMember = member
+                paymentAmount = "\(Int(rateAmount))"
+                showPaymentSheet = true
+            } label: {
+                Text("Pay")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(Color.sweeplyNavy)
+                    .clipShape(Capsule())
+            }
+            .buttonStyle(.plain)
         }
         .padding(.vertical, 12)
     }
@@ -707,6 +764,44 @@ struct FinancesView: View {
 
     private func earnedThisMonth(for member: TeamMember) -> Double {
         completedJobsThisMonth(for: member).reduce(0.0) { $0 + $1.price }
+    }
+
+    private func calculateEarningsWithRate(for member: TeamMember) -> Double {
+        guard member.payRateEnabled && member.payRateAmount > 0 else {
+            return earnedThisMonth(for: member)
+        }
+
+        let jobs = completedJobsThisMonth(for: member)
+        let cal = Calendar.current
+
+        switch member.payRateType {
+        case .perJob:
+            return Double(jobs.count) * member.payRateAmount
+        case .perDay:
+            let dailyTotals = Dictionary(grouping: jobs) { job in
+                cal.startOfDay(for: job.date)
+            }
+            return dailyTotals.values.reduce(0.0) { _ in member.payRateAmount }
+        case .perWeek:
+            return member.payRateAmount
+        case .custom:
+            return member.payRateAmount
+        }
+    }
+
+    private func processPayment(member: TeamMember) async -> Bool {
+        guard let amount = Double(paymentAmount), amount > 0,
+              let ownerId = session.userId else { return false }
+
+        let payment = TeamPayment(
+            memberId: member.id,
+            ownerId: ownerId,
+            amount: amount,
+            notes: paymentNotes
+        )
+
+        var store = TeamPaymentsStore()
+        return await store.add(payment)
     }
 }
 
@@ -1008,6 +1103,101 @@ struct InvoicesListView: View {
             .overlay(Capsule().stroke(selected ? Color.clear : Color.sweeplyBorder, lineWidth: 1))
         }
         .buttonStyle(.plain)
+    }
+}
+
+// MARK: - Payment Sheet
+
+private struct PaymentSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    let member: TeamMember
+    @Binding var amount: String
+    @Binding var notes: String
+    let onPay: () -> Void
+
+    @State private var isPaying = false
+
+    private var parsedAmount: Double? {
+        let cleaned = amount.replacingOccurrences(of: ",", with: ".")
+        return Double(cleaned)
+    }
+
+    private var canPay: Bool {
+        (parsedAmount ?? 0) > 0
+    }
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                Color.sweeplyBackground.ignoresSafeArea()
+
+                VStack(spacing: 20) {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Payment Amount")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundStyle(Color.sweeplyTextSub)
+                        
+                        HStack {
+                            Text("$")
+                                .font(.system(size: 24, weight: .bold))
+                                .foregroundStyle(Color.sweeplyNavy)
+                            
+                            TextField("0", text: $amount)
+                                .font(.system(size: 32, weight: .bold, design: .monospaced))
+                                .keyboardType(.decimalPad)
+                        }
+                        .padding(16)
+                        .background(Color.sweeplySurface)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                    }
+
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Notes (optional)")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundStyle(Color.sweeplyTextSub)
+                        
+                        TextField("Payment for this week...", text: $notes, axis: .vertical)
+                            .font(.system(size: 15))
+                            .lineLimit(3)
+                            .padding(12)
+                            .background(Color.sweeplySurface)
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                    }
+
+                    Spacer()
+
+                    Button {
+                        isPaying = true
+                        onPay()
+                    } label: {
+                        HStack {
+                            if isPaying {
+                                ProgressView()
+                                    .tint(.white)
+                            } else {
+                                Text("Record Payment")
+                                    .font(.system(size: 16, weight: .semibold))
+                            }
+                        }
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                        .background(canPay ? Color.sweeplyNavy : Color.sweeplyNavy.opacity(0.5))
+                        .clipShape(RoundedRectangle(cornerRadius: 14))
+                    }
+                    .disabled(!canPay || isPaying)
+                }
+                .padding(20)
+            }
+            .navigationTitle("Pay \(member.name)")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Cancel") { dismiss() }
+                        .foregroundStyle(Color.sweeplyTextSub)
+                }
+            }
+        }
     }
 }
 

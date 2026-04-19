@@ -348,6 +348,31 @@ enum TeamMemberStatus: String, Codable {
     }
 }
 
+enum PayRateType: String, CaseIterable, Codable {
+    case perJob      = "per_job"
+    case perDay     = "per_day"
+    case perWeek    = "per_week"
+    case custom     = "custom"
+
+    var displayName: String {
+        switch self {
+        case .perJob:   return "Per Job"
+        case .perDay:   return "Per Day"
+        case .perWeek:  return "Per Week"
+        case .custom:   return "Custom"
+        }
+    }
+    
+    var description: String {
+        switch self {
+        case .perJob:   return "$X per job completed"
+        case .perDay:  return "$X for all jobs done that day"
+        case .perWeek: return "$X for all jobs done that week"
+        case .custom:  return "Owner enters custom amount"
+        }
+    }
+}
+
 struct TeamMember: Identifiable, Codable {
     var id      = UUID()
     var ownerId : UUID
@@ -357,6 +382,11 @@ struct TeamMember: Identifiable, Codable {
     var role    : TeamRole
     var status  : TeamMemberStatus
     var addedAt : Date
+    
+    // Pay rate settings
+    var payRateType: PayRateType = .perJob
+    var payRateAmount: Double = 0
+    var payRateEnabled: Bool = false
 
     var initials: String {
         name.split(separator: " ")
@@ -364,5 +394,10 @@ struct TeamMember: Identifiable, Codable {
             .prefix(2)
             .map { String($0).uppercased() }
             .joined()
+    }
+    
+    var payRateDescription: String {
+        guard payRateEnabled && payRateAmount > 0 else { return "Not set" }
+        return "$\(Int(payRateAmount)) \(payRateType.displayName.lowercased())"
     }
 }

@@ -170,6 +170,40 @@ final class TeamStore {
             return false
         }
     }
+
+    // MARK: - Update Pay Rate
+
+    func updatePayRate(id: UUID, rateType: PayRateType, amount: Double, enabled: Bool) async -> Bool {
+        guard let client = SupabaseManager.shared else {
+            if let idx = members.firstIndex(where: { $0.id == id }) {
+                members[idx].payRateType = rateType
+                members[idx].payRateAmount = amount
+                members[idx].payRateEnabled = enabled
+            }
+            return true
+        }
+
+        do {
+            try await client
+                .from("team_members")
+                .update(TeamMemberPayRatePatch(
+                    payRateType: rateType.rawValue,
+                    payRateAmount: amount,
+                    payRateEnabled: enabled
+                ))
+                .eq("id", value: id.uuidString)
+                .execute()
+            if let idx = members.firstIndex(where: { $0.id == id }) {
+                members[idx].payRateType = rateType
+                members[idx].payRateAmount = amount
+                members[idx].payRateEnabled = enabled
+            }
+            return true
+        } catch {
+            lastError = error.localizedDescription
+            return false
+        }
+    }
 }
 
 // MARK: - DTOs
@@ -183,11 +217,17 @@ private struct TeamMemberDTO: Decodable {
     let role: String
     let status: String
     let addedAt: Date
+    let payRateType: String?
+    let payRateAmount: Double?
+    let payRateEnabled: Bool?
 
     enum CodingKeys: String, CodingKey {
         case id, name, email, phone, role, status
         case ownerId  = "owner_id"
         case addedAt  = "added_at"
+        case payRateType = "pay_rate_type"
+        case payRateAmount = "pay_rate_amount"
+        case payRateEnabled = "pay_rate_enabled"
     }
 
     func toMember() -> TeamMember {
@@ -199,7 +239,10 @@ private struct TeamMemberDTO: Decodable {
             phone: phone,
             role: TeamRole(rawValue: role) ?? .member,
             status: TeamMemberStatus(rawValue: status) ?? .invited,
-            addedAt: addedAt
+            addedAt: addedAt,
+            payRateType: PayRateType(rawValue: payRateType ?? "per_job") ?? .perJob,
+            payRateAmount: payRateAmount ?? 0,
+            payRateEnabled: payRateEnabled ?? false
         )
     }
 }
@@ -233,4 +276,16 @@ private struct TeamMemberFullPatch: Encodable {
     let email: String
     let phone: String
     let role: String
+}
+
+private struct TeamMemberPayRatePatch: Encodable {
+    let payRateType: String
+    let payRateAmount: Double
+    let payRateEnabled: Bool
+
+    enum CodingKeys: String, CodingKey {
+        case payRateType = "pay_rate_type"
+        case payRateAmount = "pay_rate_amount"
+        case payRateEnabled = "pay_rate_enabled"
+    }
 }
