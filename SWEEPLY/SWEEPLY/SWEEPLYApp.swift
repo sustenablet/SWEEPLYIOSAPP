@@ -94,6 +94,12 @@ struct SWEEPLYApp: App {
                     }
                 }
                 .onOpenURL { url in
+                    // Auth callbacks (email confirmation, OAuth redirect)
+                    if url.scheme == "sweeply", url.host == "auth-callback" {
+                        Task { try? await SupabaseManager.shared?.auth.session(from: url) }
+                        return
+                    }
+                    // Schedule deep links: sweeply://schedule?date=...
                     if url.scheme == "sweeply" {
                         if let comps = URLComponents(url: url, resolvingAgainstBaseURL: false),
                            let dateStr = comps.queryItems?.first(where: { $0.name == "date" })?.value {
@@ -101,7 +107,7 @@ struct SWEEPLYApp: App {
                         }
                         UserDefaults.standard.set(true, forKey: "pendingScheduleTab")
                     } else {
-                        SupabaseManager.shared?.auth.handle(url)
+                        Task { try? await SupabaseManager.shared?.auth.session(from: url) }
                     }
                 }
                 .onContinueUserActivity(CSSearchableItemActionType) { activity in

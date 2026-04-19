@@ -1,3 +1,5 @@
+import AuthenticationServices
+import CryptoKit
 import Foundation
 import Observation
 import Supabase
@@ -46,6 +48,8 @@ final class AppSession {
     var hasResolvedInitialSession: Bool = false
 
     private var authTask: Task<Void, Never>?
+    private var currentAppleNonce: String?
+    private var webAuthSession: ASWebAuthenticationSession?
 
     init() {
         guard SupabaseManager.shared != nil else {
@@ -77,6 +81,75 @@ final class AppSession {
         } catch {
             lastAuthError = humanizedAuthError(error)
         }
+    }
+
+    // MARK: - Apple Sign In
+
+    func prepareAppleSignIn() -> String {
+        let nonce = Self.randomNonce()
+        currentAppleNonce = nonce
+        return nonce
+    }
+
+    func signInWithApple(idToken: String) async {
+        guard let client = SupabaseManager.shared, let nonce = currentAppleNonce else { return }
+        lastAuthError = nil
+        do {
+            _ = try await client.auth.signInWithIdToken(
+                credentials: .init(provider: .apple, idToken: idToken, nonce: nonce)
+            )
+        } catch {
+            lastAuthError = humanizedAuthError(error)
+        }
+    }
+
+    // MARK: - Google Sign In
+
+    func signInWithGoogle() async {
+        guard let client = SupabaseManager.shared else { return }
+        lastAuthError = nil
+        do {
+            let url = try client.auth.getOAuthSignInURL(
+                provider: .google,
+                redirectTo: URL(string: "sweeply://auth-callback")
+            )
+            await startOAuthSession(url: url)
+        } catch {
+            lastAuthError = humanizedAuthError(error)
+        }
+    }
+
+    @MainActor
+    private func startOAuthSession(url: URL) async {
+        let anchor = OAuthAnchor()
+        await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
+            let session = ASWebAuthenticationSession(url: url, callbackURLScheme: "sweeply") { [weak self] callbackURL, error in
+                Task { @MainActor [weak self] in
+                    if let callbackURL {
+                        _ = try? await SupabaseManager.shared?.auth.session(from: callbackURL)
+                    } else if let err = error as? ASWebAuthenticationSessionError, err.code != .canceledLogin {
+                        self?.lastAuthError = err.localizedDescription
+                    }
+                    continuation.resume()
+                }
+            }
+            session.presentationContextProvider = anchor
+            session.prefersEphemeralWebBrowserSession = false
+            webAuthSession = session
+            session.start()
+        }
+    }
+
+    // MARK: - OAuth Helpers
+
+    static func sha256(_ input: String) -> String {
+        SHA256.hash(data: Data(input.utf8)).map { String(format: "%02x", $0) }.joined()
+    }
+
+    private static func randomNonce(length: Int = 32) -> String {
+        var bytes = [UInt8](repeating: 0, count: length)
+        _ = SecRandomCopyBytes(kSecRandomDefault, bytes.count, &bytes)
+        return bytes.map { String(format: "%02x", $0) }.joined()
     }
 
     func signOut() async {
@@ -280,5 +353,16 @@ final class AppSession {
             pendingInvites = []
             activeMemberships = []
         }
+    }
+}
+
+// MARK: - ASWebAuthentication anchor
+
+private final class OAuthAnchor: NSObject, ASWebAuthenticationPresentationContextProviding {
+    func presentationAnchor(for session: ASWebAuthenticationSession) -> ASPresentationAnchor {
+        UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+            .flatMap { $0.windows }
+            .first { $0.isKeyWindow } ?? ASPresentationAnchor()
     }
 }
