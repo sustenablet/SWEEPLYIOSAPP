@@ -1,4 +1,3 @@
-import AuthenticationServices
 import Foundation
 import Observation
 import Supabase
@@ -47,7 +46,6 @@ final class AppSession {
     var hasResolvedInitialSession: Bool = false
 
     private var authTask: Task<Void, Never>?
-    private var webAuthSession: ASWebAuthenticationSession?
 
     init() {
         guard SupabaseManager.shared != nil else {
@@ -78,43 +76,6 @@ final class AppSession {
             _ = try await client.auth.signUp(email: email, password: password)
         } catch {
             lastAuthError = humanizedAuthError(error)
-        }
-    }
-
-    // MARK: - Google Sign In
-
-    func signInWithGoogle() async {
-        guard let client = SupabaseManager.shared else { return }
-        lastAuthError = nil
-        do {
-            let url = try client.auth.getOAuthSignInURL(
-                provider: .google,
-                redirectTo: URL(string: "sweeply://auth-callback")
-            )
-            await startOAuthSession(url: url)
-        } catch {
-            lastAuthError = humanizedAuthError(error)
-        }
-    }
-
-    @MainActor
-    private func startOAuthSession(url: URL) async {
-        let anchor = OAuthAnchor()
-        await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
-            let session = ASWebAuthenticationSession(url: url, callbackURLScheme: "sweeply") { [weak self] callbackURL, error in
-                Task { @MainActor [weak self] in
-                    if let callbackURL {
-                        _ = try? await SupabaseManager.shared?.auth.session(from: callbackURL)
-                    } else if let err = error as? ASWebAuthenticationSessionError, err.code != .canceledLogin {
-                        self?.lastAuthError = err.localizedDescription
-                    }
-                    continuation.resume()
-                }
-            }
-            session.presentationContextProvider = anchor
-            session.prefersEphemeralWebBrowserSession = false
-            webAuthSession = session
-            session.start()
         }
     }
 
@@ -331,13 +292,3 @@ final class AppSession {
     }
 }
 
-// MARK: - ASWebAuthentication anchor
-
-private final class OAuthAnchor: NSObject, ASWebAuthenticationPresentationContextProviding {
-    func presentationAnchor(for session: ASWebAuthenticationSession) -> ASPresentationAnchor {
-        UIApplication.shared.connectedScenes
-            .compactMap { $0 as? UIWindowScene }
-            .flatMap { $0.windows }
-            .first { $0.isKeyWindow } ?? ASPresentationAnchor()
-    }
-}

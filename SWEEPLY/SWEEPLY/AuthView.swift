@@ -80,43 +80,6 @@ struct AuthView: View {
                 .padding(.horizontal, 24)
                 .padding(.bottom, 20)
 
-            // Social sign-in
-            VStack(spacing: 10) {
-                Button {
-                    UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-                    Task { await session.signInWithGoogle() }
-                } label: {
-                    HStack(spacing: 10) {
-                        Image(systemName: "globe")
-                            .font(.system(size: 16, weight: .medium))
-                        Text("Continue with Google")
-                            .font(.system(size: 16, weight: .semibold))
-                    }
-                    .foregroundStyle(Color.sweeplyNavy)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 52)
-                    .background(Color.sweeplyBackground)
-                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 14, style: .continuous)
-                            .stroke(Color.sweeplyBorder, lineWidth: 1.5)
-                    )
-                }
-                .buttonStyle(.plain)
-            }
-            .padding(.horizontal, 24)
-
-            // Divider
-            HStack(spacing: 12) {
-                Rectangle().fill(Color.sweeplyBorder).frame(height: 1)
-                Text("or continue with email")
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundStyle(Color.sweeplyTextSub)
-                    .fixedSize()
-                Rectangle().fill(Color.sweeplyBorder).frame(height: 1)
-            }
-            .padding(.horizontal, 24)
-            .padding(.vertical, 16)
 
             // Fields
             VStack(spacing: 14) {

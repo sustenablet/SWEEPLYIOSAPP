@@ -653,6 +653,16 @@ struct AddExpenseSheet: View {
                                         .keyboardType(.decimalPad)
                                         .foregroundStyle(Color.primary)
                                         .focused($isAmountFocused)
+                                        .toolbar {
+                                            ToolbarItemGroup(placement: .keyboard) {
+                                                Spacer()
+                                                Button("Done") {
+                                                    isAmountFocused = false
+                                                }
+                                                .font(.system(size: 15, weight: .semibold))
+                                                .foregroundStyle(Color.sweeplyAccent)
+                                            }
+                                        }
                                 }
                             }
                         }
