@@ -154,11 +154,9 @@ struct ExpensesView: View {
     @ViewBuilder
     private var expenseCountLabel: some View {
         if selectedDay != nil {
-            if let day = selectedDay {
-                Text(dayName(day))
-                    .font(.system(size: 13))
-                    .foregroundStyle(Color.sweeplyTextSub)
-            }
+            Text("\(filteredExpenses.count) expense\(filteredExpenses.count == 1 ? "" : "s") in \(shortMonthLabel)")
+                .font(.system(size: 13))
+                .foregroundStyle(Color.sweeplyTextSub)
         } else {
             Text("\(monthExpenses.count) expense\(monthExpenses.count == 1 ? "" : "s") in \(shortMonthLabel)")
                 .font(.system(size: 13))
