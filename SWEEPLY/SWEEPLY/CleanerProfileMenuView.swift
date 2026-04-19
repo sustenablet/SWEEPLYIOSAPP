@@ -1,0 +1,121 @@
+import SwiftUI
+
+struct CleanerProfileMenuView: View {
+    @Environment(AppSession.self)   private var session
+    @Environment(ProfileStore.self) private var profileStore
+    @Environment(\.dismiss)         private var dismiss
+
+    let membership: TeamMembership
+    @Binding var showSettings: Bool
+
+    private var profile: UserProfile { profileStore.profile ?? MockData.profile }
+
+    private var initials: String {
+        profile.fullName.split(separator: " ").compactMap { $0.first }.map { String($0) }.joined()
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            Capsule()
+                .fill(Color.sweeplyBorder)
+                .frame(width: 32, height: 4)
+                .padding(.top, 10)
+                .padding(.bottom, 20)
+
+            // Identity row
+            HStack(spacing: 14) {
+                ZStack {
+                    Circle()
+                        .fill(Color.sweeplyNavy)
+                        .frame(width: 50, height: 50)
+                    Text(initials.isEmpty ? "?" : initials)
+                        .font(.system(size: 19, weight: .bold))
+                        .foregroundStyle(.white)
+                }
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(profile.fullName.isEmpty ? "Team Member" : profile.fullName)
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundStyle(Color.sweeplyNavy)
+                        .lineLimit(1)
+                    Text(profile.email)
+                        .font(.system(size: 12))
+                        .foregroundStyle(Color.sweeplyTextSub)
+                        .lineLimit(1)
+                }
+                Spacer()
+                Text(membership.businessName)
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(Color.sweeplyAccent)
+                    .padding(.horizontal, 9)
+                    .padding(.vertical, 4)
+                    .background(Color.sweeplyAccent.opacity(0.1))
+                    .clipShape(Capsule())
+                    .overlay(Capsule().stroke(Color.sweeplyAccent.opacity(0.25), lineWidth: 1))
+                    .lineLimit(1)
+            }
+            .padding(.horizontal, 20)
+            .padding(.bottom, 18)
+
+            Divider()
+
+            menuRow(icon: "gearshape.fill", iconColor: Color.sweeplyNavy, label: "Settings") {
+                dismiss()
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) { showSettings = true }
+            }
+
+            Divider().padding(.leading, 54)
+
+            menuRow(icon: "arrow.left.arrow.right", iconColor: Color.sweeplyAccent, label: "Switch to My Business") {
+                dismiss()
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+                    session.switchToOwnBusiness()
+                }
+            }
+
+            Divider()
+
+            Button {
+                Task { await session.signOut(); dismiss() }
+            } label: {
+                HStack(spacing: 12) {
+                    Image(systemName: "rectangle.portrait.and.arrow.right")
+                        .font(.system(size: 14, weight: .medium))
+                    Text("Sign Out")
+                        .font(.system(size: 15, weight: .semibold))
+                    Spacer()
+                }
+                .foregroundStyle(Color.sweeplyDestructive)
+                .padding(.horizontal, 20)
+                .padding(.vertical, 16)
+            }
+            .buttonStyle(.plain)
+        }
+        .background(Color.sweeplyBackground)
+    }
+
+    @ViewBuilder
+    private func menuRow(icon: String, iconColor: Color, label: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 14) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .fill(iconColor.opacity(0.1))
+                        .frame(width: 32, height: 32)
+                    Image(systemName: icon)
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundStyle(iconColor)
+                }
+                Text(label)
+                    .font(.system(size: 15))
+                    .foregroundStyle(Color.primary)
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(Color.sweeplyBorder)
+            }
+            .padding(.horizontal, 20)
+            .padding(.vertical, 14)
+        }
+        .buttonStyle(.plain)
+    }
+}

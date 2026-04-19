@@ -8,6 +8,7 @@ struct FinancesView: View {
     @Environment(ProfileStore.self) private var profileStore
     @Environment(AppSession.self) private var session
     @Environment(ExpenseStore.self) private var expenseStore
+    @Environment(TeamStore.self)    private var teamStore
 
     @State private var selectedPeriod: ChartPeriod = .week
     @State private var selectedFilter: InvoiceFilter = .all
@@ -145,6 +146,7 @@ struct FinancesView: View {
                 expenseSummarySection
                 sixMonthChartSection
                 invoicesBlock
+                teamPayrollSection
             }
             .padding(.horizontal, 20)
             .padding(.bottom, 36)
@@ -617,6 +619,88 @@ struct FinancesView: View {
                 ? "Your first invoice will appear here once created."
                 : "Try a different filter to see more invoices."
         )
+    }
+
+    // MARK: - Team Payroll
+
+    private var teamPayrollSection: some View {
+        SectionCard {
+            VStack(alignment: .leading, spacing: 14) {
+                CardHeader(title: "Team Payroll", subtitle: "This month's earnings", action: nil)
+
+                if teamStore.members.isEmpty {
+                    VStack(spacing: 8) {
+                        Image(systemName: "person.2")
+                            .font(.system(size: 32))
+                            .foregroundStyle(Color.sweeplyTextSub.opacity(0.4))
+                        Text("No team members yet")
+                            .font(.system(size: 14))
+                            .foregroundStyle(Color.sweeplyTextSub)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 24)
+                } else {
+                    VStack(spacing: 0) {
+                        ForEach(Array(teamStore.members.enumerated()), id: \.element.id) { index, member in
+                            payrollRow(member: member)
+                            if index < teamStore.members.count - 1 {
+                                Divider().padding(.leading, 52)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private func payrollRow(member: TeamMember) -> some View {
+        let jobs = completedJobsThisMonth(for: member)
+        let amount = earnedThisMonth(for: member)
+        let nameInitials = member.name.split(separator: " ").compactMap { $0.first }.map { String($0) }.joined()
+        let initStr = String(nameInitials.prefix(2))
+
+        return HStack(spacing: 12) {
+            ZStack {
+                Circle()
+                    .fill(Color.sweeplyNavy)
+                    .frame(width: 36, height: 36)
+                Text(initStr.isEmpty ? "?" : initStr)
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundStyle(.white)
+            }
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(member.name)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(Color.primary)
+                Text(member.role.rawValue.capitalized)
+                    .font(.system(size: 12))
+                    .foregroundStyle(Color.sweeplyTextSub)
+            }
+
+            Spacer()
+
+            VStack(alignment: .trailing, spacing: 2) {
+                Text(amount.currency)
+                    .font(.system(size: 15, weight: .bold, design: .monospaced))
+                    .foregroundStyle(Color.sweeplyNavy)
+                Text("\(jobs.count) job\(jobs.count == 1 ? "" : "s")")
+                    .font(.system(size: 11))
+                    .foregroundStyle(Color.sweeplyTextSub)
+            }
+        }
+        .padding(.vertical, 12)
+    }
+
+    private func completedJobsThisMonth(for member: TeamMember) -> [Job] {
+        guard let start = Calendar.current.dateInterval(of: .month, for: Date())?.start else { return [] }
+        return jobsStore.jobs.filter { job in
+            job.assignedMemberId == member.id && job.status == .completed && job.date >= start
+        }
+    }
+
+    private func earnedThisMonth(for member: TeamMember) -> Double {
+        completedJobsThisMonth(for: member).reduce(0.0) { $0 + $1.price }
     }
 }
 

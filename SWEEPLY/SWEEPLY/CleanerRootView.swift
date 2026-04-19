@@ -7,7 +7,7 @@ struct CleanerRootView: View {
 
     @State private var selectedTab: Tab = .dashboard
 
-    enum Tab { case dashboard, upcoming, profile }
+    enum Tab { case dashboard, upcoming, finance }
 
     var body: some View {
         TabView(selection: $selectedTab) {
@@ -19,9 +19,9 @@ struct CleanerRootView: View {
                 .tabItem { Label("Upcoming", systemImage: "calendar") }
                 .tag(Tab.upcoming)
 
-            CleanerProfileView(membership: membership)
-                .tabItem { Label("Profile", systemImage: "person.circle.fill") }
-                .tag(Tab.profile)
+            CleanerFinanceView(membership: membership)
+                .tabItem { Label("Finance", systemImage: "dollarsign.circle.fill") }
+                .tag(Tab.finance)
         }
         .tint(Color.sweeplyAccent)
         .onChange(of: selectedTab) { _, _ in

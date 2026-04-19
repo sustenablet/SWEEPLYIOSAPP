@@ -507,7 +507,9 @@
 				INFOPLIST_KEY_NSCalendarsWriteOnlyAccessUsageDescription = "Sweeply adds your scheduled cleaning jobs to your calendar.";
 				INFOPLIST_KEY_NSCameraUsageDescription = "Sweeply lets you take photos on-site to document your cleaning jobs.";
 				INFOPLIST_KEY_NSContactsUsageDescription = "Sweeply uses your contacts to quickly import client details when adding a new client.";
-				INFOPLIST_KEY_NSFaceIDUsageDescription = "Sweeply uses Face ID to keep your business data secure.";
+				INFOPLIST_KEY_NSFaceIDUsageDescription = "Sweeply uses Face ID to protect your business data when the app lock is enabled.";
+				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "Sweeply needs your location to show your position on the map and help you navigate to job sites, even when the app is in the background.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Sweeply needs your location to show your position on the map and help you navigate to job sites.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Sweeply uses your microphone so you can dictate messages to the AI assistant.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Sweeply lets you attach photos to jobs for better job documentation.";
 				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "Sweeply uses speech recognition to transcribe your voice into text for the AI assistant.";
@@ -548,7 +550,9 @@
 				INFOPLIST_KEY_NSCalendarsWriteOnlyAccessUsageDescription = "Sweeply adds your scheduled cleaning jobs to your calendar.";
 				INFOPLIST_KEY_NSCameraUsageDescription = "Sweeply lets you take photos on-site to document your cleaning jobs.";
 				INFOPLIST_KEY_NSContactsUsageDescription = "Sweeply uses your contacts to quickly import client details when adding a new client.";
-				INFOPLIST_KEY_NSFaceIDUsageDescription = "Sweeply uses Face ID to keep your business data secure.";
+				INFOPLIST_KEY_NSFaceIDUsageDescription = "Sweeply uses Face ID to protect your business data when the app lock is enabled.";
+				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "Sweeply needs your location to show your position on the map and help you navigate to job sites, even when the app is in the background.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Sweeply needs your location to show your position on the map and help you navigate to job sites.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Sweeply uses your microphone so you can dictate messages to the AI assistant.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Sweeply lets you attach photos to jobs for better job documentation.";
 				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "Sweeply uses speech recognition to transcribe your voice into text for the AI assistant.";

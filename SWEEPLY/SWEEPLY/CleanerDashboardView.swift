@@ -9,6 +9,8 @@ struct CleanerDashboardView: View {
     @State private var appeared = false
     @State private var selectedJobId: UUID? = nil
     @State private var showNotifications = false
+    @State private var showProfileMenu = false
+    @State private var showMemberSettings = false
 
     // MARK: - Derived
 
@@ -99,6 +101,15 @@ struct CleanerDashboardView: View {
             .sheet(isPresented: $showNotifications) {
                 NotificationsView()
             }
+            .sheet(isPresented: $showProfileMenu) {
+                CleanerProfileMenuView(membership: membership, showSettings: $showMemberSettings)
+                    .presentationDetents([.height(300)])
+                    .presentationDragIndicator(.hidden)
+                    .presentationCornerRadius(28)
+            }
+            .fullScreenCover(isPresented: $showMemberSettings) {
+                CleanerSettingsView(membership: membership)
+            }
         }
     }
 
@@ -110,19 +121,33 @@ struct CleanerDashboardView: View {
             title: longDate,
             subtitle: greeting
         ) {
-            Button { showNotifications = true } label: {
-                Image(systemName: "bell")
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundStyle(Color.sweeplyNavy)
-                    .frame(width: 40, height: 40)
-                    .background(Color.sweeplySurface)
-                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                    .overlay(
+            HStack(spacing: 12) {
+                Button { showNotifications = true } label: {
+                    Image(systemName: "bell")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundStyle(Color.sweeplyNavy)
+                        .frame(width: 40, height: 40)
+                        .background(Color.sweeplySurface)
+                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                .stroke(Color.sweeplyBorder, lineWidth: 1)
+                        )
+                }
+                .buttonStyle(.plain)
+
+                Button { showProfileMenu = true } label: {
+                    ZStack {
                         RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .stroke(Color.sweeplyBorder, lineWidth: 1)
-                    )
+                            .fill(Color.sweeplyNavy)
+                            .frame(width: 40, height: 40)
+                        Image(systemName: "person.fill")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundStyle(.white)
+                    }
+                }
+                .buttonStyle(.plain)
             }
-            .buttonStyle(.plain)
         }
     }
 

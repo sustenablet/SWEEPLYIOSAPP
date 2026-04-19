@@ -1,5 +1,4 @@
 import AuthenticationServices
-import CryptoKit
 import Foundation
 import Observation
 import Supabase
@@ -48,7 +47,6 @@ final class AppSession {
     var hasResolvedInitialSession: Bool = false
 
     private var authTask: Task<Void, Never>?
-    private var currentAppleNonce: String?
     private var webAuthSession: ASWebAuthenticationSession?
 
     init() {
@@ -78,26 +76,6 @@ final class AppSession {
         lastAuthError = nil
         do {
             _ = try await client.auth.signUp(email: email, password: password)
-        } catch {
-            lastAuthError = humanizedAuthError(error)
-        }
-    }
-
-    // MARK: - Apple Sign In
-
-    func prepareAppleSignIn() -> String {
-        let nonce = Self.randomNonce()
-        currentAppleNonce = nonce
-        return nonce
-    }
-
-    func signInWithApple(idToken: String) async {
-        guard let client = SupabaseManager.shared, let nonce = currentAppleNonce else { return }
-        lastAuthError = nil
-        do {
-            _ = try await client.auth.signInWithIdToken(
-                credentials: .init(provider: .apple, idToken: idToken, nonce: nonce)
-            )
         } catch {
             lastAuthError = humanizedAuthError(error)
         }
@@ -138,18 +116,6 @@ final class AppSession {
             webAuthSession = session
             session.start()
         }
-    }
-
-    // MARK: - OAuth Helpers
-
-    static func sha256(_ input: String) -> String {
-        SHA256.hash(data: Data(input.utf8)).map { String(format: "%02x", $0) }.joined()
-    }
-
-    private static func randomNonce(length: Int = 32) -> String {
-        var bytes = [UInt8](repeating: 0, count: length)
-        _ = SecRandomCopyBytes(kSecRandomDefault, bytes.count, &bytes)
-        return bytes.map { String(format: "%02x", $0) }.joined()
     }
 
     func signOut() async {

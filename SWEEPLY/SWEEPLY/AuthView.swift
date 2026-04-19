@@ -1,4 +1,3 @@
-import AuthenticationServices
 import SwiftUI
 import Supabase
 
@@ -83,27 +82,6 @@ struct AuthView: View {
 
             // Social sign-in
             VStack(spacing: 10) {
-                SignInWithAppleButton(.continue, onRequest: { request in
-                    let nonce = session.prepareAppleSignIn()
-                    request.requestedScopes = [.fullName, .email]
-                    request.nonce = AppSession.sha256(nonce)
-                }, onCompletion: { result in
-                    switch result {
-                    case .success(let auth):
-                        guard let credential = auth.credential as? ASAuthorizationAppleIDCredential,
-                              let tokenData = credential.identityToken,
-                              let token = String(data: tokenData, encoding: .utf8) else { return }
-                        Task { await session.signInWithApple(idToken: token) }
-                    case .failure(let error):
-                        if (error as? ASAuthorizationError)?.code != .canceled {
-                            session.lastAuthError = error.localizedDescription
-                        }
-                    }
-                })
-                .signInWithAppleButtonStyle(.black)
-                .frame(height: 52)
-                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-
                 Button {
                     UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                     Task { await session.signInWithGoogle() }
