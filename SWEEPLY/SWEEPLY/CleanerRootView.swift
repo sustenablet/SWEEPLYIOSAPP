@@ -16,7 +16,7 @@ struct CleanerRootView: View {
                 .tag(Tab.dashboard)
 
             CleanerUpcomingView(membership: membership)
-                .tabItem { Label("Upcoming", systemImage: "calendar") }
+                .tabItem { Label("Schedule", systemImage: "calendar.badge.clock") }
                 .tag(Tab.upcoming)
 
             CleanerFinanceView(membership: membership)

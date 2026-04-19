@@ -328,32 +328,44 @@ struct CleanerDashboardView: View {
     }
 }
 
-// MARK: - CleanerDashJobRow (matches DashJobRow visual quality)
+// MARK: - CleanerDashJobRow
 
 struct CleanerDashJobRow: View {
     let job: Job
 
     var body: some View {
         HStack(spacing: 0) {
-            VStack(spacing: 2) {
+            // Left service-type accent bar
+            RoundedRectangle(cornerRadius: 2, style: .continuous)
+                .fill(serviceColor(job.serviceType))
+                .frame(width: 4)
+                .padding(.vertical, 10)
+                .padding(.trailing, 10)
+
+            // Time column
+            VStack(alignment: .center, spacing: 2) {
                 Text(job.date.formatted(.dateTime.hour().minute()))
                     .font(.system(size: 12, weight: .bold, design: .monospaced))
-                    .foregroundStyle(statusColor(job.status))
-                Rectangle()
-                    .fill(statusColor(job.status).opacity(0.25))
-                    .frame(width: 2)
-                    .frame(maxHeight: .infinity)
+                    .foregroundStyle(serviceColor(job.serviceType))
+                if job.duration > 0 {
+                    Text(durationLabel(job.duration))
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundStyle(Color.sweeplyTextSub)
+                }
             }
-            .frame(width: 52)
+            .frame(width: 48)
             .padding(.vertical, 10)
 
+            // Content
             VStack(alignment: .leading, spacing: 3) {
                 Text(job.clientName)
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(Color.primary)
+                    .lineLimit(1)
                 Text(job.serviceType.rawValue)
                     .font(.system(size: 12))
                     .foregroundStyle(Color.sweeplyTextSub)
+                    .lineLimit(1)
                 if !job.address.isEmpty {
                     Label(job.address, systemImage: "mappin")
                         .font(.system(size: 11))
@@ -363,19 +375,36 @@ struct CleanerDashJobRow: View {
             }
             .padding(.vertical, 10)
 
-            Spacer()
+            Spacer(minLength: 8)
 
-            statusPill(job.status)
+            // Right: price + status
+            VStack(alignment: .trailing, spacing: 4) {
+                Text(job.price.currency)
+                    .font(.system(size: 13, weight: .bold, design: .monospaced))
+                    .foregroundStyle(Color.sweeplyNavy)
+                statusPill(job.status)
+            }
+            .padding(.vertical, 10)
+            .padding(.trailing, 2)
         }
     }
 
+    private func durationLabel(_ hours: Double) -> String {
+        let total = Int(hours * 60)
+        let h = total / 60; let m = total % 60
+        if h > 0 && m > 0 { return "\(h)h \(m)m" }
+        if h > 0 { return "\(h)h" }
+        return "\(m)m"
+    }
+
     private func statusPill(_ status: JobStatus) -> some View {
-        Text(status.rawValue)
+        let color = statusColor(status)
+        return Text(status.rawValue)
             .font(.system(size: 10, weight: .semibold))
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
-            .background(statusColor(status).opacity(0.1))
-            .foregroundStyle(statusColor(status))
+            .background(color.opacity(0.1))
+            .foregroundStyle(color)
             .clipShape(Capsule())
     }
 
@@ -385,6 +414,17 @@ struct CleanerDashJobRow: View {
         case .inProgress: return .orange
         case .completed:  return .green
         case .cancelled:  return Color.sweeplyTextSub
+        }
+    }
+
+    private func serviceColor(_ type: ServiceType) -> Color {
+        switch type {
+        case .standard:         return Color.sweeplyAccent
+        case .deep:             return Color.sweeplyNavy
+        case .moveInOut:        return Color.sweeplyWarning
+        case .postConstruction: return .gray
+        case .office:           return Color.sweeplyNavy
+        case .custom:           return Color.sweeplyAccent
         }
     }
 }

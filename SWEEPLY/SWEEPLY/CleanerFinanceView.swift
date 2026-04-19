@@ -82,16 +82,7 @@ struct CleanerFinanceView: View {
     // MARK: - Header
 
     private var headerRow: some View {
-        HStack(alignment: .top) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Finance")
-                    .font(.system(size: 28, weight: .bold))
-                    .foregroundStyle(Color.sweeplyNavy)
-                Text("Your Earnings")
-                    .font(.system(size: 14))
-                    .foregroundStyle(Color.sweeplyTextSub)
-            }
-            Spacer()
+        PageHeader(eyebrow: "EARNINGS", title: "Finance", subtitle: selectedPeriod.rawValue) {
             periodPicker
         }
     }
