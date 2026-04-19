@@ -133,10 +133,12 @@ final class AppSession {
 
     func switchToOwnBusiness() {
         currentViewMode = .ownBusiness
+        UserDefaults.standard.removeObject(forKey: "persistedActiveMembershipId")
     }
 
     func switchToMembership(_ membership: TeamMembership) {
         currentViewMode = .memberOf(membership)
+        UserDefaults.standard.set(membership.id.uuidString, forKey: "persistedActiveMembershipId")
     }
 
     // MARK: - Invite actions
@@ -154,6 +156,7 @@ final class AppSession {
             // Auto-switch to the accepted team view
             if let membership = activeMemberships.first(where: { $0.id == memberId }) {
                 currentViewMode = .memberOf(membership)
+                UserDefaults.standard.set(membership.id.uuidString, forKey: "persistedActiveMembershipId")
             }
         } catch {
             print("[AppSession] acceptInvite error: \(error)")
@@ -309,11 +312,17 @@ final class AppSession {
                 .filter { $0.status == "active" }
                 .map { TeamMembership(id: $0.id, businessName: profileMap[$0.ownerId] ?? "A Team", role: $0.role) }
 
-            // If user was in a membership that's no longer active, reset to own business
+            // Restore persisted view mode from previous session
             if case .memberOf(let m) = currentViewMode {
                 if !activeMemberships.contains(where: { $0.id == m.id }) {
                     currentViewMode = .ownBusiness
+                    UserDefaults.standard.removeObject(forKey: "persistedActiveMembershipId")
                 }
+            } else if currentViewMode == .ownBusiness,
+                      let savedId = UserDefaults.standard.string(forKey: "persistedActiveMembershipId"),
+                      let uuid = UUID(uuidString: savedId),
+                      let membership = activeMemberships.first(where: { $0.id == uuid }) {
+                currentViewMode = .memberOf(membership)
             }
         } catch {
             pendingInvites = []
