@@ -390,46 +390,37 @@ struct ExpensesView: View {
 
     private func categoryCarouselCard(cat: ExpenseCategory, amount: Double) -> some View {
         let pct = monthTotal > 0 ? amount / monthTotal : 0
-        return VStack(alignment: .leading, spacing: 10) {
-            HStack {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .fill(categoryColor(cat).opacity(0.12))
-                        .frame(width: 36, height: 36)
-                    Image(systemName: cat.icon)
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(categoryColor(cat))
-                }
-                Spacer()
-                Text("\(Int(pct * 100))%")
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(Color.sweeplyTextSub)
+        return HStack(spacing: 10) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .fill(categoryColor(cat).opacity(0.12))
+                    .frame(width: 32, height: 32)
+                Image(systemName: cat.icon)
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(categoryColor(cat))
             }
 
-            Text(cat.displayName)
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(Color.sweeplyNavy)
-                .lineLimit(1)
-
-            Text(amount.currency)
-                .font(.system(size: 18, weight: .bold, design: .monospaced))
-                .foregroundStyle(Color.sweeplyNavy)
-
-            GeometryReader { geo in
-                ZStack(alignment: .leading) {
-                    Capsule().fill(Color.sweeplyBorder.opacity(0.5)).frame(height: 4)
-                    Capsule()
-                        .fill(categoryColor(cat))
-                        .frame(width: max(4, geo.size.width * pct), height: 4)
-                }
+            VStack(alignment: .leading, spacing: 2) {
+                Text(cat.displayName)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(Color.sweeplyNavy)
+                    .lineLimit(1)
+                Text(amount.currency)
+                    .font(.system(size: 13, weight: .bold, design: .monospaced))
+                    .foregroundStyle(Color.sweeplyNavy)
             }
-            .frame(height: 4)
+
+            Spacer()
+
+            Text("\(Int(pct * 100))%")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(Color.sweeplyTextSub)
         }
-        .padding(14)
-        .frame(width: 130)
+        .padding(10)
+        .frame(width: 150)
         .background(Color.sweeplyBackground)
-        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(Color.sweeplyBorder, lineWidth: 1))
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(Color.sweeplyBorder, lineWidth: 1))
     }
 
     private func categoryRow(cat: ExpenseCategory, amount: Double) -> some View {
