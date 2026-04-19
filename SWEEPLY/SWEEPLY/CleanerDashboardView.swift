@@ -1,8 +1,11 @@
 import SwiftUI
+import Charts
 
 struct CleanerDashboardView: View {
-    @Environment(AppSession.self)   private var session
-    @Environment(JobsStore.self)    private var jobsStore
+    @Environment(AppSession.self)         private var session
+    @Environment(JobsStore.self)          private var jobsStore
+    @Environment(NotificationsStore.self) private var notificationsStore
+    @Environment(ProfileStore.self)       private var profileStore
 
     let membership: TeamMembership
 
@@ -11,6 +14,7 @@ struct CleanerDashboardView: View {
     @State private var showNotifications = false
     @State private var showProfileMenu = false
     @State private var showMemberSettings = false
+    @State private var selectedHealthSlide = 0
 
     // MARK: - Derived
 
@@ -28,6 +32,19 @@ struct CleanerDashboardView: View {
         return f.string(from: Date())
     }
 
+    private var firstName: String {
+        String(profileStore.profile?.fullName.split(separator: " ").first ?? "there")
+    }
+
+    private var initials: String {
+        (profileStore.profile?.fullName ?? "")
+            .split(separator: " ").compactMap { $0.first }.map { String($0) }.joined()
+    }
+
+    private var notificationsCount: Int {
+        notificationsStore.notifications.filter { !$0.isRead }.count
+    }
+
     private var myJobs: [Job] {
         jobsStore.jobs.filter { $0.assignedMemberId == membership.id && $0.status != .cancelled }
     }
@@ -41,6 +58,21 @@ struct CleanerDashboardView: View {
         return myJobs.filter { $0.date >= start && $0.status == .completed }.count
     }
 
+    private var weekEarned: Double {
+        let start = Calendar.current.dateInterval(of: .weekOfYear, for: Date())?.start ?? Date()
+        return myJobs.filter { $0.date >= start && $0.status == .completed }.reduce(0) { $0 + $1.price }
+    }
+
+    private var monthEarned: Double {
+        let start = Calendar.current.dateInterval(of: .month, for: Date())?.start ?? Date()
+        return myJobs.filter { $0.date >= start && $0.status == .completed }.reduce(0) { $0 + $1.price }
+    }
+
+    private var monthJobCount: Int {
+        let start = Calendar.current.dateInterval(of: .month, for: Date())?.start ?? Date()
+        return myJobs.filter { $0.date >= start && $0.status == .completed }.count
+    }
+
     private var inProgressCount: Int {
         myJobs.filter { $0.status == .inProgress }.count
     }
@@ -51,12 +83,81 @@ struct CleanerDashboardView: View {
         return myJobs.filter { $0.date >= tomorrow && $0.date < end }.count
     }
 
-    private var nextJobs: [(Date, [Job])] {
-        let tomorrow = Calendar.current.startOfDay(for: Date()).addingTimeInterval(86400)
-        let end = tomorrow.addingTimeInterval(86400 * 3)
-        let upcoming = myJobs.filter { $0.date >= tomorrow && $0.date < end }.sorted { $0.date < $1.date }
-        let groups = Dictionary(grouping: upcoming) { Calendar.current.startOfDay(for: $0.date) }
-        return groups.sorted { $0.key < $1.key }
+    private var completionRate: Double {
+        let total = myJobs.filter { $0.status != .scheduled }.count
+        guard total > 0 else { return 0 }
+        return Double(myJobs.filter { $0.status == .completed }.count) / Double(total) * 100
+    }
+
+    private var nextJob: Job? {
+        myJobs.filter { ($0.status == .scheduled || $0.status == .inProgress) && $0.date >= Date() }
+              .sorted { $0.date < $1.date }.first
+    }
+
+    private var weeklyEarningsData: [(week: Date, amount: Double)] {
+        let cal = Calendar.current; let today = Date()
+        return (0..<8).reversed().compactMap { ago -> (Date, Double)? in
+            guard let start = cal.date(byAdding: .weekOfYear, value: -ago, to: cal.startOfDay(for: today)),
+                  let end = cal.date(byAdding: .day, value: 7, to: start) else { return nil }
+            let total = myJobs.filter { $0.status == .completed && $0.date >= start && $0.date < end }
+                              .reduce(0.0) { $0 + $1.price }
+            return (start, total)
+        }
+    }
+
+    private var performanceCards: [DashboardHealthCardModel] {
+        [
+            DashboardHealthCardModel(
+                title: "Earnings This Week",
+                subtitle: "From completed jobs this week",
+                value: weekEarned.currency,
+                trend: weekCompleted > 0 ? "+\(weekCompleted) jobs" : "No completions",
+                isPositive: weekCompleted > 0,
+                icon: "dollarsign",
+                iconColor: .sweeplyAccent,
+                footnote: "\(weekCompleted) job\(weekCompleted == 1 ? "" : "s") completed this week"
+            ),
+            DashboardHealthCardModel(
+                title: "This Month",
+                subtitle: "Earnings from completed jobs this month",
+                value: monthEarned.currency,
+                trend: "\(monthJobCount) completed",
+                isPositive: monthJobCount > 0,
+                icon: "calendar",
+                iconColor: .sweeplyNavy,
+                footnote: "\(monthJobCount) job\(monthJobCount == 1 ? "" : "s") done this month"
+            ),
+            DashboardHealthCardModel(
+                title: "Completion Rate",
+                subtitle: "Share of your jobs marked complete",
+                value: completionRate > 0 ? String(format: "%.0f%%", completionRate) : "—",
+                trend: completionRate >= 90 ? "On track" : completionRate > 0 ? "Keep it up" : "No data yet",
+                isPositive: completionRate >= 80,
+                icon: "checkmark.circle",
+                iconColor: .sweeplyAccent,
+                footnote: "\(myJobs.filter { $0.status == .completed }.count) of \(myJobs.filter { $0.status != .scheduled }.count) jobs completed"
+            ),
+            DashboardHealthCardModel(
+                title: "Next Job",
+                subtitle: nextJob.map { "For \($0.clientName)" } ?? "Nothing coming up",
+                value: nextJob.map { timeUntil($0.date) } ?? "—",
+                trend: nextJob?.serviceType.rawValue ?? "Clear schedule",
+                isPositive: nextJob != nil,
+                icon: "clock",
+                iconColor: .sweeplyNavy,
+                footnote: nextJob?.address.isEmpty == false ? nextJob!.address : "No upcoming jobs scheduled"
+            )
+        ]
+    }
+
+    private func timeUntil(_ date: Date) -> String {
+        let diff = date.timeIntervalSince(Date())
+        if diff <= 0 { return "Now" }
+        let h = Int(diff / 3600)
+        let m = Int(diff.truncatingRemainder(dividingBy: 3600) / 60)
+        if h >= 24 { return "\(h / 24)d away" }
+        if h > 0 { return "\(h)h \(m)m" }
+        return "\(m)m"
     }
 
     // MARK: - Body
@@ -72,17 +173,21 @@ struct CleanerDashboardView: View {
 
                     Divider()
 
-                    // Hero stats strip
-                    heroStrip
-                        .padding(.horizontal, 20)
-                        .padding(.vertical, 16)
-                        .padding(.bottom, 8)
+                    // Revenue hero + stats grid
+                    HStack(alignment: .center, spacing: 20) {
+                        revenueHero
+                        cleanerStatsGrid
+                            .frame(width: 140)
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 12)
+                    .padding(.bottom, 24)
 
                     // Card sections
                     VStack(spacing: 12) {
                         teamBanner
                         todaySection
-                        if !nextJobs.isEmpty { upcomingSection }
+                        performanceSection
                     }
                     .padding(.horizontal, 20)
                     .padding(.top, 4)
@@ -119,7 +224,7 @@ struct CleanerDashboardView: View {
         PageHeader(
             eyebrow: nil,
             title: longDate,
-            subtitle: greeting
+            subtitle: "\(greeting), \(firstName)"
         ) {
             HStack(spacing: 12) {
                 Button { showNotifications = true } label: {
@@ -133,6 +238,14 @@ struct CleanerDashboardView: View {
                             RoundedRectangle(cornerRadius: 12, style: .continuous)
                                 .stroke(Color.sweeplyBorder, lineWidth: 1)
                         )
+                        .overlay(alignment: .topTrailing) {
+                            if notificationsCount > 0 {
+                                Circle()
+                                    .fill(Color.sweeplyDestructive)
+                                    .frame(width: 8, height: 8)
+                                    .offset(x: 2, y: -2)
+                            }
+                        }
                 }
                 .buttonStyle(.plain)
 
@@ -141,8 +254,8 @@ struct CleanerDashboardView: View {
                         RoundedRectangle(cornerRadius: 12, style: .continuous)
                             .fill(Color.sweeplyNavy)
                             .frame(width: 40, height: 40)
-                        Image(systemName: "person.fill")
-                            .font(.system(size: 15, weight: .semibold))
+                        Text(initials.isEmpty ? "?" : initials)
+                            .font(.system(size: 13, weight: .bold))
                             .foregroundStyle(.white)
                     }
                 }
@@ -151,46 +264,73 @@ struct CleanerDashboardView: View {
         }
     }
 
-    // MARK: - Hero Strip (4 stats)
+    // MARK: - Revenue Hero
 
-    private var heroStrip: some View {
-        HStack(spacing: 0) {
-            statCell(value: "\(todayJobs.count)", label: "Today")
-            stripDivider
-            statCell(value: "\(weekCompleted)", label: "Done this wk")
-            stripDivider
-            statCell(value: "\(upcomingCount)", label: "Upcoming")
-            stripDivider
-            statCell(value: "\(inProgressCount)", label: "In Progress")
-        }
-        .padding(.vertical, 12)
-        .background(Color.sweeplySurface)
-        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .stroke(Color.sweeplyBorder, lineWidth: 1)
-        )
-    }
-
-    private func statCell(value: String, label: String) -> some View {
-        VStack(spacing: 4) {
-            Text(value)
-                .font(.system(size: 22, weight: .bold, design: .monospaced))
-                .foregroundStyle(Color.sweeplyNavy)
-            Text(label)
-                .font(.system(size: 10, weight: .semibold))
+    private var revenueHero: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("EARNINGS THIS WEEK")
+                .font(.system(size: 11, weight: .semibold))
                 .foregroundStyle(Color.sweeplyTextSub)
-                .textCase(.uppercase)
-                .tracking(0.3)
-                .multilineTextAlignment(.center)
+                .tracking(0.8)
+
+            Text(weekEarned.currency)
+                .font(.system(size: 42, weight: .bold, design: .monospaced))
+                .foregroundStyle(Color.sweeplyNavy)
+                .tracking(-1.5)
+                .minimumScaleFactor(0.6)
+                .lineLimit(1)
+
+            if weekCompleted > 0 {
+                Text("\(weekCompleted) job\(weekCompleted == 1 ? "" : "s") completed")
+                    .font(.system(size: 13))
+                    .foregroundStyle(Color.sweeplyTextSub)
+            } else {
+                Text("No completed jobs yet this week")
+                    .font(.system(size: 13))
+                    .foregroundStyle(Color.sweeplyTextSub)
+            }
+
+            if !weeklyEarningsData.isEmpty {
+                Chart(weeklyEarningsData, id: \.week) { point in
+                    AreaMark(
+                        x: .value("Week", point.week),
+                        y: .value("Earned", point.amount)
+                    )
+                    .foregroundStyle(
+                        LinearGradient(
+                            colors: [Color.sweeplyAccent.opacity(0.3), Color.sweeplyAccent.opacity(0.0)],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+                    LineMark(
+                        x: .value("Week", point.week),
+                        y: .value("Earned", point.amount)
+                    )
+                    .foregroundStyle(Color.sweeplyAccent)
+                    .lineStyle(StrokeStyle(lineWidth: 2))
+                }
+                .chartXAxis(.hidden)
+                .chartYAxis(.hidden)
+                .frame(height: 36)
+                .animation(.easeOut(duration: 0.6), value: weeklyEarningsData.map(\.amount))
+                .padding(.top, 4)
+            }
         }
-        .frame(maxWidth: .infinity)
     }
 
-    private var stripDivider: some View {
-        Rectangle()
-            .fill(Color.sweeplyBorder)
-            .frame(width: 1, height: 40)
+    // MARK: - Stats Grid (2x2)
+
+    private var cleanerStatsGrid: some View {
+        LazyVGrid(
+            columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)],
+            spacing: 8
+        ) {
+            CleanerStatBox(value: "\(todayJobs.count)", label: "Today")
+            CleanerStatBox(value: "\(weekCompleted)", label: "Done Wk")
+            CleanerStatBox(value: "\(upcomingCount)", label: "Upcoming")
+            CleanerStatBox(value: "\(inProgressCount)", label: "In Prog.")
+        }
     }
 
     // MARK: - Team Banner
@@ -286,45 +426,63 @@ struct CleanerDashboardView: View {
         }
     }
 
-    // MARK: - Upcoming (next 3 days)
+    // MARK: - Performance Section
 
-    private var upcomingSection: some View {
+    private var performanceSection: some View {
         SectionCard {
-            VStack(alignment: .leading, spacing: 14) {
-                CardHeader(title: "Coming Up", subtitle: "Next 3 days", action: nil)
+            VStack(alignment: .leading, spacing: 16) {
+                CardHeader(title: "Performance", subtitle: "Swipe through your stats", action: nil)
 
-                VStack(spacing: 14) {
-                    ForEach(nextJobs, id: \.0) { date, jobs in
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text(upcomingDayLabel(date))
-                                .font(.system(size: 11, weight: .semibold))
-                                .foregroundStyle(Color.sweeplyTextSub)
-                                .textCase(.uppercase)
-                                .tracking(0.5)
-
-                            VStack(alignment: .leading, spacing: 0) {
-                                ForEach(Array(jobs.enumerated()), id: \.element.id) { index, job in
-                                    CleanerDashJobRow(job: job)
-                                        .onTapGesture {
-                                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                                            selectedJobId = job.id
-                                        }
-                                    if index < jobs.count - 1 {
-                                        Divider().padding(.leading, 56)
-                                    }
-                                }
-                            }
-                        }
+                TabView(selection: $selectedHealthSlide) {
+                    ForEach(Array(performanceCards.enumerated()), id: \.offset) { index, card in
+                        DashboardHealthSlide(card: card)
+                            .tag(index)
+                            .padding(.vertical, 2)
                     }
+                }
+                .tabViewStyle(.page(indexDisplayMode: .never))
+                .frame(height: 178)
+
+                HStack(spacing: 8) {
+                    ForEach(performanceCards.indices, id: \.self) { index in
+                        Capsule()
+                            .fill(index == selectedHealthSlide ? Color.sweeplyNavy : Color.sweeplyBorder.opacity(0.8))
+                            .frame(width: index == selectedHealthSlide ? 18 : 8, height: 8)
+                            .animation(.easeInOut(duration: 0.2), value: selectedHealthSlide)
+                    }
+                    Spacer()
+                    Text("\(selectedHealthSlide + 1) / \(performanceCards.count)")
+                        .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                        .foregroundStyle(Color.sweeplyTextSub)
                 }
             }
         }
     }
+}
 
-    private func upcomingDayLabel(_ date: Date) -> String {
-        let cal = Calendar.current
-        if cal.isDateInTomorrow(date) { return "Tomorrow" }
-        return date.formatted(.dateTime.weekday(.wide).month().day())
+// MARK: - CleanerStatBox
+
+private struct CleanerStatBox: View {
+    let value: String
+    let label: String
+
+    var body: some View {
+        VStack(spacing: 4) {
+            Text(value)
+                .font(.system(size: 14, weight: .bold, design: .monospaced))
+                .foregroundStyle(Color.sweeplyNavy)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+            Text(label)
+                .font(.system(size: 9, weight: .semibold))
+                .foregroundStyle(Color.sweeplyTextSub)
+                .tracking(0.3)
+        }
+        .frame(maxWidth: .infinity)
+        .frame(height: 54)
+        .background(Color.sweeplySurface)
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.sweeplyBorder, lineWidth: 1))
     }
 }
 

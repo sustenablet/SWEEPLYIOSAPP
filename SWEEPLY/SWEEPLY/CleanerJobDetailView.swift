@@ -52,12 +52,32 @@ struct CleanerJobDetailView: View {
                         .foregroundStyle(Color.sweeplyTextSub)
                 }
                 Spacer()
-                statusBadge(job.status)
+                VStack(alignment: .trailing, spacing: 6) {
+                    statusBadge(job.status)
+                    if job.isRecurring {
+                        HStack(spacing: 4) {
+                            Image(systemName: "arrow.triangle.2.circlepath")
+                                .font(.system(size: 9, weight: .bold))
+                            Text(job.recurrenceFrequency?.displayName ?? "Recurring")
+                                .font(.system(size: 11, weight: .semibold))
+                        }
+                        .foregroundStyle(Color.sweeplyAccent)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(Color.sweeplyAccent.opacity(0.1))
+                        .clipShape(Capsule())
+                    }
+                }
             }
 
             Text(job.date.formatted(.dateTime.weekday(.wide).month().day().hour().minute()))
                 .font(.system(size: 14, weight: .medium, design: .monospaced))
                 .foregroundStyle(Color.sweeplyTextSub)
+
+            Text(job.price.currency)
+                .font(.system(size: 26, weight: .bold, design: .monospaced))
+                .foregroundStyle(Color.sweeplyNavy)
+                .padding(.top, 2)
         }
         .padding(16)
         .background(Color.sweeplySurface)
@@ -72,6 +92,8 @@ struct CleanerJobDetailView: View {
                 Divider().padding(.leading, 44)
             }
             detailRow(icon: "clock.fill", label: "Duration", value: durationLabel(job.duration))
+            Divider().padding(.leading, 44)
+            detailRow(icon: "dollarsign.circle.fill", label: "Pay", value: job.price.currency)
         }
         .background(Color.sweeplySurface)
         .clipShape(RoundedRectangle(cornerRadius: 12))

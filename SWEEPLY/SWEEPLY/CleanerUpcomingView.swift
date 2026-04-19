@@ -3,8 +3,9 @@ import SwiftUI
 // MARK: - Cleaner Schedule View
 
 enum CleanerScheduleMode: String, CaseIterable {
-    case day  = "Day"
-    case list = "List"
+    case day   = "Day"
+    case list  = "List"
+    case month = "Month"
 }
 
 struct CleanerUpcomingView: View {
@@ -75,8 +76,9 @@ struct CleanerUpcomingView: View {
 
                 Group {
                     switch viewMode {
-                    case .day:  dayView
-                    case .list: listView
+                    case .day:   dayView
+                    case .list:  listView
+                    case .month: monthView
                     }
                 }
             }
@@ -363,6 +365,54 @@ struct CleanerUpcomingView: View {
             .refreshable {
                 await jobsStore.load(isAuthenticated: session.isAuthenticated)
             }
+        }
+    }
+
+    // MARK: - Month View
+
+    private var monthView: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 0) {
+                JobberCalendarView(selectedDay: $selectedDay, jobs: myJobs)
+                    .padding(.horizontal, 20)
+                    .padding(.top, 12)
+
+                Text("Jobs for \(selectedDay.formatted(.dateTime.day().month(.wide)))")
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundStyle(Color.sweeplyNavy)
+                    .padding(.horizontal, 24)
+                    .padding(.top, 20)
+                    .padding(.bottom, 12)
+
+                if filteredJobsForDay.isEmpty {
+                    VStack(spacing: 12) {
+                        Image(systemName: "calendar.badge.clock")
+                            .font(.system(size: 44))
+                            .foregroundStyle(Color.sweeplyTextSub.opacity(0.3))
+                        Text("No jobs this day")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundStyle(Color.sweeplyTextSub)
+                        Text(statusFilter != nil ? "Try clearing the filter." : "Nothing scheduled.")
+                            .font(.system(size: 13))
+                            .foregroundStyle(Color.sweeplyTextSub.opacity(0.6))
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 40)
+                } else {
+                    VStack(spacing: 8) {
+                        ForEach(filteredJobsForDay) { job in
+                            CleanerListJobRow(job: job) {
+                                selectedJobId = job.id
+                            }
+                            .padding(.horizontal, 20)
+                        }
+                    }
+                }
+            }
+            .padding(.bottom, 100)
+        }
+        .refreshable {
+            await jobsStore.load(isAuthenticated: session.isAuthenticated)
         }
     }
 

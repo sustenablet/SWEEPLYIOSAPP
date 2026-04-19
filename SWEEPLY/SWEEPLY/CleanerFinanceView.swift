@@ -1,4 +1,5 @@
 import SwiftUI
+import Charts
 
 struct CleanerFinanceView: View {
     @Environment(JobsStore.self) private var jobsStore
@@ -44,6 +45,18 @@ struct CleanerFinanceView: View {
     private var totalEarned: Double { completedJobs.reduce(0) { $0 + $1.price } }
     private var avgPerJob: Double   { completedJobs.isEmpty ? 0 : totalEarned / Double(completedJobs.count) }
     private var scheduledTotal: Double { upcomingEarningsJobs.reduce(0) { $0 + $1.price } }
+
+    private var weeklyEarningsData: [(week: Date, amount: Double)] {
+        let cal = Calendar.current; let today = Date()
+        return (0..<8).reversed().compactMap { ago -> (Date, Double)? in
+            guard let start = cal.date(byAdding: .weekOfYear, value: -ago, to: cal.startOfDay(for: today)),
+                  let end = cal.date(byAdding: .day, value: 7, to: start) else { return nil }
+            let total = allMyJobs
+                .filter { $0.status == .completed && $0.date >= start && $0.date < end }
+                .reduce(0.0) { $0 + $1.price }
+            return (start, total)
+        }
+    }
 
     // MARK: - Body
 
@@ -114,14 +127,43 @@ struct CleanerFinanceView: View {
     // MARK: - Hero Strip
 
     private var heroStrip: some View {
-        HStack(spacing: 0) {
-            statCell(value: totalEarned.currency, label: "Earned")
-            stripDivider
-            statCell(value: "\(completedJobs.count)", label: "Jobs Done")
-            stripDivider
-            statCell(value: avgPerJob > 0 ? avgPerJob.currency : "—", label: "Avg / Job")
+        VStack(spacing: 0) {
+            HStack(spacing: 0) {
+                statCell(value: totalEarned.currency, label: "Earned")
+                stripDivider
+                statCell(value: "\(completedJobs.count)", label: "Jobs Done")
+                stripDivider
+                statCell(value: avgPerJob > 0 ? avgPerJob.currency : "—", label: "Avg / Job")
+            }
+            .padding(.vertical, 14)
+
+            if !weeklyEarningsData.isEmpty {
+                Chart(weeklyEarningsData, id: \.week) { point in
+                    AreaMark(
+                        x: .value("Week", point.week),
+                        y: .value("Earned", point.amount)
+                    )
+                    .foregroundStyle(
+                        LinearGradient(
+                            colors: [Color.sweeplyAccent.opacity(0.25), .clear],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+                    LineMark(
+                        x: .value("Week", point.week),
+                        y: .value("Earned", point.amount)
+                    )
+                    .foregroundStyle(Color.sweeplyAccent)
+                    .lineStyle(StrokeStyle(lineWidth: 2))
+                }
+                .chartXAxis(.hidden)
+                .chartYAxis(.hidden)
+                .frame(height: 32)
+                .padding(.horizontal, 16)
+                .padding(.bottom, 12)
+            }
         }
-        .padding(.vertical, 14)
         .background(Color.sweeplySurface)
         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(Color.sweeplyBorder, lineWidth: 1))
