@@ -71,6 +71,13 @@ struct CleanerUpcomingView: View {
                     .padding(.horizontal, 16)
                     .padding(.top, 12)
 
+                if let filter = statusFilter {
+                    activeFilterChip(filter)
+                        .padding(.horizontal, 16)
+                        .padding(.top, 8)
+                        .transition(.move(edge: .top).combined(with: .opacity))
+                }
+
                 WeekStripView(selectedDay: $selectedDay, jobs: myJobs)
                     .padding(.top, 12)
 
@@ -132,12 +139,45 @@ struct CleanerUpcomingView: View {
     }
 
     private func cycleStatusFilter() {
-        switch statusFilter {
-        case nil:         statusFilter = .scheduled
-        case .scheduled:  statusFilter = .inProgress
-        case .inProgress: statusFilter = .completed
-        default:          statusFilter = nil
+        withAnimation(.spring(duration: 0.2)) {
+            switch statusFilter {
+            case nil:         statusFilter = .scheduled
+            case .scheduled:  statusFilter = .inProgress
+            case .inProgress: statusFilter = .completed
+            default:          statusFilter = nil
+            }
         }
+    }
+
+    private func activeFilterChip(_ filter: JobStatus) -> some View {
+        let color: Color = filter == .completed ? .green : filter == .inProgress ? .orange : Color.sweeplyAccent
+        return HStack(spacing: 6) {
+            Circle()
+                .fill(color)
+                .frame(width: 6, height: 6)
+            Text("Showing: \(filter.rawValue)")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(color)
+            Spacer()
+            Button {
+                withAnimation(.spring(duration: 0.2)) { statusFilter = nil }
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            } label: {
+                HStack(spacing: 4) {
+                    Text("Clear")
+                        .font(.system(size: 12, weight: .medium))
+                    Image(systemName: "xmark")
+                        .font(.system(size: 10, weight: .semibold))
+                }
+                .foregroundStyle(color)
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 8)
+        .background(color.opacity(0.08))
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .overlay(RoundedRectangle(cornerRadius: 10).stroke(color.opacity(0.2), lineWidth: 1))
     }
 
     // MARK: - Mode Segment
@@ -420,13 +460,13 @@ struct CleanerUpcomingView: View {
 
     private var emptyState: some View {
         VStack(spacing: 12) {
-            Image(systemName: "calendar.badge.clock")
+            Image(systemName: statusFilter != nil ? "line.3.horizontal.decrease.circle" : "calendar.badge.clock")
                 .font(.system(size: 44))
                 .foregroundStyle(Color.sweeplyTextSub.opacity(0.3))
-            Text("No jobs this day")
+            Text(statusFilter != nil ? "No \(statusFilter!.rawValue.lowercased()) jobs today" : "No jobs this day")
                 .font(.system(size: 16, weight: .semibold))
                 .foregroundStyle(Color.sweeplyTextSub)
-            Text(statusFilter != nil ? "Try clearing the filter." : "Enjoy your day off.")
+            Text(statusFilter != nil ? "Tap the filter chip above to clear it." : "Enjoy your day off.")
                 .font(.system(size: 13))
                 .foregroundStyle(Color.sweeplyTextSub.opacity(0.6))
         }
