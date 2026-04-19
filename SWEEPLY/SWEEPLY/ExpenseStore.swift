@@ -34,6 +34,8 @@ final class ExpenseStore {
             expenses = rows.map { $0.toExpense() }
         } catch {
             lastError = error.localizedDescription
+            // Clear any local expenses with mismatched userIds (from earlier bugs)
+            expenses.removeAll { $0.userId != userId }
         }
     }
 
