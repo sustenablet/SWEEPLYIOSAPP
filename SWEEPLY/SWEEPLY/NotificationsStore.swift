@@ -15,6 +15,8 @@ final class NotificationsStore {
             return
         }
 
+        let previousIds = Set(notifications.map(\.id))
+
         do {
             let fetched: [RemoteNotification] = try await client.database
                 .from("notifications")
@@ -38,8 +40,14 @@ final class NotificationsStore {
             }
             self.isLoaded = true
             self.lastError = nil
-            
-            // If the table is empty (e.g. new user), let's pre-populate it with a welcome message locally
+
+            // Fire a local banner for any genuinely new unread notification
+            let newUnread = self.notifications.filter { !$0.isRead && !previousIds.contains($0.id) }
+            for n in newUnread {
+                NotificationManager.shared.fireInstantBanner(title: n.title, body: n.message)
+            }
+
+            // If the table is empty (e.g. new user), pre-populate locally with a welcome message
             if notifications.isEmpty {
                 notifications = [
                     AppNotification(
@@ -55,7 +63,6 @@ final class NotificationsStore {
         } catch {
             print("Failed to fetch notifications: \(error)")
             self.lastError = "Failed to synchronize notifications."
-            // Fallback to local
             if !isLoaded {
                 notifications = MockData.notifications
             }
@@ -162,6 +169,7 @@ struct AppNotification: Identifiable {
         case billing
         case profile
         case system
+        case team
     }
 
     let id: UUID

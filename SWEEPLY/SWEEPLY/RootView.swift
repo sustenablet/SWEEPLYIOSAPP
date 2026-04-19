@@ -7,7 +7,8 @@ struct RootView: View {
     @Environment(JobsStore.self)           private var jobsStore
     @Environment(InvoicesStore.self)       private var invoicesStore
     @Environment(ProfileStore.self)        private var profileStore
-    @Environment(NotificationManager.self) private var notificationManager
+    @Environment(NotificationManager.self)  private var notificationManager
+    @Environment(NotificationsStore.self)  private var notificationsStore
     @Environment(TeamStore.self)           private var teamStore
     @Environment(ExpenseStore.self)        private var expenseStore
 
@@ -76,6 +77,14 @@ struct RootView: View {
                     authenticate()
                 } else {
                     handlePendingActions()
+                }
+                if session.isAuthenticated {
+                    Task {
+                        await notificationsStore.load(
+                            isAuthenticated: session.isAuthenticated,
+                            userId: session.userId
+                        )
+                    }
                 }
             }
         }

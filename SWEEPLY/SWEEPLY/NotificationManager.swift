@@ -96,6 +96,25 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
         }
     }
 
+    // MARK: - Instant Banner
+
+    func fireInstantBanner(title: String, body: String) {
+        guard isAuthorized else { return }
+        let content = UNMutableNotificationContent()
+        content.title = title
+        content.body = body
+        content.sound = .default
+        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 0.1, repeats: false)
+        let request = UNNotificationRequest(
+            identifier: "instant-\(UUID().uuidString)",
+            content: content,
+            trigger: trigger
+        )
+        UNUserNotificationCenter.current().add(request) { error in
+            if let error { print("[NotificationManager] fireInstantBanner error: \(error)") }
+        }
+    }
+
     // MARK: - Job Reminders
 
     func scheduleJobReminder(for job: Job) {

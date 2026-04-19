@@ -357,20 +357,22 @@ private struct NotificationRow: View {
     private var kindIcon: String {
         switch notification.kind {
         case .schedule: return "calendar"
-        case .jobs: return "briefcase.fill"
+        case .jobs:     return "briefcase.fill"
         case .billing:  return "creditcard"
         case .profile:  return "person.fill"
         case .system:   return "bell.fill"
+        case .team:     return "person.2.fill"
         }
     }
 
     private var kindColor: Color {
         switch notification.kind {
         case .schedule: return Color.sweeplyNavy
-        case .jobs: return Color.sweeplyAccent
+        case .jobs:     return Color.sweeplyAccent
         case .billing:  return Color.sweeplySuccess
         case .profile:  return Color.sweeplyTextSub
         case .system:   return Color.sweeplyBorder
+        case .team:     return Color.sweeplyNavy
         }
     }
 
