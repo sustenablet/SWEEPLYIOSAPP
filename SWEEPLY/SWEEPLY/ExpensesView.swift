@@ -389,38 +389,28 @@ struct ExpensesView: View {
     }
 
     private func categoryCarouselCard(cat: ExpenseCategory, amount: Double) -> some View {
-        let pct = monthTotal > 0 ? amount / monthTotal : 0
-        return HStack(spacing: 10) {
+        return HStack(spacing: 8) {
             ZStack {
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                RoundedRectangle(cornerRadius: 6)
                     .fill(categoryColor(cat).opacity(0.12))
-                    .frame(width: 32, height: 32)
+                    .frame(width: 28, height: 28)
                 Image(systemName: cat.icon)
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(categoryColor(cat))
             }
 
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: 1) {
                 Text(cat.displayName)
-                    .font(.system(size: 12, weight: .medium))
+                    .font(.system(size: 11, weight: .medium))
                     .foregroundStyle(Color.sweeplyNavy)
                     .lineLimit(1)
                 Text(amount.currency)
-                    .font(.system(size: 13, weight: .bold, design: .monospaced))
+                    .font(.system(size: 12, weight: .bold, design: .monospaced))
                     .foregroundStyle(Color.sweeplyNavy)
             }
-
-            Spacer()
-
-            Text("\(Int(pct * 100))%")
-                .font(.system(size: 11, weight: .semibold))
-                .foregroundStyle(Color.sweeplyTextSub)
         }
-        .padding(10)
-        .frame(width: 150)
-        .background(Color.sweeplyBackground)
-        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(Color.sweeplyBorder, lineWidth: 1))
+        .padding(.horizontal, 8)
+        .padding(.vertical, 6)
     }
 
     private func categoryRow(cat: ExpenseCategory, amount: Double) -> some View {
