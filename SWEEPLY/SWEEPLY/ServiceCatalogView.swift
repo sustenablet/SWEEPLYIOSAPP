@@ -1,5 +1,11 @@
 import SwiftUI
 
+// MARK: - Service Tab
+private enum ServiceTab {
+    case services
+    case extras
+}
+
 // MARK: - Service Catalog View
 // Standalone full-screen catalog management.
 // Presented as a sheet from BusinessView ("View All") and SettingsView (Business tab).
@@ -11,51 +17,124 @@ struct ServiceCatalogView: View {
 
     var addonsOnly: Bool = false
 
+    @State private var selectedTab: ServiceTab = .services
     @State private var serviceEditorState: ServiceCatalogEditorState?
+
+    // Only show tabs if not in addonsOnly mode
+    private var showTabs: Bool { !addonsOnly }
+
     @State private var feedbackMessage: String?
     @State private var feedbackIsSuccess = false
 
+    private var currentTabIsAddon: Bool {
+        selectedTab == .extras
+    }
+
     private var services: [BusinessService] {
         (profileStore.profile ?? MockData.profile).settings.hydratedServiceCatalog
-            .filter { $0.isAddon == addonsOnly }
+            .filter { $0.isAddon == currentTabIsAddon }
+    }
+
+    private var servicesCount: Int {
+        (profileStore.profile ?? MockData.profile).settings.hydratedServiceCatalog
+            .filter { !$0.isAddon }.count
+    }
+
+    private var extrasCount: Int {
+        (profileStore.profile ?? MockData.profile).settings.hydratedServiceCatalog
+            .filter { $0.isAddon }.count
     }
 
     private var navTitle: String { addonsOnly ? "Job Extras" : "Service Catalog" }
-    private var sectionTitle: String { addonsOnly ? "Extras" : "Services" }
+    private var sectionTitle: String {
+        if addonsOnly { return "Extras" }
+        return selectedTab == .extras ? "Extras" : "Services"
+    }
     private var sectionSubtitle: String {
-        addonsOnly ? "Add-ons charged on top of the main service" : "Primary services offered"
+        if addonsOnly || selectedTab == .extras {
+            return "Add-ons charged on top of the main service"
+        }
+        return "Primary services offered"
     }
-    private var emptyTitle: String { addonsOnly ? "No extras yet" : "No services yet" }
+    private var emptyTitle: String {
+        if addonsOnly || selectedTab == .extras {
+            return "No extras yet"
+        }
+        return "No services yet"
+    }
     private var emptyBody: String {
-        addonsOnly
-            ? "Add small add-ons like laundry, dishes, or window cleaning — these appear as extras when booking a job."
-            : "Create your service catalog — these appear\nin new job and invoice pickers."
+        if addonsOnly || selectedTab == .extras {
+            return "Add small add-ons like laundry, dishes, or window cleaning — these appear as extras when booking a job."
+        }
+        return "Create your service catalog — these appear\nin new job and invoice pickers."
     }
-    private var emptyButtonLabel: String { addonsOnly ? "Add First Extra" : "Add First Service" }
+    private var emptyButtonLabel: String {
+        if addonsOnly || selectedTab == .extras {
+            return "Add First Extra"
+        }
+        return "Add First Service"
+    }
+
+    // MARK: - Tab Picker
+
+    private var tabPicker: some View {
+        HStack(spacing: 4) {
+            tabButton(.services, label: "Services", count: servicesCount)
+            tabButton(.extras, label: "Extras", count: extrasCount)
+        }
+    }
+
+    private func tabButton(_ tab: ServiceTab, label: String, count: Int) -> some View {
+        Button {
+            withAnimation(.spring(duration: 0.2)) {
+                selectedTab = tab
+            }
+        } label: {
+            HStack(spacing: 4) {
+                Text(label)
+                    .font(.system(size: 12, weight: selectedTab == tab ? .bold : .medium))
+                Text("(\(count))")
+                    .font(.system(size: 11))
+                    .foregroundStyle(selectedTab == tab ? .white : Color.sweeplyTextSub)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+            .background(selectedTab == tab ? Color.sweeplyNavy : Color.clear)
+            .foregroundStyle(selectedTab == tab ? .white : Color.sweeplyNavy)
+            .clipShape(Capsule())
+            .overlay(
+                Capsule()
+                    .stroke(selectedTab == tab ? Color.clear : Color.sweeplyBorder, lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
+    }
 
     var body: some View {
         NavigationStack {
-            Group {
-                if services.isEmpty {
-                    emptyState
-                } else {
-                    ScrollView {
-                        VStack(alignment: .leading, spacing: 24) {
-                            if let msg = feedbackMessage {
-                                feedbackBanner(message: msg, isSuccess: feedbackIsSuccess)
-                            }
+            ScrollView {
+                VStack(alignment: .leading, spacing: 24) {
+                    if showTabs {
+                        tabPicker
+                    }
 
-                            catalogSection(
-                                title: sectionTitle,
-                                subtitle: sectionSubtitle,
-                                services: services
-                            )
-                        }
-                        .padding(.horizontal, 20)
-                        .padding(.vertical, 16)
-                        .padding(.bottom, 24)
+                    if let msg = feedbackMessage {
+                        feedbackBanner(message: msg, isSuccess: feedbackIsSuccess)
+                    }
+
+                    if services.isEmpty {
+                        emptyState
+                    } else {
+                        catalogSection(
+                            title: sectionTitle,
+                            subtitle: sectionSubtitle,
+                            services: services
+                        )
                     }
                 }
+                .padding(.horizontal, 20)
+                .padding(.vertical, 16)
+                .padding(.bottom, 24)
             }
             .background(Color.sweeplyBackground.ignoresSafeArea())
             .navigationTitle(navTitle)
@@ -68,7 +147,8 @@ struct ServiceCatalogView: View {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button {
                         UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                        serviceEditorState = ServiceCatalogEditorState(defaultAddon: addonsOnly, lockedAddon: addonsOnly)
+                        let isAddon = addonsOnly || selectedTab == .extras
+                        serviceEditorState = ServiceCatalogEditorState(defaultAddon: isAddon, lockedAddon: addonsOnly)
                     } label: {
                         HStack(spacing: 5) {
                             Image(systemName: "plus")
