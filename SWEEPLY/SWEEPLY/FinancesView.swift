@@ -389,35 +389,86 @@ struct FinancesView: View {
                     )
                 }
 
-                // Category breakdown (only if there are expenses)
-                let cats = expenseStore.byCategory(in: currentMonthInterval)
-                if !cats.isEmpty {
+                // Expense list with swipe-to-delete
+                let monthExpenses = expenseStore.expenses
+                    .filter { currentMonthInterval.contains($0.date) }
+                    .sorted { $0.date > $1.date }
+                if !monthExpenses.isEmpty {
                     Divider()
-                    VStack(spacing: 8) {
-                        ForEach(cats, id: \.0) { cat, amount in
-                            HStack(spacing: 10) {
-                                Image(systemName: cat.icon)
-                                    .font(.system(size: 12, weight: .medium))
-                                    .foregroundStyle(Color.sweeplyAccent)
-                                    .frame(width: 18)
-                                Text(cat.displayName)
-                                    .font(.system(size: 13, weight: .medium))
-                                    .foregroundStyle(Color.primary)
-                                Spacer()
-                                Text(amount.currency)
-                                    .font(.system(size: 13, weight: .semibold, design: .monospaced))
-                                    .foregroundStyle(Color.sweeplyNavy)
-                                // Mini bar
-                                if monthExpenseTotal > 0 {
-                                    Capsule()
-                                        .fill(Color.sweeplyAccent.opacity(0.3))
-                                        .frame(width: max(4, 50 * (amount / monthExpenseTotal)), height: 4)
-                                }
+                    
+                    HStack {
+                        Text("Expenses")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(Color.sweeplyTextSub)
+                            .textCase(.uppercase)
+                            .tracking(0.6)
+                        Spacer()
+                        Text("\(monthExpenses.count)")
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundStyle(Color.sweeplyTextSub)
+                    }
+                    
+                    VStack(spacing: 0) {
+                        ForEach(Array(monthExpenses.enumerated()), id: \.element.id) { idx, expense in
+                            expenseListRow(expense)
+                            if idx < monthExpenses.count - 1 {
+                                Divider().padding(.leading, 58)
                             }
                         }
                     }
+                    .background(Color.sweeplySurface)
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(Color.sweeplyBorder, lineWidth: 1))
                 }
             }
+        }
+    }
+    
+    private func expenseListRow(_ expense: Expense) -> some View {
+        HStack(spacing: 12) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .fill(expenseCategoryColor(expense.category).opacity(0.12))
+                    .frame(width: 32, height: 32)
+                Image(systemName: expense.category.icon)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(expenseCategoryColor(expense.category))
+            }
+            
+            VStack(alignment: .leading, spacing: 1) {
+                Text(expense.category.displayName)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(Color.sweeplyNavy)
+                Text(expense.date.formatted(date: .abbreviated, time: .omitted))
+                    .font(.system(size: 11))
+                    .foregroundStyle(Color.sweeplyTextSub)
+            }
+            
+            Spacer()
+            
+            Text("−\(expense.amount.currency)")
+                .font(.system(size: 14, weight: .bold, design: .monospaced))
+                .foregroundStyle(Color.sweeplyDestructive)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+            Button(role: .destructive) {
+                Task { await expenseStore.remove(id: expense.id) }
+            } label: {
+                Label("Delete", systemImage: "trash")
+            }
+        }
+    }
+    
+    private func expenseCategoryColor(_ cat: ExpenseCategory) -> Color {
+        switch cat {
+        case .supplies:    return Color(hue: 0.58, saturation: 0.70, brightness: 0.75)
+        case .fuel:        return Color(hue: 0.08, saturation: 0.80, brightness: 0.82)
+        case .equipment:   return Color(hue: 0.55, saturation: 0.60, brightness: 0.65)
+        case .insurance:   return Color(hue: 0.35, saturation: 0.65, brightness: 0.68)
+        case .marketing:   return Color(hue: 0.78, saturation: 0.55, brightness: 0.75)
+        case .other:       return Color(hue: 0.40, saturation: 0.45, brightness: 0.60)
         }
     }
 
