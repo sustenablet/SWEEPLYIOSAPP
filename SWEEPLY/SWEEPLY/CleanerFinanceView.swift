@@ -131,7 +131,7 @@ struct CleanerFinanceView: View {
     private var heroStrip: some View {
         VStack(spacing: 0) {
             HStack(spacing: 0) {
-                statCell(value: totalEarned.currency, label: "Earned")
+                statCell(value: totalEarned.currency, label: "Gross Earned")
                 stripDivider
                 statCell(value: "\(completedJobs.count)", label: "Jobs Done")
                 stripDivider
@@ -169,6 +169,30 @@ struct CleanerFinanceView: View {
         .background(Color.sweeplySurface)
         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(Color.sweeplyBorder, lineWidth: 1))
+    }
+
+    // MARK: - Rate Info Banner
+
+    private var rateInfoBanner: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "dollarsign.circle.fill")
+                .font(.system(size: 20))
+                .foregroundStyle(Color.sweeplyAccent)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Your Pay Rate")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(Color.sweeplyTextSub)
+                Text("Contact your manager to set up your pay rate")
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(Color.sweeplyNavy)
+            }
+
+            Spacer()
+        }
+        .padding(14)
+        .background(Color.sweeplyAccent.opacity(0.08))
+        .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 
     private func statCell(value: String, label: String) -> some View {

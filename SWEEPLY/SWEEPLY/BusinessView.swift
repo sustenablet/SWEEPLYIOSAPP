@@ -1031,7 +1031,7 @@ struct BusinessView: View {
                     .font(.system(size: 12, weight: serviceTab == tab ? .bold : .medium))
                 Text("(\(count))")
                     .font(.system(size: 11))
-                    .foregroundStyle(Color.sweeplyTextSub)
+                    .foregroundStyle(serviceTab == tab ? .white : Color.sweeplyTextSub)
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 6)
