@@ -11,6 +11,7 @@ struct RootView: View {
     @Environment(NotificationsStore.self)  private var notificationsStore
     @Environment(TeamStore.self)           private var teamStore
     @Environment(ExpenseStore.self)        private var expenseStore
+    @Environment(MessagesStore.self)       private var messagesStore
 
     @State private var selectedTab: Tab = .dashboard
     @State private var deepLinkedJobId: UUID? = nil
