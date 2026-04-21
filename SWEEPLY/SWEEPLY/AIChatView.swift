@@ -86,6 +86,9 @@ enum DirectAction {
     case markJobComplete(Job)
     case markInvoicePaid(Invoice)
     case rescheduleJob(Job, Date)
+    case cancelJob(Job)
+    case startJob(Job)
+    case assignJob(Job, TeamMember)
 }
 
 enum ConversationState {
@@ -135,6 +138,7 @@ struct ClientDraft {
     var nextMissingField: String? {
         if name == nil { return "What's the client's name?" }
         if phone == nil { return "What's their phone number? (or say 'skip' to leave blank)" }
+        if email == nil { return "And their email address? (or say 'skip')" }
         return nil
     }
 
@@ -210,6 +214,7 @@ struct AIChatView: View {
     @Environment(ClientsStore.self) private var clientsStore
     @Environment(InvoicesStore.self) private var invoicesStore
     @Environment(ProfileStore.self) private var profileStore
+    @Environment(TeamStore.self) private var teamStore
 
     var onNewJob: (() -> Void)? = nil
     var onNewClient: (() -> Void)? = nil
@@ -271,10 +276,12 @@ struct AIChatView: View {
             ("/invoice",  "doc.badge.plus",             "New Invoice",     "Create a new invoice"),
             ("/insights", "sparkles",                   "Insights",        "Give me business insights"),
             ("/overview", "square.grid.2x2.fill",       "Overview",        "Business overview"),
+            ("/briefing", "sun.max.fill",               "Morning Briefing","Give me my morning briefing"),
+            ("/team",     "person.3.fill",              "My Team",         "Show my team"),
             ("/help",     "questionmark.circle",        "Help",            "What can you do?"),
-            ("/cancel",  "xmark.circle",               "Cancel Job",      "Cancel a job"),
-            ("/start",   "play.fill",                  "Start Job",       "Start my next job"),
-            ("/rebook",  "arrow.counterclockwise",     "Rebook",          "Book the same job again"),
+            ("/cancel",   "xmark.circle",               "Cancel Job",      "Cancel a job"),
+            ("/start",    "play.fill",                  "Start Job",       "Start my next job"),
+            ("/rebook",   "arrow.counterclockwise",     "Rebook",          "Book the same job again"),
         ]
     }
 
@@ -1336,9 +1343,34 @@ struct AIChatView: View {
         }
     }
 
+    private func resolveSlashCommand(_ input: String) -> String {
+        guard input.hasPrefix("/") else { return input }
+        let cmd = input.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
+        if let match = slashCommands.first(where: { cmd == "/\($0.command.lowercased())" }) {
+            return match.query
+        }
+        switch cmd {
+        case "/jobs":     return "Show my upcoming jobs"
+        case "/today":    return "What's on my schedule today?"
+        case "/revenue":  return "What's my revenue this month?"
+        case "/clients":  return "Show my clients"
+        case "/invoice":  return "Create a new invoice"
+        case "/insights": return "Give me business insights"
+        case "/overview": return "Business overview"
+        case "/help":     return "What can you do?"
+        case "/cancel":   return "Cancel a job"
+        case "/start":    return "Start my next job"
+        case "/rebook":   return "Book the same job again"
+        case "/team":     return "Show my team"
+        case "/briefing": return "Give me my morning briefing"
+        default:          return input
+        }
+    }
+
     private func sendMessage(_ text: String) {
-        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return }
+        let raw = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !raw.isEmpty else { return }
+        let trimmed = resolveSlashCommand(raw)
 
         // Check if this message matches a suggestion (from suggestion tap)
         let isFromSuggestion = currentSuggestions.contains { $0.query == trimmed }
@@ -2346,13 +2378,12 @@ struct AIChatView: View {
                 return jobsStore.jobs.filter { $0.status == .scheduled }.sorted { $0.date < $1.date }.first
             }()
             if let job = matchedJob {
-                Task { await jobsStore.updateStatus(id: job.id, status: .cancelled) }
-                UINotificationFeedbackGenerator().notificationOccurred(.warning)
+                conversationState = .awaitingDirectAction(.cancelJob(job))
                 return ChatMessage(
                     role: .assistant,
-                    text: "Done — I've cancelled the \(job.serviceType.rawValue) for \(job.clientName) on \(job.date.formatted(date: .abbreviated, time: .omitted)).",
+                    text: "Cancel the \(job.serviceType.rawValue) for \(job.clientName) on \(job.date.formatted(date: .abbreviated, time: .omitted))? This can't be undone.",
                     style: .warning,
-                    quickReplies: ["Schedule a new job", "Business overview"]
+                    quickReplies: ["Yes, cancel it", "No, keep it"]
                 )
             } else {
                 return ChatMessage(
@@ -2377,13 +2408,12 @@ struct AIChatView: View {
                 return todayJobs.first ?? jobsStore.jobs.filter { $0.status == .scheduled }.sorted { $0.date < $1.date }.first
             }()
             if let job = matchedJob {
-                Task { await jobsStore.updateStatus(id: job.id, status: .inProgress) }
-                UINotificationFeedbackGenerator().notificationOccurred(.success)
+                conversationState = .awaitingDirectAction(.startJob(job))
                 return ChatMessage(
                     role: .assistant,
-                    text: "Job started! \(job.serviceType.rawValue) for \(job.clientName) is now in progress. I'll be here when you're done.",
-                    style: .success,
-                    quickReplies: ["Mark complete", "Today's jobs"]
+                    text: "Start the \(job.serviceType.rawValue) for \(job.clientName) on \(job.date.formatted(date: .omitted, time: .shortened))?",
+                    style: .info,
+                    quickReplies: ["Yes, start it", "Not yet"]
                 )
             } else {
                 return ChatMessage(
@@ -2430,6 +2460,61 @@ struct AIChatView: View {
                     quickReplies: ["Show my clients"]
                 )
             }
+        }
+
+        // TEAM — show team members
+        let isTeamIntent = lowered.contains("team") && (lowered.contains("show") || lowered.contains("my team") || lowered.contains("who's on") || lowered.contains("members") || lowered.contains("staff") || lowered.contains("cleaners"))
+        if isTeamIntent {
+            let active = teamStore.members.filter { $0.status == .active }
+            let invited = teamStore.members.filter { $0.status == .invited }
+            if teamStore.members.isEmpty {
+                return ChatMessage(role: .assistant, text: "You don't have any team members yet. You can invite cleaners from the Business tab.", quickReplies: ["Business overview"])
+            }
+            var text = "Your team has \(active.count) active member\(active.count == 1 ? "" : "s")"
+            if invited.count > 0 { text += " (\(invited.count) invite\(invited.count == 1 ? "" : "s") pending)" }
+            text += ":\n" + active.map { "• \($0.name) — \($0.role.rawValue)" }.joined(separator: "\n")
+            return ChatMessage(role: .assistant, text: text, style: .info, quickReplies: ["Assign a job", "Business overview"])
+        }
+
+        // ASSIGN JOB — "assign [client] to [member]" or "give [client's] job to [member]"
+        let isAssignIntent = (lowered.contains("assign") || lowered.contains("give") && lowered.contains("job")) && !teamStore.members.isEmpty
+        if isAssignIntent {
+            let matchedMember = teamStore.members.first { member in
+                let parts = member.name.lowercased().components(separatedBy: " ")
+                return parts.contains { $0.count > 2 && lowered.contains($0) }
+            }
+            let matchedJob: Job? = {
+                for client in clientsStore.clients {
+                    let parts = client.name.lowercased().components(separatedBy: " ")
+                    if parts.contains(where: { $0.count > 2 && lowered.contains($0) }) {
+                        return jobsStore.jobs.filter { $0.clientId == client.id && $0.status == .scheduled }.sorted { $0.date < $1.date }.first
+                    }
+                }
+                return jobsStore.jobs.filter { $0.status == .scheduled }.sorted { $0.date < $1.date }.first
+            }()
+            if let job = matchedJob, let member = matchedMember {
+                conversationState = .awaitingDirectAction(.assignJob(job, member))
+                return ChatMessage(
+                    role: .assistant,
+                    text: "Assign the \(job.serviceType.rawValue) for \(job.clientName) on \(job.date.formatted(date: .abbreviated, time: .omitted)) to \(member.name)?",
+                    style: .info,
+                    quickReplies: ["Yes, assign", "Cancel"]
+                )
+            } else if let job = matchedJob {
+                let memberList = teamStore.members.filter { $0.status == .active }.prefix(4).map { $0.name }
+                return ChatMessage(role: .assistant, text: "Who should I assign \(job.clientName)'s job to?", quickReplies: memberList.map { $0 })
+            } else if let member = matchedMember {
+                return ChatMessage(role: .assistant, text: "Which job should I assign to \(member.name)?", quickReplies: ["Today's jobs", "Upcoming schedule"])
+            } else {
+                let memberList = teamStore.members.filter { $0.status == .active }.prefix(4).map { $0.name }
+                return ChatMessage(role: .assistant, text: "Which job and which team member? Say something like \"assign John's job to Sarah\".", quickReplies: memberList.map { $0 })
+            }
+        }
+
+        // MORNING BRIEFING
+        let isBriefingIntent = lowered.contains("briefing") || lowered.contains("morning brief") || lowered.contains("daily brief") || lowered.contains("what's up") || lowered.contains("catch me up")
+        if isBriefingIntent {
+            return buildMorningBriefing()
         }
 
         // DEFAULT — fall through to AI with full conversation history
@@ -2543,6 +2628,9 @@ struct AIChatView: View {
             """
         }
 
+        let activeTeam = teamStore.members.filter { $0.status == .active }
+        let teamText = activeTeam.isEmpty ? "no team members" : activeTeam.map { $0.name }.joined(separator: ", ")
+
         return """
         You are Sweeply AI, a smart business assistant for \(businessName) (owner: \(ownerName)).
 
@@ -2554,8 +2642,9 @@ struct AIChatView: View {
         - Unpaid invoices: \(unpaidText)
         - Overdue invoices: \(overdueText)
         - Total jobs completed: \(allJobs.filter { $0.status == .completed }.count)
+        - Team members: \(teamText)
 
-        You help \(ownerName) manage their cleaning business. Be friendly, practical, and concise — 2-3 sentences max unless they ask for detail. Use the data above to give specific, accurate answers. Focus on actionable advice. If asked about data you don't have, say so and suggest checking the relevant screen in the app.
+        You help \(ownerName) manage their cleaning business. Be friendly, practical, and concise — 2-3 sentences max unless they ask for detail. Use the data above to give specific, accurate answers. You can help with: scheduling jobs, marking jobs complete/cancelled/in-progress, assigning jobs to team members, tracking invoices, client management, revenue analysis, and business insights. Focus on actionable advice.
         """
     }
 
@@ -2647,17 +2736,20 @@ struct AIChatView: View {
             updatedDraft.name = input.trimmingCharacters(in: .whitespacesAndNewlines)
         } else if draft.phone == nil {
             updatedDraft.phone = lowered == "skip" ? "" : input.trimmingCharacters(in: .whitespacesAndNewlines)
+        } else if draft.email == nil {
+            updatedDraft.email = lowered == "skip" ? "" : input.trimmingCharacters(in: .whitespacesAndNewlines)
         }
 
         if updatedDraft.isComplete {
             conversationState = .idle
             return ChatMessage(
                 role: .assistant,
-                text: "I'll open the client form with \(updatedDraft.name ?? "their") details pre-filled. You can add more info before saving.",
+                text: "Got it! I'll open the client form with these details pre-filled. Review and save.",
                 style: .success,
                 action: .newClient,
                 actionLabel: "Open Client Form",
-                quickReplies: ["Add another client", "Schedule a job"]
+                quickReplies: ["Add another client", "Schedule a job"],
+                contextCard: .confirmClient(updatedDraft)
             )
         } else {
             conversationState = .collectingClient(updatedDraft)
@@ -2730,6 +2822,36 @@ struct AIChatView: View {
                     style: .success,
                     quickReplies: ["View schedule", "Today's jobs"]
                 )
+            case .cancelJob(let job):
+                await jobsStore.updateStatus(id: job.id, status: .cancelled)
+                UINotificationFeedbackGenerator().notificationOccurred(.warning)
+                return ChatMessage(
+                    role: .assistant,
+                    text: "Cancelled — \(job.serviceType.rawValue) for \(job.clientName) on \(job.date.formatted(date: .abbreviated, time: .omitted)) has been removed.",
+                    style: .warning,
+                    quickReplies: ["Schedule a new job", "Business overview"]
+                )
+            case .startJob(let job):
+                await jobsStore.updateStatus(id: job.id, status: .inProgress)
+                UINotificationFeedbackGenerator().notificationOccurred(.success)
+                return ChatMessage(
+                    role: .assistant,
+                    text: "Job started! \(job.serviceType.rawValue) for \(job.clientName) is now in progress. I'll be here when you're done.",
+                    style: .success,
+                    quickReplies: ["Mark complete", "Today's jobs"]
+                )
+            case .assignJob(let job, let member):
+                var updated = job
+                updated.assignedMemberId = member.id
+                updated.assignedMemberName = member.name
+                _ = await jobsStore.update(updated)
+                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                return ChatMessage(
+                    role: .assistant,
+                    text: "\(job.serviceType.rawValue) for \(job.clientName) on \(job.date.formatted(date: .abbreviated, time: .omitted)) assigned to \(member.name).",
+                    style: .success,
+                    quickReplies: ["View schedule", "Assign another job"]
+                )
             }
         }
 
@@ -2800,6 +2922,65 @@ struct AIChatView: View {
 
         let text = "Business insights:\n\n" + insights.map { "• \($0)" }.joined(separator: "\n")
         return ChatMessage(role: .assistant, text: text, style: .info, quickReplies: ["Business overview", "Check finances"])
+    }
+
+    // MARK: - Morning Briefing
+
+    private func buildMorningBriefing() -> ChatMessage {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+        let weekEnd = calendar.date(byAdding: .day, value: 7, to: today) ?? today
+        let ownerName = profileStore.profile?.fullName.components(separatedBy: " ").first ?? "there"
+
+        let todayJobs = jobsStore.jobs.filter { calendar.isDate($0.date, inSameDayAs: today) && $0.status == .scheduled }.sorted { $0.date < $1.date }
+        let weekJobs = jobsStore.jobs.filter { $0.date > today && $0.date <= weekEnd && $0.status == .scheduled }
+        let overdueInvoices = invoicesStore.invoices.filter { $0.status == .overdue }
+        let unpaidTotal = invoicesStore.invoices.filter { $0.status == .unpaid }.reduce(0.0) { $0 + $1.subtotal }
+        let overdueTotal = overdueInvoices.reduce(0.0) { $0 + $1.subtotal }
+        let monthStart = calendar.date(from: calendar.dateComponents([.year, .month], from: Date())) ?? today
+        let monthRevenue = invoicesStore.invoices.filter { $0.status == .paid && $0.createdAt >= monthStart }.reduce(0.0) { $0 + $1.subtotal }
+
+        var lines: [String] = ["Good morning, \(ownerName)! Here's your briefing:\n"]
+
+        if todayJobs.isEmpty {
+            lines.append("📅 Nothing scheduled today.")
+        } else {
+            lines.append("📅 Today (\(todayJobs.count) job\(todayJobs.count == 1 ? "" : "s")):")
+            for job in todayJobs {
+                lines.append("  • \(job.clientName) — \(job.serviceType.rawValue) at \(job.date.formatted(date: .omitted, time: .shortened))")
+            }
+        }
+
+        if !weekJobs.isEmpty {
+            lines.append("\n🗓 This week: \(weekJobs.count) more job\(weekJobs.count == 1 ? "" : "s") scheduled.")
+        }
+
+        if overdueInvoices.count > 0 {
+            lines.append("\n⚠️ \(overdueInvoices.count) overdue invoice\(overdueInvoices.count == 1 ? "" : "s") totaling \(overdueTotal.currency) — action needed.")
+        }
+        if unpaidTotal > 0 {
+            lines.append("💰 \(unpaidTotal.currency) outstanding (unpaid).")
+        }
+        lines.append("📈 Revenue this month: \(monthRevenue.currency)")
+
+        if !teamStore.members.filter({ $0.status == .active }).isEmpty {
+            let unassigned = todayJobs.filter { $0.assignedMemberId == nil }
+            if !unassigned.isEmpty {
+                lines.append("\n👥 \(unassigned.count) today's job\(unassigned.count == 1 ? "" : "s") not yet assigned to a team member.")
+            }
+        }
+
+        var replies: [String] = []
+        if !todayJobs.isEmpty { replies.append("Start first job") }
+        if overdueInvoices.count > 0 { replies.append("Show overdue invoices") }
+        replies.append("Business overview")
+
+        return ChatMessage(
+            role: .assistant,
+            text: lines.joined(separator: "\n"),
+            style: overdueInvoices.count > 0 ? .warning : .info,
+            quickReplies: replies
+        )
     }
 
     // MARK: - Focus Briefing
@@ -3272,8 +3453,8 @@ private struct MessageBubble: View {
             }
         case .confirmJob(let draft):
             JobConfirmCard(draft: draft)
-        case .confirmClient:
-            EmptyView()
+        case .confirmClient(let draft):
+            ClientConfirmCard(draft: draft)
         }
     }
 
@@ -3446,6 +3627,54 @@ private struct JobConfirmCard: View {
             Text(value)
                 .font(.system(size: 12, weight: .semibold))
                 .foregroundStyle(Color.sweeplyNavy)
+        }
+    }
+}
+
+// MARK: - Client Confirmation Card
+
+private struct ClientConfirmCard: View {
+    let draft: ClientDraft
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("NEW CLIENT")
+                .font(.system(size: 10, weight: .bold))
+                .foregroundStyle(Color.sweeplyTextSub)
+                .tracking(0.8)
+
+            VStack(spacing: 8) {
+                if let name = draft.name {
+                    confirmRow(icon: "person.fill", label: "Name", value: name)
+                }
+                if let phone = draft.phone, !phone.isEmpty {
+                    confirmRow(icon: "phone.fill", label: "Phone", value: phone)
+                }
+                if let email = draft.email, !email.isEmpty {
+                    confirmRow(icon: "envelope.fill", label: "Email", value: email)
+                }
+            }
+        }
+        .padding(14)
+        .background(Color.sweeplyNavy.opacity(0.04))
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.sweeplyNavy.opacity(0.15), lineWidth: 1))
+    }
+
+    private func confirmRow(icon: String, label: String, value: String) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: icon)
+                .font(.system(size: 11))
+                .foregroundStyle(Color.sweeplyNavy)
+                .frame(width: 16)
+            Text(label)
+                .font(.system(size: 12))
+                .foregroundStyle(Color.sweeplyTextSub)
+            Spacer()
+            Text(value)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(Color.sweeplyNavy)
+                .lineLimit(1)
         }
     }
 }

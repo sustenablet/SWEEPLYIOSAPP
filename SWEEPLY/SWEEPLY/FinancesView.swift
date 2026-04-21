@@ -168,11 +168,15 @@ struct FinancesView: View {
             await invoicesStore.load(isAuthenticated: session.isAuthenticated)
         }
         .sheet(isPresented: $showFinanceAI) {
-            AIChatView(financeMode: true)
-                .environment(jobsStore)
-                .environment(clientsStore)
-                .environment(invoicesStore)
-                .environment(profileStore)
+            AIChatView(
+                onNewInvoice: { showFinanceAI = false; DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { showNewInvoice = true } },
+                financeMode: true
+            )
+            .environment(jobsStore)
+            .environment(clientsStore)
+            .environment(invoicesStore)
+            .environment(profileStore)
+            .environment(teamStore)
         }
         .sheet(isPresented: $showInvoicesList) {
             InvoicesListView()

@@ -792,6 +792,7 @@ struct BusinessView: View {
             .environment(clientsStore)
             .environment(invoicesStore)
             .environment(profileStore)
+            .environment(teamStore)
         }
     }
 
