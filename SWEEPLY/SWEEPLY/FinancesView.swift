@@ -175,9 +175,10 @@ struct FinancesView: View {
                 .environment(profileStore)
         }
         .sheet(isPresented: $showInvoicesList) {
-            InvoicesListView(showNewInvoice: $showNewInvoice)
+            InvoicesListView()
                 .environment(invoicesStore)
                 .environment(clientsStore)
+                .environment(jobsStore)
                 .environment(session)
                 .environment(profileStore)
         }
@@ -995,17 +996,16 @@ struct InvoicesListView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(InvoicesStore.self) private var invoicesStore
     @Environment(ClientsStore.self) private var clientsStore
+    @Environment(JobsStore.self) private var jobsStore
     @Environment(AppSession.self) private var session
     @Environment(ProfileStore.self) private var profileStore
 
-    @Binding var showNewInvoice: Bool
-
+    @State private var showNewInvoice = false
     @State private var selectedFilter: InvoiceFilter
     @State private var searchText = ""
 
-    init(preselectedFilter: String = "all", showNewInvoice: Binding<Bool>? = nil) {
+    init(preselectedFilter: String = "all") {
         _selectedFilter = State(initialValue: InvoiceFilter(rawValue: preselectedFilter) ?? .all)
-        _showNewInvoice = showNewInvoice ?? .constant(false)
     }
 
     private enum InvoiceFilter: String, CaseIterable {
@@ -1109,6 +1109,14 @@ struct InvoicesListView: View {
                     }
                     .foregroundStyle(Color.sweeplyNavy)
                 }
+            }
+            .sheet(isPresented: $showNewInvoice) {
+                NewInvoiceView()
+                    .environment(invoicesStore)
+                    .environment(clientsStore)
+                    .environment(jobsStore)
+                    .environment(session)
+                    .environment(profileStore)
             }
         }
     }
