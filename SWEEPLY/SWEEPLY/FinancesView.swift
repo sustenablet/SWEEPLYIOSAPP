@@ -23,6 +23,7 @@ struct FinancesView: View {
     @State private var showFinanceAI = false
     @State private var showInvoicesList = false
     @State private var showExpenses = false
+    @State private var showNewInvoice = false
 
     private var invoices: [Invoice] {
         invoicesStore.invoices
@@ -174,9 +175,17 @@ struct FinancesView: View {
                 .environment(profileStore)
         }
         .sheet(isPresented: $showInvoicesList) {
-            InvoicesListView()
+            InvoicesListView(showNewInvoice: $showNewInvoice)
                 .environment(invoicesStore)
                 .environment(clientsStore)
+                .environment(session)
+                .environment(profileStore)
+        }
+        .sheet(isPresented: $showNewInvoice) {
+            NewInvoiceView()
+                .environment(invoicesStore)
+                .environment(clientsStore)
+                .environment(jobsStore)
                 .environment(session)
                 .environment(profileStore)
         }
@@ -989,11 +998,14 @@ struct InvoicesListView: View {
     @Environment(AppSession.self) private var session
     @Environment(ProfileStore.self) private var profileStore
 
+    @Binding var showNewInvoice: Bool
+
     @State private var selectedFilter: InvoiceFilter
     @State private var searchText = ""
 
-    init(preselectedFilter: String = "all") {
+    init(preselectedFilter: String = "all", showNewInvoice: Binding<Bool>? = nil) {
         _selectedFilter = State(initialValue: InvoiceFilter(rawValue: preselectedFilter) ?? .all)
+        _showNewInvoice = showNewInvoice ?? .constant(false)
     }
 
     private enum InvoiceFilter: String, CaseIterable {
@@ -1086,6 +1098,16 @@ struct InvoicesListView: View {
                 ToolbarItem(placement: .topBarLeading) {
                     Button("Close") { dismiss() }
                         .foregroundStyle(Color.sweeplyTextSub)
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        showNewInvoice = true
+                    } label: {
+                        Image(systemName: "plus")
+                            .font(.system(size: 16, weight: .semibold))
+                    }
+                    .foregroundStyle(Color.sweeplyNavy)
                 }
             }
         }
