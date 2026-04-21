@@ -231,6 +231,7 @@ struct AIChatView: View {
     @State private var showCommandPalette: Bool = false
     @State private var showHistory: Bool = false
     @State private var showMenu: Bool = false
+    @State private var showFullAI: Bool = false
     @FocusState private var isInputFocused: Bool
 
     // Chat title
@@ -528,6 +529,17 @@ struct AIChatView: View {
                             .tint(Color.sweeplyNavy)
                         }
 
+                        if financeMode {
+                            Divider()
+                            Button {
+                                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                showFullAI = true
+                            } label: {
+                                Label("Full AI Assistant", systemImage: "sparkles")
+                            }
+                            .tint(Color.sweeplyNavy)
+                        }
+
                         Divider()
 
                         Button(role: .destructive) {
@@ -654,6 +666,19 @@ struct AIChatView: View {
                 projectPickerSheet
                     .presentationDetents([.medium, .large])
                     .presentationDragIndicator(.visible)
+            }
+            .sheet(isPresented: $showFullAI) {
+                AIChatView(
+                    onNewJob: onNewJob,
+                    onNewClient: onNewClient,
+                    onNewInvoice: onNewInvoice,
+                    financeMode: false
+                )
+                .environment(jobsStore)
+                .environment(clientsStore)
+                .environment(invoicesStore)
+                .environment(profileStore)
+                .environment(teamStore)
             }
         }
     }
@@ -1593,6 +1618,22 @@ struct AIChatView: View {
     @MainActor
     private func generateResponse(for input: String) async -> ChatMessage {
         let lowered = input.lowercased()
+
+        // Finance mode guard — block non-financial intents and redirect to Full AI
+        if financeMode {
+            let isNonFinanceIntent = (lowered.contains("job") && (lowered.contains("schedule") || lowered.contains("add") || lowered.contains("new") || lowered.contains("create") || lowered.contains("book")))
+                || (lowered.contains("client") && (lowered.contains("add") || lowered.contains("new") || lowered.contains("create")))
+                || lowered.contains("reschedule") || lowered.contains("cancel a job") || lowered.contains("start a job")
+                || (lowered.contains("team") && (lowered.contains("assign") || lowered.contains("invite")))
+            if isNonFinanceIntent {
+                return ChatMessage(
+                    role: .assistant,
+                    text: "I'm focused on finances here. For scheduling, jobs, and client management, tap the menu ☰ → Full AI Assistant.",
+                    style: .info,
+                    quickReplies: ["Revenue this month", "Overdue invoices", "Collection rate"]
+                )
+            }
+        }
 
         // Conversational state handling
         switch conversationState {
@@ -2608,23 +2649,42 @@ struct AIChatView: View {
             let avgInvoice = allInvoices.isEmpty ? 0.0 : allInvoices.reduce(0.0) { $0 + $1.amount } / Double(allInvoices.count)
             let thisMonthPaid = paid.filter { $0.createdAt >= monthStart }.reduce(0.0) { $0 + $1.amount }
 
+            let lastThreeMonths = (0..<3).map { offset -> String in
+                let cal = Calendar.current
+                guard let monthDate = cal.date(byAdding: .month, value: -offset, to: Date()),
+                      let interval = cal.dateInterval(of: .month, for: monthDate) else { return "" }
+                let f = DateFormatter(); f.dateFormat = "MMM"
+                let label = f.string(from: interval.start)
+                let rev = paid.filter { $0.createdAt >= interval.start && $0.createdAt < interval.end }.reduce(0.0) { $0 + $1.amount }
+                return "\(label): \(rev.currency)"
+            }.filter { !$0.isEmpty }.joined(separator: ", ")
+
+            let topPayingClients = Dictionary(grouping: paid, by: { $0.clientName })
+                .mapValues { $0.reduce(0.0) { $0 + $1.amount } }
+                .sorted { $0.value > $1.value }
+                .prefix(5)
+                .map { "\($0.key) (\($0.value.currency))" }
+                .joined(separator: ", ")
+
             return """
-            You are Finance AI, a financial analyst embedded in Sweeply for \(businessName) (owner: \(ownerName)).
+            You are Finance AI, a specialist financial assistant embedded in Sweeply for \(businessName) (owner: \(ownerName)).
 
-            Live financial data:
+            Your ONLY domain is financial data. You never help with scheduling, jobs, clients, or team management — if asked, politely say "I'm focused on finances — tap the menu to open the Full AI Assistant for that."
+
+            Live financial snapshot:
             - Total collected (all time): \(totalCollected.currency)
-            - Collected this month: \(thisMonthPaid.currency)
-            - Revenue this week: \(weekRevenue.currency)
+            - This month: \(thisMonthPaid.currency)
+            - This week: \(weekRevenue.currency)
+            - Revenue by month (last 3): \(lastThreeMonths)
             - Outstanding (unpaid): \(unpaidText)
-            - Overdue invoices: \(overdueText)
-            - Total overdue: \(totalOverdue.currency)
+            - Overdue: \(totalOverdue.currency) across \(overdueInvoices.count) invoice\(overdueInvoices.count == 1 ? "" : "s")
+            - Overdue details: \(overdueText)
             - Collection rate: \(collectionRate)%
-            - Average invoice value: \(avgInvoice.currency)
-            - Total invoices: \(allInvoices.count)
+            - Avg invoice value: \(avgInvoice.currency)
+            - Total invoices: \(allInvoices.count) (\(paid.count) paid, \(unpaidInvoices.count) unpaid, \(overdueInvoices.count) overdue)
+            - Top paying clients: \(topPayingClients.isEmpty ? "none yet" : topPayingClients)
 
-            Overdue invoice details: \(overdueText)
-
-            Be concise and data-driven — lead with numbers. Stay focused on finances: revenue, invoices, cash flow, collection rates, outstanding balances. Redirect non-financial questions back to finances. Never suggest creating jobs or schedules.
+            Be concise and data-driven — lead with numbers. When you spot financial risks (high overdue rate, low collection rate, cash flow gaps), proactively flag them. Keep responses under 4 sentences unless the user asks for detail.
             """
         }
 
