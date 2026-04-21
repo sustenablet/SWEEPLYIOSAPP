@@ -20,6 +20,11 @@ struct ChatMessage: Identifiable {
         case invoices([InvoicePreview])
         case confirmJob(JobDraft)
         case confirmClient(ClientDraft)
+        case revenueChart([MonthBar])
+        case businessHealth(BusinessHealthData)
+        case clientRanking([ClientRankRow])
+        case invoiceDonut(paid: Double, unpaid: Double, overdue: Double)
+        case jobTimeline([JobTimelineItem])
     }
 
     struct JobPreview {
@@ -37,6 +42,39 @@ struct ChatMessage: Identifiable {
         let amount: Double
         let status: InvoiceStatus
         let dueDate: Date
+    }
+
+    struct MonthBar: Identifiable {
+        let id = UUID()
+        let label: String
+        let collected: Double
+        let pipeline: Double
+    }
+
+    struct BusinessHealthData {
+        let activeClients: Int
+        let jobsThisMonth: Int
+        let collectionRate: Int
+        let overdueCount: Int
+        let monthRevenue: Double
+        let weekRevenue: Double
+    }
+
+    struct ClientRankRow: Identifiable {
+        let id: UUID
+        let name: String
+        let totalRevenue: Double
+        let jobCount: Int
+        let rank: Int
+    }
+
+    struct JobTimelineItem: Identifiable {
+        let id: UUID
+        let clientName: String
+        let serviceType: String
+        let time: Date
+        let status: JobStatus
+        let assignedMember: String?
     }
 
     let id: UUID
@@ -368,14 +406,39 @@ struct AIChatView: View {
     }
 
     // Whether to show suggestions carousel
-    private var showSuggestions: Bool {
-        guard firstMessageSource != nil else { return true }
-        
-        if firstMessageSource == .manual {
-            return false
+    private var showSuggestions: Bool { inputText.isEmpty }
+
+    private var contextualChips: [(label: String, query: String)] {
+        var chips: [(priority: Int, label: String, query: String)] = []
+        let cal = Calendar.current
+        let overdue = invoicesStore.invoices.filter { $0.status == .overdue }
+        let todayJobs = jobsStore.jobs.filter { cal.isDateInToday($0.date) && $0.status == .scheduled }
+        let unpaid = invoicesStore.invoices.filter { $0.status == .unpaid }
+        let upcoming = jobsStore.jobs.filter { $0.status == .scheduled && $0.date > Date() }.sorted { $0.date < $1.date }
+
+        if !overdue.isEmpty {
+            chips.append((0, "⚠️ \(overdue.count) overdue", "Show my overdue invoices"))
         }
-        
-        return nonSuggestionMessageCount < 2
+        if !todayJobs.isEmpty {
+            chips.append((1, "📅 Today (\(todayJobs.count))", "What's on my schedule today?"))
+        }
+        let unassigned = todayJobs.filter { $0.assignedMemberId == nil }
+        if !teamStore.members.filter({ $0.status == .active }).isEmpty && !unassigned.isEmpty {
+            chips.append((2, "👥 Assign jobs", "Assign today's jobs to my team"))
+        }
+        if let next = upcoming.first {
+            let first = next.clientName.components(separatedBy: " ").first ?? next.clientName
+            chips.append((3, "▶ Start \(first)'s job", "Start \(next.clientName)'s job"))
+        }
+        if !unpaid.isEmpty {
+            chips.append((4, "💰 \(unpaid.count) unpaid", "Show unpaid invoices"))
+        }
+        if chips.isEmpty {
+            return financeMode
+                ? [("Revenue", "What's my revenue this month?"), ("Overdue", "Show overdue invoices"), ("Collection rate", "What's my collection rate?")]
+                : [("Today", "What's on my schedule today?"), ("Overview", "Business overview"), ("Insights", "Give me business insights")]
+        }
+        return chips.sorted { $0.priority < $1.priority }.prefix(4).map { ($0.label, $0.query) }
     }
 
     var body: some View {
@@ -1058,9 +1121,12 @@ struct AIChatView: View {
     private var suggestionsCarousel: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
-                ForEach(currentSuggestions, id: \.label) { suggestion in
-                    Button { sendMessage(suggestion.query) } label: {
-                        Text(suggestion.label)
+                ForEach(contextualChips, id: \.label) { chip in
+                    Button {
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        sendMessage(chip.query)
+                    } label: {
+                        Text(chip.label)
                             .font(.system(size: 13, weight: .medium))
                             .foregroundStyle(Color.sweeplyNavy)
                             .padding(.horizontal, 14)
@@ -1890,26 +1956,21 @@ struct AIChatView: View {
             if todayJobs.isEmpty {
                 return ChatMessage(
                     role: .assistant,
-                    text: "Nothing scheduled for today. Want to book something?",
+                    text: ResponseVariants.noJobsToday(firstName: firstName),
                     action: .newJob,
                     actionLabel: "Schedule a Job",
                     quickReplies: ["Show upcoming jobs", "Business overview"]
                 )
             }
-            let previews = todayJobs.map {
-                ChatMessage.JobPreview(clientName: $0.clientName, serviceType: $0.serviceType.rawValue, date: $0.date, status: $0.status, price: $0.price, address: $0.address)
+            let timelineItems = todayJobs.map {
+                ChatMessage.JobTimelineItem(id: $0.id, clientName: $0.clientName, serviceType: $0.serviceType.rawValue, time: $0.date, status: $0.status, assignedMember: $0.assignedMemberName)
             }
-            let todayVariants = [
-                "You have \(todayJobs.count) job\(todayJobs.count == 1 ? "" : "s") today:",
-                "Here's your schedule for today (\(todayJobs.count) job\(todayJobs.count == 1 ? "" : "s")):",
-                "Today's \(todayJobs.count == 1 ? "job" : "\(todayJobs.count) jobs"):"
-            ]
             return ChatMessage(
                 role: .assistant,
-                text: todayVariants.randomElement() ?? todayVariants[0],
+                text: ResponseVariants.todayJobs(count: todayJobs.count, firstName: firstName),
                 style: .info,
-                quickReplies: ["Add another job", "This week?"],
-                contextCard: .jobs(previews)
+                quickReplies: ["Start first job", "This week?"],
+                contextCard: .jobTimeline(timelineItems)
             )
         }
 
@@ -2070,14 +2131,15 @@ struct AIChatView: View {
             if overdue.isEmpty {
                 return ChatMessage(role: .assistant, text: "No overdue invoices right now — you're all caught up on billing.", style: .success, quickReplies: ["Check all invoices", "Create invoice"])
             }
+            let total = overdue.reduce(0.0) { $0 + $1.subtotal }
             let previews = overdue.map { ChatMessage.InvoicePreview(invoiceNumber: $0.invoiceNumber, clientName: $0.clientName, amount: $0.subtotal, status: $0.status, dueDate: $0.dueDate) }
             return ChatMessage(
                 role: .assistant,
-                text: "\(overdue.count) overdue invoice\(overdue.count == 1 ? "" : "s") need attention:",
+                text: ResponseVariants.overdueWarning(count: overdue.count, total: total.currency),
                 style: .warning,
                 action: .openFinances,
                 actionLabel: "Open Finances",
-                quickReplies: ["Create a new invoice", "Check all invoices"],
+                quickReplies: ["Mark one paid", "Who owes most?"],
                 contextCard: .invoices(previews)
             )
         }
@@ -2100,8 +2162,9 @@ struct AIChatView: View {
             let outstanding = (unpaid + overdue).reduce(0.0) { $0 + $1.subtotal }
             text += "\n\nOutstanding: \(outstanding.formatted(.currency(code: "USD")))"
 
-            let recentUnpaid = (unpaid + overdue).sorted { $0.dueDate < $1.dueDate }.prefix(3)
-            let previews = recentUnpaid.map { ChatMessage.InvoicePreview(invoiceNumber: $0.invoiceNumber, clientName: $0.clientName, amount: $0.subtotal, status: $0.status, dueDate: $0.dueDate) }
+            let paidAmt = invoicesStore.invoices.filter { $0.status == .paid }.reduce(0.0) { $0 + $1.subtotal }
+            let unpaidAmt = unpaid.reduce(0.0) { $0 + $1.subtotal }
+            let overdueAmt = overdue.reduce(0.0) { $0 + $1.subtotal }
 
             return ChatMessage(
                 role: .assistant,
@@ -2110,7 +2173,7 @@ struct AIChatView: View {
                 action: .openFinances,
                 actionLabel: "Open Finances",
                 quickReplies: ["Create invoice", "Check overdue"],
-                contextCard: previews.isEmpty ? nil : .invoices(Array(previews))
+                contextCard: .invoiceDonut(paid: paidAmt, unpaid: unpaidAmt, overdue: overdueAmt)
             )
         }
 
@@ -2118,29 +2181,27 @@ struct AIChatView: View {
         if lowered.contains("revenue") || lowered.contains("money") || lowered.contains("earn") || lowered.contains("income") || lowered.contains("finance") || lowered.contains("how much") || lowered.contains("what's my revenue") || lowered.contains("check revenue") || (lowered.contains("paid") && !lowered.contains("job")) {
             lastIntent = "revenue"
             let paidInvoices = invoicesStore.invoices.filter { $0.status == .paid }
-            let collected = paidInvoices.reduce(0.0) { $0 + $1.subtotal }
-            let pipeline = invoicesStore.invoices.filter { $0.status == .unpaid }.reduce(0.0) { $0 + $1.subtotal }
             let overdueAmt = invoicesStore.invoices.filter { $0.status == .overdue }.reduce(0.0) { $0 + $1.subtotal }
-
             let thisMonth = paidInvoices.filter {
                 Calendar.current.isDate($0.createdAt, equalTo: Date(), toGranularity: .month)
             }.reduce(0.0) { $0 + $1.subtotal }
-
-            let revenueVariants = [
-                "Financial snapshot:\n\n• Collected: \(collected.formatted(.currency(code: "USD")))\n• This month: \(thisMonth.formatted(.currency(code: "USD")))\n• Outstanding: \(pipeline.formatted(.currency(code: "USD")))",
-                "Here's where you stand financially:\n\n• Total collected: \(collected.formatted(.currency(code: "USD")))\n• This month: \(thisMonth.formatted(.currency(code: "USD")))\n• In the pipeline: \(pipeline.formatted(.currency(code: "USD")))",
-                "Revenue breakdown:\n\n• \(collected.formatted(.currency(code: "USD"))) collected total\n• \(thisMonth.formatted(.currency(code: "USD"))) this month\n• \(pipeline.formatted(.currency(code: "USD"))) outstanding"
-            ]
-            var text = revenueVariants.randomElement() ?? revenueVariants[0]
-            if overdueAmt > 0 { text += "\n• Overdue: \(overdueAmt.formatted(.currency(code: "USD")))" }
-
+            let monthBars: [ChatMessage.MonthBar] = (0..<6).reversed().compactMap { offset in
+                guard let monthDate = Calendar.current.date(byAdding: .month, value: -offset, to: Date()),
+                      let interval = Calendar.current.dateInterval(of: .month, for: monthDate) else { return nil }
+                let f = DateFormatter(); f.dateFormat = "MMM"
+                let collected = paidInvoices.filter { $0.createdAt >= interval.start && $0.createdAt < interval.end }.reduce(0.0) { $0 + $1.subtotal }
+                let pipeline = invoicesStore.invoices.filter { $0.status != .paid && $0.createdAt >= interval.start && $0.createdAt < interval.end }.reduce(0.0) { $0 + $1.subtotal }
+                return ChatMessage.MonthBar(label: f.string(from: interval.start), collected: collected, pipeline: pipeline)
+            }
+            let text = ResponseVariants.revenueOpener(month: thisMonth.currency, overdue: overdueAmt > 0 ? overdueAmt.currency : nil)
             return ChatMessage(
                 role: .assistant,
                 text: text,
                 style: .info,
                 action: .openFinances,
                 actionLabel: "View Full Finances",
-                quickReplies: overdueAmt > 0 ? ["Who owes me most?", "Am I on track?"] : ["Am I on track?", "Year to date", "Who's my best client?"]
+                quickReplies: overdueAmt > 0 ? ["Who owes me most?", "Am I on track?"] : ["Am I on track?", "Year to date", "Who's my best client?"],
+                contextCard: .revenueChart(monthBars)
             )
         }
 
@@ -2159,26 +2220,28 @@ struct AIChatView: View {
 
         // BUSINESS OVERVIEW
         if lowered.contains("overview") || lowered.contains("summary") || lowered.contains("stats") || lowered.contains("how am i doing") || lowered.contains("business overview") {
-            let upcoming = jobsStore.jobs.filter { $0.date >= Date() && $0.status == .scheduled }.count
+            let monthStart = Calendar.current.date(from: Calendar.current.dateComponents([.year, .month], from: Date())) ?? Date()
+            let weekStart = Calendar.current.date(byAdding: .day, value: -7, to: Date()) ?? Date()
             let activeClients = clientsStore.clients.filter { $0.isActive }.count
-            let completed = jobsStore.jobs.filter { $0.status == .completed }.count
-            let outstanding = invoicesStore.invoices.filter { $0.status == .unpaid || $0.status == .overdue }.reduce(0.0) { $0 + $1.subtotal }
-            let collected = invoicesStore.invoices.filter { $0.status == .paid }.reduce(0.0) { $0 + $1.subtotal }
-            let overdueCt = invoicesStore.invoices.filter { $0.status == .overdue }.count
-
-            var text = "Business overview:\n\n"
-            text += "• \(upcoming) upcoming job\(upcoming == 1 ? "" : "s")\n"
-            text += "• \(completed) jobs completed\n"
-            text += "• \(activeClients) active client\(activeClients == 1 ? "" : "s")\n"
-            text += "• \(collected.formatted(.currency(code: "USD"))) collected\n"
-            text += "• \(outstanding.formatted(.currency(code: "USD"))) outstanding"
-            if overdueCt > 0 { text += "\n• \(overdueCt) overdue invoice\(overdueCt == 1 ? "" : "s")" }
-
+            let jobsThisMonth = jobsStore.jobs.filter { $0.date >= monthStart && ($0.status == .scheduled || $0.status == .completed || $0.status == .inProgress) }.count
+            let paidInvoices = invoicesStore.invoices.filter { $0.status == .paid }
+            let allInvoices = invoicesStore.invoices
+            let overdueCt = allInvoices.filter { $0.status == .overdue }.count
+            let collectionRate = allInvoices.isEmpty ? 0 : Int((Double(paidInvoices.count) / Double(allInvoices.count)) * 100)
+            let monthRevenue = paidInvoices.filter { $0.createdAt >= monthStart }.reduce(0.0) { $0 + $1.subtotal }
+            let weekRevenue = paidInvoices.filter { $0.createdAt >= weekStart }.reduce(0.0) { $0 + $1.subtotal }
+            let health = ChatMessage.BusinessHealthData(
+                activeClients: activeClients, jobsThisMonth: jobsThisMonth,
+                collectionRate: collectionRate, overdueCount: overdueCt,
+                monthRevenue: monthRevenue, weekRevenue: weekRevenue
+            )
+            let text = ResponseVariants.overviewOpener(collectionRate: collectionRate, overdueCount: overdueCt)
             return ChatMessage(
                 role: .assistant,
                 text: text,
-                style: .info,
-                quickReplies: ["Who's my best client?", "Am I on track?", "Most popular services"]
+                style: overdueCt > 0 ? .warning : .info,
+                quickReplies: ["Who's my best client?", "Am I on track?", "Revenue trend"],
+                contextCard: .businessHealth(health)
             )
         }
 
@@ -2222,16 +2285,21 @@ struct AIChatView: View {
 
         // TOP CLIENT BY REVENUE
         if lowered.contains("best client") || lowered.contains("top client") || lowered.contains("most valuable client") || lowered.contains("who pays me the most") || lowered.contains("highest paying") || (lowered.contains("which client") && (lowered.contains("most") || lowered.contains("revenue") || lowered.contains("pays"))) {
-            let clientRevenue = clientsStore.clients.map { client -> (name: String, revenue: Double, count: Int) in
+            let clientRevenue: [(client: Client, revenue: Double, count: Int)] = clientsStore.clients.map { client in
                 let paid = invoicesStore.invoices.filter { $0.clientId == client.id && $0.status == .paid }
-                return (name: client.name, revenue: paid.reduce(0) { $0 + $1.subtotal }, count: paid.count)
-            }.sorted { $0.revenue > $1.revenue }
-            if let top = clientRevenue.first, top.revenue > 0 {
-                var text = "Your top client by revenue is \(top.name) — \(top.revenue.formatted(.currency(code: "USD"))) collected across \(top.count) invoice\(top.count == 1 ? "" : "s")."
-                if clientRevenue.count > 1, clientRevenue[1].revenue > 0 {
-                    text += " Runner-up: \(clientRevenue[1].name) (\(clientRevenue[1].revenue.formatted(.currency(code: "USD"))))."
+                return (client: client, revenue: paid.reduce(0) { $0 + $1.subtotal }, count: paid.count)
+            }.filter { $0.revenue > 0 }.sorted { $0.revenue > $1.revenue }
+            if let top = clientRevenue.first {
+                let rows = clientRevenue.prefix(5).enumerated().map {
+                    ChatMessage.ClientRankRow(id: $0.element.client.id, name: $0.element.client.name, totalRevenue: $0.element.revenue, jobCount: $0.element.count, rank: $0.offset + 1)
                 }
-                return ChatMessage(role: .assistant, text: text, style: .success, quickReplies: ["Business overview", "Revenue breakdown", "Who owes me most?"])
+                return ChatMessage(
+                    role: .assistant,
+                    text: ResponseVariants.topClient(name: top.client.name, revenue: top.revenue.currency),
+                    style: .success,
+                    quickReplies: ["Business overview", "Revenue trend", "Who owes me most?"],
+                    contextCard: .clientRanking(rows)
+                )
             } else {
                 return ChatMessage(role: .assistant, text: "No paid invoices yet — once you start collecting, I'll rank your clients by revenue.", quickReplies: ["Create invoice", "Business overview"])
             }
@@ -2584,6 +2652,95 @@ struct AIChatView: View {
         )
     }
 
+    // MARK: - Response Variations
+
+    private enum ResponseVariants {
+        static func todayJobs(count: Int, firstName: String) -> String {
+            let d = dayName()
+            return [
+                "You've got \(count) job\(count == 1 ? "" : "s") today, \(firstName).",
+                "\(count) \(count == 1 ? "job" : "jobs") on the board today.",
+                "Busy \(d)! \(count) job\(count == 1 ? "" : "s") scheduled."
+            ].randomElement()!
+        }
+        static func noJobsToday(firstName: String) -> String {
+            return [
+                "Nothing scheduled today, \(firstName) — good time to follow up on invoices.",
+                "Clear schedule today. Any clients you want to reach out to?",
+                "You're free today. Want to check outstanding invoices or plan ahead?"
+            ].randomElement()!
+        }
+        static func markComplete(clientName: String, service: String) -> String {
+            let first = clientName.components(separatedBy: " ").first ?? clientName
+            return [
+                "Done — \(service) for \(first) marked complete.",
+                "\(first)'s \(service) is wrapped up. Nice work.",
+                "Marked complete. \(service) for \(first) is done."
+            ].randomElement()!
+        }
+        static func markPaid(invoiceNumber: String, amount: String) -> String {
+            return [
+                "\(invoiceNumber) marked as paid — \(amount) collected.",
+                "Paid! \(amount) logged for \(invoiceNumber).",
+                "\(invoiceNumber) settled. \(amount) in the books."
+            ].randomElement()!
+        }
+        static func greeting(firstName: String) -> String {
+            return [
+                "Hey \(firstName)! What can I help you with?",
+                "What's up, \(firstName)? Ask me anything.",
+                "Hi \(firstName)! How can I help today?"
+            ].randomElement()!
+        }
+        static func overviewOpener(collectionRate: Int, overdueCount: Int) -> String {
+            if overdueCount > 0 {
+                return [
+                    "Here's your business snapshot — \(overdueCount) invoice\(overdueCount == 1 ? "" : "s") need attention.",
+                    "Business overview. One flag: \(overdueCount) overdue invoice\(overdueCount == 1 ? "" : "s").",
+                    "\(collectionRate)% collection rate. \(overdueCount) overdue to chase."
+                ].randomElement()!
+            }
+            return [
+                "Here's how your business is doing:",
+                "Your business at a glance:",
+                "Business health — looking \(collectionRate >= 80 ? "strong" : "okay"):"
+            ].randomElement()!
+        }
+        static func revenueOpener(month: String, overdue: String?) -> String {
+            if let o = overdue {
+                return [
+                    "Revenue breakdown — \(month) this month, \(o) overdue.",
+                    "\(month) collected this month. Heads up: \(o) overdue.",
+                    "Here's your revenue picture — \(month) in, \(o) to chase."
+                ].randomElement()!
+            }
+            return [
+                "Here's your revenue breakdown:",
+                "\(month) collected this month — full picture below.",
+                "Revenue snapshot:"
+            ].randomElement()!
+        }
+        static func topClient(name: String, revenue: String) -> String {
+            let first = name.components(separatedBy: " ").first ?? name
+            return [
+                "\(first) is your top client — \(revenue) collected.",
+                "Your highest earner is \(name) at \(revenue).",
+                "\(name) leads the pack with \(revenue) in revenue."
+            ].randomElement()!
+        }
+        static func overdueWarning(count: Int, total: String) -> String {
+            return [
+                "You have \(count) overdue invoice\(count == 1 ? "" : "s") totaling \(total).",
+                "\(count) invoice\(count == 1 ? " is" : "s are") overdue — \(total) outstanding.",
+                "\(total) overdue across \(count) invoice\(count == 1 ? "" : "s"). Worth chasing."
+            ].randomElement()!
+        }
+        private static func dayName() -> String {
+            let f = DateFormatter(); f.dateFormat = "EEEE"
+            return f.string(from: Date())
+        }
+    }
+
     // MARK: - Business Context for AI
 
     private func buildBusinessContext() -> String {
@@ -2859,7 +3016,7 @@ struct AIChatView: View {
                 UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                 return ChatMessage(
                     role: .assistant,
-                    text: "\(job.serviceType.rawValue) for \(job.clientName) marked as completed.",
+                    text: ResponseVariants.markComplete(clientName: job.clientName, service: job.serviceType.rawValue),
                     style: .success,
                     quickReplies: ["Create invoice for \(job.clientName.components(separatedBy: " ").first ?? job.clientName)", "View schedule"]
                 )
@@ -2868,7 +3025,7 @@ struct AIChatView: View {
                 UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                 return ChatMessage(
                     role: .assistant,
-                    text: "Invoice \(invoice.invoiceNumber) for \(invoice.clientName) — \(invoice.subtotal.formatted(.currency(code: "USD"))) — marked as paid.",
+                    text: ResponseVariants.markPaid(invoiceNumber: invoice.invoiceNumber, amount: invoice.subtotal.currency),
                     style: .success,
                     quickReplies: ["Check all invoices", "Business overview"]
                 )
@@ -3319,6 +3476,7 @@ private struct MessageBubble: View {
     let message: ChatMessage
     let onAction: (ChatMessage.ActionType) -> Void
     let onQuickReply: (String) -> Void
+    var onCardQuickReply: ((String) -> Void)? = nil
 
     @State private var displayedText: String = ""
     @State private var typewriterTask: Task<Void, Never>? = nil
@@ -3515,6 +3673,8 @@ private struct MessageBubble: View {
             JobConfirmCard(draft: draft)
         case .confirmClient(let draft):
             ClientConfirmCard(draft: draft)
+        case .revenueChart, .businessHealth, .clientRanking, .invoiceDonut, .jobTimeline:
+            EmptyView()
         }
     }
 

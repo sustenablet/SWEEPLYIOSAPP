@@ -16,6 +16,7 @@ struct SettingsView: View {
     @State private var feedbackStyle: SettingsFeedbackStyle = .info
     @State private var showServiceCatalog = false
     @State private var showJobExtras = false
+    @State private var showOnboarding = false
 
     private var canSave: Bool {
         !isSaving && validationMessage == nil && hasUnsavedChanges
@@ -109,6 +110,11 @@ struct SettingsView: View {
             }
             .sheet(isPresented: $showJobExtras) {
                 ServiceCatalogView(addonsOnly: true)
+            }
+            .sheet(isPresented: $showOnboarding) {
+                OnboardingView()
+                    .environment(profileStore)
+                    .environment(session)
             }
         }
     }
@@ -459,6 +465,27 @@ struct SettingsView: View {
 
             sectionLabel("ACCOUNT")
             settingsGroup {
+                Button {
+                    UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                    showOnboarding = true
+                } label: {
+                    HStack(spacing: 14) {
+                        settingsIcon("arrow.triangle.2.circlepath", color: Color.sweeplyAccent)
+                        Text("Re-run Setup")
+                            .font(.system(size: 15))
+                            .foregroundStyle(Color.primary)
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(Color.sweeplyBorder)
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
+                }
+                .buttonStyle(.plain)
+                
+                Divider().padding(.leading, 58)
+                
                 Button { resetPassword() } label: {
                     HStack(spacing: 14) {
                         settingsIcon("lock.shield.fill", color: Color.sweeplyAccent)
