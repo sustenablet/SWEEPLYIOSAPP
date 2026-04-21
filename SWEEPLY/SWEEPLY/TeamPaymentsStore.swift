@@ -123,25 +123,24 @@ private struct TeamPaymentDTO: Decodable {
     let memberId: UUID
     let ownerId: UUID
     let amount: Double
-    let periodStart: String?
-    let periodEnd: String?
+    let periodStart: Date?
+    let periodEnd: Date?
     let notes: String
-    let paidAt: String
+    let paidAt: Date
+
+    enum CodingKeys: String, CodingKey {
+        case id, amount, notes
+        case memberId    = "member_id"
+        case ownerId     = "owner_id"
+        case periodStart = "period_start"
+        case periodEnd   = "period_end"
+        case paidAt      = "paid_at"
+    }
 
     func toPayment() -> TeamPayment {
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = "yyyy-MM-dd"
-
-        return TeamPayment(
-            id: id,
-            memberId: memberId,
-            ownerId: ownerId,
-            amount: amount,
-            periodStart: periodStart.flatMap { dateFormatter.date(from: $0) },
-            periodEnd: periodEnd.flatMap { dateFormatter.date(from: $0) },
-            notes: notes,
-            paidAt: ISO8601DateFormatter().date(from: paidAt) ?? Date()
-        )
+        TeamPayment(id: id, memberId: memberId, ownerId: ownerId,
+                    amount: amount, periodStart: periodStart, periodEnd: periodEnd,
+                    notes: notes, paidAt: paidAt)
     }
 }
 
@@ -149,31 +148,17 @@ private struct TeamPaymentInsert: Encodable {
     let memberId: UUID
     let ownerId: UUID
     let amount: Double
-    let periodStart: String?
-    let periodEnd: String?
+    let periodStart: Date?
+    let periodEnd: Date?
     let notes: String
-    let paidAt: String
+    let paidAt: Date
 
     enum CodingKeys: String, CodingKey {
-        case memberId = "member_id"
-        case ownerId = "owner_id"
-        case amount
+        case amount, notes
+        case memberId    = "member_id"
+        case ownerId     = "owner_id"
         case periodStart = "period_start"
-        case periodEnd = "period_end"
-        case notes
-        case paidAt = "paid_at"
-    }
-
-    init(memberId: UUID, ownerId: UUID, amount: Double, periodStart: Date?, periodEnd: Date?, notes: String, paidAt: Date) {
-        self.memberId = memberId
-        self.ownerId = ownerId
-        self.amount = amount
-        self.notes = notes
-        self.paidAt = ISO8601DateFormatter().string(from: paidAt)
-
-        let df = DateFormatter()
-        df.dateFormat = "yyyy-MM-dd"
-        self.periodStart = periodStart.map { df.string(from: $0) }
-        self.periodEnd = periodEnd.map { df.string(from: $0) }
+        case periodEnd   = "period_end"
+        case paidAt      = "paid_at"
     }
 }
