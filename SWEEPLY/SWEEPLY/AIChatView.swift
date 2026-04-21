@@ -1,4 +1,5 @@
 import AVFoundation
+import Charts
 import Speech
 import SwiftUI
 import UserNotifications
@@ -1420,7 +1421,8 @@ struct AIChatView: View {
         MessageBubble(
             message: message,
             onAction: handleAction,
-            onQuickReply: sendMessage
+            onQuickReply: sendMessage,
+            onCardQuickReply: sendMessage
         )
         .id(message.id)
         .swipeActions(edge: .leading, allowsFullSwipe: true) {
@@ -1617,15 +1619,21 @@ struct AIChatView: View {
                 $0.status == .paid && Calendar.current.isDate($0.createdAt, equalTo: Date(), toGranularity: .month)
             }.reduce(0.0) { $0 + $1.subtotal }
 
-            var text = "Here's your financial snapshot — \(thisMonth.formatted(.currency(code: "USD"))) collected this month, \(outstanding.formatted(.currency(code: "USD"))) outstanding."
+            var text = "\(Calendar.current.monthSymbols[Calendar.current.component(.month, from: Date()) - 1]): \(thisMonth.formatted(.currency(code: "USD"))) collected, \(outstanding.formatted(.currency(code: "USD"))) outstanding."
             if !overdueList.isEmpty {
-                text += " You have \(overdueList.count) overdue invoice\(overdueList.count == 1 ? "" : "s") totaling \(overdueTotal.formatted(.currency(code: "USD"))) that need attention."
+                text += " \(overdueList.count) overdue invoice\(overdueList.count == 1 ? "" : "s") totaling \(overdueTotal.formatted(.currency(code: "USD"))) need attention."
             }
             let style: ChatMessage.MessageStyle = overdueList.isEmpty ? .info : .warning
             let replies = overdueList.isEmpty
                 ? ["Revenue breakdown", "Outstanding invoices", "Best paying client"]
-                : ["Show overdue", "Mark invoice paid", "Revenue breakdown"]
-            return ChatMessage(role: .assistant, text: text, style: style, quickReplies: replies)
+                : ["Chase overdue", "Revenue trend", "Who owes most"]
+            return ChatMessage(
+                role: .assistant,
+                text: text,
+                style: style,
+                quickReplies: replies,
+                contextCard: .invoiceDonut(paid: collected, unpaid: outstanding, overdue: overdueTotal)
+            )
         }
 
         if isNewUser {
@@ -3660,21 +3668,29 @@ private struct MessageBubble: View {
         case .jobs(let previews):
             VStack(spacing: 6) {
                 ForEach(previews, id: \.clientName) { preview in
-                    JobPreviewCard(preview: preview)
+                    JobPreviewCard(preview: preview, onQuickReply: onCardQuickReply)
                 }
             }
         case .invoices(let previews):
             VStack(spacing: 6) {
                 ForEach(previews, id: \.invoiceNumber) { preview in
-                    InvoicePreviewCard(preview: preview)
+                    InvoicePreviewCard(preview: preview, onQuickReply: onCardQuickReply)
                 }
             }
         case .confirmJob(let draft):
             JobConfirmCard(draft: draft)
         case .confirmClient(let draft):
             ClientConfirmCard(draft: draft)
-        case .revenueChart, .businessHealth, .clientRanking, .invoiceDonut, .jobTimeline:
-            EmptyView()
+        case .revenueChart(let months):
+            RevenueChartCard(months: months, onMonthTap: onCardQuickReply)
+        case .businessHealth(let data):
+            BusinessHealthCard(data: data)
+        case .clientRanking(let rows):
+            ClientRankingCard(rows: rows)
+        case .invoiceDonut(let paid, let unpaid, let overdue):
+            InvoiceDonutCard(paid: paid, unpaid: unpaid, overdue: overdue)
+        case .jobTimeline(let items):
+            JobTimelineCard(items: items, onRowTap: onCardQuickReply)
         }
     }
 
@@ -3707,35 +3723,77 @@ private struct MessageBubble: View {
 
 private struct JobPreviewCard: View {
     let preview: ChatMessage.JobPreview
+    var onQuickReply: ((String) -> Void)? = nil
 
     var body: some View {
-        HStack(spacing: 10) {
-            Circle()
-                .fill(statusColor)
-                .frame(width: 8, height: 8)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(preview.clientName)
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(Color.sweeplyNavy)
-                HStack(spacing: 6) {
-                    Text(preview.serviceType)
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(Color.sweeplyTextSub)
-                    Text(preview.date.formatted(date: .abbreviated, time: .shortened))
-                        .font(.system(size: 11, design: .monospaced))
-                        .foregroundStyle(Color.sweeplyTextSub)
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(spacing: 10) {
+                Circle()
+                    .fill(statusColor)
+                    .frame(width: 8, height: 8)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(preview.clientName)
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(Color.sweeplyNavy)
+                    HStack(spacing: 6) {
+                        Text(preview.serviceType)
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundStyle(Color.sweeplyTextSub)
+                        Text(preview.date.formatted(date: .abbreviated, time: .shortened))
+                            .font(.system(size: 11, design: .monospaced))
+                            .foregroundStyle(Color.sweeplyTextSub)
+                    }
                 }
+                Spacer()
+                Text(preview.price.formatted(.currency(code: "USD")))
+                    .font(.system(size: 12, weight: .bold, design: .monospaced))
+                    .foregroundStyle(Color.sweeplyAccent)
             }
-            Spacer()
-            Text(preview.price.formatted(.currency(code: "USD")))
-                .font(.system(size: 12, weight: .bold, design: .monospaced))
-                .foregroundStyle(Color.sweeplyAccent)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+
+            if preview.status == .scheduled || preview.status == .inProgress, let reply = onQuickReply {
+                Divider().padding(.horizontal, 8)
+                HStack(spacing: 6) {
+                    if preview.status == .scheduled {
+                        jobActionPill("Start", color: Color.sweeplyAccent) {
+                            reply("Start \(preview.clientName)'s job")
+                        }
+                    }
+                    if preview.status == .scheduled || preview.status == .inProgress {
+                        jobActionPill("Complete", color: Color.green) {
+                            reply("Mark \(preview.clientName)'s \(preview.serviceType) complete")
+                        }
+                    }
+                    if preview.status == .scheduled {
+                        jobActionPill("Cancel", color: Color.sweeplyDestructive) {
+                            reply("Cancel \(preview.clientName)'s job")
+                        }
+                    }
+                }
+                .padding(.horizontal, 10)
+                .padding(.vertical, 8)
+            }
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 10)
         .background(Color.sweeplyBackground)
         .clipShape(RoundedRectangle(cornerRadius: 12))
         .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.sweeplyBorder, lineWidth: 1))
+    }
+
+    private func jobActionPill(_ label: String, color: Color, action: @escaping () -> Void) -> some View {
+        Button(action: {
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            action()
+        }) {
+            Text(label)
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(color)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 5)
+                .background(color.opacity(0.1))
+                .clipShape(Capsule())
+        }
+        .buttonStyle(.plain)
     }
 
     private var statusColor: Color {
@@ -3752,32 +3810,56 @@ private struct JobPreviewCard: View {
 
 private struct InvoicePreviewCard: View {
     let preview: ChatMessage.InvoicePreview
+    var onQuickReply: ((String) -> Void)? = nil
 
     var body: some View {
-        HStack(spacing: 10) {
-            VStack(alignment: .leading, spacing: 2) {
-                HStack(spacing: 6) {
-                    Text(preview.invoiceNumber)
-                        .font(.system(size: 12, weight: .bold, design: .monospaced))
-                        .foregroundStyle(Color.sweeplyNavy)
-                    statusBadge
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(spacing: 10) {
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(spacing: 6) {
+                        Text(preview.invoiceNumber)
+                            .font(.system(size: 12, weight: .bold, design: .monospaced))
+                            .foregroundStyle(Color.sweeplyNavy)
+                        statusBadge
+                    }
+                    HStack(spacing: 4) {
+                        Text(preview.clientName)
+                            .font(.system(size: 11))
+                            .foregroundStyle(Color.sweeplyTextSub)
+                        Text("• Due \(preview.dueDate.formatted(date: .abbreviated, time: .omitted))")
+                            .font(.system(size: 11))
+                            .foregroundStyle(Color.sweeplyTextSub)
+                    }
                 }
-                HStack(spacing: 4) {
-                    Text(preview.clientName)
-                        .font(.system(size: 11))
-                        .foregroundStyle(Color.sweeplyTextSub)
-                    Text("• Due \(preview.dueDate.formatted(date: .abbreviated, time: .omitted))")
-                        .font(.system(size: 11))
-                        .foregroundStyle(Color.sweeplyTextSub)
-                }
+                Spacer()
+                Text(preview.amount.formatted(.currency(code: "USD")))
+                    .font(.system(size: 13, weight: .bold, design: .monospaced))
+                    .foregroundStyle(preview.status == .overdue ? Color.sweeplyDestructive : Color.sweeplyNavy)
             }
-            Spacer()
-            Text(preview.amount.formatted(.currency(code: "USD")))
-                .font(.system(size: 13, weight: .bold, design: .monospaced))
-                .foregroundStyle(preview.status == .overdue ? Color.sweeplyDestructive : Color.sweeplyNavy)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+
+            if (preview.status == .overdue || preview.status == .unpaid), let reply = onQuickReply {
+                Divider().padding(.horizontal, 8)
+                Button(action: {
+                    UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                    reply("Mark invoice \(preview.invoiceNumber) paid")
+                }) {
+                    HStack(spacing: 5) {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.system(size: 11))
+                        Text("Mark Paid")
+                            .font(.system(size: 11, weight: .semibold))
+                    }
+                    .foregroundStyle(Color.green)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 7)
+                }
+                .buttonStyle(.plain)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 4)
+            }
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 10)
         .background(preview.status == .overdue ? Color.sweeplyDestructive.opacity(0.04) : Color.sweeplyBackground)
         .clipShape(RoundedRectangle(cornerRadius: 12))
         .overlay(RoundedRectangle(cornerRadius: 12).stroke(preview.status == .overdue ? Color.sweeplyDestructive.opacity(0.2) : Color.sweeplyBorder, lineWidth: 1))
@@ -3895,6 +3977,409 @@ private struct ClientConfirmCard: View {
                 .font(.system(size: 12, weight: .semibold))
                 .foregroundStyle(Color.sweeplyNavy)
                 .lineLimit(1)
+        }
+    }
+}
+
+// MARK: - Revenue Chart Card
+
+private struct RevenueChartCard: View {
+    let months: [ChatMessage.MonthBar]
+    var onMonthTap: ((String) -> Void)? = nil
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Text("REVENUE — LAST 6 MONTHS")
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundStyle(Color.sweeplyTextSub)
+                    .tracking(0.8)
+                Spacer()
+                let total = months.reduce(0.0) { $0 + $1.collected }
+                Text(total.formatted(.currency(code: "USD")))
+                    .font(.system(size: 13, weight: .bold, design: .monospaced))
+                    .foregroundStyle(Color.sweeplyNavy)
+            }
+
+            Chart {
+                ForEach(months) { bar in
+                    BarMark(
+                        x: .value("Month", bar.label),
+                        y: .value("Collected", bar.collected)
+                    )
+                    .foregroundStyle(Color.sweeplyNavy)
+                    .cornerRadius(4)
+                    if bar.pipeline > 0 {
+                        BarMark(
+                            x: .value("Month", bar.label),
+                            y: .value("Pipeline", bar.pipeline)
+                        )
+                        .foregroundStyle(Color.sweeplyAccent.opacity(0.25))
+                        .cornerRadius(4)
+                    }
+                }
+            }
+            .chartYAxis(.hidden)
+            .chartXAxis {
+                AxisMarks(values: .automatic) { _ in
+                    AxisValueLabel()
+                        .font(.system(size: 9, weight: .medium))
+                        .foregroundStyle(Color.sweeplyTextSub)
+                }
+            }
+            .frame(height: 110)
+            .onTapGesture { loc in
+                // Approximate bar selection by tap x position
+                guard let onMonthTap, !months.isEmpty else { return }
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                let barWidth = UIScreen.main.bounds.width / CGFloat(months.count + 1)
+                let index = min(Int(loc.x / barWidth), months.count - 1)
+                let label = months[index].label
+                onMonthTap("What happened in \(label)?")
+            }
+
+            HStack(spacing: 12) {
+                legendDot(Color.sweeplyNavy, "Collected")
+                legendDot(Color.sweeplyAccent.opacity(0.4), "Pipeline")
+            }
+        }
+        .padding(14)
+        .background(Color.sweeplyBackground)
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.sweeplyBorder, lineWidth: 1))
+    }
+
+    private func legendDot(_ color: Color, _ label: String) -> some View {
+        HStack(spacing: 4) {
+            Circle().fill(color).frame(width: 6, height: 6)
+            Text(label)
+                .font(.system(size: 10))
+                .foregroundStyle(Color.sweeplyTextSub)
+        }
+    }
+}
+
+// MARK: - Business Health Card
+
+private struct BusinessHealthCard: View {
+    let data: ChatMessage.BusinessHealthData
+
+    private var healthColor: Color {
+        if data.collectionRate >= 80 { return .green }
+        if data.collectionRate >= 60 { return Color.sweeplyWarning }
+        return Color.sweeplyDestructive
+    }
+
+    private var healthLabel: String {
+        if data.collectionRate >= 80 { return "Strong" }
+        if data.collectionRate >= 60 { return "Fair" }
+        return "Needs Attention"
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("BUSINESS HEALTH")
+                .font(.system(size: 10, weight: .bold))
+                .foregroundStyle(Color.sweeplyTextSub)
+                .tracking(0.8)
+
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
+                healthStatCell(icon: "person.2.fill", value: "\(data.activeClients)", label: "Active Clients")
+                healthStatCell(icon: "briefcase.fill", value: "\(data.jobsThisMonth)", label: "Jobs This Month")
+                healthStatCell(icon: "dollarsign.circle.fill", value: data.monthRevenue.formatted(.currency(code: "USD")), label: "This Month")
+                healthStatCell(icon: "chart.line.uptrend.xyaxis", value: "\(data.collectionRate)%", label: "Collection Rate", valueColor: healthColor)
+            }
+
+            VStack(alignment: .leading, spacing: 6) {
+                GeometryReader { geo in
+                    ZStack(alignment: .leading) {
+                        RoundedRectangle(cornerRadius: 4)
+                            .fill(Color.sweeplyNavy.opacity(0.08))
+                            .frame(height: 6)
+                        RoundedRectangle(cornerRadius: 4)
+                            .fill(LinearGradient(
+                                colors: [healthColor.opacity(0.7), healthColor],
+                                startPoint: .leading, endPoint: .trailing
+                            ))
+                            .frame(width: geo.size.width * CGFloat(data.collectionRate) / 100, height: 6)
+                            .animation(.easeOut(duration: 0.6), value: data.collectionRate)
+                    }
+                }
+                .frame(height: 6)
+
+                HStack {
+                    HStack(spacing: 4) {
+                        Circle().fill(healthColor).frame(width: 6, height: 6)
+                        Text(healthLabel)
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(healthColor)
+                    }
+                    Spacer()
+                    if data.overdueCount > 0 {
+                        Text("\(data.overdueCount) overdue")
+                            .font(.system(size: 11))
+                            .foregroundStyle(Color.sweeplyDestructive)
+                    }
+                }
+            }
+        }
+        .padding(14)
+        .background(Color.sweeplyBackground)
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.sweeplyBorder, lineWidth: 1))
+    }
+
+    private func healthStatCell(icon: String, value: String, label: String, valueColor: Color = Color.sweeplyNavy) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: icon)
+                .font(.system(size: 13))
+                .foregroundStyle(Color.sweeplyAccent)
+                .frame(width: 20)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(value)
+                    .font(.system(size: 13, weight: .bold, design: .monospaced))
+                    .foregroundStyle(valueColor)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+                Text(label)
+                    .font(.system(size: 10))
+                    .foregroundStyle(Color.sweeplyTextSub)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(10)
+        .background(Color.sweeplySurface)
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+    }
+}
+
+// MARK: - Client Ranking Card
+
+private struct ClientRankingCard: View {
+    let rows: [ChatMessage.ClientRankRow]
+
+    private var maxRevenue: Double {
+        rows.map { $0.totalRevenue }.max() ?? 1
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("TOP CLIENTS BY REVENUE")
+                .font(.system(size: 10, weight: .bold))
+                .foregroundStyle(Color.sweeplyTextSub)
+                .tracking(0.8)
+
+            VStack(spacing: 8) {
+                ForEach(rows.prefix(5)) { row in
+                    HStack(spacing: 8) {
+                        Text("#\(row.rank)")
+                            .font(.system(size: 11, weight: .bold, design: .monospaced))
+                            .foregroundStyle(row.rank == 1 ? Color.sweeplyAccent : Color.sweeplyTextSub)
+                            .frame(width: 22, alignment: .leading)
+
+                        Text(row.name)
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(Color.sweeplyNavy)
+                            .lineLimit(1)
+                            .frame(width: 80, alignment: .leading)
+
+                        GeometryReader { geo in
+                            RoundedRectangle(cornerRadius: 3)
+                                .fill(Color.sweeplyAccent.opacity(0.2))
+                                .frame(height: 6)
+                                .overlay(alignment: .leading) {
+                                    RoundedRectangle(cornerRadius: 3)
+                                        .fill(Color.sweeplyAccent)
+                                        .frame(width: geo.size.width * (row.totalRevenue / maxRevenue), height: 6)
+                                }
+                        }
+                        .frame(height: 6)
+
+                        VStack(alignment: .trailing, spacing: 1) {
+                            Text(row.totalRevenue.formatted(.currency(code: "USD")))
+                                .font(.system(size: 11, weight: .bold, design: .monospaced))
+                                .foregroundStyle(Color.sweeplyNavy)
+                            Text("\(row.jobCount) job\(row.jobCount == 1 ? "" : "s")")
+                                .font(.system(size: 9))
+                                .foregroundStyle(Color.sweeplyTextSub)
+                        }
+                        .frame(width: 60, alignment: .trailing)
+                    }
+                }
+            }
+        }
+        .padding(14)
+        .background(Color.sweeplyBackground)
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.sweeplyBorder, lineWidth: 1))
+    }
+}
+
+// MARK: - Invoice Donut Card
+
+private struct InvoiceDonutCard: View {
+    let paid: Double
+    let unpaid: Double
+    let overdue: Double
+
+    private var total: Double { paid + unpaid + overdue }
+    private var collectionRate: Int {
+        guard total > 0 else { return 0 }
+        return Int((paid / total) * 100)
+    }
+
+    var body: some View {
+        HStack(spacing: 16) {
+            ZStack {
+                if total > 0 {
+                    Chart {
+                        if paid > 0 {
+                            SectorMark(angle: .value("Paid", paid), innerRadius: .ratio(0.6))
+                                .foregroundStyle(Color.green)
+                        }
+                        if unpaid > 0 {
+                            SectorMark(angle: .value("Outstanding", unpaid), innerRadius: .ratio(0.6))
+                                .foregroundStyle(Color.sweeplyAccent)
+                        }
+                        if overdue > 0 {
+                            SectorMark(angle: .value("Overdue", overdue), innerRadius: .ratio(0.6))
+                                .foregroundStyle(Color.sweeplyDestructive)
+                        }
+                    }
+                    .chartLegend(.hidden)
+                    .frame(width: 88, height: 88)
+                } else {
+                    Circle()
+                        .stroke(Color.sweeplyNavy.opacity(0.1), lineWidth: 10)
+                        .frame(width: 88, height: 88)
+                }
+
+                VStack(spacing: 0) {
+                    Text("\(collectionRate)%")
+                        .font(.system(size: 16, weight: .black, design: .rounded))
+                        .foregroundStyle(Color.sweeplyNavy)
+                    Text("collected")
+                        .font(.system(size: 8, weight: .medium))
+                        .foregroundStyle(Color.sweeplyTextSub)
+                }
+            }
+
+            VStack(alignment: .leading, spacing: 8) {
+                donutLegendRow(color: .green, label: "Collected", amount: paid)
+                donutLegendRow(color: Color.sweeplyAccent, label: "Outstanding", amount: unpaid)
+                if overdue > 0 {
+                    donutLegendRow(color: Color.sweeplyDestructive, label: "Overdue", amount: overdue)
+                }
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(14)
+        .background(Color.sweeplyBackground)
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.sweeplyBorder, lineWidth: 1))
+    }
+
+    private func donutLegendRow(color: Color, label: String, amount: Double) -> some View {
+        HStack(spacing: 6) {
+            Circle().fill(color).frame(width: 7, height: 7)
+            Text(label)
+                .font(.system(size: 11))
+                .foregroundStyle(Color.sweeplyTextSub)
+            Spacer()
+            Text(amount.formatted(.currency(code: "USD")))
+                .font(.system(size: 11, weight: .bold, design: .monospaced))
+                .foregroundStyle(Color.sweeplyNavy)
+        }
+    }
+}
+
+// MARK: - Job Timeline Card
+
+private struct JobTimelineCard: View {
+    let items: [ChatMessage.JobTimelineItem]
+    var onRowTap: ((String) -> Void)? = nil
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack {
+                Text("TODAY — \(Date().formatted(.dateTime.weekday(.wide).month(.abbreviated).day()).uppercased())")
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundStyle(Color.sweeplyTextSub)
+                    .tracking(0.8)
+            }
+            .padding(.horizontal, 14)
+            .padding(.top, 14)
+            .padding(.bottom, 10)
+
+            VStack(spacing: 0) {
+                ForEach(Array(items.sorted(by: { $0.time < $1.time }).enumerated()), id: \.offset) { idx, item in
+                    VStack(spacing: 0) {
+                        Button(action: {
+                            guard let reply = onRowTap else { return }
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                            if item.status == .scheduled {
+                                reply("Start \(item.clientName)'s job")
+                            } else if item.status == .inProgress {
+                                reply("Mark \(item.clientName)'s \(item.serviceType) complete")
+                            }
+                        }) {
+                            HStack(spacing: 10) {
+                                Text(item.time.formatted(.dateTime.hour().minute()))
+                                    .font(.system(size: 11, weight: .medium, design: .monospaced))
+                                    .foregroundStyle(Color.sweeplyTextSub)
+                                    .frame(width: 44, alignment: .trailing)
+
+                                Circle()
+                                    .fill(statusColor(item.status))
+                                    .frame(width: 8, height: 8)
+
+                                VStack(alignment: .leading, spacing: 1) {
+                                    Text(item.clientName)
+                                        .font(.system(size: 13, weight: .semibold))
+                                        .foregroundStyle(Color.sweeplyNavy)
+                                    HStack(spacing: 4) {
+                                        Text(item.serviceType)
+                                            .font(.system(size: 11))
+                                            .foregroundStyle(Color.sweeplyTextSub)
+                                        if let member = item.assignedMember {
+                                            Text("· \(member)")
+                                                .font(.system(size: 11))
+                                                .foregroundStyle(Color.sweeplyTextSub.opacity(0.6))
+                                        }
+                                    }
+                                }
+                                Spacer()
+                                if item.status == .scheduled || item.status == .inProgress {
+                                    Image(systemName: "chevron.right")
+                                        .font(.system(size: 10, weight: .medium))
+                                        .foregroundStyle(Color.sweeplyTextSub.opacity(0.3))
+                                }
+                            }
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 10)
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(item.status != .scheduled && item.status != .inProgress)
+
+                        if idx < items.count - 1 {
+                            Divider().padding(.leading, 72)
+                        }
+                    }
+                }
+            }
+            .padding(.bottom, 4)
+        }
+        .background(Color.sweeplyBackground)
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.sweeplyBorder, lineWidth: 1))
+    }
+
+    private func statusColor(_ status: JobStatus) -> Color {
+        switch status {
+        case .scheduled: return Color.sweeplyAccent
+        case .inProgress: return Color.sweeplyWarning
+        case .completed: return Color.green
+        case .cancelled: return Color.sweeplyDestructive
         }
     }
 }
