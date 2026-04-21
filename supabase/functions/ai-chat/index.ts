@@ -16,10 +16,19 @@ serve(async (req) => {
   }
 
   try {
-    const { userMessage, systemPrompt } = await req.json();
+    // Accept either full messages array (preferred) or legacy userMessage+systemPrompt
+    const body = await req.json();
+    let messages: { role: string; content: string }[];
 
-    if (!userMessage || !systemPrompt) {
-      return new Response(JSON.stringify({ content: null, error: "Missing userMessage or systemPrompt" }), {
+    if (Array.isArray(body.messages)) {
+      messages = body.messages;
+    } else if (body.userMessage && body.systemPrompt) {
+      messages = [
+        { role: "system", content: body.systemPrompt },
+        { role: "user", content: body.userMessage },
+      ];
+    } else {
+      return new Response(JSON.stringify({ content: null, error: "Invalid request body" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -33,17 +42,15 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         model: MODEL,
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userMessage },
-        ],
-        max_tokens: 300,
+        messages,
+        max_tokens: 400,
         temperature: 0.7,
       }),
     });
 
     if (!groqRes.ok) {
-      return new Response(JSON.stringify({ content: null, error: `Groq error: ${groqRes.status}` }), {
+      const errorText = await groqRes.text();
+      return new Response(JSON.stringify({ content: null, error: `Groq ${groqRes.status}: ${errorText}` }), {
         status: 502,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });

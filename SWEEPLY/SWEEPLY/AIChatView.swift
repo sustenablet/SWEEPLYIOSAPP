@@ -1376,7 +1376,7 @@ struct AIChatView: View {
             let response: ChatMessage = await withTaskGroup(of: ChatMessage.self) { group in
                 group.addTask { await self.generateResponse(for: trimmed) }
                 group.addTask {
-                    try? await Task.sleep(nanoseconds: 10_000_000_000)
+                    try? await Task.sleep(nanoseconds: 15_000_000_000)
                     return ChatMessage(
                         role: .assistant,
                         text: "I'm having trouble connecting right now. Try again in a moment.",
@@ -2432,10 +2432,21 @@ struct AIChatView: View {
             }
         }
 
-        // DEFAULT — fall through to Groq AI if configured
+        // DEFAULT — fall through to AI with full conversation history
         if AIService.shared.isConfigured {
             let context = buildBusinessContext()
-            if let aiReply = await AIService.shared.chat(userMessage: input, systemPrompt: context) {
+            var historyMessages: [[String: String]] = [["role": "system", "content": context]]
+            // Include up to last 10 messages for context
+            let recentMessages = messages.suffix(10)
+            for msg in recentMessages {
+                let roleStr = msg.role == .user ? "user" : "assistant"
+                historyMessages.append(["role": roleStr, "content": msg.text])
+            }
+            // Append current user message if not already included
+            if historyMessages.last?["content"] != input {
+                historyMessages.append(["role": "user", "content": input])
+            }
+            if let aiReply = await AIService.shared.chatWithHistory(messages: historyMessages) {
                 return ChatMessage(role: .assistant, text: aiReply.trimmingCharacters(in: .whitespacesAndNewlines))
             }
         }
@@ -2451,74 +2462,100 @@ struct AIChatView: View {
 
     private func buildBusinessContext() -> String {
         let businessName = profileStore.profile?.businessName ?? "your cleaning business"
-        let clientCount = clientsStore.clients.filter { $0.isActive ?? true }.count
+        let ownerName = profileStore.profile?.fullName.components(separatedBy: " ").first ?? "the owner"
+        let df = DateFormatter()
+        df.dateStyle = .medium
+        df.timeStyle = .short
+
         let today = Calendar.current.startOfDay(for: Date())
-        let todayJobs = jobsStore.jobs.filter { Calendar.current.isDate($0.date, inSameDayAs: today) }
-        let overdueInvoices = invoicesStore.invoices.filter { $0.status == .overdue }
-        let overdueTotal = overdueInvoices.reduce(0) { $0 + $1.amount }
-        let weekStart = Calendar.current.date(byAdding: .day, value: -7, to: Date()) ?? Date()
-        let weekRevenue = invoicesStore.invoices
-            .filter { $0.status == .paid && $0.createdAt >= weekStart }
-            .reduce(0) { $0 + $1.amount }
-        let nextJob = jobsStore.jobs
-            .filter { $0.status == .scheduled && $0.date >= Date() }
+        let weekEnd = Calendar.current.date(byAdding: .day, value: 7, to: today) ?? today
+        let weekStart = Calendar.current.date(byAdding: .day, value: -7, to: today) ?? today
+        let monthStart = Calendar.current.date(from: Calendar.current.dateComponents([.year, .month], from: Date())) ?? today
+
+        let allJobs = jobsStore.jobs
+        let allInvoices = invoicesStore.invoices
+        let allClients = clientsStore.clients
+
+        let todayJobs = allJobs.filter { Calendar.current.isDate($0.date, inSameDayAs: today) && $0.status == .scheduled }
+        let upcomingWeekJobs = allJobs
+            .filter { $0.date >= today && $0.date <= weekEnd && $0.status == .scheduled }
             .sorted { $0.date < $1.date }
-            .first
+        let overdueInvoices = allInvoices.filter { $0.status == .overdue }
+        let unpaidInvoices = allInvoices.filter { $0.status == .unpaid }
+        let weekRevenue = allInvoices
+            .filter { $0.status == .paid && $0.createdAt >= weekStart }
+            .reduce(0.0) { $0 + $1.amount }
+        let monthRevenue = allInvoices
+            .filter { $0.status == .paid && $0.createdAt >= monthStart }
+            .reduce(0.0) { $0 + $1.amount }
+        let activeClients = allClients.filter { $0.isActive }
 
-        var todayJobsText = "none scheduled"
-        if !todayJobs.isEmpty {
-            todayJobsText = todayJobs.map { "\($0.clientName) (\($0.serviceType.rawValue))" }.joined(separator: ", ")
-        }
+        // Top clients by job count
+        let clientJobCounts = Dictionary(grouping: allJobs, by: { $0.clientId })
+            .mapValues { $0.count }
+        let topClients = activeClients
+            .sorted { (clientJobCounts[$0.id] ?? 0) > (clientJobCounts[$1.id] ?? 0) }
+            .prefix(5)
+            .map { "\($0.name) (\(clientJobCounts[$0.id] ?? 0) jobs)" }
 
-        var nextJobText = "none upcoming"
-        if let job = nextJob {
-            let formatter = DateFormatter()
-            formatter.dateStyle = .short
-            formatter.timeStyle = .short
-            nextJobText = "\(job.clientName) on \(formatter.string(from: job.date))"
-        }
+        let todayJobsText = todayJobs.isEmpty
+            ? "none"
+            : todayJobs.map { "\($0.clientName) – \($0.serviceType.rawValue) at \(df.string(from: $0.date))" }.joined(separator: "; ")
+
+        let weekJobsText = upcomingWeekJobs.isEmpty
+            ? "none"
+            : upcomingWeekJobs.prefix(7).map { "\($0.clientName) on \(df.string(from: $0.date))" }.joined(separator: "; ")
+
+        let overdueText = overdueInvoices.isEmpty
+            ? "none"
+            : overdueInvoices.prefix(5).map { "#\($0.invoiceNumber) – \($0.clientName) – \($0.amount.currency)" }.joined(separator: "; ")
+
+        let unpaidText = unpaidInvoices.isEmpty
+            ? "none"
+            : "\(unpaidInvoices.count) invoices totaling \(unpaidInvoices.reduce(0.0) { $0 + $1.amount }.currency)"
 
         if financeMode {
-            let allInvoices = invoicesStore.invoices
             let paid = allInvoices.filter { $0.status == .paid }
-            let unpaid = allInvoices.filter { $0.status == .unpaid }
-            let overdue = allInvoices.filter { $0.status == .overdue }
-            let totalCollected = paid.reduce(0) { $0 + $1.amount }
-            let totalOutstanding = unpaid.reduce(0) { $0 + $1.amount }
-            let totalOverdue = overdue.reduce(0) { $0 + $1.amount }
-            let monthStart = Calendar.current.date(from: Calendar.current.dateComponents([.year, .month], from: Date())) ?? Date()
-            let thisMonth = paid.filter { $0.createdAt >= monthStart }.reduce(0) { $0 + $1.amount }
+            let totalCollected = paid.reduce(0.0) { $0 + $1.amount }
+            let totalOverdue = overdueInvoices.reduce(0.0) { $0 + $1.amount }
+            let totalOutstanding = unpaidInvoices.reduce(0.0) { $0 + $1.amount }
             let collectionRate = allInvoices.isEmpty ? 0 : Int((Double(paid.count) / Double(allInvoices.count)) * 100)
-            let avgInvoice = allInvoices.isEmpty ? 0 : allInvoices.reduce(0) { $0 + $1.amount } / Double(allInvoices.count)
+            let avgInvoice = allInvoices.isEmpty ? 0.0 : allInvoices.reduce(0.0) { $0 + $1.amount } / Double(allInvoices.count)
+            let thisMonthPaid = paid.filter { $0.createdAt >= monthStart }.reduce(0.0) { $0 + $1.amount }
 
             return """
-            You are Finance AI, a financial analyst assistant embedded in Sweeply for \(businessName), a cleaning business.
+            You are Finance AI, a financial analyst embedded in Sweeply for \(businessName) (owner: \(ownerName)).
 
             Live financial data:
             - Total collected (all time): \(totalCollected.currency)
-            - Collected this month: \(thisMonth.currency)
-            - Outstanding (unpaid): \(totalOutstanding.currency) across \(unpaid.count) invoice\(unpaid.count == 1 ? "" : "s")
-            - Overdue: \(totalOverdue.currency) across \(overdue.count) invoice\(overdue.count == 1 ? "" : "s")
+            - Collected this month: \(thisMonthPaid.currency)
             - Revenue this week: \(weekRevenue.currency)
+            - Outstanding (unpaid): \(unpaidText)
+            - Overdue invoices: \(overdueText)
+            - Total overdue: \(totalOverdue.currency)
             - Collection rate: \(collectionRate)%
             - Average invoice value: \(avgInvoice.currency)
             - Total invoices: \(allInvoices.count)
 
-            Your focus is purely financial: revenue, invoices, cash flow, collection rate, outstanding balances, and financial health. Be concise and data-driven — lead with the numbers. If asked about non-financial topics, gently redirect to finances. Never suggest creating jobs or managing schedules — that's outside your scope here.
+            Overdue invoice details: \(overdueText)
+
+            Be concise and data-driven — lead with numbers. Stay focused on finances: revenue, invoices, cash flow, collection rates, outstanding balances. Redirect non-financial questions back to finances. Never suggest creating jobs or schedules.
             """
         }
 
         return """
-        You are Sweeply AI, a smart business assistant for \(businessName), a cleaning business.
+        You are Sweeply AI, a smart business assistant for \(businessName) (owner: \(ownerName)).
 
-        Current business snapshot:
-        - Active clients: \(clientCount)
-        - Jobs today: \(todayJobsText)
-        - Revenue this week: \(weekRevenue.currency)
-        - Overdue invoices: \(overdueInvoices.count) totaling \(overdueTotal.currency)
-        - Next upcoming job: \(nextJobText)
+        Today's snapshot:
+        - Today's jobs: \(todayJobsText)
+        - Upcoming this week: \(weekJobsText)
+        - Active clients: \(activeClients.count) | Top clients: \(topClients.joined(separator: ", "))
+        - Revenue this week: \(weekRevenue.currency) | This month: \(monthRevenue.currency)
+        - Unpaid invoices: \(unpaidText)
+        - Overdue invoices: \(overdueText)
+        - Total jobs completed: \(allJobs.filter { $0.status == .completed }.count)
 
-        You help the owner manage their cleaning business. Be friendly, practical, and concise — 2-3 sentences max unless they ask for detail. Focus on actionable advice. If asked about specific data you don't have access to, say so briefly and suggest they check the relevant screen.
+        You help \(ownerName) manage their cleaning business. Be friendly, practical, and concise — 2-3 sentences max unless they ask for detail. Use the data above to give specific, accurate answers. Focus on actionable advice. If asked about data you don't have, say so and suggest checking the relevant screen in the app.
         """
     }
 

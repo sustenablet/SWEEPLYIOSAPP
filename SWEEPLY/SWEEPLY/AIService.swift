@@ -29,15 +29,28 @@ final class AIService {
 
     var isConfigured: Bool { config != nil }
 
-    // MARK: - Chat
+    // MARK: - Chat (legacy single-turn)
 
     func chat(userMessage: String, systemPrompt: String) async -> String? {
+        let messages: [[String: String]] = [
+            ["role": "system", "content": systemPrompt],
+            ["role": "user", "content": userMessage],
+        ]
+        return await sendMessages(messages)
+    }
+
+    // MARK: - Chat with conversation history
+
+    func chatWithHistory(messages: [[String: String]]) async -> String? {
+        return await sendMessages(messages)
+    }
+
+    // MARK: - Private
+
+    private func sendMessages(_ messages: [[String: String]]) async -> String? {
         guard let config else { return nil }
 
-        let body: [String: Any] = [
-            "userMessage": userMessage,
-            "systemPrompt": systemPrompt,
-        ]
+        let body: [String: Any] = ["messages": messages]
         guard let bodyData = try? JSONSerialization.data(withJSONObject: body) else { return nil }
 
         var request = URLRequest(url: config.functionURL)
@@ -46,7 +59,7 @@ final class AIService {
         request.setValue(config.anonKey, forHTTPHeaderField: "apikey")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = bodyData
-        request.timeoutInterval = 10
+        request.timeoutInterval = 15
 
         do {
             let (data, response) = try await URLSession.shared.data(for: request)
@@ -62,7 +75,7 @@ final class AIService {
             return json?["content"] as? String
         } catch {
             #if DEBUG
-            print("[AIService] chat() failed: \(error.localizedDescription)")
+            print("[AIService] sendMessages() failed: \(error.localizedDescription)")
             #endif
             return nil
         }
