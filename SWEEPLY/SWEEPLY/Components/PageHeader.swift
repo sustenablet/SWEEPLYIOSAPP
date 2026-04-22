@@ -19,7 +19,7 @@ struct PageHeader<Trailing: View>: View {
                 }
 
                 Text(title)
-                    .font(.system(size: 28, weight: .semibold))
+                    .font(.system(size: 26, weight: .semibold))
                     .foregroundStyle(Color.sweeplyNavy)
                     .lineLimit(1)
                     .minimumScaleFactor(0.85)
