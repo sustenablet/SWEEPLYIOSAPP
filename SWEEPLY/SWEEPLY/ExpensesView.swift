@@ -531,6 +531,13 @@ struct ExpensesView: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 14)
+        .contextMenu {
+            Button(role: .destructive) {
+                Task { await expenseStore.remove(id: expense.id) }
+            } label: {
+                Label("Delete", systemImage: "trash")
+            }
+        }
         .swipeActions(edge: .trailing, allowsFullSwipe: true) {
             Button(role: .destructive) {
                 Task { await expenseStore.remove(id: expense.id) }
