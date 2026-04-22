@@ -11,9 +11,15 @@ struct ExpensesView: View {
     @State private var selectedMonth : Date = Date()
     @State private var selectedDay  : Date? = nil
     @State private var appeared      = false
+    @State private var viewMode      : ExpensesViewMode = .calendar
 
     private var canAddExpense: Bool {
         session.userId != nil
+    }
+
+    enum ExpensesViewMode {
+        case calendar
+        case week
     }
 
     private var monthLabel: String {
@@ -262,13 +268,35 @@ struct ExpensesView: View {
                         .overlay(Circle().stroke(canGoForward ? Color.sweeplyBorder : Color.clear, lineWidth: 1))
                 }
                 .disabled(!canGoForward)
+
+                Spacer()
+
+                Button {
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        viewMode = viewMode == .calendar ? .week : .calendar
+                    }
+                } label: {
+                    Image(systemName: viewMode == .calendar ? "calendar" : "calendar.badge.clock")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundStyle(Color.sweeplyNavy)
+                        .frame(width: 32, height: 32)
+                        .background(Color.sweeplySurface)
+                        .clipShape(Circle())
+                        .overlay(Circle().stroke(Color.sweeplyBorder, lineWidth: 1))
+                }
             }
             .padding(.top, 8)
             .padding(.bottom, 16)
 
-            // Calendar grid
-            calendarGrid
-                .padding(.bottom, 20)
+            // View mode content
+            if viewMode == .calendar {
+                calendarGrid
+                    .padding(.bottom, 20)
+            } else {
+                weekCarousel
+                    .padding(.bottom, 20)
+            }
 
             // Big total
             VStack(spacing: 6) {
@@ -363,6 +391,82 @@ struct ExpensesView: View {
         }
         .buttonStyle(.plain)
         .disabled(!inCurrentMonth || future)
+    }
+
+    // MARK: - Week carousel
+
+    private var weekCarousel: some View {
+        let weekDates = getWeekDates()
+
+        return HStack(spacing: 8) {
+            ForEach(weekDates, id: \.self) { date in
+                weekDayCell(date)
+            }
+        }
+    }
+
+    private func getWeekDates() -> [Date] {
+        let cal = Calendar.current
+        let today = cal.startOfDay(for: Date())
+        let weekday = cal.component(.weekday, from: today)
+        let daysFromSunday = weekday - 1
+
+        guard let sunday = cal.date(byAdding: .day, value: -daysFromSunday, to: today) else {
+            return []
+        }
+
+        var dates: [Date] = []
+        for i in 0..<7 {
+            if let date = cal.date(byAdding: .day, value: i, to: sunday) {
+                dates.append(date)
+            }
+        }
+        return dates
+    }
+
+    private func weekDayCell(_ date: Date) -> some View {
+        let cal = Calendar.current
+        let today = cal.startOfDay(for: Date())
+        let isToday = cal.isDate(date, inSameDayAs: today)
+        let isSelected = selectedDay.map { cal.isDate($0, inSameDayAs: date) } ?? false
+        let hasExp = monthExpenses.contains { cal.isDate($0.date, inSameDayAs: date) }
+
+        let dayName = cal.shortWeekdaySymbols[cal.component(.weekday, from: date) - 1]
+        let dayNum = cal.component(.day, from: date)
+
+        return Button {
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            if isSelected {
+                selectedDay = nil
+            } else {
+                selectedDay = date
+            }
+        } label: {
+            VStack(spacing: 4) {
+                Text(dayName)
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundStyle(isSelected ? .white : Color.sweeplyTextSub)
+
+                Text("\(dayNum)")
+                    .font(.system(size: 16, weight: isSelected ? .bold : .medium))
+                    .foregroundStyle(isSelected ? .white : Color.sweeplyNavy)
+
+                Circle()
+                    .fill(hasExp ? (isSelected ? Color.white : Color.sweeplyAccent) : Color.clear)
+                    .frame(width: 4, height: 4)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 12)
+            .background(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(isSelected ? Color.sweeplyNavy : Color.clear)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .stroke(isSelected ? Color.clear : Color.sweeplyBorder, lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: - Category breakdown card
