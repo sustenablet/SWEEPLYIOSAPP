@@ -210,6 +210,7 @@ struct NewClientForm: View {
             .disabled(isSaving)
             .padding(24)
         }
+        .ignoresSafeArea(.keyboard, edges: .bottom)
         .scrollDismissesKeyboard(.interactively)
         .toolbar {
             ToolbarItemGroup(placement: .keyboard) {

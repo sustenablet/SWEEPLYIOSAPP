@@ -136,11 +136,10 @@ struct NewInvoiceView: View {
                         .disabled(!canSubmit)
                     }
                     .padding(20)
-                    .background(Color.sweeplyBackground.ignoresSafeArea(edges: .bottom))
                 }
-                .frame(maxHeight: .infinity, alignment: .bottom)
             }
             .navigationBarHidden(true)
+            .ignoresSafeArea(.keyboard, edges: .bottom)
             .scrollDismissesKeyboard(.interactively)
             .toolbar {
                 ToolbarItemGroup(placement: .keyboard) {

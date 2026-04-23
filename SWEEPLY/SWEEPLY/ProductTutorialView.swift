@@ -160,11 +160,6 @@ struct ProductTutorialView: View {
                 preview: AnyView(FinancesTutorialPreview())
             ),
             TutorialPage(
-                eyebrow: "AI ASSISTANT",
-                headline: "Meet your AI\nbusiness assistant.",
-                preview: AnyView(AITutorialPreview())
-            ),
-            TutorialPage(
                 eyebrow: "YOU'RE READY",
                 headline: "Let's go.",
                 preview: AnyView(ReadyTutorialPreview())
@@ -339,74 +334,6 @@ private struct FinancesTutorialPreview: View {
     }
 }
 
-private struct AITutorialPreview: View {
-    var body: some View {
-        VStack(spacing: 8) {
-            HStack(alignment: .bottom, spacing: 6) {
-                ZStack {
-                    Circle().fill(Color.sweeplyNavy).frame(width: 22, height: 22)
-                    Text("S").font(.system(size: 10, weight: .black, design: .rounded)).foregroundStyle(.white)
-                }
-                .alignmentGuide(.bottom) { d in d[.bottom] }
-
-                Text("Hey! You have 3 jobs today. Sarah's at 9am is next — want me to start it?")
-                    .font(.system(size: 9, weight: .medium))
-                    .foregroundStyle(Color.sweeplyNavy)
-                    .padding(.horizontal, 10).padding(.vertical, 8)
-                    .background(Color.sweeplySurface)
-                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.sweeplyBorder, lineWidth: 1))
-                Spacer(minLength: 16)
-            }
-
-            HStack(alignment: .bottom, spacing: 6) {
-                Spacer(minLength: 16)
-                Text("Yes, start Sarah's job")
-                    .font(.system(size: 9, weight: .medium))
-                    .foregroundStyle(Color.sweeplyNavy)
-                    .padding(.horizontal, 10).padding(.vertical, 8)
-                    .background(Color.sweeplyAccent.opacity(0.12))
-                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-            }
-
-            HStack(alignment: .bottom, spacing: 6) {
-                ZStack {
-                    Circle().fill(Color.sweeplyNavy).frame(width: 22, height: 22)
-                    Text("S").font(.system(size: 10, weight: .black, design: .rounded)).foregroundStyle(.white)
-                }
-                .alignmentGuide(.bottom) { d in d[.bottom] }
-
-                Text("Done — Sarah's Standard Clean is now in progress. Good luck out there!")
-                    .font(.system(size: 9, weight: .medium))
-                    .foregroundStyle(Color.sweeplyNavy)
-                    .padding(.horizontal, 10).padding(.vertical, 8)
-                    .background(Color.sweeplySurface)
-                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.sweeplyBorder, lineWidth: 1))
-                Spacer(minLength: 16)
-            }
-
-            HStack(spacing: 6) {
-                ForEach(["Today's jobs", "Revenue", "Invoices"], id: \.self) { chip in
-                    Text(chip)
-                        .font(.system(size: 8, weight: .medium))
-                        .foregroundStyle(Color.sweeplyAccent)
-                        .padding(.horizontal, 8).padding(.vertical, 4)
-                        .background(Color.sweeplyAccent.opacity(0.08))
-                        .clipShape(Capsule())
-                        .overlay(Capsule().stroke(Color.sweeplyAccent.opacity(0.2), lineWidth: 1))
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.leading, 4)
-        }
-        .padding(12)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color.sweeplyBackground)
-        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
-    }
-}
-
 private struct ReadyTutorialPreview: View {
     var body: some View {
         VStack(spacing: 14) {
@@ -434,7 +361,6 @@ private struct ReadyTutorialPreview: View {
             VStack(spacing: 6) {
                 readyRow(icon: "calendar.badge.checkmark", label: "Scheduling")
                 readyRow(icon: "doc.text.fill", label: "Invoicing")
-                readyRow(icon: "sparkles", label: "AI assistant")
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)

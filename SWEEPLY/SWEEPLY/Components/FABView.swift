@@ -6,10 +6,8 @@ struct FABView: View {
     var onNewJob: () -> Void
     var onNewClient: () -> Void
     var onNewInvoice: () -> Void
-    var onAIChat: () -> Void
 
     private let actions: [(label: String, icon: String, tag: String)] = [
-        ("Ask AI", "sparkles", "ai"),
         ("New Invoice", "doc.badge.plus", "invoice"),
         ("New Client", "person.badge.plus", "client"),
         ("New Job", "briefcase.fill", "job"),
@@ -35,15 +33,13 @@ struct FABView: View {
                     ForEach(actions, id: \.tag) { action in
                         FABActionButton(
                             label: action.label,
-                            icon: action.icon,
-                            isAI: action.tag == "ai"
+                            icon: action.icon
                         ) {
                             UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                             withAnimation(.spring(duration: 0.3)) {
                                 isExpanded = false
                             }
                             switch action.tag {
-                            case "ai": onAIChat()
                             case "job": onNewJob()
                             case "client": onNewClient()
                             case "invoice": onNewInvoice()
@@ -76,17 +72,10 @@ struct FABView: View {
                                 .foregroundStyle(.white)
                                 .transition(.scale.combined(with: .opacity))
                         } else {
-                            // Brand "S" mark with AI sparkle hint
-                            ZStack {
-                                Text("S")
-                                    .font(.system(size: 22, weight: .black, design: .rounded))
-                                    .foregroundStyle(.white)
-                                Image(systemName: "sparkles")
-                                    .font(.system(size: 8, weight: .bold))
-                                    .foregroundStyle(Color.sweeplyAccent)
-                                    .offset(x: 13, y: -13)
-                            }
-                            .transition(.scale.combined(with: .opacity))
+                            // Brand "S" mark
+                            Text("S")
+                                .font(.system(size: 22, weight: .black, design: .rounded))
+                                .foregroundStyle(.white)
                         }
                     }
                 }
@@ -101,7 +90,6 @@ struct FABView: View {
 struct FABActionButton: View {
     let label: String
     let icon: String
-    var isAI: Bool = false
     let action: () -> Void
 
     var body: some View {
@@ -109,7 +97,7 @@ struct FABActionButton: View {
             HStack(spacing: 10) {
                 Image(systemName: icon)
                     .font(.system(size: 13, weight: .bold))
-                    .foregroundStyle(isAI ? Color.sweeplyAccent : .white)
+                    .foregroundStyle(.white)
                 Text(label)
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(.white)
@@ -131,8 +119,7 @@ struct FABActionButton: View {
             selectedTab: .constant(.dashboard),
             onNewJob: {},
             onNewClient: {},
-            onNewInvoice: {},
-            onAIChat: {}
+            onNewInvoice: {}
         )
     }
 }

@@ -17,6 +17,7 @@ struct SettingsView: View {
     @State private var showServiceCatalog = false
     @State private var showJobExtras = false
     @State private var showOnboarding = false
+    @State private var currentTestNotificationIndex = 0
 
     private var canSave: Bool {
         !isSaving && validationMessage == nil && hasUnsavedChanges
@@ -322,15 +323,34 @@ struct SettingsView: View {
                     Divider().padding(.leading, 58)
                     Button {
                         UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                        notificationManager.sendTestNotification()
+                        let notificationTypes = ["Job Reminder", "Invoice Due", "Test"]
+                        let type = notificationTypes[currentTestNotificationIndex]
+                        
+                        switch type {
+                        case "Job Reminder":
+                            notificationManager.fireInstantBanner(
+                                title: "Job in 1 Hour",
+                                body: "Standard Clean at Sarah M. — 123 Main St"
+                            )
+                        case "Invoice Due":
+                            notificationManager.fireInstantBanner(
+                                title: "Invoice Due Soon",
+                                body: "INV-0042 for Sarah M. is due in 3 days — $320.00"
+                            )
+                        default:
+                            notificationManager.sendTestNotification()
+                        }
+                        
+                        currentTestNotificationIndex = (currentTestNotificationIndex + 1) % notificationTypes.count
                     } label: {
                         HStack(spacing: 14) {
                             settingsIcon("paperplane.fill", color: Color.sweeplyAccent)
-                            Text("Send Test Notification")
+                            Text("Test Notification")
                                 .font(.system(size: 15))
                                 .foregroundStyle(Color.primary)
                             Spacer()
-                            Text("5s")
+                            let notificationTypes = ["Job Reminder", "Invoice Due", "Test"]
+                            Text(notificationTypes[currentTestNotificationIndex])
                                 .font(.system(size: 12, design: .monospaced))
                                 .foregroundStyle(Color.sweeplyTextSub)
                             Image(systemName: "chevron.right")

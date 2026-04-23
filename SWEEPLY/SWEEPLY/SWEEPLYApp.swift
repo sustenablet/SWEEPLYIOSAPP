@@ -129,12 +129,6 @@ struct SWEEPLYApp: App {
                 icon: UIApplicationShortcutIcon(systemImageName: "briefcase.fill")
             ),
             UIApplicationShortcutItem(
-                type: "com.sweeply.ai",
-                localizedTitle: "AI Assistant",
-                localizedSubtitle: nil,
-                icon: UIApplicationShortcutIcon(systemImageName: "sparkles")
-            ),
-            UIApplicationShortcutItem(
                 type: "com.sweeply.schedule",
                 localizedTitle: "Today's Schedule",
                 localizedSubtitle: nil,

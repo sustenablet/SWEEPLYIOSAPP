@@ -81,8 +81,10 @@ struct ScheduleView: View {
                     .padding(.horizontal, 16)
                     .padding(.top, 12)
 
-                WeekStripView(selectedDay: $selectedDay, jobs: jobsStore.jobs)
-                    .padding(.top, 12)
+                if viewMode != .month {
+                    WeekStripView(selectedDay: $selectedDay, jobs: jobsStore.jobs)
+                        .padding(.top, 12)
+                }
 
                 Group {
                     switch viewMode {

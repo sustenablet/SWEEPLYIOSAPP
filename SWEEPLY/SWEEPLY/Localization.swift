@@ -198,11 +198,6 @@ enum Localization {
     "Skip": ["pt-BR": "Pular"],
     "Get Started": ["pt-BR": "Começar"],
     
-    // MARK: - AI Chat
-    "AI Assistant": ["pt-BR": "Assistente IA"],
-    "How can I help?": ["pt-BR": "Como posso ajudar?"],
-    "Ask anything about your business...": ["pt-BR": "Pergunte qualquer coisa sobre seu negócio..."],
-    
     // MARK: - Filters
     "Filters": ["pt-BR": "Filtros"],
     "Clear All": ["pt-BR": "Limpar Tudo"],

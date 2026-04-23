@@ -505,8 +505,8 @@ struct NewJobForm: View {
             }
             .padding(24)
             .background(Color.sweeplySurface)
-            .shadow(color: .black.opacity(0.04), radius: 10, x: 0, y: -5)
         }
+        .ignoresSafeArea(.keyboard, edges: .bottom)
         .scrollDismissesKeyboard(.interactively)
         .toolbar {
             ToolbarItemGroup(placement: .keyboard) {

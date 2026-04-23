@@ -20,7 +20,6 @@ struct RootView: View {
     @State private var showNewClient = false
     @State private var showNewInvoice = false
     @State private var showQuickAdd = false
-    @State private var showAIChat = false
     @State private var showOnboarding = false
     @State private var showProductTutorial = false
     @State private var isLocked = false
@@ -133,8 +132,6 @@ struct RootView: View {
         switch shortcut {
         case "com.sweeply.newjob":
             showNewJob = true
-        case "com.sweeply.ai":
-            showAIChat = true
         case "com.sweeply.schedule":
             selectedTab = .schedule
         default:
@@ -243,8 +240,7 @@ struct RootView: View {
                 selectedTab: $selectedTab,
                 onNewJob: { showNewJob = true },
                 onNewClient: { showNewClient = true },
-                onNewInvoice: { showNewInvoice = true },
-                onAIChat: { showAIChat = true }
+                onNewInvoice: { showNewInvoice = true }
             )
         }
     }
@@ -256,18 +252,6 @@ struct RootView: View {
         }
         .sheet(isPresented: $showNewInvoice) {
             NewInvoiceView()
-        }
-        .sheet(isPresented: $showAIChat) {
-            AIChatView(
-                onNewJob: { showNewJob = true },
-                onNewClient: { showNewClient = true },
-                onNewInvoice: { showNewInvoice = true }
-            )
-            .environment(jobsStore)
-            .environment(clientsStore)
-            .environment(invoicesStore)
-            .environment(profileStore)
-            .environment(teamStore)
         }
         .fullScreenCover(isPresented: $showOnboarding) {
             OnboardingView()
@@ -352,7 +336,6 @@ struct RootView: View {
             pendingShortcut = ""  // clear any stale UserDefaults value
             switch type {
             case "com.sweeply.newjob":    showNewJob = true
-            case "com.sweeply.ai":        showAIChat = true
             case "com.sweeply.schedule":  selectedTab = .schedule
             default: break
             }
