@@ -422,12 +422,34 @@ struct FinancesView: View {
                             .foregroundStyle(Color.sweeplyTextSub)
                     }
                     
+                    let displayExpenses = Array(monthExpenses.prefix(5))
+                    let hasMore = monthExpenses.count > 5
+                    
                     VStack(spacing: 0) {
-                        ForEach(Array(monthExpenses.enumerated()), id: \.element.id) { idx, expense in
+                        ForEach(Array(displayExpenses.enumerated()), id: \.element.id) { idx, expense in
                             expenseListRow(expense)
-                            if idx < monthExpenses.count - 1 {
+                            if idx < displayExpenses.count - 1 {
                                 Divider().padding(.leading, 58)
                             }
+                        }
+                        
+                        if hasMore {
+                            Button {
+                                showExpenses = true
+                            } label: {
+                                HStack {
+                                    Spacer()
+                                    Text("View All \(monthExpenses.count) Expenses")
+                                        .font(.system(size: 12, weight: .medium))
+                                        .foregroundStyle(Color.sweeplyAccent)
+                                    Image(systemName: "chevron.right")
+                                        .font(.system(size: 10, weight: .semibold))
+                                        .foregroundStyle(Color.sweeplyAccent)
+                                    Spacer()
+                                }
+                                .padding(.vertical, 12)
+                            }
+                            .buttonStyle(.plain)
                         }
                     }
                     .background(Color.sweeplySurface)
