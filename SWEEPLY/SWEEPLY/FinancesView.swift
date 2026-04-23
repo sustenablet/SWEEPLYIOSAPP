@@ -20,10 +20,12 @@ struct FinancesView: View {
     private var selectedFilter: InvoiceFilter { InvoiceFilter(rawValue: selectedFilterRaw) ?? .all }
     @State private var appeared = false
     @State private var selectedBarMonth: String? = nil
-    @State private var showFinanceAI = false
+    @State private var showAIChat = false
     @State private var showInvoicesList = false
     @State private var showExpenses = false
     @State private var showNewInvoice = false
+
+    // Remove the old showFinanceAI state
 
     private var invoices: [Invoice] {
         invoicesStore.invoices
@@ -167,10 +169,10 @@ struct FinancesView: View {
         .refreshable {
             await invoicesStore.load(isAuthenticated: session.isAuthenticated)
         }
-        .sheet(isPresented: $showFinanceAI) {
+        .sheet(isPresented: $showAIChat) {
             AIChatView(
-                onNewInvoice: { showFinanceAI = false; DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { showNewInvoice = true } },
-                financeMode: true
+                onNewInvoice: { showAIChat = false; DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { showNewInvoice = true } },
+                financeMode: false
             )
             .environment(jobsStore)
             .environment(clientsStore)
@@ -226,9 +228,9 @@ struct FinancesView: View {
                     Divider()
                     Button {
                         UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                        showFinanceAI = true
+                        showAIChat = true
                     } label: {
-                        Label("Finance AI", systemImage: "sparkles")
+                        Label("Sweeply AI", systemImage: "sparkles")
                     }
                 } label: {
                     Image(systemName: "line.3.horizontal")
