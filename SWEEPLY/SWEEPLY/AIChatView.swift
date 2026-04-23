@@ -3029,7 +3029,7 @@ struct AIChatView: View {
                     quickReplies: ["Create invoice for \(job.clientName.components(separatedBy: " ").first ?? job.clientName)", "View schedule"]
                 )
             case .markInvoicePaid(let invoice):
-                await invoicesStore.markPaid(id: invoice.id, userId: nil)
+                await invoicesStore.markPaid(id: invoice.id, amount: invoice.total, method: .cash)
                 UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                 return ChatMessage(
                     role: .assistant,

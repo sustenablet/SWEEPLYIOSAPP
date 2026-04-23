@@ -365,9 +365,10 @@ struct RootView: View {
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("MarkInvoicePaid"))) { notification in
-            if let invoiceId = notification.userInfo?["invoiceId"] as? UUID {
+            if let invoiceId = notification.userInfo?["invoiceId"] as? UUID,
+               let invoice = invoicesStore.invoices.first(where: { $0.id == invoiceId }) {
                 Task {
-                    await invoicesStore.markPaid(id: invoiceId, userId: session.userId)
+                    await invoicesStore.markPaid(id: invoiceId, amount: invoice.total, method: .cash)
                 }
             }
         }

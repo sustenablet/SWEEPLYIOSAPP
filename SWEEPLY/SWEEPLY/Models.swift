@@ -15,6 +15,26 @@ enum InvoiceStatus: String, CaseIterable, Codable {
     case overdue = "Overdue"
 }
 
+enum PaymentMethod: String, CaseIterable, Codable {
+    case check   = "Check"
+    case zelle  = "Zelle"
+    case venmo  = "Venmo"
+    case cash   = "Cash"
+    case card   = "Card"
+    case other  = "Other"
+    
+    var icon: String {
+        switch self {
+        case .check:  return "banknote"
+        case .zelle: return "dollarsign.circle"
+        case .venmo: return "v.circle"
+        case .cash:  return "dollarsign.square"
+        case .card:  return "creditcard"
+        case .other: return "ellipsis.circle"
+        }
+    }
+}
+
 enum ServiceType: RawRepresentable, Hashable, CaseIterable, Codable {
     case standard
     case deep
@@ -264,12 +284,21 @@ struct Invoice: Identifiable {
     var invoiceNumber: String
     var notes: String = ""
     var lineItems: [InvoiceLineItem] = []
+    // Payment tracking
+    var paidAmount: Double? = nil
+    var paymentMethod: PaymentMethod? = nil
+    var paidAt: Date? = nil
 
     var subtotal: Double {
         lineItems.isEmpty ? amount : lineItems.reduce(0) { $0 + $1.total }
     }
 
     var total: Double { subtotal }
+    
+    var isFullyPaid: Bool {
+        guard let paid = paidAmount else { return status == .paid }
+        return paid >= total
+    }
 }
 
 struct WeeklyRevenue: Identifiable {

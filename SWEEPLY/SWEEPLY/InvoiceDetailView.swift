@@ -63,6 +63,9 @@ struct InvoiceDetailView: View {
                 .sheet(isPresented: $showingEdit) {
                     EditInvoiceSheet(invoice: invoice)
                 }
+                .sheet(isPresented: $showMarkPaidSheet) {
+                    MarkPaidSheet(invoice: invoice)
+                }
                 .sheet(isPresented: $showPDFShare) {
                     ShareSheetView(data: pdfData ?? Data(), fileName: "Invoice-\(invoice.invoiceNumber).pdf")
                 }
@@ -149,16 +152,15 @@ struct InvoiceDetailView: View {
         }
     }
 
+    @State private var showMarkPaidSheet = false
+    
     // MARK: - Action Buttons
 
     private func actionButtons(invoice: Invoice) -> some View {
         HStack(spacing: 12) {
             if invoice.status != .paid {
                 Button {
-                    Task {
-                        await invoicesStore.markPaid(id: invoice.id)
-                        UINotificationFeedbackGenerator().notificationOccurred(.success)
-                    }
+                    showMarkPaidSheet = true
                 } label: {
                     Label("Mark Paid", systemImage: "checkmark.circle.fill")
                         .font(.system(size: 14, weight: .bold))

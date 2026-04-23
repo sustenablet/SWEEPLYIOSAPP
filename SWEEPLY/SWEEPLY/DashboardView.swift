@@ -597,7 +597,7 @@ struct DashInvoiceRow: View {
                 Spacer()
                 HStack(spacing: 8) {
                     Text(invoice.total.currency).font(.system(size: 14, weight: .bold, design: .monospaced)).foregroundStyle(Color.sweeplyNavy)
-                    Button("Mark Paid") { Task { await invoicesStore.markPaid(id: invoice.id) } }
+                    Button("Mark Paid") { Task { await invoicesStore.markPaid(id: invoice.id, amount: invoice.total, method: .cash) } }
                         .font(.system(size: 11, weight: .semibold)).foregroundStyle(.white)
                         .padding(.horizontal, 10).padding(.vertical, 5).background(Color.sweeplyNavy).clipShape(Capsule())
                 }

@@ -981,7 +981,7 @@ struct MinimalInvoiceRow: View {
         .buttonStyle(.plain)
         .contextMenu {
             if invoice.status != .paid {
-                Button { Task { await invoicesStore.markPaid(id: invoice.id) } } label: {
+                Button { Task { await invoicesStore.markPaid(id: invoice.id, amount: invoice.total, method: .cash) } } label: {
                     Label("Mark as paid", systemImage: "checkmark.circle")
                 }
             }

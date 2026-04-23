@@ -1,88 +1,125 @@
 import SwiftUI
 
-/// First-launch product walkthrough (Notion-style): dark chrome, segmented progress, phone mockups.
 struct ProductTutorialView: View {
     var onComplete: () -> Void
 
     @State private var page = 0
-    private let totalPages = 5
-
-    private let bg = Color(red: 0.07, green: 0.07, blue: 0.09)
-    private let subtle = Color.white.opacity(0.45)
-    private let ctaBlue = Color(red: 0.18, green: 0.47, blue: 0.98)
+    @State private var goingForward = true
+    private let totalPages = 4
 
     var body: some View {
         ZStack {
-            bg.ignoresSafeArea()
+            Color.sweeplyNavy.ignoresSafeArea()
 
             VStack(spacing: 0) {
                 topBar
-                    .padding(.horizontal, 8)
+                    .padding(.horizontal, 20)
                     .padding(.top, 8)
 
                 segmentedProgress
                     .padding(.horizontal, 20)
                     .padding(.top, 12)
 
-                Spacer(minLength: 12)
+                Spacer(minLength: 16)
 
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("Some essential tips")
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundStyle(subtle)
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(pages[page].eyebrow)
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(Color.sweeplyAccent)
+                        .tracking(0.6)
 
                     Text(pages[page].headline)
                         .font(.system(size: 26, weight: .bold))
                         .foregroundStyle(.white)
                         .fixedSize(horizontal: false, vertical: true)
+                        .lineSpacing(2)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, 24)
 
                 Spacer(minLength: 20)
 
-                TutorialPhoneFrame {
-                    pages[page].preview
+                ZStack {
+                    TutorialPhoneFrame {
+                        pages[page].preview
+                    }
+                    .transition(
+                        .asymmetric(
+                            insertion: .move(edge: goingForward ? .trailing : .leading).combined(with: .opacity),
+                            removal:   .move(edge: goingForward ? .leading  : .trailing).combined(with: .opacity)
+                        )
+                    )
+                    .id(page)
                 }
-                .padding(.horizontal, 28)
+                .padding(.horizontal, 32)
 
                 Spacer()
 
                 Button {
                     advance()
                 } label: {
-                    Text(page == totalPages - 1 ? "Finish" : "Continue")
+                    Text(page == totalPages - 1 ? "Get started" : "Continue")
                         .font(.system(size: 17, weight: .semibold))
                         .foregroundStyle(.white)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 16)
-                        .background(ctaBlue)
+                        .background(Color.sweeplyAccent)
                         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
                 }
                 .padding(.horizontal, 20)
                 .padding(.bottom, 28)
             }
         }
-    }
-
-    private var topBar: some View {
-        HStack {
-            Button {
-                if page > 0 {
+        .gesture(
+            DragGesture().onEnded { value in
+                if value.translation.width < -50 {
+                    advance()
+                } else if value.translation.width > 50 && page > 0 {
+                    goingForward = false
                     withAnimation(.easeInOut(duration: 0.25)) { page -= 1 }
                     UIImpactFeedbackGenerator(style: .light).impactOccurred()
                 }
-            } label: {
-                Image(systemName: "chevron.left")
-                    .font(.system(size: 17, weight: .semibold))
-                    .foregroundStyle(page > 0 ? Color.white : Color.clear)
-                    .frame(width: 44, height: 44)
             }
-            .disabled(page == 0)
+        )
+    }
+
+    // MARK: - Top Bar
+
+    private var topBar: some View {
+        HStack {
+            if page > 0 {
+                Button {
+                    goingForward = false
+                    withAnimation(.easeInOut(duration: 0.25)) { page -= 1 }
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                } label: {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(.white.opacity(0.7))
+                        .frame(width: 44, height: 44)
+                }
+            } else {
+                Spacer().frame(width: 44, height: 44)
+            }
 
             Spacer()
+
+            Button {
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                UINotificationFeedbackGenerator().notificationOccurred(.success)
+                onComplete()
+            } label: {
+                Text("Skip")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundStyle(.white.opacity(0.45))
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+            }
+            .buttonStyle(.plain)
         }
     }
+
+    // MARK: - Segmented Progress
 
     private var segmentedProgress: some View {
         HStack(spacing: 4) {
@@ -90,13 +127,17 @@ struct ProductTutorialView: View {
                 RoundedRectangle(cornerRadius: 1.5)
                     .fill(i <= page ? Color.white : Color.white.opacity(0.18))
                     .frame(height: 3)
+                    .animation(.easeInOut(duration: 0.25), value: page)
             }
         }
     }
 
+    // MARK: - Advance
+
     private func advance() {
         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
         if page < totalPages - 1 {
+            goingForward = true
             withAnimation(.easeInOut(duration: 0.28)) { page += 1 }
         } else {
             UINotificationFeedbackGenerator().notificationOccurred(.success)
@@ -104,38 +145,43 @@ struct ProductTutorialView: View {
         }
     }
 
+    // MARK: - Pages
+
     private var pages: [TutorialPage] {
         [
             TutorialPage(
-                headline: "Your cleaning business, organized in one place.",
-                preview: AnyView(DashboardTutorialPreview())
-            ),
-            TutorialPage(
-                headline: "See every visit on the schedule — by day or list.",
+                eyebrow: "SCHEDULING",
+                headline: "Book a job in\n20 seconds.",
                 preview: AnyView(ScheduleTutorialPreview())
             ),
             TutorialPage(
-                headline: "Keep every client and job site in one directory.",
-                preview: AnyView(ClientsTutorialPreview())
-            ),
-            TutorialPage(
-                headline: "Track invoices and cash flow without spreadsheets.",
+                eyebrow: "INVOICING",
+                headline: "Send invoices.\nGet paid.",
                 preview: AnyView(FinancesTutorialPreview())
             ),
             TutorialPage(
-                headline: "You’re ready. Run jobs, get paid, and grow.",
+                eyebrow: "AI ASSISTANT",
+                headline: "Meet your AI\nbusiness assistant.",
+                preview: AnyView(AITutorialPreview())
+            ),
+            TutorialPage(
+                eyebrow: "YOU'RE READY",
+                headline: "Let's go.",
                 preview: AnyView(ReadyTutorialPreview())
             )
         ]
     }
 }
 
+// MARK: - Page Model
+
 private struct TutorialPage {
+    let eyebrow: String
     let headline: String
     let preview: AnyView
 }
 
-// MARK: - Phone frame
+// MARK: - Phone Frame
 
 private struct TutorialPhoneFrame<Content: View>: View {
     @ViewBuilder let content: () -> Content
@@ -145,20 +191,20 @@ private struct TutorialPhoneFrame<Content: View>: View {
             RoundedRectangle(cornerRadius: 36, style: .continuous)
                 .fill(
                     LinearGradient(
-                        colors: [Color.white.opacity(0.14), Color.white.opacity(0.06)],
+                        colors: [Color.white.opacity(0.12), Color.white.opacity(0.05)],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     )
                 )
                 .overlay(
                     RoundedRectangle(cornerRadius: 36, style: .continuous)
-                        .stroke(Color.white.opacity(0.12), lineWidth: 1)
+                        .stroke(Color.white.opacity(0.1), lineWidth: 1)
                 )
 
             VStack(spacing: 0) {
                 Capsule()
-                    .fill(Color.black.opacity(0.35))
-                    .frame(width: 88, height: 28)
+                    .fill(Color.black.opacity(0.4))
+                    .frame(width: 80, height: 26)
                     .padding(.top, 10)
 
                 content()
@@ -167,156 +213,194 @@ private struct TutorialPhoneFrame<Content: View>: View {
             }
         }
         .aspectRatio(9 / 19.5, contentMode: .fit)
-        .shadow(color: .white.opacity(0.08), radius: 40, y: 20)
+        .shadow(color: Color.sweeplyAccent.opacity(0.12), radius: 40, y: 20)
     }
 }
 
-// MARK: - Preview contents (light “app inside phone”)
+// MARK: - Page Previews
 
-private struct DashboardTutorialPreview: View {
+private struct ScheduleTutorialPreview: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Today")
                 .font(.system(size: 11, weight: .bold))
                 .foregroundStyle(Color.sweeplyNavy)
-            RoundedRectangle(cornerRadius: 8)
-                .fill(Color.sweeplyBackground)
-                .frame(height: 44)
-                .overlay(alignment: .leading) {
-                    HStack(spacing: 8) {
-                        Circle().fill(Color.sweeplyAccent.opacity(0.3)).frame(width: 28, height: 28)
-                        VStack(alignment: .leading, spacing: 2) {
-                            RoundedRectangle(cornerRadius: 2).fill(Color.sweeplyNavy.opacity(0.2)).frame(width: 80, height: 6)
-                            RoundedRectangle(cornerRadius: 2).fill(Color.sweeplyTextSub.opacity(0.25)).frame(width: 50, height: 4)
-                        }
-                        Spacer()
-                    }
-                    .padding(.horizontal, 10)
-                }
-            HStack(spacing: 6) {
-                ForEach(0..<3, id: \.self) { _ in
-                    RoundedRectangle(cornerRadius: 6)
-                        .fill(Color.sweeplySurface)
-                        .frame(height: 52)
-                        .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.sweeplyBorder, lineWidth: 1))
-                }
-            }
-        }
-        .padding(12)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color.sweeplyBackground)
-        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
-    }
-}
 
-private struct ScheduleTutorialPreview: View {
-    var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack {
-                Text("April")
-                    .font(.system(size: 12, weight: .bold))
-                Spacer()
-            }
-            HStack(spacing: 4) {
-                let letters = ["S", "M", "T", "W", "T", "F", "S"]
-                ForEach(0..<7, id: \.self) { i in
-                    VStack(spacing: 4) {
-                        Text(letters[i])
+            HStack(spacing: 3) {
+                let days = [("M", 21), ("T", 22), ("W", 23), ("T", 24), ("F", 25)]
+                ForEach(Array(days.enumerated()), id: \.offset) { idx, day in
+                    VStack(spacing: 3) {
+                        Text(day.0)
                             .font(.system(size: 8, weight: .medium))
                             .foregroundStyle(Color.sweeplyTextSub)
-                        Text("\(29 + i)")
-                            .font(.system(size: 11, weight: i == 2 ? .bold : .regular))
-                            .foregroundStyle(i == 2 ? Color.white : Color.primary)
-                            .frame(width: 22, height: 22)
-                            .background(i == 2 ? Color.sweeplySuccess : Color.clear)
+                        Text("\(day.1)")
+                            .font(.system(size: 10, weight: idx == 1 ? .bold : .regular))
+                            .foregroundStyle(idx == 1 ? .white : Color.primary)
+                            .frame(width: 20, height: 20)
+                            .background(idx == 1 ? Color.sweeplyAccent : Color.clear)
                             .clipShape(Circle())
                     }
                     .frame(maxWidth: .infinity)
                 }
             }
-            RoundedRectangle(cornerRadius: 8)
-                .fill(Color.sweeplySurface)
-                .frame(height: 56)
-                .overlay(alignment: .leading) {
-                    HStack {
-                        RoundedRectangle(cornerRadius: 3).fill(Color.sweeplySuccess).frame(width: 3, height: 36)
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("9:00 AM")
-                                .font(.system(size: 9, weight: .semibold))
-                            Text("Standard clean")
-                                .font(.system(size: 8))
-                                .foregroundStyle(Color.sweeplyTextSub)
-                        }
-                        Spacer()
-                    }
-                    .padding(.horizontal, 10)
-                }
+
+            VStack(spacing: 6) {
+                timelineRow(time: "9:00", color: Color.sweeplyAccent, client: "Sarah M.", service: "Standard Clean")
+                Divider().padding(.leading, 54)
+                timelineRow(time: "11:30", color: Color.sweeplyWarning, client: "John D.", service: "Deep Clean")
+                Divider().padding(.leading, 54)
+                timelineRow(time: "2:00", color: Color.sweeplyAccent, client: "Lisa K.", service: "Move In/Out")
+            }
+            .padding(10)
+            .background(Color.sweeplySurface)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.sweeplyBorder, lineWidth: 1))
         }
         .padding(12)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color.sweeplyBackground)
         .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
     }
-}
 
-private struct ClientsTutorialPreview: View {
-    var body: some View {
-        VStack(spacing: 8) {
-            ForEach(0..<4, id: \.self) { i in
-                HStack(spacing: 10) {
-                    RoundedRectangle(cornerRadius: 8)
-                        .fill(Color.sweeplyNavy)
-                        .frame(width: 32, height: 32)
-                        .overlay(
-                            Text(["A", "B", "C", "D"][i])
-                                .font(.system(size: 12, weight: .bold))
-                                .foregroundStyle(.white)
-                        )
-                    VStack(alignment: .leading, spacing: 3) {
-                        RoundedRectangle(cornerRadius: 2).fill(Color.sweeplyNavy.opacity(0.2)).frame(width: 100 - CGFloat(i * 10), height: 7)
-                        RoundedRectangle(cornerRadius: 2).fill(Color.sweeplyTextSub.opacity(0.2)).frame(width: 70, height: 5)
-                    }
-                    Spacer()
-                }
-                .padding(10)
-                .background(Color.sweeplySurface)
-                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-                .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.sweeplyBorder, lineWidth: 1))
+    private func timelineRow(time: String, color: Color, client: String, service: String) -> some View {
+        HStack(spacing: 8) {
+            Text(time)
+                .font(.system(size: 9, weight: .medium, design: .monospaced))
+                .foregroundStyle(Color.sweeplyTextSub)
+                .frame(width: 30, alignment: .trailing)
+            Circle().fill(color).frame(width: 6, height: 6)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(client).font(.system(size: 9, weight: .semibold)).foregroundStyle(Color.sweeplyNavy)
+                Text(service).font(.system(size: 8)).foregroundStyle(Color.sweeplyTextSub)
             }
+            Spacer()
         }
-        .padding(10)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color.sweeplyBackground)
-        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
     }
 }
 
 private struct FinancesTutorialPreview: View {
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 10) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("THIS MONTH")
+                    .font(.system(size: 8, weight: .bold))
+                    .foregroundStyle(Color.sweeplyTextSub)
+                    .tracking(0.5)
+                Text("$3,200")
+                    .font(.system(size: 22, weight: .black, design: .monospaced))
+                    .foregroundStyle(Color.sweeplyNavy)
+            }
+            .padding(.horizontal, 12)
+            .padding(.top, 10)
+
             HStack(spacing: 4) {
-                ForEach(0..<5, id: \.self) { h in
-                    RoundedRectangle(cornerRadius: 2)
-                        .fill(Color.sweeplyNavy.opacity(0.15 + Double(h) * 0.08))
-                        .frame(width: 14, height: 24 + CGFloat(h * 8))
+                ForEach([0.4, 0.6, 0.5, 0.75, 0.55, 0.9], id: \.self) { h in
+                    RoundedRectangle(cornerRadius: 3)
+                        .fill(Color.sweeplyAccent.opacity(0.3 + h * 0.4))
+                        .frame(maxWidth: .infinity)
+                        .frame(height: CGFloat(h) * 30)
                 }
             }
             .frame(maxWidth: .infinity)
-            RoundedRectangle(cornerRadius: 8)
-                .fill(Color.sweeplySurface)
-                .frame(height: 40)
-                .overlay(
-                    HStack {
-                        Text("INV-0042")
-                            .font(.system(size: 9, weight: .medium, design: .monospaced))
-                        Spacer()
-                        Text("$320")
-                            .font(.system(size: 10, weight: .bold, design: .rounded))
-                    }
-                    .padding(.horizontal, 10)
-                )
+            .padding(.horizontal, 12)
+
+            VStack(spacing: 5) {
+                invoiceRow(number: "INV-0024", client: "Sarah M.", amount: "$320", status: "PAID", statusColor: .green)
+                Divider().padding(.horizontal, 10)
+                invoiceRow(number: "INV-0025", client: "John D.", amount: "$180", status: "OVERDUE", statusColor: Color.sweeplyDestructive)
+            }
+            .padding(8)
+            .background(Color.sweeplySurface)
+            .clipShape(RoundedRectangle(cornerRadius: 10))
+            .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.sweeplyBorder, lineWidth: 1))
+            .padding(.horizontal, 8)
+            .padding(.bottom, 8)
         }
-        .padding(14)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color.sweeplyBackground)
+        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+    }
+
+    private func invoiceRow(number: String, client: String, amount: String, status: String, statusColor: Color) -> some View {
+        HStack(spacing: 6) {
+            VStack(alignment: .leading, spacing: 1) {
+                Text(number).font(.system(size: 8, weight: .bold, design: .monospaced)).foregroundStyle(Color.sweeplyNavy)
+                Text(client).font(.system(size: 7)).foregroundStyle(Color.sweeplyTextSub)
+            }
+            Spacer()
+            Text(status)
+                .font(.system(size: 7, weight: .bold))
+                .foregroundStyle(statusColor)
+                .padding(.horizontal, 5).padding(.vertical, 2)
+                .background(statusColor.opacity(0.1)).clipShape(Capsule())
+            Text(amount).font(.system(size: 9, weight: .bold, design: .monospaced)).foregroundStyle(Color.sweeplyNavy)
+        }
+        .padding(.horizontal, 4)
+    }
+}
+
+private struct AITutorialPreview: View {
+    var body: some View {
+        VStack(spacing: 8) {
+            HStack(alignment: .bottom, spacing: 6) {
+                ZStack {
+                    Circle().fill(Color.sweeplyNavy).frame(width: 22, height: 22)
+                    Text("S").font(.system(size: 10, weight: .black, design: .rounded)).foregroundStyle(.white)
+                }
+                .alignmentGuide(.bottom) { d in d[.bottom] }
+
+                Text("Hey! You have 3 jobs today. Sarah's at 9am is next — want me to start it?")
+                    .font(.system(size: 9, weight: .medium))
+                    .foregroundStyle(Color.sweeplyNavy)
+                    .padding(.horizontal, 10).padding(.vertical, 8)
+                    .background(Color.sweeplySurface)
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.sweeplyBorder, lineWidth: 1))
+                Spacer(minLength: 16)
+            }
+
+            HStack(alignment: .bottom, spacing: 6) {
+                Spacer(minLength: 16)
+                Text("Yes, start Sarah's job")
+                    .font(.system(size: 9, weight: .medium))
+                    .foregroundStyle(Color.sweeplyNavy)
+                    .padding(.horizontal, 10).padding(.vertical, 8)
+                    .background(Color.sweeplyAccent.opacity(0.12))
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            }
+
+            HStack(alignment: .bottom, spacing: 6) {
+                ZStack {
+                    Circle().fill(Color.sweeplyNavy).frame(width: 22, height: 22)
+                    Text("S").font(.system(size: 10, weight: .black, design: .rounded)).foregroundStyle(.white)
+                }
+                .alignmentGuide(.bottom) { d in d[.bottom] }
+
+                Text("Done — Sarah's Standard Clean is now in progress. Good luck out there!")
+                    .font(.system(size: 9, weight: .medium))
+                    .foregroundStyle(Color.sweeplyNavy)
+                    .padding(.horizontal, 10).padding(.vertical, 8)
+                    .background(Color.sweeplySurface)
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.sweeplyBorder, lineWidth: 1))
+                Spacer(minLength: 16)
+            }
+
+            HStack(spacing: 6) {
+                ForEach(["Today's jobs", "Revenue", "Invoices"], id: \.self) { chip in
+                    Text(chip)
+                        .font(.system(size: 8, weight: .medium))
+                        .foregroundStyle(Color.sweeplyAccent)
+                        .padding(.horizontal, 8).padding(.vertical, 4)
+                        .background(Color.sweeplyAccent.opacity(0.08))
+                        .clipShape(Capsule())
+                        .overlay(Capsule().stroke(Color.sweeplyAccent.opacity(0.2), lineWidth: 1))
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.leading, 4)
+        }
+        .padding(12)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color.sweeplyBackground)
         .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
@@ -325,21 +409,55 @@ private struct FinancesTutorialPreview: View {
 
 private struct ReadyTutorialPreview: View {
     var body: some View {
-        VStack(spacing: 16) {
-            Image(systemName: "checkmark.circle.fill")
-                .font(.system(size: 48))
-                .foregroundStyle(Color.sweeplySuccess)
-                .shadow(color: Color.sweeplySuccess.opacity(0.4), radius: 16)
-            Text("Sweeply")
-                .font(.system(size: 20, weight: .bold))
-                .foregroundStyle(Color.sweeplyNavy)
-            Text("Clients · Jobs · Invoices")
-                .font(.system(size: 11, weight: .medium))
-                .foregroundStyle(Color.sweeplyTextSub)
+        VStack(spacing: 14) {
+            ZStack {
+                Circle()
+                    .fill(Color.sweeplyAccent.opacity(0.12))
+                    .frame(width: 80, height: 80)
+                Circle()
+                    .fill(Color.sweeplyNavy)
+                    .frame(width: 60, height: 60)
+                Text("S")
+                    .font(.system(size: 28, weight: .black, design: .rounded))
+                    .foregroundStyle(.white)
+            }
+
+            VStack(spacing: 5) {
+                Text("Sweeply")
+                    .font(.system(size: 18, weight: .bold))
+                    .foregroundStyle(Color.sweeplyNavy)
+                Text("Run jobs. Get paid. Grow.")
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(Color.sweeplyTextSub)
+            }
+
+            VStack(spacing: 6) {
+                readyRow(icon: "calendar.badge.checkmark", label: "Scheduling")
+                readyRow(icon: "doc.text.fill", label: "Invoicing")
+                readyRow(icon: "sparkles", label: "AI assistant")
+            }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color.sweeplyBackground)
         .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+    }
+
+    private func readyRow(icon: String, label: String) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: "checkmark.circle.fill")
+                .font(.system(size: 10))
+                .foregroundStyle(Color.sweeplyAccent)
+            Image(systemName: icon)
+                .font(.system(size: 10))
+                .foregroundStyle(Color.sweeplyNavy)
+            Text(label)
+                .font(.system(size: 10, weight: .medium))
+                .foregroundStyle(Color.sweeplyNavy)
+        }
+        .padding(.horizontal, 10).padding(.vertical, 5)
+        .background(Color.sweeplySurface)
+        .clipShape(Capsule())
+        .overlay(Capsule().stroke(Color.sweeplyBorder, lineWidth: 1))
     }
 }
 

@@ -114,16 +114,27 @@ final class InvoicesStore {
         }
     }
 
-    func markPaid(id: UUID, userId: UUID? = nil) async -> Bool {
+    func markPaid(id: UUID, amount: Double, method: PaymentMethod) async -> Bool {
+        let paidAt = Date()
+        
         guard let client = SupabaseManager.shared else {
             if let idx = invoices.firstIndex(where: { $0.id == id }) {
                 invoices[idx].status = .paid
+                invoices[idx].paidAmount = amount
+                invoices[idx].paymentMethod = method
+                invoices[idx].paidAt = paidAt
             }
             return true
         }
+        
         lastError = nil
         do {
-            let patch = InvoiceStatusPatch(status: InvoiceStatus.paid.rawValue)
+            let patch = InvoicePaymentPatch(
+                status: InvoiceStatus.paid.rawValue,
+                paidAmount: amount,
+                paymentMethod: method.rawValue,
+                paidAt: paidAt
+            )
             let refreshed: InvoiceRow = try await client
                 .from("invoices")
                 .update(patch)
@@ -136,9 +147,6 @@ final class InvoicesStore {
                 let paid = refreshed.toInvoice()
                 invoices[idx] = paid
                 NotificationManager.shared.cancelInvoiceReminders(for: id)
-                if let uid = userId {
-                    await NotificationHelper.insert(userId: uid, title: "Payment Received", message: "\(paid.invoiceNumber) for \(paid.clientName) has been marked as paid. \(paid.subtotal.formatted(.currency(code: "USD")))", kind: "billing")
-                }
             }
             return true
         } catch {
@@ -228,9 +236,12 @@ private struct InvoiceRow: Decodable {
     let invoiceNumber: String
     let notes: String?
     let lineItems: String?      // JSON-encoded [InvoiceLineItem]
+    let paidAmount: Double?
+    let paymentMethod: String?
+    let paidAt: Date?
 
     enum CodingKeys: String, CodingKey {
-        case id, amount, status, notes
+        case id, amount, status, notes, paidAmount, paymentMethod, paidAt
         case userId        = "user_id"
         case clientId      = "client_id"
         case clientName    = "client_name"
@@ -255,7 +266,10 @@ private struct InvoiceRow: Decodable {
             dueDate: dueDate,
             invoiceNumber: invoiceNumber,
             notes: notes ?? "",
-            lineItems: items
+            lineItems: items,
+            paidAmount: paidAmount,
+            paymentMethod: paymentMethod.flatMap { PaymentMethod(rawValue: $0) },
+            paidAt: paidAt
         )
     }
 }
@@ -284,6 +298,17 @@ private struct InvoiceRowInsert: Encodable {
 
 private struct InvoiceStatusPatch: Encodable {
     let status: String
+}
+
+private struct InvoicePaymentPatch: Encodable {
+    let status: String
+    let paidAmount: Double
+    let paymentMethod: String
+    let paidAt: Date
+    
+    enum CodingKeys: String, CodingKey {
+        case status, paidAmount, paymentMethod, paidAt
+    }
 }
 
 private struct InvoiceUpdatePatch: Encodable {
