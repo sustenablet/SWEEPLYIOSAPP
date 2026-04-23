@@ -216,7 +216,7 @@ struct SettingsView: View {
                     Divider()
                     HStack(spacing: 12) {
                         SettingsField(label: "City", text: $localProfile.settings.city)
-                        SettingsStatePickerField(label: "State", state: $localProfile.settings.state).frame(width: 70)
+                        SettingsStatePickerField(label: "State", state: $localProfile.settings.state).frame(width: 90)
                         SettingsField(label: "ZIP", text: $localProfile.settings.zip).frame(width: 90)
                     }
                 }
