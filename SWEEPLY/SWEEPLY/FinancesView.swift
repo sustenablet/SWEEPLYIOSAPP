@@ -20,7 +20,6 @@ struct FinancesView: View {
     private var selectedFilter: InvoiceFilter { InvoiceFilter(rawValue: selectedFilterRaw) ?? .all }
     @State private var appeared = false
     @State private var selectedBarMonth: String? = nil
-    @State private var showAIChat = false
     @State private var showInvoicesList = false
     @State private var showExpenses = false
     @State private var showNewInvoice = false
@@ -169,17 +168,6 @@ struct FinancesView: View {
         .refreshable {
             await invoicesStore.load(isAuthenticated: session.isAuthenticated)
         }
-        .sheet(isPresented: $showAIChat) {
-            AIChatView(
-                onNewInvoice: { showAIChat = false; DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { showNewInvoice = true } },
-                financeMode: false
-            )
-            .environment(jobsStore)
-            .environment(clientsStore)
-            .environment(invoicesStore)
-            .environment(profileStore)
-            .environment(teamStore)
-        }
         .sheet(isPresented: $showInvoicesList) {
             InvoicesListView()
                 .environment(invoicesStore)
@@ -224,13 +212,6 @@ struct FinancesView: View {
                         showExpenses = true
                     } label: {
                         Label("Expenses", systemImage: "creditcard.fill")
-                    }
-                    Divider()
-                    Button {
-                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                        showAIChat = true
-                    } label: {
-                        Label("Sweeply AI", systemImage: "sparkles")
                     }
                 } label: {
                     Image(systemName: "line.3.horizontal")

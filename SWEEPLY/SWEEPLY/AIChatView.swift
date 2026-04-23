@@ -2638,25 +2638,30 @@ struct AIChatView: View {
         if AIService.shared.isConfigured {
             let context = buildBusinessContext()
             var historyMessages: [[String: String]] = [["role": "system", "content": context]]
-            // Include up to last 10 messages for context
-            let recentMessages = messages.suffix(10)
-            for msg in recentMessages {
-                let roleStr = msg.role == .user ? "user" : "assistant"
-                historyMessages.append(["role": roleStr, "content": msg.text])
+            
+            // If we have previous messages, include them
+            if !messages.isEmpty {
+                let recentMessages = messages.suffix(6)
+                for msg in recentMessages {
+                    let roleStr = msg.role == .user ? "user" : "assistant"
+                    historyMessages.append(["role": roleStr, "content": msg.text])
+                }
             }
-            // Append current user message if not already included
-            if historyMessages.last?["content"] != input {
-                historyMessages.append(["role": "user", "content": input])
-            }
+            
+            // Append current message
+            historyMessages.append(["role": "user", "content": input])
+            
+            // Try the AI
             if let aiReply = await AIService.shared.chatWithHistory(messages: historyMessages) {
                 return ChatMessage(role: .assistant, text: aiReply.trimmingCharacters(in: .whitespacesAndNewlines))
             }
         }
-
+        
+        // More conversational fallback when AI doesn't respond
         return ChatMessage(
             role: .assistant,
-            text: "I'm not sure I caught that — try asking about your jobs, clients, invoices, or revenue. You can also say \"schedule a job\" or \"add a client\" to get started.",
-            quickReplies: ["Today's jobs", "Business overview", "Help"]
+            text: "I understand you're asking about something - let me help you find what you need. Here are some things I can do:",
+            quickReplies: ["Show my jobs", "Create an invoice", "Add a new client", "How's my revenue?"]
         )
     }
 

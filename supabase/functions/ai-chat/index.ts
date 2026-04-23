@@ -10,9 +10,23 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Simple auth check - accept requests with valid anon key
+const isAuthorized = (req: Request): boolean => {
+  const authHeader = req.headers.get("apikey");
+  return authHeader != null && authHeader.length > 0;
+};
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
+  }
+
+  // Check authorization
+  if (!isAuthorized(req)) {
+    return new Response(JSON.stringify({ content: null, error: "Unauthorized" }), {
+      status: 401,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 
   try {
