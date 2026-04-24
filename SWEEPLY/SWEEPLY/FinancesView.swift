@@ -25,6 +25,7 @@ struct FinancesView: View {
     @State private var showNewInvoice = false
     @State private var selectedInvoiceId: UUID? = nil
     @State private var showInvoiceDetail = false
+    @State private var markPaidInvoice: Invoice? = nil
 
     // Remove the old showFinanceAI state
 
@@ -190,6 +191,15 @@ struct FinancesView: View {
             ExpensesView()
                 .environment(expenseStore)
                 .environment(session)
+        }
+        .sheet(isPresented: Binding(
+            get: { markPaidInvoice != nil },
+            set: { if !$0 { markPaidInvoice = nil } }
+        )) {
+            if let invoice = markPaidInvoice {
+                MarkPaidSheet(invoice: invoice)
+                    .environment(invoicesStore)
+            }
         }
         .sheet(isPresented: $showInvoiceDetail) {
             if let id = selectedInvoiceId {
@@ -673,6 +683,8 @@ struct FinancesView: View {
                             MinimalInvoiceRow(invoice: invoice, invoicesStore: invoicesStore) {
                                 selectedInvoiceId = invoice.id
                                 showInvoiceDetail = true
+                            } onMarkPaid: {
+                                markPaidInvoice = invoice
                             }
                             if idx < displayInvoices.count - 1 {
                                 Divider()
@@ -976,6 +988,7 @@ struct MinimalInvoiceRow: View {
     let invoice: Invoice
     let invoicesStore: InvoicesStore
     var onTap: (() -> Void)? = nil
+    var onMarkPaid: (() -> Void)? = nil
     @State private var isMarkingPaid = false
 
     private var dueDateLabel: String {
@@ -1021,26 +1034,13 @@ struct MinimalInvoiceRow: View {
                 }
             }
             
-            if invoice.status != .paid && !isMarkingPaid {
-                Button {
-                    Task {
-                        isMarkingPaid = true
-                        let success = await invoicesStore.markPaid(id: invoice.id, amount: invoice.total, method: .cash)
-                        isMarkingPaid = false
-                        if success {
-                            UINotificationFeedbackGenerator().notificationOccurred(.success)
-                        } else {
-                            UINotificationFeedbackGenerator().notificationOccurred(.error)
-                        }
-                    }
-                } label: {
-                    Image(systemName: "checkmark.circle.fill")
+            if invoice.status != .paid {
+                Button { onMarkPaid?() } label: {
+                    Image(systemName: "checkmark.circle")
                         .font(.system(size: 18))
-                        .foregroundStyle(Color.sweeplySuccess)
+                        .foregroundStyle(Color.sweeplyTextSub)
                 }
                 .buttonStyle(.plain)
-            } else if isMarkingPaid {
-                ProgressView().scaleEffect(0.7)
             }
 
             Button { onTap?() } label: {
@@ -1071,6 +1071,7 @@ struct InvoicesListView: View {
     @State private var searchText = ""
     @State private var selectedInvoiceId: UUID? = nil
     @State private var showInvoiceDetail = false
+    @State private var markPaidInvoice: Invoice? = nil
 
     init(preselectedFilter: String = "all") {
         _selectedFilter = State(initialValue: InvoiceFilter(rawValue: preselectedFilter) ?? .all)
@@ -1147,6 +1148,8 @@ struct InvoicesListView: View {
                                 MinimalInvoiceRow(invoice: invoice, invoicesStore: invoicesStore) {
                                     selectedInvoiceId = invoice.id
                                     showInvoiceDetail = true
+                                } onMarkPaid: {
+                                    markPaidInvoice = invoice
                                 }
                                 if idx < filtered.count - 1 {
                                     Divider().padding(.leading, 16)
@@ -1198,6 +1201,15 @@ struct InvoicesListView: View {
                     .environment(clientsStore)
                     .environment(profileStore)
                     .environment(session)
+                }
+            }
+            .sheet(isPresented: Binding(
+                get: { markPaidInvoice != nil },
+                set: { if !$0 { markPaidInvoice = nil } }
+            )) {
+                if let invoice = markPaidInvoice {
+                    MarkPaidSheet(invoice: invoice)
+                        .environment(invoicesStore)
                 }
             }
         }

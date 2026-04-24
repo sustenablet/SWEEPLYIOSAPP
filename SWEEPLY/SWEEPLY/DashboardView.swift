@@ -21,6 +21,7 @@ struct DashboardView: View {
     @State private var showNotifications = false
     @State private var selectedInvoiceId: UUID? = nil
     @State private var showInvoiceDetail = false
+    @State private var markPaidInvoice: Invoice? = nil
     @State private var showTeam = false
     @State private var showInvoicesList = false
     @State private var invoicesPreselectedFilter: String = "overdue"
@@ -263,6 +264,15 @@ private var healthCards: [DashboardHealthCardModel] {
                     .environment(session)
                 }
             }
+            .sheet(isPresented: Binding(
+                get: { markPaidInvoice != nil },
+                set: { if !$0 { markPaidInvoice = nil } }
+            )) {
+                if let invoice = markPaidInvoice {
+                    MarkPaidSheet(invoice: invoice)
+                        .environment(invoicesStore)
+                }
+            }
             .sheet(isPresented: $showInvoicesList) {
                 NavigationStack {
                     InvoicesListView(preselectedFilter: "Overdue")
@@ -495,6 +505,8 @@ private var healthCards: [DashboardHealthCardModel] {
                             DashInvoiceRow(invoice: invoice, invoicesStore: invoicesStore) {
                                 selectedInvoiceId = invoice.id
                                 showInvoiceDetail = true
+                            } onMarkPaid: {
+                                markPaidInvoice = invoice
                             }
                             if index < min(ongoingInvoices.count, 3) - 1 {
                                 Divider()
@@ -583,7 +595,7 @@ struct DashInvoiceRow: View {
     let invoice: Invoice
     let invoicesStore: InvoicesStore
     var onTap: (() -> Void)? = nil
-    @State private var isMarkingPaid = false
+    var onMarkPaid: (() -> Void)? = nil
     var body: some View {
         HStack {
             VStack(alignment: .leading, spacing: 3) {
@@ -598,27 +610,16 @@ struct DashInvoiceRow: View {
             Spacer()
             HStack(spacing: 8) {
                 Text(invoice.total.currency).font(.system(size: 14, weight: .bold, design: .monospaced)).foregroundStyle(Color.sweeplyNavy)
-                Button {
-                    Task {
-                        isMarkingPaid = true
-                        let success = await invoicesStore.markPaid(id: invoice.id, amount: invoice.total, method: .cash)
-                        isMarkingPaid = false
-                        if success {
-                            UINotificationFeedbackGenerator().notificationOccurred(.success)
-                        } else {
-                            UINotificationFeedbackGenerator().notificationOccurred(.error)
-                        }
-                    }
-                } label: {
-                    if isMarkingPaid {
-                        ProgressView().scaleEffect(0.7)
-                    } else {
+                if invoice.status != .paid {
+                    Button { onMarkPaid?() } label: {
                         Text("Mark Paid")
                     }
+                    .font(.system(size: 11, weight: .semibold)).foregroundStyle(.white)
+                    .padding(.horizontal, 10).padding(.vertical, 5).background(Color.sweeplyNavy).clipShape(Capsule())
+                } else {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundStyle(Color.sweeplySuccess)
                 }
-                .font(.system(size: 11, weight: .semibold)).foregroundStyle(.white)
-                .padding(.horizontal, 10).padding(.vertical, 5).background(Color.sweeplyNavy).clipShape(Capsule())
-                .disabled(isMarkingPaid)
             }
         }
         .padding(.vertical, 10)
