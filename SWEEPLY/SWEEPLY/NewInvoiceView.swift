@@ -66,76 +66,78 @@ struct NewInvoiceView: View {
             ZStack {
                 Color.sweeplyBackground.ignoresSafeArea()
 
-                ScrollView(showsIndicators: false) {
-                    VStack(spacing: 24) {
-                        // Header
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text("New Invoice")
-                                .font(.system(size: 28, weight: .bold))
-                                .foregroundStyle(Color.sweeplyNavy)
-                            Text(autoInvoiceNumber)
-                                .font(.system(size: 14, weight: .semibold, design: .monospaced))
-                                .foregroundStyle(Color.sweeplyTextSub)
-                        }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.top, 12)
-
-                        // Error banner
-                        if let error = errorMessage {
-                            Text(error)
-                                .font(.system(size: 14, weight: .medium))
-                                .foregroundStyle(.white)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .padding()
-                                .background(Color.sweeplyDestructive)
-                                .clipShape(RoundedRectangle(cornerRadius: 12))
-                        }
-
-                        clientSection
-                        servicesSection
-                        invoiceDetailsSection
-                        paymentSection
-                    }
-                    .padding(24)
-                    .padding(.bottom, lineItems.isEmpty ? 100 : 180)
-                }
-
-                // Sticky bottom: total bar + footer
                 VStack(spacing: 0) {
-                    if !lineItems.isEmpty {
-                        totalBar
-                    }
-
-                    Divider().background(Color.sweeplyBorder.opacity(0.3))
-
-                    HStack(spacing: 16) {
-                        Button("Cancel") { dismiss() }
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundStyle(Color.sweeplyTextSub)
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 54)
-                            .background(Color.sweeplySurface)
-                            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                            .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(Color.sweeplyBorder, lineWidth: 1))
-
-                        Button { createInvoice() } label: {
-                            Group {
-                                if isSubmitting {
-                                    ProgressView().tint(.white)
-                                } else {
-                                    Text("Create Invoice")
-                                }
+                    ScrollView(showsIndicators: false) {
+                        VStack(spacing: 24) {
+                            // Header
+                            VStack(alignment: .leading, spacing: 6) {
+                                Text("New Invoice")
+                                    .font(.system(size: 28, weight: .bold))
+                                    .foregroundStyle(Color.sweeplyNavy)
+                                Text(autoInvoiceNumber)
+                                    .font(.system(size: 14, weight: .semibold, design: .monospaced))
+                                    .foregroundStyle(Color.sweeplyTextSub)
                             }
-                            .font(.system(size: 16, weight: .bold))
-                            .foregroundStyle(.white)
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 54)
-                            .background(canSubmit ? Color.sweeplyNavy : Color.sweeplyNavy.opacity(0.4))
-                            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.top, 12)
+
+                            // Error banner
+                            if let error = errorMessage {
+                                Text(error)
+                                    .font(.system(size: 14, weight: .medium))
+                                    .foregroundStyle(.white)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .padding()
+                                    .background(Color.sweeplyDestructive)
+                                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                            }
+
+                            clientSection
+                            servicesSection
+                            invoiceDetailsSection
+                            paymentSection
                         }
-                        .disabled(!canSubmit)
+                        .padding(24)
+                        .padding(.bottom, lineItems.isEmpty ? 24 : 140)
                     }
-                    .padding(20)
+
+                    // Sticky bottom: total bar + footer
+                    VStack(spacing: 0) {
+                        if !lineItems.isEmpty {
+                            totalBar
+                        }
+
+                        Divider().background(Color.sweeplyBorder.opacity(0.3))
+
+                        HStack(spacing: 16) {
+                            Button("Cancel") { dismiss() }
+                                .font(.system(size: 16, weight: .semibold))
+                                .foregroundStyle(Color.sweeplyTextSub)
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 54)
+                                .background(Color.sweeplySurface)
+                                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                                .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(Color.sweeplyBorder, lineWidth: 1))
+
+                            Button { createInvoice() } label: {
+                                Group {
+                                    if isSubmitting {
+                                        ProgressView().tint(.white)
+                                    } else {
+                                        Text("Create Invoice")
+                                    }
+                                }
+                                .font(.system(size: 16, weight: .bold))
+                                .foregroundStyle(.white)
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 54)
+                                .background(canSubmit ? Color.sweeplyNavy : Color.sweeplyNavy.opacity(0.4))
+                                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                            }
+                            .disabled(!canSubmit)
+                        }
+                        .padding(20)
+                    }
                 }
             }
             .navigationBarHidden(true)
