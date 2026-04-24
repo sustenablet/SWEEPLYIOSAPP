@@ -491,16 +491,12 @@ struct ScheduleView: View {
         filteredJobsForDate(date).reduce(0) { $0 + $1.price }
     }
 
-    // MARK: - List View (Multi-day Agenda)
+    // MARK: - List View (Single Day Focus)
 
-    private var upcomingGroupedJobs: [(date: Date, jobs: [Job])] {
-        let today = calendar.startOfDay(for: Date())
-        let upcoming = jobsStore.jobs
-            .filter { applyFilters($0) && calendar.startOfDay(for: $0.date) >= today }
-            .sorted { $0.date < $1.date }
-        let grouped = Dictionary(grouping: upcoming) { calendar.startOfDay(for: $0.date) }
-        return grouped
-            .map { (date: $0.key, jobs: $0.value.sorted { $0.date < $1.date }) }
+    private var listJobsForSelectedDay: [Job] {
+        jobsStore.jobs
+            .filter { calendar.isDate($0.date, inSameDayAs: selectedDay) }
+            .filter { applyFilters($0) }
             .sorted { $0.date < $1.date }
     }
 
@@ -512,19 +508,24 @@ struct ScheduleView: View {
 
     private var listView: some View {
         VStack(spacing: 0) {
-            // Stats bar — upcoming totals
+            // Stats bar — selected day totals
             HStack(spacing: 0) {
-                let allUpcoming = upcomingGroupedJobs.flatMap { $0.jobs }
                 HStack(spacing: 4) {
-                    Text("\(allUpcoming.count)")
+                    Text("\(listJobsForSelectedDay.count)")
                         .font(.system(size: 13, weight: .bold, design: .monospaced))
                         .foregroundStyle(Color.sweeplyAccent)
-                    Text(allUpcoming.count == 1 ? "upcoming job" : "upcoming jobs")
+                    Text(listJobsForSelectedDay.count == 1 ? "job" : "jobs")
                         .font(.system(size: 13, weight: .semibold))
                         .foregroundStyle(Color.sweeplyTextSub)
+                    Text("on")
+                        .font(.system(size: 13))
+                        .foregroundStyle(Color.sweeplyTextSub.opacity(0.6))
+                    Text(agendaDateLabel(selectedDay))
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(Color.sweeplyNavy)
                 }
                 Spacer()
-                Text(allUpcoming.reduce(0) { $0 + $1.price }.currency)
+                Text(listJobsForSelectedDay.reduce(0) { $0 + $1.price }.currency)
                     .font(.system(size: 13, weight: .bold, design: .monospaced))
                     .foregroundStyle(Color.sweeplyNavy)
             }
@@ -536,15 +537,15 @@ struct ScheduleView: View {
             ScrollView {
                 if jobsStore.isLoading && jobsStore.jobs.isEmpty {
                     SkeletonList(count: 4).padding(.top, 16).padding(.horizontal, 20)
-                } else if upcomingGroupedJobs.isEmpty {
+                } else if listJobsForSelectedDay.isEmpty {
                     VStack(spacing: 12) {
                         Image(systemName: "calendar.badge.clock")
                             .font(.system(size: 44))
                             .foregroundStyle(Color.sweeplyTextSub.opacity(0.3))
-                        Text("No upcoming jobs")
+                        Text("No jobs on \(agendaDateLabel(selectedDay))")
                             .font(.system(size: 16, weight: .semibold))
                             .foregroundStyle(Color.sweeplyTextSub)
-                        Text("Schedule a job to see it here.")
+                        Text("Tap the date to choose another day.")
                             .font(.system(size: 13))
                             .foregroundStyle(Color.sweeplyTextSub.opacity(0.6))
                     }
@@ -552,35 +553,33 @@ struct ScheduleView: View {
                     .padding(.vertical, 60)
                 } else {
                     LazyVStack(alignment: .leading, spacing: 0, pinnedViews: [.sectionHeaders]) {
-                        ForEach(upcomingGroupedJobs, id: \.date) { group in
-                            Section {
-                                VStack(spacing: 8) {
-                                    ForEach(group.jobs) { job in
-                                        ScheduleJobRow(job: job)
-                                    }
+                        Section {
+                            VStack(spacing: 8) {
+                                ForEach(listJobsForSelectedDay) { job in
+                                    ScheduleJobRow(job: job)
                                 }
-                                .padding(.horizontal, 20)
-                                .padding(.bottom, 16)
-                            } header: {
-                                HStack(spacing: 8) {
-                                    Text(agendaDateLabel(group.date))
-                                        .font(.system(size: 13, weight: .bold))
-                                        .foregroundStyle(calendar.isDateInToday(group.date) ? Color.sweeplyAccent : Color.sweeplyNavy)
-                                    Text("·")
-                                        .foregroundStyle(Color.sweeplyBorder)
-                                    Text(group.jobs.reduce(0) { $0 + $1.price }.currency)
-                                        .font(.system(size: 12, weight: .semibold, design: .monospaced))
-                                        .foregroundStyle(Color.sweeplyTextSub)
-                                    Spacer()
-                                    Text("\(group.jobs.count) job\(group.jobs.count == 1 ? "" : "s")")
-                                        .font(.system(size: 11, weight: .medium))
-                                        .foregroundStyle(Color.sweeplyTextSub.opacity(0.7))
-                                }
-                                .padding(.horizontal, 20)
-                                .padding(.vertical, 10)
-                                .background(Color.sweeplyBackground)
-                                .overlay(Rectangle().frame(height: 1).foregroundStyle(Color.sweeplyBorder.opacity(0.5)), alignment: .bottom)
                             }
+                            .padding(.horizontal, 20)
+                            .padding(.bottom, 16)
+                        } header: {
+                            HStack(spacing: 8) {
+                                Text(agendaDateLabel(selectedDay))
+                                    .font(.system(size: 13, weight: .bold))
+                                    .foregroundStyle(Color.sweeplyAccent)
+                                Text("·")
+                                    .foregroundStyle(Color.sweeplyBorder)
+                                Text(listJobsForSelectedDay.reduce(0) { $0 + $1.price }.currency)
+                                    .font(.system(size: 12, weight: .semibold, design: .monospaced))
+                                    .foregroundStyle(Color.sweeplyTextSub)
+                                Spacer()
+                                Text("\(listJobsForSelectedDay.count) job\(listJobsForSelectedDay.count == 1 ? "" : "s")")
+                                    .font(.system(size: 11, weight: .medium))
+                                    .foregroundStyle(Color.sweeplyTextSub.opacity(0.7))
+                            }
+                            .padding(.horizontal, 20)
+                            .padding(.vertical, 10)
+                            .background(Color.sweeplyBackground)
+                            .overlay(Rectangle().frame(height: 1).foregroundStyle(Color.sweeplyBorder.opacity(0.5)), alignment: .bottom)
                         }
                     }
                     .padding(.bottom, 100)
