@@ -10,6 +10,8 @@ struct MarkPaidSheet: View {
     @State private var amount: String
     @State private var selectedMethod: PaymentMethod = .cash
     @State private var isSaving = false
+    @State private var showError = false
+    @State private var errorMessage = ""
     @FocusState private var isAmountFocused: Bool
     
     private var parsedAmount: Double? {
@@ -125,6 +127,11 @@ struct MarkPaidSheet: View {
                         .foregroundStyle(Color.sweeplyTextSub)
                 }
             }
+            .alert("Payment Failed", isPresented: $showError) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text(errorMessage)
+            }
         }
     }
     
@@ -172,6 +179,10 @@ struct MarkPaidSheet: View {
             UINotificationFeedbackGenerator().notificationOccurred(.success)
             onComplete?()
             dismiss()
+        } else {
+            UINotificationFeedbackGenerator().notificationOccurred(.error)
+            errorMessage = invoicesStore.lastError ?? "Unable to record payment. Please try again."
+            showError = true
         }
     }
 }

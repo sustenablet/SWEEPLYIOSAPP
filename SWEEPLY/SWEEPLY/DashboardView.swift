@@ -583,27 +583,44 @@ struct DashInvoiceRow: View {
     let invoice: Invoice
     let invoicesStore: InvoicesStore
     var onTap: (() -> Void)? = nil
+    @State private var isMarkingPaid = false
     var body: some View {
-        Button(action: { onTap?() }) {
-            HStack {
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(invoice.clientName).font(.system(size: 14, weight: .semibold)).foregroundStyle(Color.sweeplyNavy)
-                    Text(invoice.status == .overdue
-                        ? "Overdue since \(invoice.dueDate.formatted(date: .abbreviated, time: .omitted))"
-                        : "Due \(invoice.dueDate.formatted(date: .abbreviated, time: .omitted))"
-                    )
-                    .font(.system(size: 12)).foregroundStyle(invoice.status == .overdue ? Color.sweeplyDestructive : Color.sweeplyTextSub)
+        HStack {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(invoice.clientName).font(.system(size: 14, weight: .semibold)).foregroundStyle(Color.sweeplyNavy)
+                Text(invoice.status == .overdue
+                    ? "Overdue since \(invoice.dueDate.formatted(date: .abbreviated, time: .omitted))"
+                    : "Due \(invoice.dueDate.formatted(date: .abbreviated, time: .omitted))"
+                )
+                .font(.system(size: 12)).foregroundStyle(invoice.status == .overdue ? Color.sweeplyDestructive : Color.sweeplyTextSub)
+            }
+            .onTapGesture { onTap?() }
+            Spacer()
+            HStack(spacing: 8) {
+                Text(invoice.total.currency).font(.system(size: 14, weight: .bold, design: .monospaced)).foregroundStyle(Color.sweeplyNavy)
+                Button {
+                    Task {
+                        isMarkingPaid = true
+                        let success = await invoicesStore.markPaid(id: invoice.id, amount: invoice.total, method: .cash)
+                        isMarkingPaid = false
+                        if success {
+                            UINotificationFeedbackGenerator().notificationOccurred(.success)
+                        } else {
+                            UINotificationFeedbackGenerator().notificationOccurred(.error)
+                        }
+                    }
+                } label: {
+                    if isMarkingPaid {
+                        ProgressView().scaleEffect(0.7)
+                    } else {
+                        Text("Mark Paid")
+                    }
                 }
-                Spacer()
-                HStack(spacing: 8) {
-                    Text(invoice.total.currency).font(.system(size: 14, weight: .bold, design: .monospaced)).foregroundStyle(Color.sweeplyNavy)
-                    Button("Mark Paid") { Task { await invoicesStore.markPaid(id: invoice.id, amount: invoice.total, method: .cash) } }
-                        .font(.system(size: 11, weight: .semibold)).foregroundStyle(.white)
-                        .padding(.horizontal, 10).padding(.vertical, 5).background(Color.sweeplyNavy).clipShape(Capsule())
-                }
+                .font(.system(size: 11, weight: .semibold)).foregroundStyle(.white)
+                .padding(.horizontal, 10).padding(.vertical, 5).background(Color.sweeplyNavy).clipShape(Capsule())
+                .disabled(isMarkingPaid)
             }
         }
-        .buttonStyle(.plain)
         .padding(.vertical, 10)
     }
 }
