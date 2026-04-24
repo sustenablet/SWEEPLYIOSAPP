@@ -88,41 +88,61 @@ struct ClientsView: View {
 
     private var displayJobs: [Job] { jobsStore.jobs }
 
-    private var filtered: [Client] {
-        guard !search.isEmpty else { return displayClients }
-        return displayClients.filter {
-            $0.name.localizedCaseInsensitiveContains(search) ||
-            $0.address.localizedCaseInsensitiveContains(search) ||
-            $0.city.localizedCaseInsensitiveContains(search)
-        }
-    }
-
     private func jobCount(for client: Client) -> Int {
         displayJobs.filter { $0.clientId == client.id }.count
     }
 
-    private func frequency(for client: Client) -> ClientFrequency {
-        let clientJobs = displayJobs.filter { $0.clientId == client.id }
-        guard !clientJobs.isEmpty else { return .none }
-        let hasRecurring = clientJobs.contains { $0.isRecurring }
-        guard hasRecurring else { return .oneTime }
+    private struct ClientDerived: Identifiable {
+        let id: UUID
+        let client: Client
+        let jobCount: Int
+        let frequency: ClientFrequency
+    }
 
-        // Estimate frequency from gap between sorted recurring job dates
-        let recurringDates = clientJobs
-            .filter { $0.isRecurring }
-            .map { $0.date }
-            .sorted()
-        guard recurringDates.count >= 2 else { return .recurring }
-        let gaps = zip(recurringDates, recurringDates.dropFirst()).map {
-            Calendar.current.dateComponents([.day], from: $0, to: $1).day ?? 0
+    private var clientsWithDerived: [ClientDerived] {
+        let jobs = displayJobs
+        return displayClients.map { client in
+            let clientJobs = jobs.filter { $0.clientId == client.id }
+            let count = clientJobs.count
+            let freq: ClientFrequency
+            if count == 0 {
+                freq = .none
+            } else {
+                let hasRecurring = clientJobs.contains { $0.isRecurring }
+                if !hasRecurring {
+                    freq = .oneTime
+                } else {
+                    let recurringDates = clientJobs
+                        .filter { $0.isRecurring }
+                        .map { $0.date }
+                        .sorted()
+                    if recurringDates.count < 2 {
+                        freq = .recurring
+                    } else {
+                        let gaps = zip(recurringDates, recurringDates.dropFirst()).map {
+                            Calendar.current.dateComponents([.day], from: $0, to: $1).day ?? 0
+                        }
+                        let avgGap = gaps.reduce(0, +) / gaps.count
+                        switch avgGap {
+                        case 0...9:  freq = .weekly
+                        case 10...18: freq = .weekly
+                        case 19...25: freq = .biweekly
+                        case 26...35: freq = .monthly
+                        default:      freq = .recurring
+                        }
+                    }
+                }
+            }
+            return ClientDerived(id: client.id, client: client, jobCount: count, frequency: freq)
         }
-        let avgGap = gaps.reduce(0, +) / gaps.count
-        switch avgGap {
-        case 0...9:  return .weekly
-        case 10...18: return .weekly
-        case 19...25: return .biweekly
-        case 26...35: return .monthly
-        default:      return .recurring
+    }
+
+    private var filteredClients: [ClientDerived] {
+        guard !search.isEmpty else { return clientsWithDerived }
+        return clientsWithDerived.filter {
+            $0.client.name.localizedCaseInsensitiveContains(search) ||
+            $0.client.address.localizedCaseInsensitiveContains(search) ||
+            $0.client.city.localizedCaseInsensitiveContains(search)
         }
     }
 
@@ -250,12 +270,15 @@ struct ClientsView: View {
     // MARK: - Client List
     private var clientList: some View {
         LazyVStack(spacing: 10) {
-            if clientsStore.isLoading && filtered.isEmpty {
+            if clientsStore.isLoading && filteredClients.isEmpty {
                 SkeletonList(count: 5)
-            } else if filtered.isEmpty {
+            } else if filteredClients.isEmpty {
                 emptyState
             } else {
-                ForEach(filtered) { client in
+                ForEach(filteredClients) { item in
+                    let client = item.client
+                    let cdJobCount = item.jobCount
+                    let cdFrequency = item.frequency
                     NavigationLink(
                         destination: ClientDetailView(
                             clientId: client.id
@@ -263,8 +286,8 @@ struct ClientsView: View {
                     ) {
                         ClientCard(
                             client: client,
-                            jobCount: jobCount(for: client),
-                            frequency: frequency(for: client),
+                            jobCount: cdJobCount,
+                            frequency: cdFrequency,
                             onView: { viewingClientId = client.id },
                             onEdit: {
                                 editSheetClient = client
