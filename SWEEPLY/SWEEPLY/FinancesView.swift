@@ -23,6 +23,8 @@ struct FinancesView: View {
     @State private var showInvoicesList = false
     @State private var showExpenses = false
     @State private var showNewInvoice = false
+    @State private var selectedInvoiceId: UUID? = nil
+    @State private var showInvoiceDetail = false
 
     // Remove the old showFinanceAI state
 
@@ -72,10 +74,10 @@ struct FinancesView: View {
             let collected = invoices.filter {
                 $0.status == .paid && $0.createdAt >= interval.start && $0.createdAt < interval.end
             }.reduce(0) { $0 + $1.total }
-            let pipeline = invoices.filter {
+            let scheduled = invoices.filter {
                 $0.status != .paid && $0.createdAt >= interval.start && $0.createdAt < interval.end
             }.reduce(0) { $0 + $1.total }
-            return MonthlyBar(month: label, collected: collected, pipeline: pipeline)
+            return MonthlyBar(month: label, collected: collected, scheduled: scheduled)
         }
     }
     private var chartData: [WeeklyRevenue] {
@@ -188,6 +190,17 @@ struct FinancesView: View {
             ExpensesView()
                 .environment(expenseStore)
                 .environment(session)
+        }
+        .sheet(isPresented: $showInvoiceDetail) {
+            if let id = selectedInvoiceId {
+                NavigationStack {
+                    InvoiceDetailView(invoiceId: id)
+                }
+                .environment(invoicesStore)
+                .environment(clientsStore)
+                .environment(profileStore)
+                .environment(session)
+            }
         }
     }
 
@@ -539,7 +552,7 @@ struct FinancesView: View {
                     Spacer()
                     HStack(spacing: 12) {
                         legendDot(color: Color.sweeplyAccent, label: "Collected")
-                        legendDot(color: Color.sweeplyNavy.opacity(0.25), label: "Pipeline")
+                        legendDot(color: Color.sweeplyNavy.opacity(0.25), label: "Scheduled")
                     }
                 }
 
@@ -555,7 +568,7 @@ struct FinancesView: View {
 
                     BarMark(
                         x: .value("Month", bar.month),
-                        y: .value("Amount", bar.pipeline),
+                        y: .value("Amount", bar.scheduled),
                         width: .ratio(0.38)
                     )
                     .foregroundStyle(Color.sweeplyNavy.opacity(0.25))
@@ -598,7 +611,7 @@ struct FinancesView: View {
                             .foregroundStyle(Color.sweeplyAccent)
                         Text("·")
                             .foregroundStyle(Color.sweeplyBorder)
-                        Text("Pipeline: \(bar.pipeline.currency)")
+                        Text("Scheduled: \(bar.scheduled.currency)")
                             .font(.system(size: 11, design: .monospaced))
                             .foregroundStyle(Color.sweeplyTextSub)
                     }
@@ -620,6 +633,14 @@ struct FinancesView: View {
     }
 
     // MARK: - Invoices
+
+    private var displayInvoices: [Invoice] {
+        Array(filteredInvoices.prefix(5))
+    }
+
+    private var hasMoreInvoices: Bool {
+        filteredInvoices.count > 5
+    }
 
     private var invoicesBlock: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -648,14 +669,38 @@ struct FinancesView: View {
             } else {
                 SectionCard {
                     VStack(spacing: 0) {
-                        ForEach(Array(filteredInvoices.enumerated()), id: \.element.id) { idx, invoice in
-                            MinimalInvoiceRow(invoice: invoice, invoicesStore: invoicesStore)
-                            if idx < filteredInvoices.count - 1 {
+                        ForEach(Array(displayInvoices.enumerated()), id: \.element.id) { idx, invoice in
+                            MinimalInvoiceRow(invoice: invoice, invoicesStore: invoicesStore) {
+                                selectedInvoiceId = invoice.id
+                                showInvoiceDetail = true
+                            }
+                            if idx < displayInvoices.count - 1 {
                                 Divider()
                             }
                         }
+
+                        if hasMoreInvoices {
+                            Divider()
+                            Button {
+                                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                showInvoicesList = true
+                            } label: {
+                                HStack {
+                                    Spacer()
+                                    Text("View All \(filteredInvoices.count) Invoices")
+                                        .font(.system(size: 13, weight: .medium))
+                                        .foregroundStyle(Color.sweeplyAccent)
+                                    Image(systemName: "chevron.right")
+                                        .font(.system(size: 10, weight: .semibold))
+                                        .foregroundStyle(Color.sweeplyAccent)
+                                    Spacer()
+                                }
+                                .padding(.vertical, 14)
+                            }
+                            .buttonStyle(.plain)
+                        }
                     }
-                    .padding(-16) // full bleed in SectionCard
+                    .padding(-16)
                 }
             }
         }
@@ -881,7 +926,7 @@ private struct MonthlyBar: Identifiable {
     var id: String { month }
     let month: String
     let collected: Double
-    let pipeline: Double
+    let scheduled: Double
 }
 
 private extension Double {
@@ -930,6 +975,7 @@ private struct BarChartView: View {
 struct MinimalInvoiceRow: View {
     let invoice: Invoice
     let invoicesStore: InvoicesStore
+    var onTap: (() -> Void)? = nil
 
     private var dueDateLabel: String {
         let f = DateFormatter()
@@ -947,7 +993,9 @@ struct MinimalInvoiceRow: View {
     }
 
     var body: some View {
-        NavigationLink(destination: InvoiceDetailView(invoiceId: invoice.id)) {
+        Button {
+            onTap?()
+        } label: {
             HStack(alignment: .center, spacing: 14) {
                 VStack(alignment: .leading, spacing: 6) {
                     HStack(alignment: .firstTextBaseline) {
@@ -1012,6 +1060,8 @@ struct InvoicesListView: View {
     @State private var showNewInvoice = false
     @State private var selectedFilter: InvoiceFilter
     @State private var searchText = ""
+    @State private var selectedInvoiceId: UUID? = nil
+    @State private var showInvoiceDetail = false
 
     init(preselectedFilter: String = "all") {
         _selectedFilter = State(initialValue: InvoiceFilter(rawValue: preselectedFilter) ?? .all)
@@ -1085,7 +1135,10 @@ struct InvoicesListView: View {
                     } else {
                         VStack(spacing: 0) {
                             ForEach(Array(filtered.enumerated()), id: \.element.id) { idx, invoice in
-                                MinimalInvoiceRow(invoice: invoice, invoicesStore: invoicesStore)
+                                MinimalInvoiceRow(invoice: invoice, invoicesStore: invoicesStore) {
+                                    selectedInvoiceId = invoice.id
+                                    showInvoiceDetail = true
+                                }
                                 if idx < filtered.count - 1 {
                                     Divider().padding(.leading, 16)
                                 }
@@ -1126,6 +1179,17 @@ struct InvoicesListView: View {
                     .environment(jobsStore)
                     .environment(session)
                     .environment(profileStore)
+            }
+            .sheet(isPresented: $showInvoiceDetail) {
+                if let id = selectedInvoiceId {
+                    NavigationStack {
+                        InvoiceDetailView(invoiceId: id)
+                    }
+                    .environment(invoicesStore)
+                    .environment(clientsStore)
+                    .environment(profileStore)
+                    .environment(session)
+                }
             }
         }
     }
