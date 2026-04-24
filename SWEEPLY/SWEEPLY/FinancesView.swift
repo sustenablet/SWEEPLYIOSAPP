@@ -976,6 +976,7 @@ struct MinimalInvoiceRow: View {
     let invoice: Invoice
     let invoicesStore: InvoicesStore
     var onTap: (() -> Void)? = nil
+    @State private var isMarkingPaid = false
 
     private var dueDateLabel: String {
         let f = DateFormatter()
@@ -993,57 +994,65 @@ struct MinimalInvoiceRow: View {
     }
 
     var body: some View {
-        Button {
-            onTap?()
-        } label: {
-            HStack(alignment: .center, spacing: 14) {
-                VStack(alignment: .leading, spacing: 6) {
-                    HStack(alignment: .firstTextBaseline) {
-                        Text(invoice.clientName)
-                            .font(.system(size: 15, weight: .medium))
-                            .foregroundStyle(Color.sweeplyNavy)
-                            .lineLimit(1)
-                        Spacer(minLength: 8)
-                        Text(invoice.total.currency)
-                            .font(.system(size: 15, weight: .semibold, design: .rounded))
-                            .foregroundStyle(Color.sweeplyNavy)
-                            .monospacedDigit()
-                    }
-                    HStack(spacing: 8) {
-                        Text(invoice.invoiceNumber)
-                            .font(.system(size: 11, weight: .regular, design: .monospaced))
-                            .foregroundStyle(Color.sweeplyTextSub)
-                        Text("·")
-                            .foregroundStyle(Color.sweeplyBorder)
-                        Text(dueDateLabel)
-                            .font(.system(size: 11, weight: .regular))
-                            .foregroundStyle(dueDateColor)
-                        Spacer(minLength: 8)
-                        InvoiceStatusBadge(status: invoice.status)
-                    }
+        HStack(alignment: .center, spacing: 14) {
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(alignment: .firstTextBaseline) {
+                    Text(invoice.clientName)
+                        .font(.system(size: 15, weight: .medium))
+                        .foregroundStyle(Color.sweeplyNavy)
+                        .lineLimit(1)
+                    Spacer(minLength: 8)
+                    Text(invoice.total.currency)
+                        .font(.system(size: 15, weight: .semibold, design: .rounded))
+                        .foregroundStyle(Color.sweeplyNavy)
+                        .monospacedDigit()
                 }
+                HStack(spacing: 8) {
+                    Text(invoice.invoiceNumber)
+                        .font(.system(size: 11, weight: .regular, design: .monospaced))
+                        .foregroundStyle(Color.sweeplyTextSub)
+                    Text("·")
+                        .foregroundStyle(Color.sweeplyBorder)
+                    Text(dueDateLabel)
+                        .font(.system(size: 11, weight: .regular))
+                        .foregroundStyle(dueDateColor)
+                    Spacer(minLength: 8)
+                    InvoiceStatusBadge(status: invoice.status)
+                }
+            }
+            
+            if invoice.status != .paid && !isMarkingPaid {
+                Button {
+                    Task {
+                        isMarkingPaid = true
+                        let success = await invoicesStore.markPaid(id: invoice.id, amount: invoice.total, method: .cash)
+                        isMarkingPaid = false
+                        if success {
+                            UINotificationFeedbackGenerator().notificationOccurred(.success)
+                        } else {
+                            UINotificationFeedbackGenerator().notificationOccurred(.error)
+                        }
+                    }
+                } label: {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 18))
+                        .foregroundStyle(Color.sweeplySuccess)
+                }
+                .buttonStyle(.plain)
+            } else if isMarkingPaid {
+                ProgressView().scaleEffect(0.7)
+            }
 
+            Button { onTap?() } label: {
                 Image(systemName: "chevron.right")
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(Color.sweeplyBorder)
                     .frame(width: 32, height: 32)
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 14)
+            .buttonStyle(.plain)
         }
-        .buttonStyle(.plain)
-        .contextMenu {
-            if invoice.status != .paid {
-                Button { Task { await invoicesStore.markPaid(id: invoice.id, amount: invoice.total, method: .cash) } } label: {
-                    Label("Mark as paid", systemImage: "checkmark.circle")
-                }
-            }
-            Button(role: .destructive) {
-                Task { await invoicesStore.delete(id: invoice.id) }
-            } label: {
-                Label("Delete", systemImage: "trash")
-            }
-        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 14)
     }
 }
 

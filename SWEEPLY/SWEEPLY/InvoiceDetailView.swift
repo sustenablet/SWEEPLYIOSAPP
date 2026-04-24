@@ -153,6 +153,7 @@ struct InvoiceDetailView: View {
     }
 
     @State private var showMarkPaidSheet = false
+    @State private var isMarkingPaid = false
     
     // MARK: - Action Buttons
 
@@ -160,16 +161,32 @@ struct InvoiceDetailView: View {
         HStack(spacing: 12) {
             if invoice.status != .paid {
                 Button {
-                    showMarkPaidSheet = true
+                    Task {
+                        isMarkingPaid = true
+                        let success = await invoicesStore.markPaid(id: invoice.id, amount: invoice.total, method: .cash)
+                        isMarkingPaid = false
+                        if success {
+                            UINotificationFeedbackGenerator().notificationOccurred(.success)
+                        } else {
+                            UINotificationFeedbackGenerator().notificationOccurred(.error)
+                        }
+                    }
                 } label: {
-                    Label("Mark Paid", systemImage: "checkmark.circle.fill")
-                        .font(.system(size: 14, weight: .bold))
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
-                        .background(Color.sweeplySuccess)
-                        .foregroundStyle(.white)
-                        .clipShape(RoundedRectangle(cornerRadius: 14))
+                    Group {
+                        if isMarkingPaid {
+                            ProgressView().tint(.white).scaleEffect(0.85)
+                        } else {
+                            Label("Mark Paid", systemImage: "checkmark.circle.fill")
+                        }
+                    }
+                    .font(.system(size: 14, weight: .bold))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(Color.sweeplySuccess)
+                    .foregroundStyle(.white)
+                    .clipShape(RoundedRectangle(cornerRadius: 14))
                 }
+                .disabled(isMarkingPaid)
             } else {
                 Label("Already Paid", systemImage: "checkmark.seal.fill")
                     .font(.system(size: 14, weight: .bold))
