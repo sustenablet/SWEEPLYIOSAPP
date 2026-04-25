@@ -30,6 +30,8 @@ struct BusinessView: View {
         KPITimeRange(rawValue: kpiTimeRangeRaw) ?? .month
     }
 
+    @State private var showTimeFilter = false
+
     private var profile: UserProfile {
         profileStore.profile ?? MockData.profile
     }

@@ -360,7 +360,7 @@ struct NewJobForm: View {
                                         HStack(spacing: 10) {
                                             Image(systemName: "sparkles")
                                                 .font(.system(size: 12, weight: .semibold))
-                                                .foregroundStyle(Color.sweeplyWarning)
+                                                .foregroundStyle(Color.sweeplyAccent)
                                                 .frame(width: 20)
                                             Text(extra.name)
                                                 .font(.system(size: 14, weight: .medium))
@@ -398,12 +398,12 @@ struct NewJobForm: View {
                                     Text("Add Extra")
                                         .font(.system(size: 14, weight: .semibold))
                                 }
-                                .foregroundStyle(Color.sweeplyWarning)
+                                .foregroundStyle(Color.sweeplyAccent)
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 12)
-                                .background(Color.sweeplyWarning.opacity(0.08))
+                                .background(Color.sweeplyAccent.opacity(0.08))
                                 .clipShape(RoundedRectangle(cornerRadius: 12))
-                                .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.sweeplyWarning.opacity(0.25), lineWidth: 1))
+                                .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.sweeplyAccent.opacity(0.25), lineWidth: 1))
                             }
                             .buttonStyle(.plain)
                         }
