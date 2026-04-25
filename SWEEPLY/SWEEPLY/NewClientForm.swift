@@ -28,13 +28,13 @@ struct NewClientForm: View {
 
     private var fallbackSettings: AppSettings {
         var settings = AppSettings()
-        settings.services = AppSettings.defaultServiceCatalog
+        settings.services = AppSettings.defaultServiceCatalog.filter { !$0.isAddon }
         return settings
     }
 
     private var serviceCatalog: [BusinessService] {
         let settings = profileStore.profile?.settings ?? fallbackSettings
-        return settings.hydratedServiceCatalog
+        return settings.hydratedServiceCatalog.filter { !$0.isAddon }
     }
 
     private var isEmailValid: Bool {
@@ -161,11 +161,11 @@ struct NewClientForm: View {
                             state: $state,
                             zip: $zip
                         )
-                        HStack(spacing: 12) {
-                            FormTextField(label: "City", text: $city, placeholder: "Miami")
-                            StatePickerField(label: "State", state: $state).frame(width: 70)
-                            FormTextField(label: "ZIP", text: $zip, placeholder: "33101", keyboard: .numberPad).frame(width: 90)
-                        }
+HStack(spacing: 12) {
+                             FormTextField(label: "City", text: $city, placeholder: "Miami")
+                             StatePickerField(label: "State", state: $state).frame(width: 90)
+                             FormTextField(label: "ZIP", text: $zip, placeholder: "33101", keyboard: .numberPad).frame(width: 90)
+                         }
                     }
 
                     // Notes

@@ -15,6 +15,7 @@ struct Conversation: Identifiable {
     let clientPhone: String
     var lastMessage: String?
     var lastMessageAt: Date
+    var unreadCount: Int
     let createdAt: Date
 }
 
@@ -24,6 +25,7 @@ struct Message: Identifiable {
     let body: String
     let direction: MessageDirection
     let sentAt: Date
+    var isRead: Bool
 }
 
 // MARK: - Store
@@ -44,10 +46,32 @@ final class MessagesStore {
                 .order("last_message_at", ascending: false)
                 .execute()
                 .value
-            self.conversations = rows.map { $0.toConversation() }
+            var convs: [Conversation] = []
+            for row in rows {
+                let unreadCount = await getUnreadCount(conversationId: row.id)
+                convs.append(row.toConversation(unreadCount: unreadCount))
+            }
+            self.conversations = convs
             self.lastError = nil
         } catch {
             self.lastError = "Failed to load conversations."
+        }
+    }
+
+    private func getUnreadCount(conversationId: UUID) async -> Int {
+        guard let client = SupabaseManager.shared else { return 0 }
+        do {
+            let rows: [MessageRow] = try await client.database
+                .from("messages")
+                .select("id")
+                .eq("conversation_id", value: conversationId)
+                .eq("direction", value: "incoming")
+                .eq("is_read", value: false)
+                .execute()
+                .value
+            return rows.count
+        } catch {
+            return 0
         }
     }
 
@@ -85,7 +109,7 @@ final class MessagesStore {
                 .single()
                 .execute()
                 .value
-            let conv = row.toConversation()
+            let conv = row.toConversation(unreadCount: 0)
             if !conversations.contains(where: { $0.id == conv.id }) {
                 conversations.insert(conv, at: 0)
             }
@@ -98,13 +122,13 @@ final class MessagesStore {
 
     @discardableResult
     func sendMessage(body: String, conversationId: UUID, userId: UUID, direction: MessageDirection) async -> Message? {
-        let optimistic = Message(id: UUID(), conversationId: conversationId, body: body, direction: direction, sentAt: Date())
+        let optimistic = Message(id: UUID(), conversationId: conversationId, body: body, direction: direction, sentAt: Date(), isRead: direction == .outgoing)
         messagesByConversation[conversationId, default: []].append(optimistic)
         updateLastMessage(conversationId: conversationId, body: body)
 
         guard let client = SupabaseManager.shared else { return optimistic }
         do {
-            let insert = MessageInsert(conversationId: conversationId, userId: userId, body: body, direction: direction.rawValue)
+            let insert = MessageInsert(conversationId: conversationId, userId: userId, body: body, direction: direction.rawValue, isRead: direction == .outgoing)
             let row: MessageRow = try await client.database
                 .from("messages")
                 .insert(insert)
@@ -130,6 +154,28 @@ final class MessagesStore {
         messagesByConversation.removeValue(forKey: id)
         guard let client = SupabaseManager.shared else { return }
         try? await client.database.from("conversations").delete().eq("id", value: id).execute()
+    }
+
+    func unreadCount(conversationId: UUID) -> Int {
+        (messagesByConversation[conversationId] ?? []).filter { !$0.isRead && $0.direction == .incoming }.count
+    }
+
+    func markAsRead(conversationId: UUID) async {
+        // Update locally
+        if var msgs = messagesByConversation[conversationId] {
+            for i in msgs.indices where !msgs[i].isRead && msgs[i].direction == .incoming {
+                msgs[i].isRead = true
+            }
+            messagesByConversation[conversationId] = msgs
+        }
+        // Update in database
+        guard let client = SupabaseManager.shared else { return }
+        try? await client.database
+            .from("messages")
+            .update(["is_read": true])
+            .eq("conversation_id", value: conversationId)
+            .eq("direction", value: "incoming")
+            .execute()
     }
 
     private func updateLastMessage(conversationId: UUID, body: String) {
@@ -165,9 +211,9 @@ private struct ConversationRow: Decodable {
         case createdAt      = "created_at"
     }
 
-    func toConversation() -> Conversation {
+    func toConversation(unreadCount: Int = 0) -> Conversation {
         Conversation(id: id, clientId: clientId, clientName: clientName, clientPhone: clientPhone,
-                     lastMessage: lastMessage, lastMessageAt: lastMessageAt, createdAt: createdAt)
+                     lastMessage: lastMessage, lastMessageAt: lastMessageAt, unreadCount: unreadCount, createdAt: createdAt)
     }
 }
 
@@ -192,17 +238,19 @@ private struct MessageRow: Decodable {
     let body: String
     let direction: String
     let sentAt: Date
+    let isRead: Bool
 
     enum CodingKeys: String, CodingKey {
         case id, body, direction
         case conversationId = "conversation_id"
         case userId         = "user_id"
         case sentAt         = "sent_at"
+        case isRead         = "is_read"
     }
 
     func toMessage() -> Message {
         Message(id: id, conversationId: conversationId, body: body,
-                direction: MessageDirection(rawValue: direction) ?? .outgoing, sentAt: sentAt)
+                direction: MessageDirection(rawValue: direction) ?? .outgoing, sentAt: sentAt, isRead: isRead)
     }
 }
 
@@ -211,10 +259,12 @@ private struct MessageInsert: Encodable {
     let userId: UUID
     let body: String
     let direction: String
+    let isRead: Bool
 
     enum CodingKeys: String, CodingKey {
         case body, direction
         case conversationId = "conversation_id"
         case userId         = "user_id"
+        case isRead         = "is_read"
     }
 }

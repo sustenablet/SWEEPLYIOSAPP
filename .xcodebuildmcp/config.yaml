@@ -1,0 +1,7 @@
+schemaVersion: 1
+sessionDefaultsProfiles:
+  sweently:
+    scheme: SWEEPLY
+  ios:
+    projectPath: /Users/joaoleite/Desktop/SWEEPLYIOSAPP/SWEEPLY/SWEEPLY.xcodeproj
+activeSessionDefaultsProfile: ios

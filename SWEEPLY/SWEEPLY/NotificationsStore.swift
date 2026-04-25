@@ -38,6 +38,9 @@ final class NotificationsStore {
                     invoiceId: remote.invoiceId
                 )
             }
+            .filter { notif in
+                !(notif.kind == .billing && notif.title == "Invoice Sent")
+            }
             self.isLoaded = true
             self.lastError = nil
 
@@ -53,7 +56,7 @@ final class NotificationsStore {
                     AppNotification(
                         id: UUID(),
                         title: "Welcome to Sweeply",
-                        message: "You're all set — job reminders, invoice alerts, and schedule updates will appear here.",
+                        message: "You're all set — job reminders and schedule updates will appear here.",
                         kind: .system,
                         timestamp: Date(),
                         isRead: false

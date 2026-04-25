@@ -1,5 +1,4 @@
 import SwiftUI
-import MessageUI
 
 struct ClientChatView: View {
     @Environment(\.dismiss) private var dismiss
@@ -12,19 +11,19 @@ struct ClientChatView: View {
     @State private var inputText = ""
     @State private var isLoading = true
     @State private var conversation: Conversation? = nil
-    @State private var showSMSComposer = false
-    @State private var showLogReply = false
-    @State private var pendingSMSBody = ""
-    @State private var logReplyText = ""
-    @FocusState private var isInputFocused: Bool
+@FocusState private var isInputFocused: Bool
 
     private let templates = [
         "On my way 🚗",
-        "Cleaning complete ✅",
         "Running 15 min late ⏱",
+        "Arriving now 📍",
+        "Cleaning complete ✅",
         "Invoice sent 📄",
-        "See you soon! 👋",
-        "Can we reschedule?"
+        "Payment received 💳",
+        "Thanks! See you next time 👋",
+        "Can we reschedule?",
+        "Reminder: appointment tomorrow ⏰",
+        "Confirming for tomorrow ✅"
     ]
 
     var body: some View {
@@ -82,18 +81,11 @@ struct ClientChatView: View {
                     }
                 }
             }
-            .sheet(isPresented: $showSMSComposer) {
-                if SMSComposer.canSendText {
-                    SMSComposer(recipient: client.phone, body: pendingSMSBody) { _ in
-                        showSMSComposer = false
-                    }
-                }
-            }
-            .sheet(isPresented: $showLogReply) {
-                logReplySheet
-            }
             .task {
                 await setupConversation()
+                if let conv = conversation {
+                    await messagesStore.markAsRead(conversationId: conv.id)
+                }
             }
         }
     }
@@ -125,25 +117,9 @@ struct ClientChatView: View {
 
         Task {
             if let saved = await messagesStore.sendMessage(body: body, conversationId: conv.id, userId: userId, direction: .outgoing) {
-                messages.append(saved)
-            }
-        }
-
-        if SMSComposer.canSendText && !client.phone.isEmpty {
-            pendingSMSBody = body
-            showSMSComposer = true
-        }
-    }
-
-    private func logReply() {
-        let body = logReplyText.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !body.isEmpty, let conv = conversation, let userId = session.userId else { return }
-        logReplyText = ""
-        showLogReply = false
-        UIImpactFeedbackGenerator(style: .light).impactOccurred()
-        Task {
-            if let saved = await messagesStore.sendMessage(body: body, conversationId: conv.id, userId: userId, direction: .incoming) {
-                messages.append(saved)
+                withAnimation(.easeOut(duration: 0.2)) {
+                    messages.append(saved)
+                }
             }
         }
     }
@@ -195,7 +171,7 @@ struct ClientChatView: View {
                 Text("No messages yet")
                     .font(.system(size: 17, weight: .bold))
                     .foregroundStyle(Color.sweeplyNavy)
-                Text("Send a message — it'll be delivered as an SMS to \(client.name).")
+                Text("Start a conversation with \(client.name).")
                     .font(.system(size: 13))
                     .foregroundStyle(Color.sweeplyTextSub)
                     .multilineTextAlignment(.center)
@@ -236,20 +212,6 @@ struct ClientChatView: View {
 
     private var inputBar: some View {
         HStack(spacing: 10) {
-            Button {
-                showLogReply = true
-            } label: {
-                Text("Log Reply")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(Color.sweeplyTextSub)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 7)
-                    .background(Color.sweeplySurface)
-                    .clipShape(Capsule())
-                    .overlay(Capsule().stroke(Color.sweeplyBorder, lineWidth: 1))
-            }
-            .buttonStyle(.plain)
-
             TextField("Message \(client.name)…", text: $inputText, axis: .vertical)
                 .font(.system(size: 15))
                 .foregroundStyle(Color.sweeplyNavy)
@@ -272,47 +234,6 @@ struct ClientChatView: View {
         .padding(.vertical, 10)
         .background(Color.sweeplyBackground)
         .overlay(Divider(), alignment: .top)
-    }
-
-    // MARK: - Log Reply Sheet
-
-    private var logReplySheet: some View {
-        NavigationStack {
-            VStack(alignment: .leading, spacing: 16) {
-                Text("What did \(client.name) say?")
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundStyle(Color.sweeplyTextSub)
-
-                TextEditor(text: $logReplyText)
-                    .font(.system(size: 15))
-                    .foregroundStyle(Color.sweeplyNavy)
-                    .frame(height: 80)
-                    .padding(10)
-                    .background(Color.sweeplySurface)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
-                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.sweeplyBorder, lineWidth: 1))
-
-                Spacer()
-            }
-            .padding(20)
-            .background(Color.sweeplyBackground.ignoresSafeArea())
-            .navigationTitle("Log Client Reply")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel") { showLogReply = false; logReplyText = "" }
-                        .foregroundStyle(Color.sweeplyTextSub)
-                }
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Save") { logReply() }
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(Color.sweeplyAccent)
-                        .disabled(logReplyText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                }
-            }
-        }
-        .presentationDetents([.height(240)])
-        .presentationDragIndicator(.visible)
     }
 }
 
@@ -351,9 +272,18 @@ private struct ChatBubble: View {
 
             HStack(spacing: 4) {
                 if isOutgoing { Spacer() }
-                Text(isOutgoing ? "Sent via SMS" : "Client replied")
-                    .font(.system(size: 10, weight: .medium))
-                    .foregroundStyle(Color.sweeplyTextSub.opacity(0.6))
+                if isOutgoing {
+                    Image(systemName: message.isRead ? "checkmark.circle.fill" : "checkmark.circle")
+                        .font(.system(size: 10))
+                        .foregroundStyle(message.isRead ? Color.sweeplyAccent : Color.sweeplyTextSub.opacity(0.4))
+                    Text(message.isRead ? "Read" : "Sent")
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundStyle(message.isRead ? Color.sweeplyAccent : Color.sweeplyTextSub.opacity(0.6))
+                } else {
+                    Text("Received")
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundStyle(Color.sweeplyTextSub.opacity(0.6))
+                }
                 Text("·")
                     .font(.system(size: 10))
                     .foregroundStyle(Color.sweeplyTextSub.opacity(0.4))

@@ -4,26 +4,21 @@ struct SplashView: View {
     @State private var contentOpacity: Double = 0
 
     var body: some View {
-        ZStack {
-            Color.white.ignoresSafeArea()
+        GeometryReader { geo in
+            ZStack {
+                Color.white.ignoresSafeArea()
 
-            VStack(spacing: 0) {
-                Spacer()
+                VStack(spacing: 0) {
+                    Spacer(minLength: 0)
 
-                Image("SplashLogo")
-                    .resizable()
-                    .scaledToFit()
-                    .frame(maxWidth: 320)
-                    .padding(.horizontal, 32)
-                    .opacity(contentOpacity)
+                    Image("SplashLogo")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: geo.size.width, height: geo.size.height)
+                        .opacity(contentOpacity)
 
-                Spacer()
-                    .frame(height: 120)
-
-                ProgressView()
-                    .tint(Color.sweeplyAccent)
-                    .opacity(contentOpacity)
-                    .padding(.bottom, 48)
+                    Spacer()
+                }
             }
         }
         .onAppear {

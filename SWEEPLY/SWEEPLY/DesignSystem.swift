@@ -22,6 +22,13 @@ extension Color {
             : UIColor(red: 0.16, green: 0.33, blue: 0.42, alpha: 1.0) // Deep Blue-Gray #28536B
     })
 
+    /// Slightly more saturated cerulean for the “ly” wordmark (matches brand brush) — a notch more vibrant than `sweeplyAccent` without going neon.
+    static let sweeplyWordmarkBlue = Color(uiColor: UIColor { trait in
+        return trait.userInterfaceStyle == .dark
+            ? UIColor(red: 0.50, green: 0.65, blue: 0.80, alpha: 1.0)
+            : UIColor(red: 0.22, green: 0.52, blue: 0.72, alpha: 1.0)
+    })
+
     /// Slate Charcoal — tab bar, avatar fill, dark UI chrome
     static let sweeplyNavy = Color(uiColor: UIColor { trait in
         return trait.userInterfaceStyle == .dark

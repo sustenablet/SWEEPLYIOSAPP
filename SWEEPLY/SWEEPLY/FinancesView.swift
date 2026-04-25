@@ -683,8 +683,6 @@ struct FinancesView: View {
                             MinimalInvoiceRow(invoice: invoice, invoicesStore: invoicesStore) {
                                 selectedInvoiceId = invoice.id
                                 showInvoiceDetail = true
-                            } onMarkPaid: {
-                                markPaidInvoice = invoice
                             }
                             if idx < displayInvoices.count - 1 {
                                 Divider()
@@ -988,8 +986,6 @@ struct MinimalInvoiceRow: View {
     let invoice: Invoice
     let invoicesStore: InvoicesStore
     var onTap: (() -> Void)? = nil
-    var onMarkPaid: (() -> Void)? = nil
-    @State private var isMarkingPaid = false
 
     private var dueDateLabel: String {
         let f = DateFormatter()
@@ -1033,24 +1029,9 @@ struct MinimalInvoiceRow: View {
                     InvoiceStatusBadge(status: invoice.status)
                 }
             }
-            
-            if invoice.status != .paid {
-                Button { onMarkPaid?() } label: {
-                    Image(systemName: "checkmark.circle")
-                        .font(.system(size: 18))
-                        .foregroundStyle(Color.sweeplyTextSub)
-                }
-                .buttonStyle(.plain)
-            }
-
-            Button { onTap?() } label: {
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(Color.sweeplyBorder)
-                    .frame(width: 32, height: 32)
-            }
-            .buttonStyle(.plain)
         }
+        .contentShape(Rectangle())
+        .onTapGesture { onTap?() }
         .padding(.horizontal, 16)
         .padding(.vertical, 14)
     }
@@ -1148,8 +1129,6 @@ struct InvoicesListView: View {
                                 MinimalInvoiceRow(invoice: invoice, invoicesStore: invoicesStore) {
                                     selectedInvoiceId = invoice.id
                                     showInvoiceDetail = true
-                                } onMarkPaid: {
-                                    markPaidInvoice = invoice
                                 }
                                 if idx < filtered.count - 1 {
                                     Divider().padding(.leading, 16)

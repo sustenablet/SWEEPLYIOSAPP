@@ -55,7 +55,6 @@ struct ClientsView: View {
     @Environment(ClientsStore.self) private var clientsStore
     @Environment(JobsStore.self) private var jobsStore
     @Environment(AppSession.self) private var session
-    @Environment(MessagesStore.self) private var messagesStore
 
     @State private var search = ""
     @State private var showAddSheet = false
@@ -74,7 +73,7 @@ struct ClientsView: View {
     @State private var archiveHaptic = false
     @State private var newJobForClient: Client? = nil
     @State private var viewingClientId: UUID? = nil
-    @State private var showConversations = false
+    @State private var showFilters = false
 
     private var displayClients: [Client] {
         let base = clientsStore.clients.filter { $0.isActive || showArchived }
@@ -176,12 +175,6 @@ struct ClientsView: View {
         .task {
             await clientsStore.load(isAuthenticated: session.isAuthenticated)
         }
-        .sheet(isPresented: $showConversations) {
-            ConversationsListView()
-                .environment(messagesStore)
-                .environment(session)
-                .environment(clientsStore)
-        }
         .sheet(isPresented: $showAddSheet) {
             NewClientForm()
         }
@@ -223,9 +216,6 @@ struct ClientsView: View {
                 subtitle: "\(displayClients.count) \(showArchived ? "total" : "active") clients"
             ) {
                 HStack(spacing: 8) {
-                    HeaderIconButton(systemName: "message.fill") {
-                        showConversations = true
-                    }
                     HeaderIconButton(systemName: "line.3.horizontal.decrease.circle") {
                         showFilters = true
                     }

@@ -430,3 +430,8 @@ struct TeamMember: Identifiable, Codable {
         return "$\(Int(payRateAmount)) \(payRateType.displayName.lowercased())"
     }
 }
+
+extension Client: Hashable {
+    static func == (lhs: Client, rhs: Client) -> Bool { lhs.id == rhs.id }
+    func hash(into hasher: inout Hasher) { hasher.combine(id) }
+}

@@ -6,7 +6,15 @@ struct MarkPaidSheet: View {
     
     let invoice: Invoice
     @State private var selectedMethod: PaymentMethod = .cash
+    @State private var paidAmount: Double
+    @State private var isEditingAmount = false
+    @State private var amountText = ""
     @State private var isSaving = false
+    
+    init(invoice: Invoice) {
+        self.invoice = invoice
+        _paidAmount = State(initialValue: invoice.total)
+    }
 
     var body: some View {
         NavigationStack {
@@ -21,10 +29,45 @@ struct MarkPaidSheet: View {
                         Text(invoice.invoiceNumber)
                             .font(.system(size: 13))
                             .foregroundStyle(Color.sweeplyTextSub)
-                        Text(invoice.total.currency)
-                            .font(.system(size: 24, weight: .bold, design: .rounded))
-                            .foregroundStyle(Color.sweeplyAccent)
-                            .padding(.top, 4)
+                        if isEditingAmount {
+                            HStack(spacing: 8) {
+                                Text("$")
+                                    .font(.system(size: 24, weight: .bold, design: .rounded))
+                                    .foregroundStyle(Color.sweeplyAccent)
+                                TextField("0.00", text: $amountText)
+                                    .font(.system(size: 24, weight: .bold, design: .rounded))
+                                    .foregroundStyle(Color.sweeplyAccent)
+                                    .keyboardType(.decimalPad)
+                                    .multilineTextAlignment(.leading)
+                                    .frame(width: 120)
+                                    .onChange(of: amountText) { _, newValue in
+                                        if let value = Double(newValue.replacingOccurrences(of: ",", with: ".")) {
+                                            paidAmount = value
+                                        }
+                                    }
+                                Button {
+                                    amountText = String(format: "%.2f", paidAmount)
+                                } label: {
+                                    Image(systemName: "checkmark.circle.fill")
+                                        .font(.system(size: 22))
+                                        .foregroundStyle(Color.sweeplySuccess)
+                                }
+                            }
+                        } else {
+                            HStack(spacing: 8) {
+                                Text(paidAmount.currency)
+                                    .font(.system(size: 24, weight: .bold, design: .rounded))
+                                    .foregroundStyle(Color.sweeplyAccent)
+                                Button {
+                                    amountText = String(format: "%.2f", paidAmount)
+                                    isEditingAmount = true
+                                } label: {
+                                    Image(systemName: "pencil.circle")
+                                        .font(.system(size: 18))
+                                        .foregroundStyle(Color.sweeplyTextSub)
+                                }
+                            }
+                        }
                     }
                     .padding(.top, 8)
 
@@ -114,7 +157,7 @@ struct MarkPaidSheet: View {
         
         let success = await invoicesStore.markPaid(
             id: invoice.id,
-            amount: invoice.total,
+            amount: paidAmount,
             method: selectedMethod
         )
         

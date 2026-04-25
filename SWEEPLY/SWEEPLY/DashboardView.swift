@@ -505,8 +505,6 @@ private var healthCards: [DashboardHealthCardModel] {
                             DashInvoiceRow(invoice: invoice, invoicesStore: invoicesStore) {
                                 selectedInvoiceId = invoice.id
                                 showInvoiceDetail = true
-                            } onMarkPaid: {
-                                markPaidInvoice = invoice
                             }
                             if index < min(ongoingInvoices.count, 3) - 1 {
                                 Divider()
@@ -595,7 +593,6 @@ struct DashInvoiceRow: View {
     let invoice: Invoice
     let invoicesStore: InvoicesStore
     var onTap: (() -> Void)? = nil
-    var onMarkPaid: (() -> Void)? = nil
     var body: some View {
         HStack {
             VStack(alignment: .leading, spacing: 3) {
@@ -608,18 +605,10 @@ struct DashInvoiceRow: View {
             }
             .onTapGesture { onTap?() }
             Spacer()
-            HStack(spacing: 8) {
-                Text(invoice.total.currency).font(.system(size: 14, weight: .bold, design: .monospaced)).foregroundStyle(Color.sweeplyNavy)
-                if invoice.status != .paid {
-                    Button { onMarkPaid?() } label: {
-                        Text("Mark Paid")
-                    }
-                    .font(.system(size: 11, weight: .semibold)).foregroundStyle(.white)
-                    .padding(.horizontal, 10).padding(.vertical, 5).background(Color.sweeplyNavy).clipShape(Capsule())
-                } else {
-                    Image(systemName: "checkmark.circle.fill")
-                        .foregroundStyle(Color.sweeplySuccess)
-                }
+            Text(invoice.total.currency).font(.system(size: 14, weight: .bold, design: .monospaced)).foregroundStyle(Color.sweeplyNavy)
+            if invoice.status == .paid {
+                Image(systemName: "checkmark.circle.fill")
+                    .foregroundStyle(Color.sweeplySuccess)
             }
         }
         .padding(.vertical, 10)

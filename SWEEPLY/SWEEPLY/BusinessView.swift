@@ -200,7 +200,7 @@ struct BusinessView: View {
         KPIItem(id: "scheduled",      title: "Scheduled",        icon: "calendar",                        isDefault: true),
         KPIItem(id: "outstanding",    title: "Outstanding",      icon: "exclamationmark.triangle.fill",   isDefault: true),
         KPIItem(id: "avgTicket",      title: "Avg Ticket",       icon: "chart.bar.fill",                  isDefault: false),
-        KPIItem(id: "pipelineValue",  title: "Pipeline Value",   icon: "arrow.up.right.circle.fill",      isDefault: false),
+        KPIItem(id: "pipelineValue",  title: "Scheduled Revenue", icon: "arrow.up.right.circle.fill",      isDefault: false),
         KPIItem(id: "recurringJobs",  title: "Recurring Jobs",   icon: "repeat",                          isDefault: false),
     ]
 
@@ -383,9 +383,9 @@ struct BusinessView: View {
                                 )
                                 Divider()
                                 snapshotRow(
-                                    title: "Upcoming Pipeline",
+                                    title: "Scheduled Revenue",
                                     value: upcomingPipelineValue.currency,
-                                    detail: "Scheduled job value",
+                                    detail: "Upcoming jobs value",
                                     accent: .sweeplyNavy
                                 )
                                 Divider()
@@ -894,6 +894,8 @@ private struct KPIBlock: View {
                 Text(value)
                     .font(.system(size: 24, weight: .bold, design: .rounded))
                     .foregroundStyle(Color.sweeplyNavy)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
                 Text(title)
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(Color.sweeplyTextSub)
@@ -901,7 +903,7 @@ private struct KPIBlock: View {
             }
         }
         .padding(16)
-        .frame(width: 140, alignment: .leading)
+        .frame(width: 140, height: 100, alignment: .leading)
         .background(Color.sweeplySurface)
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(Color.sweeplyBorder, lineWidth: 1))

@@ -16,6 +16,21 @@ struct OnboardingView: View {
 
     // Step 2 fields
     @State private var selectedServices: Set<String> = []
+    @State private var customServices: [BusinessService] = []
+    @State private var showCreateService = false
+    @State private var newServiceIsAddon = false
+    @State private var newServiceName = ""
+    @State private var newServicePrice = ""
+
+    private var allMainServices: [BusinessService] {
+        let defaults = AppSettings.defaultServiceCatalog.filter { !$0.isAddon }
+        return defaults + customServices.filter { !$0.isAddon }
+    }
+
+    private var allAddonServices: [BusinessService] {
+        let defaults = AppSettings.defaultServiceCatalog.filter { $0.isAddon }
+        return defaults + customServices.filter { $0.isAddon }
+    }
 
     // Step 3 state
     @State private var notifStatus: UNAuthorizationStatus = .notDetermined
@@ -73,6 +88,25 @@ struct OnboardingView: View {
             }
         }
         .interactiveDismissDisabled(true)
+        .sheet(isPresented: $showCreateService) {
+            CreateServiceSheet(
+                isAddon: newServiceIsAddon,
+                name: $newServiceName,
+                price: $newServicePrice,
+                onSave: {
+                    guard !newServiceName.trimmingCharacters(in: .whitespaces).isEmpty else { return }
+                    let priceValue = Double(newServicePrice.replacingOccurrences(of: "$", with: "").replacingOccurrences(of: ",", with: "")) ?? 0
+                    let newService = BusinessService(
+                        name: newServiceName.trimmingCharacters(in: .whitespaces),
+                        price: priceValue,
+                        isAddon: newServiceIsAddon
+                    )
+                    customServices.append(newService)
+                    showCreateService = false
+                },
+                onCancel: { showCreateService = false }
+            )
+        }
     }
 
     // MARK: - Header Bar
@@ -313,7 +347,7 @@ struct OnboardingView: View {
                         ],
                         spacing: 12
                     ) {
-                        ForEach(mainServices) { service in
+                        ForEach(allMainServices) { service in
                             ServiceGridCard(
                                 service: service,
                                 isSelected: selectedServices.contains(service.name)
@@ -326,6 +360,33 @@ struct OnboardingView: View {
                                 }
                             }
                         }
+
+                        // Add new main service button
+                        Button {
+                            newServiceIsAddon = false
+                            showCreateService = true
+                            newServiceName = ""
+                            newServicePrice = ""
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        } label: {
+                            VStack(spacing: 6) {
+                                Image(systemName: "plus")
+                                    .font(.system(size: 20, weight: .medium))
+                                    .foregroundStyle(Color.sweeplyTextSub)
+                                Text("Add")
+                                    .font(.system(size: 12))
+                                    .foregroundStyle(Color.sweeplyTextSub)
+                            }
+                            .frame(maxWidth: .infinity)
+                            .frame(minHeight: 90)
+                            .background(Color.sweeplySurface)
+                            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                    .stroke(Color.sweeplyBorder, lineWidth: 1)
+                            )
+                        }
+                        .buttonStyle(.plain)
                     }
                     .padding(.horizontal, 24)
                 }
@@ -341,7 +402,7 @@ struct OnboardingView: View {
                         .padding(.horizontal, 24)
 
                     VStack(spacing: 8) {
-                        ForEach(addonServices) { service in
+                        ForEach(allAddonServices) { service in
                             ServiceSelectionCard(
                                 service: service,
                                 isSelected: selectedServices.contains(service.name)
@@ -354,6 +415,34 @@ struct OnboardingView: View {
                                 }
                             }
                         }
+
+                        // Add new addon button
+                        Button {
+                            newServiceIsAddon = true
+                            showCreateService = true
+                            newServiceName = ""
+                            newServicePrice = ""
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        } label: {
+                            HStack(spacing: 12) {
+                                Image(systemName: "plus.circle")
+                                    .font(.system(size: 20))
+                                    .foregroundStyle(Color.sweeplyTextSub)
+                                Text("Add extra service")
+                                    .font(.system(size: 15, weight: .semibold))
+                                    .foregroundStyle(Color.sweeplyTextSub)
+                                Spacer()
+                            }
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 14)
+                            .background(Color.sweeplySurface)
+                            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                    .stroke(Color.sweeplyBorder, lineWidth: 1)
+                            )
+                        }
+                        .buttonStyle(.plain)
                     }
                     .padding(.horizontal, 24)
                 }
@@ -380,7 +469,7 @@ struct OnboardingView: View {
     }
 
     private var servicesStepValid: Bool {
-        mainServices.contains { selectedServices.contains($0.name) }
+        allMainServices.contains { selectedServices.contains($0.name) }
     }
 
     // MARK: - Step 3: All Set
@@ -596,7 +685,7 @@ struct OnboardingView: View {
 
             let chosenServices = AppSettings.defaultServiceCatalog.filter {
                 selectedServices.contains($0.name)
-            }
+            } + customServices.filter { selectedServices.contains($0.name) }
             if !chosenServices.isEmpty {
                 profile.settings.services = chosenServices
             }
@@ -787,4 +876,103 @@ private struct ServiceSelectionCard: View {
     OnboardingView()
         .environment(ProfileStore())
         .environment(AppSession())
+}
+
+// MARK: - Create Service Sheet
+
+private struct CreateServiceSheet: View {
+    let isAddon: Bool
+    @Binding var name: String
+    @Binding var price: String
+    let onSave: () -> Void
+    let onCancel: () -> Void
+
+    @FocusState private var focusedField: PriceField?
+
+    private enum PriceField { case price }
+
+    private var isValid: Bool {
+        !name.trimmingCharacters(in: .whitespaces).isEmpty &&
+        (Double(price.replacingOccurrences(of: "$", with: "").replacingOccurrences(of: ",", with: "")) != nil
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack {
+                Button("Cancel", action: onCancel)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(Color.sweeplyTextSub)
+                Spacer()
+                Text(isAddon ? "Add Extra" : "Add Service")
+                    .font(.system(size: 16, weight: .bold))
+                Spacer()
+                Button("Save", action: onSave)
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundStyle(isValid ? Color.sweeplyAccent : Color.sweeplyTextSub)
+                    .disabled(!isValid)
+            }
+            .padding(20)
+
+            Spacer()
+
+            VStack(spacing: 20) {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Service Name")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(Color.sweeplyTextSub)
+                    TextField("e.g. Carpet Cleaning", text: $name)
+                        .font(.system(size: 17))
+                        .padding(14)
+                        .background(Color.sweeplyBackground)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(Color.sweeplyBorder, lineWidth: 1)
+                        )
+                }
+
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Price")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(Color.sweeplyTextSub)
+                    HStack(spacing: 4) {
+                        Text("$")
+                            .font(.system(size: 20, weight: .semibold))
+                            .foregroundStyle(Color.sweeplyTextSub)
+                        TextField("0", text: $price)
+                            .font(.system(size: 20, weight: .semibold, design: .monospaced))
+                            .keyboardType(.decimalPad)
+                            .focused($focusedField, equals: .price)
+                    }
+                    .padding(14)
+                    .background(Color.sweeplyBackground)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(Color.sweeplyBorder, lineWidth: 1)
+                    )
+                }
+            }
+            .padding(.horizontal, 24)
+
+            Spacer()
+
+            Button(action: onSave) {
+                Text("Add Service")
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(isValid ? Color.sweeplyNavy : Color.sweeplyNavy.opacity(0.3))
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+            }
+            .disabled(!isValid)
+            .padding(.horizontal, 24)
+            .padding(.bottom, 32)
+        }
+        .background(Color.sweeplySurface)
+        .onAppear {
+            focusedField = .price
+        }
+    }
 }
