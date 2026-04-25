@@ -140,7 +140,7 @@ struct ScheduleView: View {
     private var topToolbar: some View {
         HStack(alignment: .center, spacing: 16) {
             VStack(alignment: .leading, spacing: 4) {
-                Text("Schedule")
+                Text("Schedule".translated())
                     .font(.system(size: 28, weight: .semibold))
                     .foregroundStyle(Color.sweeplyNavy)
                     .lineLimit(1)
@@ -534,7 +534,7 @@ struct ScheduleView: View {
                     Text(listJobsForSelectedDay.count == 1 ? "job" : "jobs")
                         .font(.system(size: 13, weight: .semibold))
                         .foregroundStyle(Color.sweeplyTextSub)
-                    Text("on")
+                    Text("on".translated())
                         .font(.system(size: 13))
                         .foregroundStyle(Color.sweeplyTextSub.opacity(0.6))
                     Text(agendaDateLabel(selectedDay))
@@ -574,7 +574,7 @@ struct ScheduleView: View {
                         Text("Nothing on \(agendaDateLabel(selectedDay))")
                             .font(.system(size: 16, weight: .semibold))
                             .foregroundStyle(Color.sweeplyTextSub)
-                        Text("Tap the date to choose another day.")
+                        Text("Tap the date to choose another day.".translated())
                             .font(.system(size: 13))
                             .foregroundStyle(Color.sweeplyTextSub.opacity(0.6))
                     }
@@ -597,7 +597,7 @@ struct ScheduleView: View {
                                     Text(agendaDateLabel(selectedDay))
                                         .font(.system(size: 13, weight: .bold))
                                         .foregroundStyle(Color.sweeplyAccent)
-                                    Text("·")
+                                    Text("·".translated())
                                         .foregroundStyle(Color.sweeplyBorder)
                                     Text(listJobsForSelectedDay.reduce(0) { $0 + $1.price }.currency)
                                         .font(.system(size: 12, weight: .semibold, design: .monospaced))
@@ -627,7 +627,7 @@ struct ScheduleView: View {
                             } header: {
                                 HStack(spacing: 6) {
                                     Rectangle().fill(Color.sweeplyBorder).frame(height: 1)
-                                    Text("INVOICES DUE")
+                                    Text("INVOICES DUE".translated())
                                         .font(.system(size: 10, weight: .bold))
                                         .foregroundStyle(Color.sweeplyTextSub)
                                         .tracking(0.8)
@@ -678,7 +678,7 @@ struct ScheduleView: View {
                             if !dayJobs.isEmpty {
                                 HStack(spacing: 6) {
                                     Rectangle().fill(Color.sweeplyBorder).frame(height: 1)
-                                    Text("INVOICES DUE")
+                                    Text("INVOICES DUE".translated())
                                         .font(.system(size: 10, weight: .bold))
                                         .foregroundStyle(Color.sweeplyTextSub)
                                         .tracking(0.8)
@@ -845,10 +845,10 @@ private extension ScheduleView {
             Image(systemName: "calendar.badge.clock")
                 .font(.system(size: 44))
                 .foregroundStyle(Color.sweeplyTextSub.opacity(0.3))
-            Text("No jobs this day")
+            Text("No jobs this day".translated())
                 .font(.system(size: 16, weight: .semibold))
                 .foregroundStyle(Color.sweeplyTextSub)
-            Text("Tap + to schedule a job.")
+            Text("Tap + to schedule a job.".translated())
                 .font(.system(size: 13))
                 .foregroundStyle(Color.sweeplyTextSub.opacity(0.6))
         }
@@ -964,7 +964,7 @@ private struct TimelineJobBlock: View {
                             Text(timeString(from: job.date))
                                 .font(.system(size: 10, design: .monospaced))
                                 .foregroundStyle(Color.sweeplyTextSub)
-                            Text("·")
+                            Text("·".translated())
                                 .foregroundStyle(Color.sweeplyTextSub.opacity(0.4))
                             Text(job.price.currency)
                                 .font(.system(size: 10, weight: .semibold, design: .monospaced))
@@ -1005,7 +1005,7 @@ private struct ScheduleMonthPicker: View {
                     }
                     dismiss()
                 } label: {
-                    Text("Today")
+                    Text("Today".translated())
                         .font(.system(size: 13, weight: .semibold))
                         .foregroundStyle(.white)
                         .padding(.horizontal, 14)
@@ -1027,7 +1027,7 @@ private struct ScheduleMonthPicker: View {
             Button {
                 dismiss()
             } label: {
-                Text("Done")
+                Text("Done".translated())
                     .font(.system(size: 16, weight: .bold))
                     .foregroundStyle(.white)
                     .frame(maxWidth: .infinity)
@@ -1199,7 +1199,7 @@ private struct ScheduleJobRow: View {
                 Task { await jobsStore.delete(id: job.id) }
             }
         } message: {
-            Text("Are you sure you want to delete this job?")
+            Text("Are you sure you want to delete this job?".translated())
         }
         .alert("Create Invoice?", isPresented: $showInvoicePrompt) {
             Button("Not Now", role: .cancel) {}

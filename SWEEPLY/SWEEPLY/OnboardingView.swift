@@ -122,7 +122,7 @@ struct OnboardingView: View {
                     HStack(spacing: 4) {
                         Image(systemName: "chevron.left")
                             .font(.system(size: 14, weight: .semibold))
-                        Text("Back")
+                        Text("Back".translated())
                             .font(.system(size: 14, weight: .medium))
                     }
                     .foregroundStyle(Color.sweeplyNavy)
@@ -150,7 +150,7 @@ struct OnboardingView: View {
                     UIImpactFeedbackGenerator(style: .light).impactOccurred()
                     advance()
                 } label: {
-                    Text("Skip")
+                    Text("Skip".translated())
                         .font(.system(size: 14, weight: .medium))
                         .foregroundStyle(Color.sweeplyTextSub)
                 }
@@ -176,15 +176,15 @@ struct OnboardingView: View {
 
                     VStack(spacing: 6) {
                         HStack(spacing: 0) {
-                            Text("Sweep")
+                            Text("Sweep".translated())
                                 .foregroundStyle(Color.sweeplyNavy)
-                            Text("ly")
+                            Text("ly".translated())
                                 .foregroundStyle(Color.sweeplyWordmarkBlue)
                         }
                         .font(.system(size: 40, weight: .bold, design: .rounded))
                         .tracking(-1.0)
 
-                        Text("Run your cleaning business.")
+                        Text("Run your cleaning business.".translated())
                             .font(.system(size: 15))
                             .foregroundStyle(Color.sweeplyTextSub)
                     }
@@ -208,7 +208,7 @@ struct OnboardingView: View {
                 UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                 advance()
             } label: {
-                Text("Get started")
+                Text("Get started".translated())
                     .font(.system(size: 17, weight: .bold))
                     .foregroundStyle(.white)
                     .frame(maxWidth: .infinity)
@@ -241,7 +241,7 @@ struct OnboardingView: View {
                         .lineSpacing(2)
                         .tracking(-0.6)
 
-                    Text("This appears on your invoices and client messages.")
+                    Text("This appears on your invoices and client messages.".translated())
                         .font(.system(size: 15))
                         .foregroundStyle(Color.sweeplyTextSub)
                 }
@@ -323,7 +323,7 @@ struct OnboardingView: View {
                         .lineSpacing(2)
                         .tracking(-0.6)
 
-                    Text("Prices are fully editable anytime in Settings.")
+                    Text("Prices are fully editable anytime in Settings.".translated())
                         .font(.system(size: 15))
                         .foregroundStyle(Color.sweeplyTextSub)
                 }
@@ -334,7 +334,7 @@ struct OnboardingView: View {
 
                 // Main services — 2-column grid
                 VStack(alignment: .leading, spacing: 12) {
-                    Text("MAIN SERVICES")
+                    Text("MAIN SERVICES".translated())
                         .font(.system(size: 10, weight: .bold))
                         .foregroundStyle(Color.sweeplyTextSub)
                         .tracking(0.8)
@@ -373,7 +373,7 @@ struct OnboardingView: View {
                                 Image(systemName: "plus")
                                     .font(.system(size: 20, weight: .medium))
                                     .foregroundStyle(Color.sweeplyTextSub)
-                                Text("Add")
+                                Text("Add".translated())
                                     .font(.system(size: 12))
                                     .foregroundStyle(Color.sweeplyTextSub)
                             }
@@ -395,7 +395,7 @@ struct OnboardingView: View {
 
                 // Add-ons — compact list
                 VStack(alignment: .leading, spacing: 12) {
-                    Text("ADD-ONS & EXTRAS")
+                    Text("ADD-ONS & EXTRAS".translated())
                         .font(.system(size: 10, weight: .bold))
                         .foregroundStyle(Color.sweeplyTextSub)
                         .tracking(0.8)
@@ -428,7 +428,7 @@ struct OnboardingView: View {
                                 Image(systemName: "plus.circle")
                                     .font(.system(size: 20))
                                     .foregroundStyle(Color.sweeplyTextSub)
-                                Text("Add extra service")
+                                Text("Add extra service".translated())
                                     .font(.system(size: 15, weight: .semibold))
                                     .foregroundStyle(Color.sweeplyTextSub)
                                 Spacer()
@@ -524,7 +524,7 @@ struct OnboardingView: View {
                 HStack(spacing: 10) {
                     Image(systemName: "exclamationmark.triangle.fill")
                         .font(.system(size: 13))
-                    Text("Couldn't save your info — tap to try again.")
+                    Text("Couldn't save your info — tap to try again.".translated())
                         .font(.system(size: 13, weight: .medium))
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -600,10 +600,10 @@ struct OnboardingView: View {
             }
 
             VStack(alignment: .leading, spacing: 2) {
-                Text("Stay on top of jobs & invoices")
+                Text("Stay on top of jobs & invoices".translated())
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(Color.sweeplyNavy)
-                Text("Get reminders before they're due")
+                Text("Get reminders before they're due".translated())
                     .font(.system(size: 11))
                     .foregroundStyle(Color.sweeplyTextSub)
             }
@@ -615,7 +615,7 @@ struct OnboardingView: View {
                 NotificationManager.shared.requestAuthorization()
                 withAnimation { notifStatus = .authorized }
             } label: {
-                Text("Allow")
+                Text("Allow".translated())
                     .font(.system(size: 12, weight: .bold))
                     .foregroundStyle(.white)
                     .padding(.horizontal, 12)
@@ -917,7 +917,7 @@ private struct CreateServiceSheet: View {
 
             VStack(spacing: 20) {
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("Service Name")
+                    Text("Service Name".translated())
                         .font(.system(size: 12, weight: .semibold))
                         .foregroundStyle(Color.sweeplyTextSub)
                     TextField("e.g. Carpet Cleaning", text: $name)
@@ -932,11 +932,11 @@ private struct CreateServiceSheet: View {
                 }
 
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("Price")
+                    Text("Price".translated())
                         .font(.system(size: 12, weight: .semibold))
                         .foregroundStyle(Color.sweeplyTextSub)
                     HStack(spacing: 4) {
-                        Text("$")
+                        Text("$".translated())
                             .font(.system(size: 20, weight: .semibold))
                             .foregroundStyle(Color.sweeplyTextSub)
                         TextField("0", text: $price)
@@ -958,7 +958,7 @@ private struct CreateServiceSheet: View {
             Spacer()
 
             Button(action: onSave) {
-                Text("Add Service")
+                Text("Add Service".translated())
                     .font(.system(size: 16, weight: .bold))
                     .foregroundStyle(.white)
                     .frame(maxWidth: .infinity)

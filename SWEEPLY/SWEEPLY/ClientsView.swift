@@ -202,7 +202,7 @@ struct ClientsView: View {
                 }
             }
         } message: {
-            Text("This will permanently remove this client. This action cannot be undone.")
+            Text("This will permanently remove this client. This action cannot be undone.".translated())
         }
     }
 
@@ -357,7 +357,7 @@ struct ClientsView: View {
                     editingClient = nil
                     showAddSheet = true
                 } label: {
-                    Text("Add Your First Client")
+                    Text("Add Your First Client".translated())
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundStyle(.white)
                         .padding(.horizontal, 24)
@@ -416,7 +416,7 @@ private struct ClientCard: View {
                             .lineLimit(1)
                             .truncationMode(.tail)
                         if !client.isActive {
-                            Text("ARCHIVED")
+                            Text("ARCHIVED".translated())
                                 .font(.system(size: 8, weight: .bold))
                                 .foregroundStyle(Color.sweeplyTextSub)
                                 .padding(.horizontal, 5)
@@ -430,7 +430,7 @@ private struct ClientCard: View {
                             Text("\(jobCount)")
                                 .font(.system(size: 13, weight: .bold, design: .monospaced))
                                 .foregroundStyle(Color.sweeplyAccent)
-                            Text("jobs")
+                            Text("jobs".translated())
                                 .font(.system(size: 11, weight: .medium))
                                 .foregroundStyle(Color.sweeplyTextSub)
                         }
@@ -565,7 +565,7 @@ private struct ClientFiltersSheet: View {
 
             // Header
             HStack {
-                Text("Filter Clients")
+                Text("Filter Clients".translated())
                     .font(.system(size: 17, weight: .bold))
                     .foregroundStyle(Color.sweeplyNavy)
                 Spacer()
@@ -578,7 +578,7 @@ private struct ClientFiltersSheet: View {
 
             // Status section
             VStack(alignment: .leading, spacing: 12) {
-                Text("STATUS")
+                Text("STATUS".translated())
                     .font(.system(size: 11, weight: .bold))
                     .foregroundStyle(Color.sweeplyTextSub)
                     .tracking(0.8)
@@ -590,7 +590,7 @@ private struct ClientFiltersSheet: View {
                             .font(.system(size: 14))
                             .foregroundStyle(Color.sweeplyTextSub)
                             .frame(width: 20)
-                        Text("Show archived clients")
+                        Text("Show archived clients".translated())
                             .font(.system(size: 15))
                             .foregroundStyle(Color.sweeplyNavy)
                     }
@@ -609,7 +609,7 @@ private struct ClientFiltersSheet: View {
 
             // Sort section
             VStack(alignment: .leading, spacing: 12) {
-                Text("SORT BY")
+                Text("SORT BY".translated())
                     .font(.system(size: 11, weight: .bold))
                     .foregroundStyle(Color.sweeplyTextSub)
                     .tracking(0.8)

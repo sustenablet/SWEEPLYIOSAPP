@@ -26,6 +26,10 @@ struct FinancesView: View {
     @State private var selectedInvoiceId: UUID? = nil
     @State private var showInvoiceDetail = false
     @State private var markPaidInvoice: Invoice? = nil
+    
+    // Interactive chart state
+    @State private var selectedCashflowBar: String? = nil
+    @State private var selectedCashflowValue: Double = 0
 
     // Remove the old showFinanceAI state
 
@@ -62,6 +66,84 @@ struct FinancesView: View {
     private var avgInvoiceValue: Double {
         guard !invoices.isEmpty else { return 0 }
         return invoices.reduce(0) { $0 + $1.total } / Double(invoices.count)
+    }
+    
+    // MARK: - Team Payroll Computed Properties
+    
+    private var totalPayrollLiability: Double {
+        teamStore.members.reduce(0) { $0 + calculateEarningsWithRate(for: $1) }
+    }
+    
+    private func paymentStatus(for member: TeamMember) -> PaymentStatus {
+        let periodStart = Calendar.current.dateInterval(of: .month, for: Date())?.start ?? Date()
+        let payments = memberPayments[member.id] ?? []
+        
+        let thisMonthPayments = payments.filter { $0.paidAt >= periodStart }
+        let owed = calculateEarningsWithRate(for: member)
+        
+        if thisMonthPayments.isEmpty {
+            // Check if it's pay day or past
+            if let payDay = member.payDayOfWeek {
+                let today = Calendar.current.component(.weekday, from: Date())
+                if today >= payDay {
+                    return .due
+                }
+            }
+            return .pending
+        }
+        
+        let paid = thisMonthPayments.reduce(0) { $0 + $1.amount }
+        if paid >= owed {
+            return .paid
+        }
+        return .partial(owed: owed, paid: paid)
+    }
+    
+    private func lastPaymentDate(for member: TeamMember) -> Date? {
+        let payments = memberPayments[member.id] ?? []
+        return payments.sorted { $0.paidAt > $1.paidAt }.first?.paidAt
+    }
+    
+    private func nextPayday(for member: TeamMember) -> String? {
+        guard let payDay = member.payDayOfWeek else { return nil }
+        
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+        let currentWeekday = calendar.component(.weekday, from: today)
+        
+        var daysUntilPayday = payDay - currentWeekday
+        if daysUntilPayday <= 0 { daysUntilPayday += 7 }
+        
+        guard let nextPayday = calendar.date(byAdding: .day, value: daysUntilPayday, to: today) else { return nil }
+        
+        let formatter = DateFormatter()
+        formatter.dateFormat = "EEEE, MMM d"
+        return formatter.string(from: nextPayday)
+    }
+    
+    enum PaymentStatus: Equatable {
+        case paid
+        case pending
+        case due
+        case partial(owed: Double, paid: Double)
+        
+        var displayText: String {
+            switch self {
+            case .paid: return "Paid"
+            case .pending: return "Pending"
+            case .due: return "Pay due"
+            case .partial: return "Partial"
+            }
+        }
+        
+        var color: Color {
+            switch self {
+            case .paid: return Color.sweeplySuccess
+            case .pending: return Color.sweeplyTextSub
+            case .due: return Color.sweeplyDestructive
+            case .partial: return Color.sweeplyWarning
+            }
+        }
     }
     private var sixMonthBarData: [MonthlyBar] {
         let calendar = Calendar.current
@@ -260,7 +342,7 @@ struct FinancesView: View {
             SectionCard {
                 VStack(alignment: .leading, spacing: 16) {
                     VStack(alignment: .leading, spacing: 6) {
-                        Text("Collected")
+                        Text("Collected".translated())
                             .font(.system(size: 12, weight: .medium))
                             .foregroundStyle(Color.sweeplyTextSub)
                         Text(totalCollected.currency)
@@ -299,7 +381,7 @@ struct FinancesView: View {
         SectionCard {
             VStack(alignment: .leading, spacing: 16) {
                 HStack {
-                    Text("Cash flow")
+                    Text("Cash flow".translated())
                         .font(.system(size: 15, weight: .semibold))
                         .foregroundStyle(Color.sweeplyNavy)
                     Spacer()
@@ -312,9 +394,27 @@ struct FinancesView: View {
                     .frame(maxWidth: 160)
                 }
 
-                BarChartView(data: chartData, maxValue: chartMax)
-                    .frame(height: 120)
-                    .animation(.easeInOut(duration: 0.25), value: selectedPeriod)
+                InteractiveBarChartView(
+                    data: chartData,
+                    maxValue: chartMax,
+                    selectedBar: $selectedCashflowBar,
+                    selectedValue: $selectedCashflowValue
+                )
+                .frame(height: 120)
+                .animation(.easeInOut(duration: 0.25), value: selectedPeriod)
+                
+                if let bar = selectedCashflowBar, selectedCashflowValue > 0 {
+                    HStack {
+                        Text(bar)
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(Color.sweeplyNavy)
+                        Spacer()
+                        Text(selectedCashflowValue.currency)
+                            .font(.system(size: 14, weight: .bold, design: .monospaced))
+                            .foregroundStyle(Color.sweeplyAccent)
+                    }
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+                }
             }
         }
     }
@@ -364,10 +464,10 @@ struct FinancesView: View {
             VStack(alignment: .leading, spacing: 16) {
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("This Month")
+                        Text("This Month".translated())
                             .font(.system(size: 12, weight: .medium))
                             .foregroundStyle(Color.sweeplyTextSub)
-                        Text("Profit & Expenses")
+                        Text("Profit & Expenses".translated())
                             .font(.system(size: 15, weight: .semibold))
                             .foregroundStyle(Color.primary)
                     }
@@ -376,7 +476,7 @@ struct FinancesView: View {
                         UIImpactFeedbackGenerator(style: .light).impactOccurred()
                         showExpenses = true
                     } label: {
-                        Text("Add Expense")
+                        Text("Add Expense".translated())
                             .font(.system(size: 12, weight: .semibold))
                             .foregroundStyle(Color.sweeplyNavy)
                             .padding(.horizontal, 12)
@@ -417,7 +517,7 @@ struct FinancesView: View {
                     Divider()
                     
                     HStack {
-                        Text("Expenses")
+                        Text("Expenses".translated())
                             .font(.system(size: 12, weight: .semibold))
                             .foregroundStyle(Color.sweeplyTextSub)
                             .textCase(.uppercase)
@@ -554,88 +654,144 @@ struct FinancesView: View {
 
     private var sixMonthChartSection: some View {
         SectionCard {
-            VStack(alignment: .leading, spacing: 16) {
-                HStack {
-                    Text("6-Month Overview")
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(Color.sweeplyNavy)
-                    Spacer()
-                    HStack(spacing: 12) {
-                        legendDot(color: Color.sweeplyAccent, label: "Collected")
-                        legendDot(color: Color.sweeplyNavy.opacity(0.25), label: "Scheduled")
-                    }
-                }
-
-                Chart(sixMonthBarData) { bar in
-                    BarMark(
-                        x: .value("Month", bar.month),
-                        y: .value("Amount", bar.collected),
-                        width: .ratio(0.38)
-                    )
-                    .foregroundStyle(Color.sweeplyAccent)
-                    .cornerRadius(3)
-                    .offset(x: -8)
-
-                    BarMark(
-                        x: .value("Month", bar.month),
-                        y: .value("Amount", bar.scheduled),
-                        width: .ratio(0.38)
-                    )
-                    .foregroundStyle(Color.sweeplyNavy.opacity(0.25))
-                    .cornerRadius(3)
-                    .offset(x: 8)
-                }
-                .chartXAxis {
-                    AxisMarks(values: .automatic) { _ in
-                        AxisValueLabel()
-                            .font(.system(size: 10, weight: .medium))
-                            .foregroundStyle(Color.sweeplyTextSub)
-                    }
-                }
-                .chartYAxis {
-                    AxisMarks(values: .automatic(desiredCount: 3)) { val in
-                        AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5))
-                            .foregroundStyle(Color.sweeplyBorder)
-                        AxisValueLabel {
-                            if let d = val.as(Double.self) {
-                                Text(d.shortCurrency)
-                                    .font(.system(size: 9, weight: .regular))
-                                    .foregroundStyle(Color.sweeplyTextSub)
-                            }
-                        }
-                    }
-                }
-                .chartLegend(.hidden)
-                .frame(height: 140)
-                .animation(.easeOut(duration: 0.5), value: appeared)
-
+            VStack(alignment: .leading, spacing: 20) {
+                headerRow
+                chartArea
                 if let month = selectedBarMonth,
                    let bar = sixMonthBarData.first(where: { $0.month == month }) {
-                    HStack {
-                        Text(month)
-                            .font(.system(size: 12, weight: .semibold))
-                            .foregroundStyle(Color.sweeplyNavy)
-                        Spacer()
-                        Text("Collected: \(bar.collected.currency)")
-                            .font(.system(size: 11, design: .monospaced))
-                            .foregroundStyle(Color.sweeplyAccent)
-                        Text("·")
-                            .foregroundStyle(Color.sweeplyBorder)
-                        Text("Scheduled: \(bar.scheduled.currency)")
-                            .font(.system(size: 11, design: .monospaced))
-                            .foregroundStyle(Color.sweeplyTextSub)
-                    }
-                    .transition(.opacity.combined(with: .move(edge: .top)))
+                    selectedMonthDetail(bar: bar)
+                        .transition(.opacity.combined(with: .move(edge: .bottom)))
                 }
             }
         }
     }
 
-    private func legendDot(color: Color, label: String) -> some View {
-        HStack(spacing: 4) {
+    private var headerRow: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("6-Month Overview".translated())
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(Color.sweeplyNavy)
+                    Text("Revenue performance".translated())
+                        .font(.system(size: 11))
+                        .foregroundStyle(Color.sweeplyTextSub)
+                }
+                Spacer()
+                summaryStats
+            }
+            HStack(spacing: 16) {
+                legendItem(color: Color.sweeplyAccent, label: "Collected")
+                legendItem(color: Color.sweeplyNavy.opacity(0.28), label: "Outstanding")
+                Spacer()
+                if let trend = monthOverMonthTrend {
+                    trendBadge(trend: trend)
+                }
+            }
+        }
+    }
+
+    private var summaryStats: some View {
+        let total = sixMonthBarData.reduce(0) { $0 + $1.collected }
+        let avg = sixMonthBarData.isEmpty ? 0 : total / Double(sixMonthBarData.count)
+        return VStack(alignment: .trailing, spacing: 2) {
+            Text(total.currency)
+                .font(.system(size: 16, weight: .bold, design: .monospaced))
+                .foregroundStyle(Color.sweeplyNavy)
+            Text("avg \(avg.currency)")
+                .font(.system(size: 10))
+                .foregroundStyle(Color.sweeplyTextSub)
+        }
+    }
+
+    private var monthOverMonthTrend: Double? {
+        guard sixMonthBarData.count >= 2 else { return nil }
+        let last = sixMonthBarData[sixMonthBarData.count - 1].collected
+        let prev = sixMonthBarData[sixMonthBarData.count - 2].collected
+        guard prev > 0 else { return nil }
+        return (last - prev) / prev
+    }
+
+    private func trendBadge(trend: Double) -> some View {
+        let isUp = trend >= 0
+        let color: Color = isUp ? Color.sweeplySuccess : Color.sweeplyDestructive
+        let icon = isUp ? "arrow.up.right" : "arrow.down.right"
+        return HStack(spacing: 3) {
+            Image(systemName: icon)
+                .font(.system(size: 9, weight: .bold))
+            Text(String(format: "%.0f%%", abs(trend * 100)))
+                .font(.system(size: 10, weight: .semibold))
+        }
+        .foregroundStyle(color)
+        .padding(.horizontal, 6)
+        .padding(.vertical, 3)
+        .background(color.opacity(0.12))
+        .clipShape(Capsule())
+    }
+
+    private var chartArea: some View {
+        SixMonthBarChart(
+            data: sixMonthBarData,
+            selectedMonth: $selectedBarMonth
+        )
+        .frame(height: 160)
+        .animation(.easeOut(duration: 0.4), value: appeared)
+    }
+
+    private func selectedMonthDetail(bar: MonthlyBar) -> some View {
+        let total = bar.collected + bar.scheduled
+        let monthTotal = sixMonthBarData.reduce(0) { $0 + $1.collected + $1.scheduled }
+        let share = monthTotal > 0 ? bar.total / monthTotal : 0
+
+        return HStack(spacing: 0) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(bar.month)
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(Color.sweeplyTextSub)
+                Text("Total: \(bar.total.currency)")
+                    .font(.system(size: 13, weight: .semibold, design: .monospaced))
+                    .foregroundStyle(Color.sweeplyNavy)
+            }
+            Spacer()
+            VStack(alignment: .trailing, spacing: 4) {
+                detailRow(label: "Collected", value: bar.collected.currency, color: Color.sweeplyAccent)
+                detailRow(label: "Outstanding", value: bar.scheduled.currency, color: Color.sweeplyNavy.opacity(0.28))
+                if share > 0 {
+                    Text(String(format: "%.0f%% of 6-month total", share * 100))
+                        .font(.system(size: 10))
+                        .foregroundStyle(Color.sweeplyTextSub)
+                }
+            }
+        }
+        .padding(14)
+        .background(Color.sweeplySurface)
+        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .stroke(Color.sweeplyBorder, lineWidth: 1)
+        )
+    }
+
+    private func detailRow(label: String, value: String, color: Color) -> some View {
+        HStack(spacing: 6) {
             Circle()
                 .fill(color)
-                .frame(width: 7, height: 7)
+                .frame(width: 6, height: 6)
+            Text(label)
+                .font(.system(size: 11))
+                .foregroundStyle(Color.sweeplyTextSub)
+            Spacer()
+            Text(value)
+                .font(.system(size: 11, weight: .medium, design: .monospaced))
+                .foregroundStyle(Color.sweeplyNavy)
+        }
+    }
+
+    private func legendItem(color: Color, label: String) -> some View {
+        HStack(spacing: 5) {
+            RoundedRectangle(cornerRadius: 2, style: .continuous)
+                .fill(color)
+                .frame(width: 10, height: 10)
             Text(label)
                 .font(.system(size: 10, weight: .medium))
                 .foregroundStyle(Color.sweeplyTextSub)
@@ -655,7 +811,7 @@ struct FinancesView: View {
     private var invoicesBlock: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {
-                Text("Invoices")
+                Text("Invoices".translated())
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundStyle(Color.sweeplyNavy)
                 Spacer()
@@ -758,18 +914,44 @@ struct FinancesView: View {
     @State private var selectedPaymentMember: TeamMember?
     @State private var paymentAmount = ""
     @State private var paymentNotes = ""
-
+    
+    // Track payments per member
+    @State private var memberPayments: [UUID: [TeamPayment]] = [:]
+    
     private var teamPayrollSection: some View {
         SectionCard {
-            VStack(alignment: .leading, spacing: 14) {
-                CardHeader(title: "Team Payroll", subtitle: "This month's earnings", action: nil)
+            VStack(alignment: .leading, spacing: 16) {
+                // Header with summary
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Team Payroll".translated())
+                                .font(.system(size: 15, weight: .semibold))
+                                .foregroundStyle(Color.sweeplyNavy)
+                            Text("This month".translated())
+                                .font(.system(size: 12))
+                                .foregroundStyle(Color.sweeplyTextSub)
+                        }
+                        Spacer()
+                        VStack(alignment: .trailing, spacing: 2) {
+                            Text(totalPayrollLiability.currency)
+                                .font(.system(size: 18, weight: .bold, design: .monospaced))
+                                .foregroundStyle(Color.sweeplyNavy)
+                            Text("\(teamStore.members.count) member\(teamStore.members.count == 1 ? "" : "s")")
+                                .font(.system(size: 11))
+                                .foregroundStyle(Color.sweeplyTextSub)
+                        }
+                    }
+                }
+
+                Divider()
 
                 if teamStore.members.isEmpty {
                     VStack(spacing: 8) {
                         Image(systemName: "person.2")
                             .font(.system(size: 32))
                             .foregroundStyle(Color.sweeplyTextSub.opacity(0.4))
-                        Text("No team members yet")
+                        Text("No team members yet".translated())
                             .font(.system(size: 14))
                             .foregroundStyle(Color.sweeplyTextSub)
                     }
@@ -812,72 +994,128 @@ struct FinancesView: View {
         let rateAmount = calculateEarningsWithRate(for: member)
         let nameInitials = member.name.split(separator: " ").compactMap { $0.first }.map { String($0) }.joined()
         let initStr = String(nameInitials.prefix(2))
+        let status = paymentStatus(for: member)
+        let lastPaid = lastPaymentDate(for: member)
+        let nextPay = nextPayday(for: member)
 
-        return HStack(spacing: 12) {
-            ZStack {
-                Circle()
-                    .fill(Color.sweeplyNavy)
-                    .frame(width: 36, height: 36)
-                Text(initStr.isEmpty ? "?" : initStr)
-                    .font(.system(size: 13, weight: .bold))
-                    .foregroundStyle(.white)
-            }
+        return VStack(spacing: 8) {
+            HStack(spacing: 12) {
+                ZStack {
+                    Circle()
+                        .fill(Color.sweeplyNavy)
+                        .frame(width: 36, height: 36)
+                    Text(initStr.isEmpty ? "?" : initStr)
+                        .font(.system(size: 13, weight: .bold))
+                        .foregroundStyle(.white)
+                }
 
-            VStack(alignment: .leading, spacing: 2) {
-                Text(member.name)
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(Color.primary)
-                if member.payRateEnabled && member.payRateAmount > 0 {
-                    Text(member.payRateDescription)
-                        .font(.system(size: 11))
-                        .foregroundStyle(Color.sweeplyAccent)
-                } else {
-                    Text("Rate not set")
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(spacing: 6) {
+                        Text(member.name)
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(Color.primary)
+                        statusBadge(for: status)
+                    }
+                    if member.payRateEnabled && member.payRateAmount > 0 {
+                        Text(member.payRateDescription)
+                            .font(.system(size: 11))
+                            .foregroundStyle(Color.sweeplyAccent)
+                    } else {
+                        Text("Rate not set".translated())
+                            .font(.system(size: 11))
+                            .foregroundStyle(Color.sweeplyTextSub)
+                    }
+                }
+
+                Spacer()
+
+                VStack(alignment: .trailing, spacing: 2) {
+                    if member.payRateEnabled && member.payRateAmount > 0 && grossAmount > rateAmount {
+                        HStack(spacing: 4) {
+                            Text(rateAmount.currency)
+                                .font(.system(size: 13, weight: .medium))
+                                .foregroundStyle(Color.sweeplyTextSub)
+                            Image(systemName: "arrow.right")
+                                .font(.system(size: 9))
+                            Text(grossAmount.currency)
+                                .font(.system(size: 13, weight: .bold, design: .monospaced))
+                                .foregroundStyle(Color.sweeplyNavy)
+                        }
+                    } else {
+                        Text(rateAmount.currency)
+                            .font(.system(size: 15, weight: .bold, design: .monospaced))
+                            .foregroundStyle(Color.sweeplyNavy)
+                    }
+                    Text("\(jobs.count) job\(jobs.count == 1 ? "" : "s")")
                         .font(.system(size: 11))
                         .foregroundStyle(Color.sweeplyTextSub)
                 }
+
+                payButton(for: member, status: status, rateAmount: rateAmount)
             }
 
-            Spacer()
-
-            VStack(alignment: .trailing, spacing: 2) {
-                if member.payRateEnabled && member.payRateAmount > 0 && grossAmount > rateAmount {
-                    HStack(spacing: 4) {
-                        Text(rateAmount.currency)
-                            .font(.system(size: 13, weight: .medium))
-                            .foregroundStyle(Color.sweeplyTextSub)
-                        Image(systemName: "arrow.right")
-                            .font(.system(size: 9))
-                        Text(grossAmount.currency)
-                            .font(.system(size: 13, weight: .bold, design: .monospaced))
-                            .foregroundStyle(Color.sweeplyNavy)
+            if status == .due || (status != .paid && status != .pending) {
+                HStack(spacing: 8) {
+                    if status == .due {
+                        Label("Payment due", systemImage: "exclamationmark.circle.fill")
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundStyle(Color.sweeplyDestructive)
                     }
-                } else {
-                    Text(grossAmount.currency)
-                        .font(.system(size: 15, weight: .bold, design: .monospaced))
-                        .foregroundStyle(Color.sweeplyNavy)
+                    if let next = nextPay {
+                        Label(next, systemImage: "calendar")
+                            .font(.system(size: 11))
+                            .foregroundStyle(Color.sweeplyTextSub)
+                    }
+                    if let last = lastPaid {
+                        Label(formatLastPaid(last), systemImage: "checkmark.circle")
+                            .font(.system(size: 11))
+                            .foregroundStyle(Color.sweeplySuccess)
+                    }
+                    Spacer()
                 }
-                Text("\(jobs.count) job\(jobs.count == 1 ? "" : "s")")
-                    .font(.system(size: 11))
-                    .foregroundStyle(Color.sweeplyTextSub)
+                .padding(.top, 2)
             }
-
-            Button {
-                selectedPaymentMember = member
-                paymentAmount = "\(Int(rateAmount))"
-                showPaymentSheet = true
-            } label: {
-                Text("Pay")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 6)
-                    .background(Color.sweeplyNavy)
-                    .clipShape(Capsule())
-            }
-            .buttonStyle(.plain)
         }
         .padding(.vertical, 12)
+    }
+
+    private func statusBadge(for status: PaymentStatus) -> some View {
+        Text(status.displayText)
+            .font(.system(size: 9, weight: .semibold))
+            .foregroundStyle(.white)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2)
+            .background(status.color)
+            .clipShape(Capsule())
+    }
+
+private func payButton(for member: TeamMember, status: PaymentStatus, rateAmount: Double) -> some View {
+        Button {
+            selectedPaymentMember = member
+            paymentAmount = "\(Int(rateAmount))"
+            showPaymentSheet = true
+        } label: {
+            HStack(spacing: 4) {
+                if status == .due {
+                    Image(systemName: "exclamationmark")
+                        .font(.system(size: 10, weight: .bold))
+                }
+                Text("Pay".translated())
+                    .font(.system(size: 12, weight: .semibold))
+            }
+            .foregroundStyle(.white)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+            .background(status == .due ? Color.sweeplyDestructive : Color.sweeplyNavy)
+            .clipShape(Capsule())
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func formatLastPaid(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "Last paid MMM d"
+        return formatter.string(from: date)
     }
 
     private func completedJobsThisMonth(for member: TeamMember) -> [Job] {
@@ -937,46 +1175,202 @@ private struct MonthlyBar: Identifiable {
     let month: String
     let collected: Double
     let scheduled: Double
-}
-
-private extension Double {
+    var total: Double { collected + scheduled }
+  }
+  
+  private extension Double {
     var shortCurrency: String {
-        if self >= 1000 { return "$\(String(format: "%.1f", self / 1000))k" }
-        return "$\(Int(self))"
+      if self >= 1000 { return "$\(String(format: "%.1f", self / 1000))k" }
+      return "$\(Int(self))"
     }
-}
-
-// MARK: - Bar chart (monochrome)
-
-private struct BarChartView: View {
+  }
+  
+  // MARK: - Interactive Bar chart (cashflow)
+  
+  private struct InteractiveBarChartView: View {
     let data: [WeeklyRevenue]
     let maxValue: Double
-
+    @Binding var selectedBar: String?
+    @Binding var selectedValue: Double
+    
     private let barColor = Color.sweeplyNavy.opacity(0.78)
+    private let selectedBarColor = Color.sweeplyAccent
     private let emptyBar = Color.sweeplyBorder.opacity(0.85)
+    
+    var body: some View {
+      GeometryReader { geo in
+        let labelHeight: CGFloat = 16
+        HStack(alignment: .bottom, spacing: 8) {
+          ForEach(data) { entry in
+            let barHeight = entry.amount > 0
+              ? max(4, CGFloat(entry.amount / maxValue) * (geo.size.height - labelHeight - 6))
+              : 3
+            let isSelected = selectedBar == entry.day
+            
+            VStack(spacing: 6) {
+              Spacer(minLength: 0)
+              Button {
+                if entry.amount > 0 {
+                  UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                  withAnimation(.easeInOut(duration: 0.15)) {
+                    if isSelected {
+                      selectedBar = nil
+                      selectedValue = 0
+                    } else {
+                      selectedBar = entry.day
+                      selectedValue = entry.amount
+                    }
+                  }
+                }
+              } label: {
+                RoundedRectangle(cornerRadius: 3, style: .continuous)
+                  .fill(isSelected ? selectedBarColor : (entry.amount > 0 ? barColor : emptyBar))
+                  .frame(height: barHeight)
+                  .overlay(
+                    RoundedRectangle(cornerRadius: 3, style: .continuous)
+                      .stroke(isSelected ? Color.sweeplyAccent : Color.clear, lineWidth: 2)
+                  )
+              }
+              .buttonStyle(.plain)
+              
+              Text(entry.day)
+                .font(.system(size: 10, weight: selectedBar == entry.day ? .semibold : .medium))
+                .foregroundStyle(selectedBar == entry.day ? Color.sweeplyNavy : Color.sweeplyTextSub)
+                .frame(height: labelHeight)
+            }
+          }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+      }
+    }
+  }
+  
+  // MARK: - Interactive grouped bar chart (6-month)
+  
+  private struct SixMonthBarChart: View {
+    let data: [MonthlyBar]
+    @Binding var selectedMonth: String?
+
+    private let collectedColor = Color.sweeplyAccent
+    private let outstandingColor = Color.sweeplyNavy.opacity(0.28)
+    private let gridColor = Color.sweeplyBorder.opacity(0.6)
+    private let labelColor = Color.sweeplyTextSub
 
     var body: some View {
         GeometryReader { geo in
-            let labelHeight: CGFloat = 16
-            HStack(alignment: .bottom, spacing: 8) {
-                ForEach(data) { entry in
-                    let barHeight = entry.amount > 0
-                        ? max(4, CGFloat(entry.amount / maxValue) * (geo.size.height - labelHeight - 6))
-                        : 3
-                    VStack(spacing: 6) {
-                        Spacer(minLength: 0)
-                        RoundedRectangle(cornerRadius: 3, style: .continuous)
-                            .fill(entry.amount > 0 ? barColor : emptyBar)
-                            .frame(height: barHeight)
-                        Text(entry.day)
-                            .font(.system(size: 10, weight: .medium))
-                            .foregroundStyle(Color.sweeplyTextSub)
-                            .frame(height: labelHeight)
-                    }
-                }
+            let availableHeight = geo.size.height - 28
+            let maxValue = data.map { $0.total }.max() ?? 1
+            let yLabels = buildYAxisLabels(maxValue: maxValue, height: availableHeight)
+
+            ZStack(alignment: .bottom) {
+                gridLines(height: availableHeight, labels: yLabels)
+                bars(maxValue: maxValue, availableHeight: availableHeight)
+                xLabels(height: availableHeight)
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
         }
+    }
+
+    @ViewBuilder
+    private func gridLines(height: CGFloat, labels: [(value: Double, y: CGFloat)]) -> some View {
+        ForEach(labels, id: \.value) { label in
+            HStack(spacing: 6) {
+                Text(formatCompact(value: label.value))
+                    .font(.system(size: 8, weight: .medium, design: .monospaced))
+                    .foregroundStyle(labelColor)
+                    .frame(width: 36, alignment: .trailing)
+                Rectangle()
+                    .fill(gridColor)
+                    .frame(height: 1)
+                Spacer()
+            }
+            .frame(height: 1, alignment: .bottom)
+            .offset(y: label.y)
+        }
+    }
+
+    @ViewBuilder
+    private func bars(maxValue: Double, availableHeight: CGFloat) -> some View {
+        let barSpacing: CGFloat = 12
+        let pairWidth: CGFloat = 22
+
+        HStack(alignment: .bottom, spacing: barSpacing) {
+            ForEach(data) { bar in
+                let isSelected = selectedMonth == bar.month
+                let collectedH = maxValue > 0 ? max(3, CGFloat(bar.collected / maxValue) * availableHeight) : 3
+                let outstandingH = maxValue > 0 ? max(3, CGFloat(bar.scheduled / maxValue) * availableHeight) : 3
+                let pairTotal = collectedH + outstandingH
+
+                VStack(spacing: 2) {
+                    Spacer()
+                    Button {
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        withAnimation(.easeInOut(duration: 0.15)) {
+                            selectedMonth = isSelected ? nil : bar.month
+                        }
+                    } label: {
+                        VStack(alignment: .trailing, spacing: 2) {
+                            if isSelected, bar.total > 0 {
+                                Text(formatCompact(value: bar.total))
+                                    .font(.system(size: 8, weight: .semibold, design: .monospaced))
+                                    .foregroundStyle(collectedColor)
+                                    .offset(y: -3)
+                            }
+                            HStack(alignment: .bottom, spacing: 3) {
+                                VStack(spacing: 1) {
+                                    RoundedRectangle(cornerRadius: 3, style: .continuous)
+                                        .fill(collectedColor)
+                                        .frame(width: 10, height: collectedH)
+                                        .opacity(isSelected ? 1 : 0.85)
+                                    RoundedRectangle(cornerRadius: 3, style: .continuous)
+                                        .fill(outstandingColor)
+                                        .frame(width: 10, height: outstandingH)
+                                        .opacity(isSelected ? 1 : 0.85)
+                                }
+                            }
+                        }
+                    }
+                    .buttonStyle(.plain)
+                }
+                .frame(maxHeight: .infinity, alignment: .bottom)
+            }
+        }
+        .padding(.leading, 44)
+    }
+
+    @ViewBuilder
+    private func xLabels(height: CGFloat) -> some View {
+        let barSpacing: CGFloat = 12
+        let pairWidth: CGFloat = 22
+
+        HStack(alignment: .top, spacing: barSpacing) {
+            ForEach(data) { bar in
+                let isSelected = selectedMonth == bar.month
+                Text(bar.month)
+                    .font(.system(size: 10, weight: isSelected ? .semibold : .regular))
+                    .foregroundStyle(isSelected ? Color.sweeplyNavy : labelColor)
+                    .frame(width: 22, alignment: .center)
+            }
+        }
+        .padding(.leading, 44 + pairWidth / 2)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .offset(y: height + 4)
+    }
+
+    private func buildYAxisLabels(maxValue: Double, height: CGFloat) -> [(value: Double, y: CGFloat)] {
+        guard maxValue > 0 else { return [] }
+        let steps = 4
+        return (0...steps).map { i in
+            let value = maxValue * Double(i) / Double(steps)
+            let y = height - (CGFloat(value) / CGFloat(maxValue) * height)
+            return (value: value, y: y)
+        }
+    }
+
+    private func formatCompact(value: Double) -> String {
+        if value >= 1000 {
+            return "$\(String(format: "%.0f", value / 1000))k"
+        }
+        return "$\(String(format: "%.0f", value))"
     }
 }
 
@@ -1020,7 +1414,7 @@ struct MinimalInvoiceRow: View {
                     Text(invoice.invoiceNumber)
                         .font(.system(size: 11, weight: .regular, design: .monospaced))
                         .foregroundStyle(Color.sweeplyTextSub)
-                    Text("·")
+                    Text("·".translated())
                         .foregroundStyle(Color.sweeplyBorder)
                     Text(dueDateLabel)
                         .font(.system(size: 11, weight: .regular))
@@ -1287,12 +1681,12 @@ private struct PaymentSheet: View {
 
                 VStack(spacing: 20) {
                     VStack(alignment: .leading, spacing: 6) {
-                        Text("Payment Amount")
+                        Text("Payment Amount".translated())
                             .font(.system(size: 12, weight: .medium))
                             .foregroundStyle(Color.sweeplyTextSub)
                         
                         HStack {
-                            Text("$")
+                            Text("$".translated())
                                 .font(.system(size: 24, weight: .bold))
                                 .foregroundStyle(Color.sweeplyNavy)
                             
@@ -1306,7 +1700,7 @@ private struct PaymentSheet: View {
                     }
 
                     VStack(alignment: .leading, spacing: 6) {
-                        Text("Notes (optional)")
+                        Text("Notes (optional)".translated())
                             .font(.system(size: 12, weight: .medium))
                             .foregroundStyle(Color.sweeplyTextSub)
                         
@@ -1329,7 +1723,7 @@ private struct PaymentSheet: View {
                                 ProgressView()
                                     .tint(.white)
                             } else {
-                                Text("Record Payment")
+                                Text("Record Payment".translated())
                                     .font(.system(size: 16, weight: .semibold))
                             }
                         }

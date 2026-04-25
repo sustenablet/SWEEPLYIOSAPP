@@ -354,7 +354,7 @@ private var healthCards: [DashboardHealthCardModel] {
 
     private var revenueHero: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("REVENUE THIS WEEK")
+            Text("REVENUE THIS WEEK".translated())
                 .font(.system(size: 11, weight: .semibold))
                 .foregroundStyle(Color.sweeplyTextSub)
                 .tracking(0.8)
@@ -369,7 +369,7 @@ private var healthCards: [DashboardHealthCardModel] {
                     .font(.system(size: 13))
                     .foregroundStyle(Color.sweeplyTextSub)
             } else {
-                Text("No completed jobs yet this week")
+                Text("No completed jobs yet this week".translated())
                     .font(.system(size: 13))
                     .foregroundStyle(Color.sweeplyTextSub)
             }
@@ -432,7 +432,7 @@ private var healthCards: [DashboardHealthCardModel] {
                         Image(systemName: "calendar.badge.exclamationmark")
                             .font(.system(size: 32))
                             .foregroundStyle(Color.sweeplyTextSub.opacity(0.4))
-                        Text("No jobs scheduled for today")
+                        Text("No jobs scheduled for today".translated())
                             .font(.system(size: 14))
                             .foregroundStyle(Color.sweeplyTextSub)
                     }
@@ -493,7 +493,7 @@ private var healthCards: [DashboardHealthCardModel] {
                         Image(systemName: "checkmark.seal.fill")
                             .font(.system(size: 32))
                             .foregroundStyle(Color.sweeplyAccent.opacity(0.4))
-                        Text("All caught up!")
+                        Text("All caught up!".translated())
                             .font(.system(size: 14))
                             .foregroundStyle(Color.sweeplyTextSub)
                     }
@@ -720,7 +720,7 @@ struct DashboardPlaybook: View {
             VStack(alignment: .leading, spacing: 16) {
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Get started")
+                        Text("Get started".translated())
                             .font(.system(size: 15, weight: .semibold))
                             .foregroundStyle(Color.sweeplyNavy)
                         Text("\(doneCount) of 4 complete")
@@ -739,7 +739,7 @@ struct DashboardPlaybook: View {
                     .accessibilityLabel("Collapse get started")
                 }
 
-                Text("Finish every step before you can remove this section.")
+                Text("Finish every step before you can remove this section.".translated())
                     .font(.system(size: 11, weight: .medium))
                     .foregroundStyle(Color.sweeplyTextSub.opacity(0.9))
 
@@ -786,7 +786,7 @@ struct DashboardPlaybook: View {
                     .font(.system(size: 16, weight: .medium))
                     .foregroundStyle(Color.sweeplyAccent)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Get started")
+                    Text("Get started".translated())
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundStyle(Color.primary)
                     Text("\(doneCount) of 4 complete")
@@ -816,10 +816,10 @@ struct DashboardPlaybook: View {
             VStack(alignment: .leading, spacing: 14) {
                 HStack {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("You're all set")
+                        Text("You're all set".translated())
                             .font(.system(size: 15, weight: .semibold))
                             .foregroundStyle(Color.sweeplyNavy)
-                        Text("Every onboarding step is complete.")
+                        Text("Every onboarding step is complete.".translated())
                             .font(.system(size: 12))
                             .foregroundStyle(Color.sweeplyTextSub)
                     }
@@ -841,7 +841,7 @@ struct DashboardPlaybook: View {
                     Image(systemName: "checkmark.circle.fill")
                         .font(.system(size: 20))
                         .foregroundStyle(Color.sweeplySuccess)
-                    Text("4 of 4 complete")
+                    Text("4 of 4 complete".translated())
                         .font(.system(size: 13, weight: .medium))
                         .foregroundStyle(Color.sweeplyTextSub)
                 }
@@ -969,7 +969,7 @@ struct ProfileMenuView: View {
                 HStack(spacing: 12) {
                     Image(systemName: "rectangle.portrait.and.arrow.right")
                         .font(.system(size: 14, weight: .medium))
-                    Text("Sign Out")
+                    Text("Sign Out".translated())
                         .font(.system(size: 15, weight: .semibold))
                     Spacer()
                 }

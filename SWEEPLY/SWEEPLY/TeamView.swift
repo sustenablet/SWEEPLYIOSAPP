@@ -83,7 +83,7 @@ struct TeamView: View {
                         HStack(spacing: 4) {
                             Image(systemName: "person.badge.plus")
                                 .font(.system(size: 14, weight: .semibold))
-                            Text("Invite")
+                            Text("Invite".translated())
                                 .font(.system(size: 14, weight: .semibold))
                         }
                         .foregroundStyle(Color.sweeplyNavy)
@@ -114,7 +114,7 @@ struct TeamView: View {
                 }
                 Button("Cancel", role: .cancel) { deleteTarget = nil }
             } message: {
-                Text("This will remove them from your roster. You can invite them again anytime.")
+                Text("This will remove them from your roster. You can invite them again anytime.".translated())
             }
         }
     }
@@ -126,7 +126,7 @@ struct TeamView: View {
 
     private var pendingInvitesSection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("TEAM INVITES")
+            Text("TEAM INVITES".translated())
                 .font(.system(size: 11, weight: .semibold))
                 .foregroundStyle(Color.sweeplyTextSub)
                 .tracking(0.5)
@@ -275,7 +275,7 @@ struct TeamView: View {
                      : (profileStore.profile?.businessName ?? ""))
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundStyle(Color.primary)
-                Text("Account owner")
+                Text("Account owner".translated())
                     .font(.system(size: 12))
                     .foregroundStyle(Color.sweeplyTextSub)
             }
@@ -349,10 +349,10 @@ struct TeamView: View {
             Image(systemName: "person.badge.plus")
                 .font(.system(size: 30, weight: .light))
                 .foregroundStyle(Color.sweeplyTextSub.opacity(0.4))
-            Text("No cleaners yet")
+            Text("No cleaners yet".translated())
                 .font(.system(size: 14, weight: .semibold))
                 .foregroundStyle(Color.sweeplyTextSub)
-            Text("Tap Invite to add your first cleaner")
+            Text("Tap Invite to add your first cleaner".translated())
                 .font(.system(size: 12))
                 .foregroundStyle(Color.sweeplyTextSub.opacity(0.6))
         }
@@ -535,7 +535,7 @@ struct MemberDetailView: View {
                     }
                 }
             } message: {
-                Text("You can invite them again anytime.")
+                Text("You can invite them again anytime.".translated())
             }
             .sheet(isPresented: $showShareSheet) {
                 ShareSheet(activityItems: [inviteMessage])
@@ -655,12 +655,12 @@ struct MemberDetailView: View {
                     .font(.system(size: 14, weight: .medium))
                     .foregroundStyle(Color.sweeplyAccent)
                     .frame(width: 24)
-                Text("Role")
+                Text("Role".translated())
                     .font(.system(size: 13, weight: .medium))
                     .foregroundStyle(Color.sweeplyTextSub)
                     .frame(width: 52, alignment: .leading)
                 Spacer()
-                Text("Cleaner")
+                Text("Cleaner".translated())
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(.white)
                     .padding(.horizontal, 10)
@@ -679,7 +679,7 @@ struct MemberDetailView: View {
                         if isSavingContact {
                             ProgressView().tint(.white).scaleEffect(0.85)
                         } else {
-                            Text("Save Contact Info")
+                            Text("Save Contact Info".translated())
                                 .font(.system(size: 15, weight: .semibold))
                         }
                     }
@@ -752,11 +752,11 @@ struct MemberDetailView: View {
         VStack(alignment: .leading, spacing: 0) {
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("THIS MONTH")
+                    Text("THIS MONTH".translated())
                         .font(.system(size: 10, weight: .bold))
                         .foregroundStyle(Color.sweeplyTextSub)
                         .tracking(0.8)
-                    Text("Performance Overview")
+                    Text("Performance Overview".translated())
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundStyle(Color.sweeplyNavy)
                 }
@@ -809,11 +809,11 @@ struct MemberDetailView: View {
             // Header
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("PAY SETUP")
+                    Text("PAY SETUP".translated())
                         .font(.system(size: 10, weight: .bold))
                         .foregroundStyle(Color.sweeplyTextSub)
                         .tracking(0.8)
-                    Text("How you pay this cleaner")
+                    Text("How you pay this cleaner".translated())
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundStyle(Color.sweeplyNavy)
                 }
@@ -830,7 +830,7 @@ struct MemberDetailView: View {
 
                 // Pay type selector (Per Job removed)
                 VStack(alignment: .leading, spacing: 10) {
-                    Text("Pay Type")
+                    Text("Pay Type".translated())
                         .font(.system(size: 12, weight: .semibold))
                         .foregroundStyle(Color.sweeplyTextSub)
 
@@ -861,7 +861,7 @@ struct MemberDetailView: View {
                     Divider()
 
                     HStack(spacing: 10) {
-                        Text("$")
+                        Text("$".translated())
                             .font(.system(size: 18, weight: .bold, design: .monospaced))
                             .foregroundStyle(Color.sweeplyNavy)
                         TextField("0.00", text: $localRateAmountText)
@@ -882,7 +882,7 @@ struct MemberDetailView: View {
                     Divider()
 
                     VStack(alignment: .leading, spacing: 10) {
-                        Text("Pay Day")
+                        Text("Pay Day".translated())
                             .font(.system(size: 12, weight: .semibold))
                             .foregroundStyle(Color.sweeplyTextSub)
 
@@ -920,7 +920,7 @@ struct MemberDetailView: View {
 
                 // Pay method
                 VStack(alignment: .leading, spacing: 10) {
-                    Text("Pay Via")
+                    Text("Pay Via".translated())
                         .font(.system(size: 12, weight: .semibold))
                         .foregroundStyle(Color.sweeplyTextSub)
 
@@ -979,11 +979,11 @@ struct MemberDetailView: View {
                                 HStack(spacing: 6) {
                                     Image(systemName: "checkmark")
                                         .font(.system(size: 14, weight: .semibold))
-                                    Text("Saved")
+                                    Text("Saved".translated())
                                         .font(.system(size: 15, weight: .semibold))
                                 }
                             } else {
-                                Text("Save Pay Setup")
+                                Text("Save Pay Setup".translated())
                                     .font(.system(size: 15, weight: .semibold))
                             }
                         }
@@ -1010,11 +1010,11 @@ struct MemberDetailView: View {
             // Header
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("PAYMENT HISTORY")
+                    Text("PAYMENT HISTORY".translated())
                         .font(.system(size: 10, weight: .bold))
                         .foregroundStyle(Color.sweeplyTextSub)
                         .tracking(0.8)
-                    Text("Payments you've recorded")
+                    Text("Payments you've recorded".translated())
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundStyle(Color.sweeplyNavy)
                 }
@@ -1026,7 +1026,7 @@ struct MemberDetailView: View {
                     HStack(spacing: 4) {
                         Image(systemName: "plus")
                             .font(.system(size: 12, weight: .bold))
-                        Text("Record")
+                        Text("Record".translated())
                             .font(.system(size: 13, weight: .semibold))
                     }
                     .foregroundStyle(.white)
@@ -1051,7 +1051,7 @@ struct MemberDetailView: View {
                     Image(systemName: "dollarsign.circle")
                         .font(.system(size: 28))
                         .foregroundStyle(Color.sweeplyTextSub.opacity(0.35))
-                    Text("No payments recorded yet")
+                    Text("No payments recorded yet".translated())
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundStyle(Color.sweeplyTextSub)
                     Text("Tap Record to log a payment to \(member.name.components(separatedBy: " ").first ?? member.name)")
@@ -1198,7 +1198,7 @@ struct MemberDetailView: View {
         } label: {
             HStack(spacing: 8) {
                 Image(systemName: "person.badge.minus")
-                Text("Remove from Team")
+                Text("Remove from Team".translated())
             }
             .font(.system(size: 15, weight: .semibold))
             .foregroundStyle(Color.sweeplyDestructive)
@@ -1368,7 +1368,7 @@ struct RecordPaymentSheet: View {
 
             // Header
             VStack(spacing: 4) {
-                Text("Record Payment")
+                Text("Record Payment".translated())
                     .font(.system(size: 20, weight: .bold))
                     .foregroundStyle(Color.sweeplyNavy)
                 Text("To \(member.name)")
@@ -1379,12 +1379,12 @@ struct RecordPaymentSheet: View {
 
             // Amount
             VStack(spacing: 6) {
-                Text("AMOUNT")
+                Text("AMOUNT".translated())
                     .font(.system(size: 10, weight: .bold))
                     .foregroundStyle(Color.sweeplyTextSub)
                     .tracking(0.8)
                 HStack(alignment: .center, spacing: 4) {
-                    Text("$")
+                    Text("$".translated())
                         .font(.system(size: 36, weight: .bold, design: .monospaced))
                         .foregroundStyle(amount > 0 ? Color.sweeplyNavy : Color.sweeplyBorder)
                     TextField("0.00", text: $amountText)
@@ -1401,7 +1401,7 @@ struct RecordPaymentSheet: View {
             VStack(spacing: 20) {
                 // Pay method
                 VStack(alignment: .leading, spacing: 10) {
-                    Text("PAY VIA")
+                    Text("PAY VIA".translated())
                         .font(.system(size: 10, weight: .bold))
                         .foregroundStyle(Color.sweeplyTextSub)
                         .tracking(0.8)
@@ -1430,7 +1430,7 @@ struct RecordPaymentSheet: View {
 
                 // Notes
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("NOTES (OPTIONAL)")
+                    Text("NOTES (OPTIONAL)".translated())
                         .font(.system(size: 10, weight: .bold))
                         .foregroundStyle(Color.sweeplyTextSub)
                         .tracking(0.8)
@@ -1556,7 +1556,7 @@ struct InviteMemberSheet: View {
                                     ProgressView().tint(.white).scaleEffect(0.85)
                                 } else {
                                     Image(systemName: "person.badge.plus")
-                                    Text("Add & Share Invite")
+                                    Text("Add & Share Invite".translated())
                                 }
                             }
                             .font(.system(size: 16, weight: .semibold))

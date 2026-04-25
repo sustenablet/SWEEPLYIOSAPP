@@ -24,8 +24,10 @@ struct RootView: View {
     @State private var showProductTutorial = false
     @State private var isLocked = false
     @State private var minimumSplashElapsed = false
+    @State private var showIntroOnboarding = false
 
     @AppStorage("hasSeenProductTutorial") private var hasSeenProductTutorial = false
+    @AppStorage("hasSeenIntroOnboarding") private var hasSeenIntroOnboarding = false
     @AppStorage("biometricLockEnabled") private var biometricLockEnabled: Bool = false
     @AppStorage("pendingShortcut") private var pendingShortcut: String = ""
     @AppStorage("pendingSpotlightLink") private var pendingSpotlightLink: String = ""
@@ -51,6 +53,11 @@ struct RootView: View {
                         try? await Task.sleep(for: .seconds(2))
                         minimumSplashElapsed = true
                     }
+            } else if showIntroOnboarding || !hasSeenIntroOnboarding {
+                IntroOnboardingView {
+                    hasSeenIntroOnboarding = true
+                    showIntroOnboarding = false
+                }
             } else if session.isAuthenticated {
                 ZStack {
                     switch session.currentViewMode {
@@ -73,6 +80,9 @@ struct RootView: View {
                 isLocked = true
             } else if phase == .active {
                 applyTabBarAppearance()
+                if !hasSeenIntroOnboarding {
+                    showIntroOnboarding = true
+                }
                 if isLocked {
                     authenticate()
                 } else {
@@ -209,24 +219,24 @@ struct RootView: View {
                     onViewAllSchedule: { selectedTab = .schedule },
                     onViewAllFinances: { selectedTab = .finances }
                 )
-                    .tabItem { Label("Dashboard", systemImage: "square.grid.2x2.fill") }
+                    .tabItem { Label("Dashboard".translated(), systemImage: "square.grid.2x2.fill") }
                     .tag(Tab.dashboard)
 
                 ScheduleView()
-                    .tabItem { Label("Schedule", systemImage: "calendar") }
+                    .tabItem { Label("Schedule".translated(), systemImage: "calendar") }
                     .tag(Tab.schedule)
 
                 ClientsView()
-                    .tabItem { Label("Clients", systemImage: "person.2.fill") }
+                    .tabItem { Label("Clients".translated(), systemImage: "person.2.fill") }
                     .tag(Tab.clients)
 
                 FinancesView()
-                    .tabItem { Label("Finances", systemImage: "chart.line.uptrend.xyaxis") }
+                    .tabItem { Label("Finances".translated(), systemImage: "chart.line.uptrend.xyaxis") }
                     .tag(Tab.finances)
                     .badge(overdueInvoiceCount > 0 ? overdueInvoiceCount : 0)
 
                 BusinessView()
-                    .tabItem { Label("Business", systemImage: "building.2.fill") }
+                    .tabItem { Label("Business".translated(), systemImage: "building.2.fill") }
                     .tag(Tab.business)
             }
             .tint(Color.sweeplyAccent)

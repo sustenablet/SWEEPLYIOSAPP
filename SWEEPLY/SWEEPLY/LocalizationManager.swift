@@ -116,4 +116,10 @@ extension String {
         guard lang == AppLanguage.portuguese.rawValue else { return self }
         return Localization.translate(self)
     }
+
+    /// Use for strings with interpolation: "You have %d jobs".translated(with: count)
+    func translated(with args: CVarArg...) -> String {
+        let template = translated()
+        return String(format: template, arguments: args)
+    }
 }

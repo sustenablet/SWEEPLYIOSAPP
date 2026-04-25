@@ -33,7 +33,7 @@ struct CleanerJobDetailView: View {
                     .padding(.bottom, 40)
                 }
             } else {
-                Text("Job not found")
+                Text("Job not found".translated())
                     .foregroundStyle(Color.sweeplyTextSub)
             }
         }
@@ -130,7 +130,7 @@ struct CleanerJobDetailView: View {
             HStack(spacing: 8) {
                 Image(systemName: "map.fill")
                     .font(.system(size: 15, weight: .semibold))
-                Text("Navigate to Job")
+                Text("Navigate to Job".translated())
                     .font(.system(size: 15, weight: .semibold))
             }
             .foregroundStyle(.white)
@@ -167,7 +167,7 @@ struct CleanerJobDetailView: View {
                 HStack(spacing: 8) {
                     Image(systemName: "checkmark.circle.fill")
                         .foregroundStyle(.green)
-                    Text("Job Completed")
+                    Text("Job Completed".translated())
                         .font(.system(size: 15, weight: .semibold))
                         .foregroundStyle(.green)
                 }

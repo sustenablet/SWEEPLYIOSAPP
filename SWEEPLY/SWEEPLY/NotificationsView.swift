@@ -74,7 +74,7 @@ struct NotificationsView: View {
                                 await notificationsStore.markAllAsRead(userId: session.userId) 
                             }
                         } label: {
-                            Text("Clear")
+                            Text("Clear".translated())
                                 .font(.system(size: 14, weight: .medium))
                                 .foregroundStyle(Color.sweeplyNavy)
                         }
@@ -436,7 +436,7 @@ private struct NotificationRow: View {
                             UIImpactFeedbackGenerator(style: .light).impactOccurred()
                             onMarkRead()
                         } label: {
-                            Text("Mark read")
+                            Text("Mark read".translated())
                                 .font(.system(size: 11, weight: .semibold))
                                 .foregroundStyle(kindColor)
                         }

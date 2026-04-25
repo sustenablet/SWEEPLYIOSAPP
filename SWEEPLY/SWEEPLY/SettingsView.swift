@@ -17,7 +17,9 @@ struct SettingsView: View {
     @State private var showServiceCatalog = false
     @State private var showJobExtras = false
     @State private var showOnboarding = false
+    @State private var showIntroOnboarding = false
     @State private var currentTestNotificationIndex = 0
+    @AppStorage("hasSeenIntroOnboarding") private var hasSeenIntroOnboarding = false
 
     private var canSave: Bool {
         !isSaving && validationMessage == nil && hasUnsavedChanges
@@ -116,6 +118,12 @@ struct SettingsView: View {
                 OnboardingView()
                     .environment(profileStore)
                     .environment(session)
+            }
+            .fullScreenCover(isPresented: $showIntroOnboarding) {
+                IntroOnboardingView {
+                    hasSeenIntroOnboarding = true
+                    showIntroOnboarding = false
+                }
             }
         }
     }
@@ -365,36 +373,23 @@ struct SettingsView: View {
             }
 
             // MARK: Language
-            sectionLabel("LANGUAGE").padding(.top, 16)
+            sectionLabel("LANGUAGE".translated()).padding(.top, 16)
             settingsGroup {
-                Button {
-                    if let url = URL(string: UIApplication.openSettingsURLString) {
-                        UIApplication.shared.open(url)
-                    }
-                } label: {
-                    HStack(spacing: 14) {
-                        settingsIcon("globe", color: Color(red: 0.2, green: 0.5, blue: 0.9))
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("App Language")
-                                .font(.system(size: 15))
-                                .foregroundStyle(Color.primary)
-                            Text("Managed by iOS Settings")
-                                .font(.system(size: 12))
-                                .foregroundStyle(Color.sweeplyTextSub)
-                        }
-                        Spacer()
-                        Text(systemLanguageLabel)
-                            .font(.system(size: 13))
+                HStack(spacing: 14) {
+                    settingsIcon("globe", color: Color(red: 0.2, green: 0.5, blue: 0.9))
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("App Language".translated())
+                            .font(.system(size: 15))
+                            .foregroundStyle(Color.primary)
+                        Text("English · Português (Brasil)")
+                            .font(.system(size: 12))
                             .foregroundStyle(Color.sweeplyTextSub)
-                        Image(systemName: "arrow.up.right.square")
-                            .font(.system(size: 12, weight: .medium))
-                            .foregroundStyle(Color.sweeplyBorder)
-                            .padding(.leading, 2)
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 14)
+                    Spacer()
+                    LanguagePicker()
                 }
-                .buttonStyle(.plain)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
             }
 
             // MARK: Security & Sync
@@ -487,11 +482,11 @@ struct SettingsView: View {
             settingsGroup {
                 Button {
                     UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-                    showOnboarding = true
+                    showIntroOnboarding = true
                 } label: {
                     HStack(spacing: 14) {
                         settingsIcon("arrow.triangle.2.circlepath", color: Color.sweeplyAccent)
-                        Text("Re-run Setup")
+                        Text("Re-run App Intro")
                             .font(.system(size: 15))
                             .foregroundStyle(Color.primary)
                         Spacer()
@@ -504,6 +499,27 @@ struct SettingsView: View {
                 }
                 .buttonStyle(.plain)
                 
+                Divider().padding(.leading, 58)
+
+                Button {
+                    UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                    showOnboarding = true
+                } label: {
+                    HStack(spacing: 14) {
+                        settingsIcon("sparkles", color: Color.sweeplyNavy)
+                        Text("Re-run Business Setup")
+                            .font(.system(size: 15))
+                            .foregroundStyle(Color.primary)
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(Color.sweeplyBorder)
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
+                }
+                .buttonStyle(.plain)
+
                 Divider().padding(.leading, 58)
                 
                 Button { resetPassword() } label: {

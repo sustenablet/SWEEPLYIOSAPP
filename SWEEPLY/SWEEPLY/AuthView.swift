@@ -68,15 +68,15 @@ struct AuthView: View {
 
             VStack(spacing: 7) {
                 HStack(spacing: 0) {
-                    Text("Sweep")
+                    Text("Sweep".translated())
                         .foregroundStyle(Color.sweeplyNavy)
-                    Text("ly")
+                    Text("ly".translated())
                         .foregroundStyle(Color.sweeplyWordmarkBlue)
                 }
                 .font(.system(size: 44, weight: .bold, design: .rounded))
                 .tracking(-1.2)
 
-                Text("Run your cleaning business.")
+                Text("Run your cleaning business.".translated())
                     .font(.system(size: 15, weight: .regular))
                     .foregroundStyle(Color.sweeplyTextSub)
                     .tracking(0.1)
@@ -170,11 +170,11 @@ struct AuthView: View {
 
             // Labels on top
             HStack(spacing: 0) {
-                tabPill("Sign In", isActive: !isSignUp) {
+                tabPill("Sign In".translated(), isActive: !isSignUp) {
                     UIImpactFeedbackGenerator(style: .light).impactOccurred()
                     withAnimation { isSignUp = false; session.lastAuthError = nil }
                 }
-                tabPill("Create Account", isActive: isSignUp) {
+                tabPill("Create Account".translated(), isActive: isSignUp) {
                     UIImpactFeedbackGenerator(style: .light).impactOccurred()
                     withAnimation { isSignUp = true; session.lastAuthError = nil }
                 }
@@ -198,7 +198,7 @@ struct AuthView: View {
 
     private var emailField: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("EMAIL")
+            Text("EMAIL".translated())
                 .font(.system(size: 10, weight: .bold))
                 .foregroundStyle(Color.sweeplyTextSub)
                 .tracking(0.8)
@@ -223,7 +223,7 @@ struct AuthView: View {
 
     private var passwordField: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("PASSWORD")
+            Text("PASSWORD".translated())
                 .font(.system(size: 10, weight: .bold))
                 .foregroundStyle(Color.sweeplyTextSub)
                 .tracking(0.8)
@@ -242,7 +242,7 @@ struct AuthView: View {
                 )
 
             if isSignUp {
-                Text("At least 6 characters")
+                Text("At least 6 characters".translated())
                     .font(.system(size: 11))
                     .foregroundStyle(Color.sweeplyTextSub.opacity(0.7))
                     .padding(.leading, 2)
@@ -395,7 +395,7 @@ private struct ForgotPasswordSheet: View {
                     .foregroundStyle(Color.sweeplyAccent)
             }
             VStack(spacing: 8) {
-                Text("Check your email")
+                Text("Check your email".translated())
                     .font(.system(size: 22, weight: .bold))
                     .foregroundStyle(Color.sweeplyNavy)
                 Text("We sent a reset link to \(resetEmail). Check your inbox and follow the instructions.")
@@ -419,17 +419,17 @@ private struct ForgotPasswordSheet: View {
     private var formState: some View {
         VStack(alignment: .leading, spacing: 0) {
             VStack(alignment: .leading, spacing: 8) {
-                Text("Reset Password")
+                Text("Reset Password".translated())
                     .font(.system(size: 24, weight: .bold))
                     .foregroundStyle(Color.sweeplyNavy)
-                Text("Enter your email and we'll send you a reset link.")
+                Text("Enter your email and we'll send you a reset link.".translated())
                     .font(.system(size: 14))
                     .foregroundStyle(Color.sweeplyTextSub)
             }
             .padding(.horizontal, 28)
 
             VStack(alignment: .leading, spacing: 6) {
-                Text("Email")
+                Text("Email".translated())
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundStyle(Color.sweeplyTextSub)
                 TextField("you@example.com", text: $resetEmail)
@@ -491,7 +491,7 @@ private struct ForgotPasswordSheet: View {
             } label: {
                 HStack(spacing: 10) {
                     if isSending { ProgressView().tint(.white).scaleEffect(0.85) }
-                    Text("Send Reset Link")
+                    Text("Send Reset Link".translated())
                         .font(.system(size: 16, weight: .bold))
                 }
                 .foregroundStyle(.white)
