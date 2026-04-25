@@ -171,6 +171,48 @@ final class TeamStore {
         }
     }
 
+    // MARK: - Payment History
+
+    func loadPayments(memberId: UUID, ownerId: UUID) async -> [TeamMemberPayment] {
+        guard let client = SupabaseManager.shared else { return [] }
+        do {
+            let rows: [TeamMemberPaymentDTO] = try await client
+                .from("team_member_payments")
+                .select()
+                .eq("member_id", value: memberId.uuidString)
+                .eq("owner_id", value: ownerId.uuidString)
+                .order("paid_at", ascending: false)
+                .limit(20)
+                .execute()
+                .value
+            return rows.map { $0.toPayment() }
+        } catch {
+            lastError = error.localizedDescription
+            return []
+        }
+    }
+
+    func recordPayment(memberId: UUID, ownerId: UUID, amount: Double, notes: String) async -> Bool {
+        guard let client = SupabaseManager.shared else { return true }
+        do {
+            let insert = TeamMemberPaymentInsert(
+                memberId: memberId,
+                ownerId: ownerId,
+                amount: amount,
+                notes: notes.isEmpty ? nil : notes,
+                paidAt: Date()
+            )
+            try await client
+                .from("team_member_payments")
+                .insert(insert)
+                .execute()
+            return true
+        } catch {
+            lastError = error.localizedDescription
+            return false
+        }
+    }
+
     // MARK: - Update Pay Rate
 
     func updatePayRate(id: UUID, rateType: PayRateType, amount: Double, enabled: Bool) async -> Bool {
@@ -287,5 +329,52 @@ private struct TeamMemberPayRatePatch: Encodable {
         case payRateType = "pay_rate_type"
         case payRateAmount = "pay_rate_amount"
         case payRateEnabled = "pay_rate_enabled"
+    }
+}
+
+// MARK: - TeamMemberPayment Public Model
+
+struct TeamMemberPayment: Identifiable {
+    let id: UUID
+    let memberId: UUID
+    let ownerId: UUID
+    let amount: Double
+    let notes: String
+    let paidAt: Date
+}
+
+private struct TeamMemberPaymentDTO: Decodable {
+    let id: UUID
+    let memberId: UUID
+    let ownerId: UUID
+    let amount: Double
+    let notes: String?
+    let paidAt: Date
+
+    enum CodingKeys: String, CodingKey {
+        case id, amount, notes
+        case memberId = "member_id"
+        case ownerId  = "owner_id"
+        case paidAt   = "paid_at"
+    }
+
+    func toPayment() -> TeamMemberPayment {
+        TeamMemberPayment(id: id, memberId: memberId, ownerId: ownerId,
+                          amount: amount, notes: notes ?? "", paidAt: paidAt)
+    }
+}
+
+private struct TeamMemberPaymentInsert: Encodable {
+    let memberId: UUID
+    let ownerId: UUID
+    let amount: Double
+    let notes: String?
+    let paidAt: Date
+
+    enum CodingKeys: String, CodingKey {
+        case amount, notes
+        case memberId = "member_id"
+        case ownerId  = "owner_id"
+        case paidAt   = "paid_at"
     }
 }

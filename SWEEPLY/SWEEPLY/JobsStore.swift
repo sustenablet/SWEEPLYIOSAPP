@@ -81,7 +81,7 @@ final class JobsStore {
             jobs.append(mapped)
             jobs.sort { $0.date > $1.date }
             NotificationManager.shared.scheduleJobReminder(for: mapped)
-            await NotificationHelper.insert(userId: userId, title: "Job Scheduled", message: "\(mapped.serviceType.rawValue) for \(mapped.clientName) on \(mapped.date.formatted(date: .abbreviated, time: .shortened)).", kind: "schedule")
+            NotificationManager.shared.refreshDailyDigests(jobs: jobs)
             Task.detached { await CalendarSyncManager.shared.addEvent(for: mapped) }
             SpotlightIndexer.shared.indexJobs([mapped])
             return true
@@ -128,6 +128,7 @@ final class JobsStore {
             }
             NotificationManager.shared.cancelJobReminders(for: mapped.id)
             NotificationManager.shared.scheduleJobReminder(for: mapped)
+            NotificationManager.shared.refreshDailyDigests(jobs: jobs)
             Task.detached { await CalendarSyncManager.shared.updateEvent(for: mapped) }
             return true
         } catch {
@@ -162,6 +163,7 @@ final class JobsStore {
             if status == .completed || status == .cancelled {
                 NotificationManager.shared.cancelJobReminders(for: id)
             }
+            NotificationManager.shared.refreshDailyDigests(jobs: jobs)
             if status == .completed { requestReviewIfAppropriate() }
             return true
         } catch {
@@ -184,6 +186,7 @@ final class JobsStore {
                 .eq("id", value: id)
                 .execute()
             jobs.removeAll { $0.id == id }
+            NotificationManager.shared.refreshDailyDigests(jobs: jobs)
             Task.detached { await CalendarSyncManager.shared.removeEvent(for: id) }
             SpotlightIndexer.shared.removeJob(id: id)
             return true

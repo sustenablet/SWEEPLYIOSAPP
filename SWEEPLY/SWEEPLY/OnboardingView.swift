@@ -20,10 +20,10 @@ struct OnboardingView: View {
     // Step 3 state
     @State private var notifStatus: UNAuthorizationStatus = .notDetermined
     @State private var checkmarkAppeared = false
+    @State private var saveError = false
 
     @State private var isSaving = false
-
-    private let totalSteps = 4
+    @State private var welcomeAppeared = false
 
     private enum IdentityField { case name, business, phone }
 
@@ -54,13 +54,10 @@ struct OnboardingView: View {
             Color.sweeplyBackground.ignoresSafeArea()
 
             VStack(spacing: 0) {
-                if step > 0 {
-                    progressBar
-                        .padding(.top, 16)
-                }
-
-                if step > 0 && step < totalSteps - 1 {
+                // Header with progress dots — only on data-collection steps
+                if step == 1 || step == 2 {
                     headerBar
+                        .transition(.opacity)
                 }
 
                 ZStack {
@@ -78,50 +75,48 @@ struct OnboardingView: View {
         .interactiveDismissDisabled(true)
     }
 
-    // MARK: - Progress Bar
-
-    private var progressBar: some View {
-        GeometryReader { geo in
-            ZStack(alignment: .leading) {
-                RoundedRectangle(cornerRadius: 2)
-                    .fill(Color.sweeplyBorder.opacity(0.4))
-                    .frame(height: 3)
-                RoundedRectangle(cornerRadius: 2)
-                    .fill(Color.sweeplyAccent)
-                    .frame(width: geo.size.width * CGFloat(step) / CGFloat(totalSteps - 1), height: 3)
-                    .animation(.spring(response: 0.5, dampingFraction: 0.8), value: step)
-            }
-        }
-        .frame(height: 3)
-        .padding(.horizontal, 24)
-    }
-
     // MARK: - Header Bar
 
     private var headerBar: some View {
         HStack {
-            Button {
-                UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                goBack()
-            } label: {
-                HStack(spacing: 4) {
-                    Image(systemName: "chevron.left")
-                        .font(.system(size: 14, weight: .semibold))
-                    Text("Back")
-                        .font(.system(size: 14, weight: .medium))
+            // Back — only on step 2
+            if step == 2 {
+                Button {
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    goBack()
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 14, weight: .semibold))
+                        Text("Back")
+                            .font(.system(size: 14, weight: .medium))
+                    }
+                    .foregroundStyle(Color.sweeplyNavy)
                 }
-                .foregroundStyle(Color.sweeplyNavy)
+                .buttonStyle(.plain)
             }
-            .buttonStyle(.plain)
 
             Spacer()
 
+            // Step dots (2 dots: 1 filled on step 1, both filled on step 2)
+            HStack(spacing: 8) {
+                ForEach(0..<2) { i in
+                    Circle()
+                        .fill(step - 1 >= i ? Color.sweeplyAccent : Color.sweeplyBorder)
+                        .frame(width: 8, height: 8)
+                        .animation(.easeInOut(duration: 0.2), value: step)
+                }
+            }
+
+            Spacer()
+
+            // Skip — only on step 2
             if step == 2 {
                 Button {
                     UIImpactFeedbackGenerator(style: .light).impactOccurred()
                     advance()
                 } label: {
-                    Text("Skip for now")
+                    Text("Skip")
                         .font(.system(size: 14, weight: .medium))
                         .foregroundStyle(Color.sweeplyTextSub)
                 }
@@ -138,104 +133,137 @@ struct OnboardingView: View {
         VStack(spacing: 0) {
             Spacer()
 
-            VStack(spacing: 32) {
-                ZStack {
-                    Circle()
-                        .fill(Color.sweeplyAccent.opacity(0.1))
-                        .frame(width: 120, height: 120)
-                    Circle()
-                        .fill(Color.sweeplyNavy)
-                        .frame(width: 88, height: 88)
-                    Text("S")
-                        .font(.system(size: 42, weight: .black, design: .rounded))
-                        .foregroundStyle(.white)
-                }
-
+            VStack(spacing: 0) {
                 VStack(spacing: 14) {
-                    Text("Your cleaning business,\nrun from your phone.")
-                        .font(.system(size: 34, weight: .bold))
-                        .foregroundStyle(Color.sweeplyNavy)
-                        .multilineTextAlignment(.center)
-                        .lineSpacing(2)
-                        .tracking(-0.6)
+                    Image("SweeplyLogo")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 80, height: 80)
 
-                    Text("Scheduling · Invoicing · AI assistant")
-                        .font(.system(size: 16, weight: .medium))
-                        .foregroundStyle(Color.sweeplyTextSub)
-                        .multilineTextAlignment(.center)
+                    VStack(spacing: 6) {
+                        HStack(spacing: 0) {
+                            Text("Sweep")
+                                .foregroundStyle(Color.sweeplyNavy)
+                            Text("ly")
+                                .foregroundStyle(Color.sweeplyWordmarkBlue)
+                        }
+                        .font(.system(size: 40, weight: .bold, design: .rounded))
+                        .tracking(-1.0)
+
+                        Text("Run your cleaning business.")
+                            .font(.system(size: 15))
+                            .foregroundStyle(Color.sweeplyTextSub)
+                    }
                 }
+
+                Spacer().frame(height: 36)
+
+                VStack(spacing: 10) {
+                    OnboardingFeaturePill(icon: "calendar", text: "Scheduling & job tracking")
+                    OnboardingFeaturePill(icon: "doc.plaintext", text: "Invoicing & payments")
+                    OnboardingFeaturePill(icon: "sparkles", text: "Built for cleaners")
+                }
+                .padding(.horizontal, 28)
             }
-            .padding(.horizontal, 32)
+            .opacity(welcomeAppeared ? 1 : 0)
+            .offset(y: welcomeAppeared ? 0 : 16)
 
             Spacer()
 
-            primaryButton(label: "Get started") {
+            Button {
                 UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                 advance()
+            } label: {
+                Text("Get started")
+                    .font(.system(size: 17, weight: .bold))
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 54)
+                    .background(Color.sweeplyNavy)
+                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    .shadow(color: Color.sweeplyNavy.opacity(0.2), radius: 8, x: 0, y: 4)
             }
+            .padding(.horizontal, 24)
             .padding(.bottom, 48)
+            .opacity(welcomeAppeared ? 1 : 0)
+        }
+        .onAppear {
+            welcomeAppeared = false
+            withAnimation(.easeOut(duration: 0.45).delay(0.1)) {
+                welcomeAppeared = true
+            }
         }
     }
 
     // MARK: - Step 1: Identity
 
     private var stepIdentity: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            Spacer()
+        ScrollView(showsIndicators: false) {
+            VStack(alignment: .leading, spacing: 0) {
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("Let's set up\nyour business")
+                        .font(.system(size: 34, weight: .bold))
+                        .foregroundStyle(Color.sweeplyNavy)
+                        .lineSpacing(2)
+                        .tracking(-0.6)
 
-            VStack(alignment: .leading, spacing: 12) {
-                Text("Let's set up\nyour business")
-                    .font(.system(size: 34, weight: .bold))
-                    .foregroundStyle(Color.sweeplyNavy)
-                    .lineSpacing(2)
-                    .tracking(-0.6)
+                    Text("This appears on your invoices and client messages.")
+                        .font(.system(size: 15))
+                        .foregroundStyle(Color.sweeplyTextSub)
+                }
+                .padding(.horizontal, 24)
+                .padding(.top, 8)
 
-                Text("This shows on your invoices and throughout the app.")
-                    .font(.system(size: 16))
-                    .foregroundStyle(Color.sweeplyTextSub)
+                Spacer().frame(height: 32)
+
+                VStack(spacing: 12) {
+                    OnboardingField(
+                        placeholder: "Your name",
+                        text: $fullName,
+                        icon: "person",
+                        keyboardType: .default,
+                        submitLabel: .next
+                    ) { focusedField = .business }
+                        .focused($focusedField, equals: .name)
+
+                    OnboardingField(
+                        placeholder: "Business name (e.g. Sunrise Cleaning)",
+                        text: $businessName,
+                        icon: "building.2",
+                        keyboardType: .default,
+                        submitLabel: .next
+                    ) { focusedField = .phone }
+                        .focused($focusedField, equals: .business)
+
+                    OnboardingField(
+                        placeholder: "Phone (optional)",
+                        text: $phone,
+                        icon: "phone",
+                        keyboardType: .phonePad,
+                        submitLabel: .done
+                    ) { focusedField = nil }
+                        .focused($focusedField, equals: .phone)
+                }
+                .padding(.horizontal, 24)
+
+                Spacer().frame(height: 40)
             }
-            .padding(.horizontal, 24)
-
-            Spacer().frame(height: 36)
-
-            VStack(spacing: 12) {
-                OnboardingField(
-                    placeholder: "Your name",
-                    text: $fullName,
-                    icon: "person",
-                    keyboardType: .default,
-                    submitLabel: .next
-                ) { focusedField = .business }
-                    .focused($focusedField, equals: .name)
-
-                OnboardingField(
-                    placeholder: "Business name (e.g. Sunrise Cleaning Co.)",
-                    text: $businessName,
-                    icon: "building.2",
-                    keyboardType: .default,
-                    submitLabel: .next
-                ) { focusedField = .phone }
-                    .focused($focusedField, equals: .business)
-
-                OnboardingField(
-                    placeholder: "Phone number (optional)",
-                    text: $phone,
-                    icon: "phone",
-                    keyboardType: .phonePad,
-                    submitLabel: .done
-                ) { focusedField = nil }
-                    .focused($focusedField, equals: .phone)
+        }
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            VStack(spacing: 0) {
+                Divider().opacity(0.5)
+                primaryButton(
+                    label: "Continue",
+                    isEnabled: identityStepValid,
+                    action: {
+                        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                        advance()
+                    }
+                )
+                .padding(.top, 16)
+                .padding(.bottom, 32)
             }
-            .padding(.horizontal, 24)
-
-            Spacer()
-
-            primaryButton(label: "Continue") {
-                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-                advance()
-            }
-            .disabled(!identityStepValid)
-            .padding(.bottom, 48)
+            .background(Color.sweeplyBackground)
         }
         .onAppear {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
@@ -252,67 +280,107 @@ struct OnboardingView: View {
     // MARK: - Step 2: Services
 
     private var stepServices: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            VStack(alignment: .leading, spacing: 12) {
-                Text("What services\ndo you offer?")
-                    .font(.system(size: 34, weight: .bold))
-                    .foregroundStyle(Color.sweeplyNavy)
-                    .lineSpacing(2)
-                    .tracking(-0.6)
+        ScrollView(showsIndicators: false) {
+            VStack(alignment: .leading, spacing: 0) {
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("What services\ndo you offer?")
+                        .font(.system(size: 34, weight: .bold))
+                        .foregroundStyle(Color.sweeplyNavy)
+                        .lineSpacing(2)
+                        .tracking(-0.6)
 
-                Text("Select at least one. Prices are editable anytime in Settings.")
-                    .font(.system(size: 16))
-                    .foregroundStyle(Color.sweeplyTextSub)
-            }
-            .padding(.horizontal, 24)
-            .padding(.top, 8)
-
-            ScrollView(showsIndicators: false) {
-                VStack(alignment: .leading, spacing: 20) {
-                    serviceSection(title: "MAIN SERVICES", services: mainServices)
-                    serviceSection(title: "ADD-ONS & EXTRAS", services: addonServices)
+                    Text("Prices are fully editable anytime in Settings.")
+                        .font(.system(size: 15))
+                        .foregroundStyle(Color.sweeplyTextSub)
                 }
                 .padding(.horizontal, 24)
-                .padding(.top, 20)
-                .padding(.bottom, 16)
-            }
+                .padding(.top, 8)
 
-            primaryButton(label: "Continue") {
-                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-                advance()
+                Spacer().frame(height: 24)
+
+                // Main services — 2-column grid
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("MAIN SERVICES")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundStyle(Color.sweeplyTextSub)
+                        .tracking(0.8)
+                        .padding(.horizontal, 24)
+
+                    LazyVGrid(
+                        columns: [
+                            GridItem(.flexible(), spacing: 12),
+                            GridItem(.flexible(), spacing: 12)
+                        ],
+                        spacing: 12
+                    ) {
+                        ForEach(mainServices) { service in
+                            ServiceGridCard(
+                                service: service,
+                                isSelected: selectedServices.contains(service.name)
+                            ) {
+                                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                if selectedServices.contains(service.name) {
+                                    selectedServices.remove(service.name)
+                                } else {
+                                    selectedServices.insert(service.name)
+                                }
+                            }
+                        }
+                    }
+                    .padding(.horizontal, 24)
+                }
+
+                Spacer().frame(height: 28)
+
+                // Add-ons — compact list
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("ADD-ONS & EXTRAS")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundStyle(Color.sweeplyTextSub)
+                        .tracking(0.8)
+                        .padding(.horizontal, 24)
+
+                    VStack(spacing: 8) {
+                        ForEach(addonServices) { service in
+                            ServiceSelectionCard(
+                                service: service,
+                                isSelected: selectedServices.contains(service.name)
+                            ) {
+                                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                if selectedServices.contains(service.name) {
+                                    selectedServices.remove(service.name)
+                                } else {
+                                    selectedServices.insert(service.name)
+                                }
+                            }
+                        }
+                    }
+                    .padding(.horizontal, 24)
+                }
+
+                Spacer().frame(height: 40)
             }
-            .disabled(!servicesStepValid)
-            .padding(.bottom, 48)
+        }
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            VStack(spacing: 0) {
+                Divider().opacity(0.5)
+                primaryButton(
+                    label: "Continue",
+                    isEnabled: servicesStepValid,
+                    action: {
+                        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                        advance()
+                    }
+                )
+                .padding(.top, 16)
+                .padding(.bottom, 32)
+            }
+            .background(Color.sweeplyBackground)
         }
     }
 
     private var servicesStepValid: Bool {
         mainServices.contains { selectedServices.contains($0.name) }
-    }
-
-    private func serviceSection(title: String, services: [BusinessService]) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text(title)
-                .font(.system(size: 10, weight: .bold))
-                .foregroundStyle(Color.sweeplyTextSub)
-                .tracking(0.8)
-
-            VStack(spacing: 8) {
-                ForEach(services) { service in
-                    ServiceSelectionCard(
-                        service: service,
-                        isSelected: selectedServices.contains(service.name)
-                    ) {
-                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                        if selectedServices.contains(service.name) {
-                            selectedServices.remove(service.name)
-                        } else {
-                            selectedServices.insert(service.name)
-                        }
-                    }
-                }
-            }
-        }
     }
 
     // MARK: - Step 3: All Set
@@ -322,54 +390,93 @@ struct OnboardingView: View {
             Spacer()
 
             VStack(spacing: 28) {
+                // Animated checkmark with accent circle
                 ZStack {
                     Circle()
                         .fill(Color.sweeplyAccent.opacity(0.1))
-                        .frame(width: 110, height: 110)
+                        .frame(width: 100, height: 100)
                     Image(systemName: "checkmark.circle.fill")
-                        .font(.system(size: 52))
+                        .font(.system(size: 56))
                         .foregroundStyle(Color.sweeplyAccent)
-                        .scaleEffect(checkmarkAppeared ? 1.0 : 0.2)
+                        .scaleEffect(checkmarkAppeared ? 1.0 : 0.1)
                         .opacity(checkmarkAppeared ? 1.0 : 0)
                 }
 
-                VStack(spacing: 10) {
+                VStack(spacing: 14) {
                     Text("Welcome to Sweeply,\n\(firstName)!")
-                        .font(.system(size: 32, weight: .bold))
+                        .font(.system(size: 30, weight: .bold))
                         .foregroundStyle(Color.sweeplyNavy)
                         .multilineTextAlignment(.center)
                         .lineSpacing(2)
                         .tracking(-0.4)
 
                     VStack(spacing: 8) {
+                        allSetRow(icon: "building.2.fill",
+                                  text: businessName.trimmingCharacters(in: .whitespaces))
                         if !selectedServices.isEmpty {
                             allSetRow(
                                 icon: "sparkles",
                                 text: "\(selectedServices.count) service\(selectedServices.count == 1 ? "" : "s") ready to go"
                             )
                         }
-                        allSetRow(
-                            icon: "building.2.fill",
-                            text: "\(businessName.trimmingCharacters(in: .whitespaces)) is all set"
-                        )
                     }
                 }
 
                 if notifStatus == .notDetermined {
-                    notificationPermissionCard
+                    notificationCard
                 }
             }
             .padding(.horizontal, 28)
 
             Spacer()
 
-            primaryButton(label: isSaving ? "Setting up..." : "Open Dashboard →") {
+            // Save error banner
+            if saveError {
+                HStack(spacing: 10) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .font(.system(size: 13))
+                    Text("Couldn't save your info — tap to try again.")
+                        .font(.system(size: 13, weight: .medium))
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .foregroundStyle(Color.sweeplyDestructive)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 11)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color.sweeplyDestructive.opacity(0.08))
+                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .padding(.horizontal, 24)
+                .padding(.bottom, 10)
+                .transition(.opacity.combined(with: .move(edge: .bottom)))
+            }
+
+            // Dashboard CTA
+            Button {
+                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                 saveAndFinish()
+            } label: {
+                Group {
+                    if isSaving {
+                        ProgressView().tint(.white)
+                    } else {
+                        Text(saveError ? "Try Again" : "Open Dashboard")
+                            .font(.system(size: 17, weight: .bold))
+                    }
+                }
+                .foregroundStyle(.white)
+                .frame(maxWidth: .infinity)
+                .frame(height: 54)
+                .background(Color.sweeplyNavy)
+                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                .shadow(color: Color.sweeplyNavy.opacity(0.2), radius: 8, x: 0, y: 4)
             }
             .disabled(isSaving)
+            .padding(.horizontal, 24)
             .padding(.bottom, 48)
         }
         .onAppear {
+            checkmarkAppeared = false
+            saveError = false
             withAnimation(.spring(response: 0.5, dampingFraction: 0.65).delay(0.15)) {
                 checkmarkAppeared = true
             }
@@ -380,7 +487,7 @@ struct OnboardingView: View {
     }
 
     private func allSetRow(icon: String, text: String) -> some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 10) {
             Image(systemName: icon)
                 .font(.system(size: 13))
                 .foregroundStyle(Color.sweeplyAccent)
@@ -392,7 +499,7 @@ struct OnboardingView: View {
         }
     }
 
-    private var notificationPermissionCard: some View {
+    private var notificationCard: some View {
         HStack(spacing: 12) {
             ZStack {
                 Circle()
@@ -404,10 +511,10 @@ struct OnboardingView: View {
             }
 
             VStack(alignment: .leading, spacing: 2) {
-                Text("Get reminders for jobs & invoices")
+                Text("Stay on top of jobs & invoices")
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(Color.sweeplyNavy)
-                Text("Stay on top of your schedule")
+                Text("Get reminders before they're due")
                     .font(.system(size: 11))
                     .foregroundStyle(Color.sweeplyTextSub)
             }
@@ -431,32 +538,39 @@ struct OnboardingView: View {
         }
         .padding(14)
         .background(Color.sweeplySurface)
-        .clipShape(RoundedRectangle(cornerRadius: 14))
-        .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.sweeplyBorder, lineWidth: 1))
+        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 14)
+                .stroke(Color.sweeplyBorder, lineWidth: 1)
+        )
     }
 
     private var firstName: String {
         fullName.trimmingCharacters(in: .whitespaces).components(separatedBy: " ").first ?? "there"
     }
 
-    // MARK: - Primary Button
+    // MARK: - Primary Button (light steps)
 
-    private func primaryButton(label: String, action: @escaping () -> Void) -> some View {
+    private func primaryButton(
+        label: String,
+        isEnabled: Bool,
+        action: @escaping () -> Void
+    ) -> some View {
         Button(action: action) {
-            Group {
-                if isSaving && label.contains("Setting") {
-                    ProgressView().tint(.white)
-                } else {
-                    Text(label)
-                }
-            }
-            .font(.system(size: 17, weight: .bold))
-            .foregroundStyle(.white)
-            .frame(maxWidth: .infinity)
-            .frame(height: 58)
-            .background(Color.sweeplyNavy)
-            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+            Text(label)
+                .font(.system(size: 17, weight: .bold))
+                .foregroundStyle(.white)
+                .frame(maxWidth: .infinity)
+                .frame(height: 54)
+                .background(isEnabled ? Color.sweeplyNavy : Color.sweeplyNavy.opacity(0.28))
+                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                .shadow(
+                    color: isEnabled ? Color.sweeplyNavy.opacity(0.22) : .clear,
+                    radius: 8, x: 0, y: 4
+                )
         }
+        .disabled(!isEnabled)
+        .animation(.easeInOut(duration: 0.15), value: isEnabled)
         .padding(.horizontal, 24)
     }
 
@@ -465,6 +579,7 @@ struct OnboardingView: View {
     private func saveAndFinish() {
         guard let userId = session.userId else { return }
         isSaving = true
+        saveError = false
 
         Task {
             var profile = profileStore.profile ?? UserProfile(
@@ -479,21 +594,109 @@ struct OnboardingView: View {
             profile.businessName = businessName.trimmingCharacters(in: .whitespacesAndNewlines)
             profile.phone = phone.trimmingCharacters(in: .whitespacesAndNewlines)
 
-            let chosenServices = AppSettings.defaultServiceCatalog.filter { selectedServices.contains($0.name) }
+            let chosenServices = AppSettings.defaultServiceCatalog.filter {
+                selectedServices.contains($0.name)
+            }
             if !chosenServices.isEmpty {
                 profile.settings.services = chosenServices
             }
 
-            await profileStore.save(profile, userId: userId)
+            let success = await profileStore.save(profile, userId: userId)
             await MainActor.run {
                 isSaving = false
-                UINotificationFeedbackGenerator().notificationOccurred(.success)
+                if success {
+                    UINotificationFeedbackGenerator().notificationOccurred(.success)
+                } else {
+                    withAnimation { saveError = true }
+                    UINotificationFeedbackGenerator().notificationOccurred(.error)
+                }
             }
         }
     }
 }
 
-// MARK: - Supporting Views
+// MARK: - Feature Pill (Step 0)
+
+private struct OnboardingFeaturePill: View {
+    let icon: String
+    let text: String
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: icon)
+                .font(.system(size: 15, weight: .medium))
+                .foregroundStyle(Color.sweeplyAccent)
+                .frame(width: 22)
+
+            Text(text)
+                .font(.system(size: 14, weight: .medium))
+                .foregroundStyle(Color.sweeplyNavy)
+
+            Spacer()
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 13)
+        .background(Color.sweeplySurface)
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .stroke(Color.sweeplyBorder, lineWidth: 1)
+        )
+    }
+}
+
+// MARK: - Service Grid Card (Step 2 — Main Services)
+
+private struct ServiceGridCard: View {
+    let service: BusinessService
+    let isSelected: Bool
+    let onTap: () -> Void
+
+    var body: some View {
+        Button(action: onTap) {
+            ZStack(alignment: .topTrailing) {
+                VStack(alignment: .leading, spacing: 8) {
+                    Spacer()
+
+                    Text(service.name)
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(isSelected ? Color.sweeplyNavy : Color.sweeplyNavy)
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    Text(service.price.currency)
+                        .font(.system(size: 12, weight: .semibold, design: .monospaced))
+                        .foregroundStyle(isSelected ? Color.sweeplyAccent : Color.sweeplyTextSub)
+                }
+                .padding(14)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .frame(minHeight: 90)
+                .background(isSelected ? Color.sweeplyAccent.opacity(0.06) : Color.sweeplySurface)
+                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .stroke(
+                            isSelected ? Color.sweeplyAccent.opacity(0.45) : Color.sweeplyBorder,
+                            lineWidth: isSelected ? 1.5 : 1
+                        )
+                )
+                .animation(.easeInOut(duration: 0.15), value: isSelected)
+
+                // Checkmark badge
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 18))
+                    .foregroundStyle(Color.sweeplyAccent)
+                    .padding(8)
+                    .opacity(isSelected ? 1 : 0)
+                    .scaleEffect(isSelected ? 1 : 0.5)
+                    .animation(.spring(response: 0.28, dampingFraction: 0.7), value: isSelected)
+            }
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+// MARK: - Onboarding Field
 
 private struct OnboardingField: View {
     let placeholder: String
@@ -518,8 +721,8 @@ private struct OnboardingField: View {
                 .autocorrectionDisabled()
                 .onSubmit { onSubmit?() }
         }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 18)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 16)
         .background(Color.sweeplySurface)
         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
         .overlay(
@@ -528,6 +731,8 @@ private struct OnboardingField: View {
         )
     }
 }
+
+// MARK: - Service Selection Card (Add-ons row)
 
 private struct ServiceSelectionCard: View {
     let service: BusinessService
@@ -553,7 +758,11 @@ private struct ServiceSelectionCard: View {
                     .foregroundStyle(isSelected ? Color.sweeplyAccent : Color.sweeplyNavy.opacity(0.5))
                     .padding(.horizontal, 10)
                     .padding(.vertical, 5)
-                    .background(isSelected ? Color.sweeplyAccent.opacity(0.08) : Color.sweeplyNavy.opacity(0.05))
+                    .background(
+                        isSelected
+                            ? Color.sweeplyAccent.opacity(0.08)
+                            : Color.sweeplyNavy.opacity(0.05)
+                    )
                     .clipShape(Capsule())
                     .animation(.easeInOut(duration: 0.15), value: isSelected)
             }
@@ -563,7 +772,10 @@ private struct ServiceSelectionCard: View {
             .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .stroke(isSelected ? Color.sweeplyAccent.opacity(0.35) : Color.sweeplyBorder, lineWidth: 1)
+                    .stroke(
+                        isSelected ? Color.sweeplyAccent.opacity(0.35) : Color.sweeplyBorder,
+                        lineWidth: 1
+                    )
             )
             .animation(.easeInOut(duration: 0.15), value: isSelected)
         }

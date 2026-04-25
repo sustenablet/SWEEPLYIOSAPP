@@ -1,4 +1,6 @@
 import SwiftUI
+import MapKit
+import CoreLocation
 
 // MARK: - Cleaner Schedule View
 
@@ -6,22 +8,51 @@ enum CleanerScheduleMode: String, CaseIterable {
     case day   = "Day"
     case list  = "List"
     case month = "Month"
+    case map   = "Map"
 }
 
 struct CleanerUpcomingView: View {
-    @Environment(JobsStore.self)  private var jobsStore
-    @Environment(AppSession.self) private var session
+    @Environment(JobsStore.self)    private var jobsStore
+    @Environment(ClientsStore.self) private var clientsStore
+    @Environment(AppSession.self)   private var session
 
     let membership: TeamMembership
 
     @State private var selectedDay: Date = Calendar.current.startOfDay(for: Date())
-    @AppStorage("cleanerScheduleViewMode")    private var viewModeRaw: String = CleanerScheduleMode.day.rawValue
+    @AppStorage("cleanerScheduleViewMode")     private var viewModeRaw: String = CleanerScheduleMode.day.rawValue
     @AppStorage("cleanerScheduleStatusFilter") private var statusFilterRaw: String = ""
+    @AppStorage("cleanerScheduleTypeFilter")   private var typeFilter: String = "All"
+    @AppStorage("cleanerScheduleEnabledModes") private var enabledModesRaw: String = "Day,List,Month,Map"
     @State private var showMonthPicker = false
+    @State private var showFilters = false
+    @State private var mapCameraPosition: MapCameraPosition = .automatic
+    @State private var mapSelectedJobId: UUID? = nil
+    @State private var showMapJobDetail = false
+    @State private var locationManager = LocationManager.shared
 
     private var viewMode: CleanerScheduleMode { CleanerScheduleMode(rawValue: viewModeRaw) ?? .day }
     private var statusFilter: JobStatus? { JobStatus(rawValue: statusFilterRaw) }
+    private var statusFilterBinding: Binding<JobStatus?> {
+        Binding(get: { JobStatus(rawValue: statusFilterRaw) }, set: { statusFilterRaw = $0?.rawValue ?? "" })
+    }
     @State private var selectedJobId: UUID? = nil
+
+    private var enabledViewModes: Set<CleanerScheduleMode> {
+        let modes = enabledModesRaw.split(separator: ",").compactMap { CleanerScheduleMode(rawValue: String($0)) }
+        return modes.isEmpty ? Set(CleanerScheduleMode.allCases) : Set(modes)
+    }
+
+    private func setEnabledViewModes(_ modes: Set<CleanerScheduleMode>) {
+        enabledModesRaw = modes.map(\.rawValue).joined(separator: ",")
+        if !modes.contains(viewMode),
+           let first = CleanerScheduleMode.allCases.first(where: { modes.contains($0) }) {
+            viewModeRaw = first.rawValue
+        }
+    }
+
+    private var visibleViewModes: [CleanerScheduleMode] {
+        CleanerScheduleMode.allCases.filter { enabledViewModes.contains($0) }
+    }
 
     private let calendar: Calendar = {
         var c = Calendar.current; c.firstWeekday = 1; return c
@@ -31,26 +62,34 @@ struct CleanerUpcomingView: View {
     private let timelineStartHour: Int = 6
     private let timelineEndHour: Int = 21
 
+    private var hasActiveFilters: Bool {
+        statusFilter != nil || typeFilter != "All"
+    }
+
     // MARK: - Derived
 
     private var myJobs: [Job] {
         jobsStore.jobs.filter { $0.assignedMemberId == membership.id && $0.status != .cancelled }
     }
 
+    private func applyFilters(_ job: Job) -> Bool {
+        if let status = statusFilter, job.status != status { return false }
+        if typeFilter == "Recurring" && !job.isRecurring { return false }
+        if typeFilter == "One-time" && job.isRecurring { return false }
+        return true
+    }
+
     private var filteredJobsForDay: [Job] {
         myJobs
             .filter { calendar.isDate($0.date, inSameDayAs: selectedDay) }
-            .filter { statusFilter == nil || $0.status == statusFilter }
+            .filter { applyFilters($0) }
             .sorted { $0.date < $1.date }
     }
 
     private var upcomingGroupedJobs: [(date: Date, jobs: [Job])] {
         let today = calendar.startOfDay(for: Date())
         let upcoming = myJobs
-            .filter {
-                calendar.startOfDay(for: $0.date) >= today
-                && (statusFilter == nil || $0.status == statusFilter)
-            }
+            .filter { calendar.startOfDay(for: $0.date) >= today && applyFilters($0) }
             .sorted { $0.date < $1.date }
         let grouped = Dictionary(grouping: upcoming) { calendar.startOfDay(for: $0.date) }
         return grouped
@@ -74,21 +113,18 @@ struct CleanerUpcomingView: View {
                     .padding(.horizontal, 16)
                     .padding(.top, 12)
 
-                if let filter = statusFilter {
-                    activeFilterChip(filter)
-                        .padding(.horizontal, 16)
-                        .padding(.top, 8)
-                        .transition(.move(edge: .top).combined(with: .opacity))
+                // Week strip — Day and List only; Month has its own calendar, Map has a date chip
+                if viewMode == .day || viewMode == .list {
+                    WeekStripView(selectedDay: $selectedDay, jobs: myJobs)
+                        .padding(.top, 12)
                 }
-
-                WeekStripView(selectedDay: $selectedDay, jobs: myJobs)
-                    .padding(.top, 12)
 
                 Group {
                     switch viewMode {
                     case .day:   dayView
                     case .list:  listView
                     case .month: monthView
+                    case .map:   mapView
                     }
                 }
             }
@@ -101,6 +137,31 @@ struct CleanerUpcomingView: View {
                 CleanerMonthPicker(selectedDay: $selectedDay, jobs: myJobs)
                     .presentationDetents([.fraction(0.65)])
                     .presentationDragIndicator(.visible)
+            }
+            .sheet(isPresented: $showFilters) {
+                CleanerJobFiltersView(
+                    statusFilter: statusFilterBinding,
+                    typeFilter: $typeFilter,
+                    enabledViewModes: Binding(
+                        get: { enabledViewModes },
+                        set: { setEnabledViewModes($0) }
+                    )
+                )
+                .presentationDetents([.large])
+            }
+            .sheet(isPresented: $showMapJobDetail) {
+                if let jobId = mapSelectedJobId {
+                    CleanerJobDetailView(jobId: jobId)
+                        .onDisappear { mapSelectedJobId = nil }
+                }
+            }
+            .onChange(of: viewMode) { _, newMode in
+                guard newMode == .map else { return }
+                updateMapCamera(for: selectedDay)
+            }
+            .onChange(of: selectedDay) { _, newDay in
+                guard viewMode == .map else { return }
+                updateMapCamera(for: newDay)
             }
         }
     }
@@ -129,58 +190,16 @@ struct CleanerUpcomingView: View {
 
             Spacer(minLength: 12)
 
-            HeaderIconButton(systemName: statusFilter == nil
-                             ? "line.3.horizontal.decrease.circle"
-                             : "line.3.horizontal.decrease.circle.fill") {
+            HeaderIconButton(systemName: hasActiveFilters
+                             ? "line.3.horizontal.decrease.circle.fill"
+                             : "line.3.horizontal.decrease.circle") {
                 UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                cycleStatusFilter()
+                showFilters = true
             }
         }
         .frame(minHeight: 76, alignment: .center)
         .padding(.horizontal, 16)
         .padding(.top, 16)
-    }
-
-    private func cycleStatusFilter() {
-        withAnimation(.spring(duration: 0.2)) {
-            switch statusFilter {
-            case nil:         statusFilterRaw = JobStatus.scheduled.rawValue
-            case .scheduled:  statusFilterRaw = JobStatus.inProgress.rawValue
-            case .inProgress: statusFilterRaw = JobStatus.completed.rawValue
-            default:          statusFilterRaw = ""
-            }
-        }
-    }
-
-    private func activeFilterChip(_ filter: JobStatus) -> some View {
-        let color: Color = filter == .completed ? .green : filter == .inProgress ? .orange : Color.sweeplyAccent
-        return HStack(spacing: 6) {
-            Circle()
-                .fill(color)
-                .frame(width: 6, height: 6)
-            Text("Showing: \(filter.rawValue)")
-                .font(.system(size: 12, weight: .semibold))
-                .foregroundStyle(color)
-            Spacer()
-            Button {
-                withAnimation(.spring(duration: 0.2)) { statusFilterRaw = "" }
-                UIImpactFeedbackGenerator(style: .light).impactOccurred()
-            } label: {
-                HStack(spacing: 4) {
-                    Text("Clear")
-                        .font(.system(size: 12, weight: .medium))
-                    Image(systemName: "xmark")
-                        .font(.system(size: 10, weight: .semibold))
-                }
-                .foregroundStyle(color)
-            }
-            .buttonStyle(.plain)
-        }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 8)
-        .background(color.opacity(0.08))
-        .clipShape(RoundedRectangle(cornerRadius: 10))
-        .overlay(RoundedRectangle(cornerRadius: 10).stroke(color.opacity(0.2), lineWidth: 1))
     }
 
     // MARK: - Mode Segment
@@ -200,7 +219,7 @@ struct CleanerUpcomingView: View {
 
     private var modeSegment: some View {
         HStack(spacing: 4) {
-            ForEach(CleanerScheduleMode.allCases, id: \.self) { mode in
+            ForEach(visibleViewModes, id: \.self) { mode in
                 Button {
                     withAnimation(.easeInOut(duration: 0.2)) { viewModeRaw = mode.rawValue }
                 } label: {
@@ -250,6 +269,142 @@ struct CleanerUpcomingView: View {
         .overlay(Rectangle().frame(height: 1).foregroundStyle(Color.sweeplyBorder), alignment: .bottom)
     }
 
+    // MARK: - Map View
+
+    private var mapView: some View {
+        let dayJobs = filteredJobsForDay
+        return ZStack(alignment: .bottom) {
+            Map(position: $mapCameraPosition) {
+                ForEach(dayJobs) { job in
+                    if let client = clientsStore.clients.first(where: { $0.id == job.clientId }),
+                       let lat = client.latitude, let lng = client.longitude {
+                        Annotation(job.clientName, coordinate: CLLocationCoordinate2D(latitude: lat, longitude: lng)) {
+                            MapPinView(
+                                status: job.status,
+                                isSelected: mapSelectedJobId == job.id,
+                                serviceType: job.serviceType
+                            )
+                            .onTapGesture {
+                                withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                                    mapSelectedJobId = job.id
+                                }
+                            }
+                        }
+                    }
+                }
+                UserAnnotation()
+            }
+            .mapStyle(.standard(elevation: .realistic, pointsOfInterest: .including([.school, .park, .hospital])))
+            .mapControls {
+                MapCompass()
+                MapScaleView()
+            }
+            .ignoresSafeArea(edges: .bottom)
+
+            // Controls overlay
+            VStack {
+                HStack(alignment: .top) {
+                    // Date chip
+                    Text(selectedDay.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day()))
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(Color.sweeplyNavy)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(Color.sweeplySurface.opacity(0.95))
+                        .clipShape(Capsule())
+                        .shadow(color: .black.opacity(0.08), radius: 6, x: 0, y: 2)
+
+                    Spacer()
+
+                    VStack(spacing: 12) {
+                        MapActionButton(icon: "location.fill") {
+                            withAnimation { mapCameraPosition = .userLocation(fallback: .automatic) }
+                        }
+                        MapActionButton(icon: "scope") {
+                            let coords = dayJobs.compactMap { job -> CLLocationCoordinate2D? in
+                                guard let c = clientsStore.clients.first(where: { $0.id == job.clientId }),
+                                      let lat = c.latitude, let lon = c.longitude else { return nil }
+                                return CLLocationCoordinate2D(latitude: lat, longitude: lon)
+                            }
+                            guard !coords.isEmpty else { return }
+                            let lats = coords.map(\.latitude)
+                            let lons = coords.map(\.longitude)
+                            let center = CLLocationCoordinate2D(
+                                latitude: (lats.min()! + lats.max()!) / 2,
+                                longitude: (lons.min()! + lons.max()!) / 2
+                            )
+                            let span = MKCoordinateSpan(
+                                latitudeDelta: (lats.max()! - lats.min()!) * 1.5 + 0.05,
+                                longitudeDelta: (lons.max()! - lons.min()!) * 1.5 + 0.05
+                            )
+                            withAnimation { mapCameraPosition = .region(MKCoordinateRegion(center: center, span: span)) }
+                        }
+                    }
+                }
+                .padding(.horizontal, 16)
+                .padding(.top, 16)
+                Spacer()
+            }
+
+            // Selected job card
+            if let jobId = mapSelectedJobId,
+               let job = dayJobs.first(where: { $0.id == jobId }) {
+                MapJobCard(
+                    job: job,
+                    onDirections: { openDirections(for: job) },
+                    onDetails: { showMapJobDetail = true },
+                    onDismiss: {
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.9)) {
+                            mapSelectedJobId = nil
+                        }
+                    }
+                )
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+                .zIndex(10)
+            }
+        }
+    }
+
+    private func updateMapCamera(for day: Date) {
+        let jobs = myJobs.filter { calendar.isDate($0.date, inSameDayAs: day) }
+        let coords = jobs.compactMap { job -> CLLocationCoordinate2D? in
+            guard let client = clientsStore.clients.first(where: { $0.id == job.clientId }),
+                  let lat = client.latitude, let lon = client.longitude else { return nil }
+            return CLLocationCoordinate2D(latitude: lat, longitude: lon)
+        }
+        let userLoc = locationManager.location
+        let fallback = CLLocationCoordinate2D(
+            latitude: userLoc?.coordinate.latitude ?? 37.3346,
+            longitude: userLoc?.coordinate.longitude ?? -122.0090
+        )
+        withAnimation(.easeInOut(duration: 0.4)) {
+            if coords.isEmpty {
+                mapCameraPosition = .region(MKCoordinateRegion(
+                    center: fallback,
+                    span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
+                ))
+            } else {
+                let lats = coords.map(\.latitude)
+                let lons = coords.map(\.longitude)
+                mapCameraPosition = .region(MKCoordinateRegion(
+                    center: CLLocationCoordinate2D(
+                        latitude: (lats.min()! + lats.max()!) / 2,
+                        longitude: (lons.min()! + lons.max()!) / 2
+                    ),
+                    span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
+                ))
+            }
+        }
+    }
+
+    private func openDirections(for job: Job) {
+        let lat = clientsStore.clients.first(where: { $0.id == job.clientId })?.latitude ?? 0
+        let lon = clientsStore.clients.first(where: { $0.id == job.clientId })?.longitude ?? 0
+        let mapItem = MKMapItem(placemark: MKPlacemark(coordinate: CLLocationCoordinate2D(latitude: lat, longitude: lon)))
+        mapItem.name = job.clientName
+        mapItem.openInMaps(launchOptions: [MKLaunchOptionsDirectionsModeKey: MKLaunchOptionsDirectionsModeDriving])
+    }
+
     // MARK: - Day View (Timeline)
 
     private var dayView: some View {
@@ -266,7 +421,6 @@ struct CleanerUpcomingView: View {
                     let totalHeight = CGFloat(hours.count) * timelineHourHeight
 
                     ZStack(alignment: .topLeading) {
-                        // Hour grid rows
                         VStack(spacing: 0) {
                             ForEach(hours, id: \.self) { hour in
                                 HStack(alignment: .top, spacing: 0) {
@@ -285,7 +439,6 @@ struct CleanerUpcomingView: View {
                             }
                         }
 
-                        // Current time indicator (today only)
                         if calendar.isDateInToday(selectedDay) {
                             let now = Date()
                             let nowHour = Calendar.current.component(.hour, from: now)
@@ -293,18 +446,12 @@ struct CleanerUpcomingView: View {
                             let yNow = CGFloat(nowHour - timelineStartHour) * timelineHourHeight
                                      + CGFloat(nowMinute) / 60.0 * timelineHourHeight
                             HStack(spacing: 0) {
-                                Circle()
-                                    .fill(Color.red)
-                                    .frame(width: 8, height: 8)
-                                    .padding(.leading, 40)
-                                Rectangle()
-                                    .fill(Color.red.opacity(0.7))
-                                    .frame(height: 1.5)
+                                Circle().fill(Color.red).frame(width: 8, height: 8).padding(.leading, 40)
+                                Rectangle().fill(Color.red.opacity(0.7)).frame(height: 1.5)
                             }
                             .offset(y: max(0, yNow) + timelineHourHeight * 0.5)
                         }
 
-                        // Job blocks
                         ForEach(filteredJobsForDay) { job in
                             let jobHour = Calendar.current.component(.hour, from: job.date)
                             let jobMinute = Calendar.current.component(.minute, from: job.date)
@@ -326,9 +473,7 @@ struct CleanerUpcomingView: View {
                     .padding(.bottom, 100)
                 }
             }
-            .refreshable {
-                await jobsStore.load(isAuthenticated: session.isAuthenticated)
-            }
+            .refreshable { await jobsStore.load(isAuthenticated: session.isAuthenticated) }
         }
     }
 
@@ -361,7 +506,7 @@ struct CleanerUpcomingView: View {
                         Text("No upcoming jobs")
                             .font(.system(size: 16, weight: .semibold))
                             .foregroundStyle(Color.sweeplyTextSub)
-                        Text(statusFilter != nil ? "Try clearing the filter." : "Nothing scheduled yet.")
+                        Text(hasActiveFilters ? "Try adjusting your filters." : "Nothing scheduled yet.")
                             .font(.system(size: 13))
                             .foregroundStyle(Color.sweeplyTextSub.opacity(0.6))
                     }
@@ -373,9 +518,7 @@ struct CleanerUpcomingView: View {
                             Section {
                                 VStack(spacing: 8) {
                                     ForEach(group.jobs) { job in
-                                        CleanerListJobRow(job: job) {
-                                            selectedJobId = job.id
-                                        }
+                                        CleanerListJobRow(job: job) { selectedJobId = job.id }
                                     }
                                 }
                                 .padding(.horizontal, 20)
@@ -385,8 +528,7 @@ struct CleanerUpcomingView: View {
                                     Text(agendaDateLabel(group.date))
                                         .font(.system(size: 13, weight: .bold))
                                         .foregroundStyle(calendar.isDateInToday(group.date) ? Color.sweeplyAccent : Color.sweeplyNavy)
-                                    Text("·")
-                                        .foregroundStyle(Color.sweeplyBorder)
+                                    Text("·").foregroundStyle(Color.sweeplyBorder)
                                     Text(group.jobs.reduce(0) { $0 + $1.price }.currency)
                                         .font(.system(size: 12, weight: .semibold, design: .monospaced))
                                         .foregroundStyle(Color.sweeplyTextSub)
@@ -405,9 +547,7 @@ struct CleanerUpcomingView: View {
                     .padding(.bottom, 100)
                 }
             }
-            .refreshable {
-                await jobsStore.load(isAuthenticated: session.isAuthenticated)
-            }
+            .refreshable { await jobsStore.load(isAuthenticated: session.isAuthenticated) }
         }
     }
 
@@ -435,7 +575,7 @@ struct CleanerUpcomingView: View {
                         Text("No jobs this day")
                             .font(.system(size: 16, weight: .semibold))
                             .foregroundStyle(Color.sweeplyTextSub)
-                        Text(statusFilter != nil ? "Try clearing the filter." : "Nothing scheduled.")
+                        Text(hasActiveFilters ? "Try adjusting your filters." : "Nothing scheduled.")
                             .font(.system(size: 13))
                             .foregroundStyle(Color.sweeplyTextSub.opacity(0.6))
                     }
@@ -444,37 +584,194 @@ struct CleanerUpcomingView: View {
                 } else {
                     VStack(spacing: 8) {
                         ForEach(filteredJobsForDay) { job in
-                            CleanerListJobRow(job: job) {
-                                selectedJobId = job.id
-                            }
-                            .padding(.horizontal, 20)
+                            CleanerListJobRow(job: job) { selectedJobId = job.id }
+                                .padding(.horizontal, 20)
                         }
                     }
                 }
             }
             .padding(.bottom, 100)
         }
-        .refreshable {
-            await jobsStore.load(isAuthenticated: session.isAuthenticated)
-        }
+        .refreshable { await jobsStore.load(isAuthenticated: session.isAuthenticated) }
     }
 
     // MARK: - Empty State
 
     private var emptyState: some View {
         VStack(spacing: 12) {
-            Image(systemName: statusFilter != nil ? "line.3.horizontal.decrease.circle" : "calendar.badge.clock")
+            Image(systemName: hasActiveFilters ? "line.3.horizontal.decrease.circle" : "calendar.badge.clock")
                 .font(.system(size: 44))
                 .foregroundStyle(Color.sweeplyTextSub.opacity(0.3))
-            Text(statusFilter != nil ? "No \(statusFilter!.rawValue.lowercased()) jobs today" : "No jobs this day")
+            Text(hasActiveFilters ? "No matching jobs" : "No jobs this day")
                 .font(.system(size: 16, weight: .semibold))
                 .foregroundStyle(Color.sweeplyTextSub)
-            Text(statusFilter != nil ? "Tap the filter chip above to clear it." : "Enjoy your day off.")
+            Text(hasActiveFilters ? "Try adjusting your filters." : "Enjoy your day off.")
                 .font(.system(size: 13))
                 .foregroundStyle(Color.sweeplyTextSub.opacity(0.6))
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 60)
+    }
+}
+
+// MARK: - Cleaner Job Filters Sheet
+
+private struct CleanerJobFiltersView: View {
+    @Environment(\.dismiss) private var dismiss
+    @Binding var statusFilter: JobStatus?
+    @Binding var typeFilter: String
+    @Binding var enabledViewModes: Set<CleanerScheduleMode>
+
+    @State private var localStatus: JobStatus?
+    @State private var localType: String = "All"
+    @State private var localViewModes: Set<CleanerScheduleMode> = Set(CleanerScheduleMode.allCases)
+
+    var body: some View {
+        VStack(spacing: 0) {
+            // Header
+            HStack {
+                Text("Filters")
+                    .font(.system(size: 20, weight: .bold))
+                Spacer()
+                Button {
+                    dismiss()
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(Color.sweeplyNavy)
+                        .frame(width: 32, height: 32)
+                        .background(Color.sweeplyBorder.opacity(0.5))
+                        .clipShape(Circle())
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(24)
+
+            ScrollView {
+                VStack(alignment: .leading, spacing: 32) {
+                    // Status filter
+                    VStack(alignment: .leading, spacing: 16) {
+                        FilterHeader(title: "JOB STATUS", subtitle: "Filter by current job progress")
+                        ChipGroup(spacing: 8) {
+                            FilterChip(label: "All Statuses", isSelected: localStatus == nil) {
+                                localStatus = nil
+                            }
+                            ForEach(JobStatus.allCases, id: \.self) { status in
+                                FilterChip(
+                                    label: status.rawValue,
+                                    isSelected: localStatus == status,
+                                    color: statusColor(for: status)
+                                ) { localStatus = status }
+                            }
+                        }
+                    }
+
+                    // Job type filter
+                    VStack(alignment: .leading, spacing: 16) {
+                        FilterHeader(title: "SCHEDULE TYPE", subtitle: "One-time or recurring jobs")
+                        HStack(spacing: 12) {
+                            TypeCard(label: "All", icon: "square.grid.2x2.fill", isSelected: localType == "All") {
+                                localType = "All"
+                            }
+                            TypeCard(label: "Recurring", icon: "arrow.triangle.2.circlepath", isSelected: localType == "Recurring") {
+                                localType = "Recurring"
+                            }
+                            TypeCard(label: "One-time", icon: "calendar", isSelected: localType == "One-time") {
+                                localType = "One-time"
+                            }
+                        }
+                    }
+
+                    // View mode toggles
+                    VStack(alignment: .leading, spacing: 16) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("VIEW OPTIONS")
+                                .font(.system(size: 11, weight: .bold))
+                                .foregroundStyle(Color.sweeplyNavy)
+                                .tracking(1.0)
+                            Text("Select which tabs appear in the schedule")
+                                .font(.system(size: 13))
+                                .foregroundStyle(Color.sweeplyTextSub)
+                        }
+
+                        VStack(spacing: 1) {
+                            ForEach(CleanerScheduleMode.allCases, id: \.self) { mode in
+                                ToggleRow(
+                                    label: mode.rawValue,
+                                    icon: iconFor(mode: mode),
+                                    isOn: localViewModes.contains(mode)
+                                ) {
+                                    if localViewModes.contains(mode) {
+                                        if localViewModes.count > 1 { localViewModes.remove(mode) }
+                                    } else {
+                                        localViewModes.insert(mode)
+                                    }
+                                }
+                                if mode != CleanerScheduleMode.allCases.last {
+                                    Divider().padding(.leading, 44)
+                                }
+                            }
+                        }
+                        .background(Color.sweeplyBackground.opacity(0.5))
+                        .clipShape(RoundedRectangle(cornerRadius: 16))
+                        .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.sweeplyBorder, lineWidth: 1))
+                    }
+                }
+                .padding(.horizontal, 24)
+                .padding(.top, 8)
+                .padding(.bottom, 40)
+            }
+
+            // Footer
+            VStack(spacing: 12) {
+                Button {
+                    statusFilter = localStatus
+                    typeFilter = localType
+                    enabledViewModes = localViewModes
+                    dismiss()
+                } label: {
+                    Text("Apply Changes")
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                        .background(Color.sweeplyNavy)
+                        .clipShape(RoundedRectangle(cornerRadius: 16))
+                        .shadow(color: Color.sweeplyNavy.opacity(0.2), radius: 10, x: 0, y: 5)
+                }
+                Button("Cancel") { dismiss() }
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(Color.sweeplyTextSub)
+                    .padding(.bottom, 8)
+            }
+            .padding(24)
+            .background(Color.sweeplySurface)
+            .shadow(color: .black.opacity(0.05), radius: 10, x: 0, y: -5)
+        }
+        .background(Color.sweeplySurface)
+        .onAppear {
+            localStatus = statusFilter
+            localType = typeFilter
+            localViewModes = enabledViewModes
+        }
+    }
+
+    private func iconFor(mode: CleanerScheduleMode) -> String {
+        switch mode {
+        case .day:   return "calendar.badge.clock"
+        case .list:  return "list.bullet"
+        case .month: return "calendar"
+        case .map:   return "map.fill"
+        }
+    }
+
+    private func statusColor(for status: JobStatus) -> Color {
+        switch status {
+        case .completed:  return Color.sweeplyAccent
+        case .inProgress: return .blue
+        case .scheduled:  return Color.sweeplyNavy
+        case .cancelled:  return Color.sweeplyDestructive
+        }
     }
 }
 
@@ -523,8 +820,7 @@ private struct CleanerTimelineJobBlock: View {
                             Text(timeString(from: job.date))
                                 .font(.system(size: 10, design: .monospaced))
                                 .foregroundStyle(Color.sweeplyTextSub)
-                            Text("·")
-                                .foregroundStyle(Color.sweeplyTextSub.opacity(0.4))
+                            Text("·").foregroundStyle(Color.sweeplyTextSub.opacity(0.4))
                             Text(job.price.currency)
                                 .font(.system(size: 10, weight: .semibold, design: .monospaced))
                                 .foregroundStyle(Color.sweeplyNavy)
@@ -533,8 +829,7 @@ private struct CleanerTimelineJobBlock: View {
                     .padding(.leading, 8)
                     .padding(.vertical, 8)
                     Spacer()
-                    StatusBadge(status: job.status)
-                        .padding(.trailing, 10)
+                    StatusBadge(status: job.status).padding(.trailing, 10)
                 }
             }
         }
@@ -552,7 +847,6 @@ private struct CleanerTimelineJobBlock: View {
 private struct CleanerListJobRow: View {
     let job: Job
     let onTap: () -> Void
-
     @State private var isPressed = false
 
     private var accentColor: Color {
@@ -577,18 +871,13 @@ private struct CleanerListJobRow: View {
         Button(action: onTap) {
             ZStack(alignment: .leading) {
                 Color.sweeplySurface
-
                 Capsule()
                     .fill(accentColor)
                     .frame(width: 3)
                     .padding(.vertical, 10)
-                    .padding(.leading, 0)
-
                 HStack(spacing: 14) {
                     Color.clear.frame(width: 3)
-
                     VStack(alignment: .leading, spacing: 6) {
-                        // Row 1: client + duration pill + price
                         HStack(spacing: 4) {
                             Text(job.clientName)
                                 .font(.system(size: 15, weight: .bold))
@@ -609,8 +898,6 @@ private struct CleanerListJobRow: View {
                                 .font(.system(size: 15, weight: .bold, design: .monospaced))
                                 .foregroundStyle(Color.sweeplyNavy)
                         }
-
-                        // Row 2: clock + time
                         HStack(spacing: 6) {
                             Image(systemName: "clock")
                                 .font(.system(size: 10))
@@ -619,8 +906,6 @@ private struct CleanerListJobRow: View {
                                 .font(.system(size: 12))
                                 .foregroundStyle(Color.sweeplyTextSub)
                         }
-
-                        // Row 3: service pill + status badge
                         HStack(spacing: 8) {
                             Text(job.serviceType.rawValue)
                                 .font(.system(size: 11, weight: .semibold))
@@ -632,7 +917,6 @@ private struct CleanerListJobRow: View {
                             StatusBadge(status: job.status)
                         }
                     }
-
                     Image(systemName: "chevron.right")
                         .font(.system(size: 12, weight: .semibold))
                         .foregroundStyle(Color.sweeplyBorder)
@@ -651,7 +935,7 @@ private struct CleanerListJobRow: View {
         .simultaneousGesture(
             DragGesture(minimumDistance: 0)
                 .onChanged { _ in isPressed = true }
-                .onEnded { _ in isPressed = false }
+                .onEnded   { _ in isPressed = false }
         )
     }
 

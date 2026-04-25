@@ -33,18 +33,18 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
     func requestAuthorization() {
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .badge, .sound]) { granted, error in
             if let error = error {
-                print("Error requesting notification authorization: \(error)")
+                print("[NotificationManager] Authorization error: \(error)")
             }
             DispatchQueue.main.async {
                 self.isAuthorized = granted
                 self.checkAuthorizationStatus()
+                if granted { self.scheduleWeeklyEarningsSummary() }
             }
         }
         registerNotificationCategories()
     }
 
     func registerNotificationCategories() {
-        // Job reminder actions
         let markCompleteAction = UNNotificationAction(
             identifier: "MARK_JOB_COMPLETE",
             title: "Mark Complete",
@@ -62,7 +62,6 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
             options: []
         )
 
-        // Invoice reminder actions
         let markPaidAction = UNNotificationAction(
             identifier: "MARK_INVOICE_PAID",
             title: "Mark Paid",
@@ -81,19 +80,6 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
         )
 
         UNUserNotificationCenter.current().setNotificationCategories([jobCategory, invoiceCategory])
-    }
-
-    func sendTestNotification() {
-        let content = UNMutableNotificationContent()
-        content.title = "Sweeply Notification"
-        content.body = "This is a test notification to confirm everything is working!"
-        content.sound = .default
-        content.badge = 1
-        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 5, repeats: false)
-        let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: trigger)
-        UNUserNotificationCenter.current().add(request) { error in
-            if let error = error { print("Error adding test notification: \(error)") }
-        }
     }
 
     // MARK: - Instant Banner
@@ -115,109 +101,267 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
         }
     }
 
-    // MARK: - Job Reminders
+    func sendTestNotification() {
+        let content = UNMutableNotificationContent()
+        content.title = "Sweeply Notifications"
+        content.body = "Everything is working — you'll get reminders for jobs and invoices here."
+        content.sound = .default
+        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 3, repeats: false)
+        let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: trigger)
+        UNUserNotificationCenter.current().add(request) { error in
+            if let error { print("[NotificationManager] sendTestNotification error: \(error)") }
+        }
+    }
 
+    // MARK: - Per-Job Countdown (1 hour before — always individual)
+
+    /// Schedules only the 60-minute countdown for a specific job.
+    /// Daily morning and evening digests are handled separately by `refreshDailyDigests(jobs:)`.
     func scheduleJobReminder(for job: Job) {
-        // 1 hour before
-        scheduleAt(timeInterval: -3600, job: job, suffix: "hour",
-                   title: "Job in 1 Hour",
-                   body: "\(job.serviceType.rawValue) at \(job.clientName) — \(job.address)")
-        // 8am the day before
-        scheduleCalendar(hour: 8, minute: 0, dayOffset: -1, job: job, suffix: "dayBefore",
-                         title: "Job Tomorrow",
-                         body: "\(job.serviceType.rawValue) at \(job.clientName)")
-        // 7am morning of
-        scheduleCalendar(hour: 7, minute: 0, dayOffset: 0, job: job, suffix: "morning",
-                         title: "Job Today",
-                         body: "\(job.serviceType.rawValue) at \(job.clientName) — \(job.address)")
+        guard job.status == .scheduled || job.status == .inProgress else { return }
+        let fireDate = job.date.addingTimeInterval(-3600)
+        guard fireDate > Date() else { return }
+
+        let content = UNMutableNotificationContent()
+        content.title = "Starting in 1 Hour"
+        var body = "\(job.serviceType.rawValue) for \(job.clientName) at \(shortTime(job.date))"
+        if !job.address.isEmpty { body += " — \(job.address)" }
+        content.body = body
+        content.sound = .default
+        content.userInfo = ["jobId": job.id.uuidString]
+        content.categoryIdentifier = "JOB_REMINDER"
+
+        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: fireDate.timeIntervalSinceNow, repeats: false)
+        let request = UNNotificationRequest(identifier: "\(job.id)-hour", content: content, trigger: trigger)
+        UNUserNotificationCenter.current().add(request, withCompletionHandler: nil)
     }
 
     func cancelJobReminders(for jobId: UUID) {
-        let ids = ["\(jobId)-hour", "\(jobId)-dayBefore", "\(jobId)-morning"]
-        UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: ids)
+        UNUserNotificationCenter.current().removePendingNotificationRequests(
+            withIdentifiers: ["\(jobId)-hour"]
+        )
+    }
+
+    // MARK: - Daily Digest (grouped per-day morning + evening)
+
+    /// Call after any jobs mutation (insert, update, delete, status change).
+    /// Cancels all existing daily digest notifications and rebuilds them from the current job list.
+    func refreshDailyDigests(jobs: [Job]) {
+        let center = UNUserNotificationCenter.current()
+        center.getPendingNotificationRequests { requests in
+            let digestIds = requests
+                .filter {
+                    $0.identifier.hasPrefix("daily-morning-") ||
+                    $0.identifier.hasPrefix("evening-preview-")
+                }
+                .map(\.identifier)
+            center.removePendingNotificationRequests(withIdentifiers: digestIds)
+
+            let today = Calendar.current.startOfDay(for: Date())
+            let upcoming = jobs.filter {
+                ($0.status == .scheduled || $0.status == .inProgress) &&
+                Calendar.current.startOfDay(for: $0.date) >= today
+            }
+
+            let grouped = Dictionary(grouping: upcoming) { Calendar.current.startOfDay(for: $0.date) }
+            for (day, dayJobs) in grouped {
+                let sorted = dayJobs.sorted { $0.date < $1.date }
+                self.scheduleMorningDigest(for: day, jobs: sorted)
+                self.scheduleEveningPreview(for: day, jobs: sorted)
+            }
+        }
+    }
+
+    // MARK: - Morning Digest (7am day-of)
+
+    private func scheduleMorningDigest(for day: Date, jobs: [Job]) {
+        guard !jobs.isEmpty else { return }
+        let dateId = dayIdentifier(for: day)
+
+        let content = UNMutableNotificationContent()
+        content.sound = .default
+        content.categoryIdentifier = "JOB_REMINDER"
+
+        switch jobs.count {
+        case 1:
+            let job = jobs[0]
+            content.title = "Job Today"
+            content.body = "\(job.serviceType.rawValue) for \(job.clientName) at \(shortTime(job.date))"
+            if !job.address.isEmpty { content.body += " — \(job.address)" }
+            content.userInfo = ["jobId": job.id.uuidString]
+        case 2:
+            content.title = "2 Jobs Today"
+            content.body = "\(jobs[0].clientName) at \(shortTime(jobs[0].date)), then \(jobs[1].clientName) at \(shortTime(jobs[1].date))"
+        default:
+            let first = jobs[0]
+            content.title = "\(jobs.count) Jobs Today"
+            content.body = "Starting at \(shortTime(first.date)) with \(first.clientName) — tap to see your full schedule"
+        }
+
+        var comp = Calendar.current.dateComponents([.year, .month, .day], from: day)
+        comp.hour = 7; comp.minute = 0
+        let trigger = UNCalendarNotificationTrigger(dateMatching: comp, repeats: false)
+        let request = UNNotificationRequest(identifier: "daily-morning-\(dateId)", content: content, trigger: trigger)
+        UNUserNotificationCenter.current().add(request, withCompletionHandler: nil)
+    }
+
+    // MARK: - Evening Preview (6pm day before)
+
+    private func scheduleEveningPreview(for day: Date, jobs: [Job]) {
+        guard !jobs.isEmpty else { return }
+        guard let dayBefore = Calendar.current.date(byAdding: .day, value: -1, to: day) else { return }
+        // Don't schedule if the evening window has already passed
+        guard dayBefore >= Calendar.current.startOfDay(for: Date()) else { return }
+
+        let dateId = dayIdentifier(for: day)
+
+        let content = UNMutableNotificationContent()
+        content.sound = .default
+        content.categoryIdentifier = "JOB_REMINDER"
+
+        switch jobs.count {
+        case 1:
+            let job = jobs[0]
+            content.title = "Tomorrow: 1 Job"
+            content.body = "\(job.serviceType.rawValue) for \(job.clientName) at \(shortTime(job.date))"
+            content.userInfo = ["jobId": job.id.uuidString]
+        case 2:
+            content.title = "Tomorrow: 2 Jobs"
+            content.body = "\(jobs[0].clientName) at \(shortTime(jobs[0].date)) and \(jobs[1].clientName) at \(shortTime(jobs[1].date))"
+        default:
+            let first = jobs[0]
+            let last = jobs[jobs.count - 1]
+            content.title = "Tomorrow: \(jobs.count) Jobs"
+            content.body = "\(shortTime(first.date))–\(shortTime(last.date)) — starting with \(first.clientName)"
+        }
+
+        var comp = Calendar.current.dateComponents([.year, .month, .day], from: dayBefore)
+        comp.hour = 18; comp.minute = 0
+        let trigger = UNCalendarNotificationTrigger(dateMatching: comp, repeats: false)
+        let request = UNNotificationRequest(identifier: "evening-preview-\(dateId)", content: content, trigger: trigger)
+        UNUserNotificationCenter.current().add(request, withCompletionHandler: nil)
+    }
+
+    // MARK: - Weekly Earnings Digest (every Monday 9am)
+
+    /// Call once after authorization is granted. Schedules a recurring Monday morning digest.
+    func scheduleWeeklyEarningsSummary() {
+        UNUserNotificationCenter.current().removePendingNotificationRequests(
+            withIdentifiers: ["weekly-earnings-summary"]
+        )
+        let content = UNMutableNotificationContent()
+        content.title = "Weekly Earnings Summary"
+        content.body = "Open Finance to see what you earned last week and what's coming up."
+        content.sound = .default
+
+        var comp = DateComponents()
+        comp.weekday = 2  // Monday (1 = Sun)
+        comp.hour = 9
+        comp.minute = 0
+        let trigger = UNCalendarNotificationTrigger(dateMatching: comp, repeats: true)
+        let request = UNNotificationRequest(
+            identifier: "weekly-earnings-summary",
+            content: content,
+            trigger: trigger
+        )
+        UNUserNotificationCenter.current().add(request, withCompletionHandler: nil)
     }
 
     // MARK: - Invoice Reminders
 
     func scheduleInvoiceReminder(for invoice: Invoice) {
-        let content3Day = UNMutableNotificationContent()
-        content3Day.title = "Invoice Due Soon"
-        content3Day.body = "\(invoice.invoiceNumber) for \(invoice.clientName) is due in 3 days — \(invoice.subtotal.formatted(.currency(code: "USD")))"
-        content3Day.sound = .default
-        content3Day.userInfo = ["invoiceId": invoice.id.uuidString]
-        content3Day.categoryIdentifier = "INVOICE_REMINDER"
+        guard invoice.status == .unpaid else { return }
 
-        let contentDayOf = UNMutableNotificationContent()
-        contentDayOf.title = "Invoice Due Today"
-        contentDayOf.body = "\(invoice.invoiceNumber) for \(invoice.clientName) is due today — \(invoice.subtotal.formatted(.currency(code: "USD")))"
-        contentDayOf.sound = .default
-        contentDayOf.userInfo = ["invoiceId": invoice.id.uuidString]
-        contentDayOf.categoryIdentifier = "INVOICE_REMINDER"
+        // 3 days before due at 9am
+        if let threeDayBefore = Calendar.current.date(byAdding: .day, value: -3, to: invoice.dueDate),
+           threeDayBefore > Date() {
+            let content = UNMutableNotificationContent()
+            content.title = "Invoice Due in 3 Days"
+            content.body = "\(invoice.invoiceNumber) for \(invoice.clientName) — \(invoice.subtotal.currency) due \(shortDate(invoice.dueDate))"
+            content.sound = .default
+            content.userInfo = ["invoiceId": invoice.id.uuidString]
+            content.categoryIdentifier = "INVOICE_REMINDER"
 
-        // 3 days before at 9am
-        if let threeDayBefore = Calendar.current.date(byAdding: .day, value: -3, to: invoice.dueDate) {
             var comp = Calendar.current.dateComponents([.year, .month, .day], from: threeDayBefore)
-            comp.hour = 9
-            comp.minute = 0
+            comp.hour = 9; comp.minute = 0
             let trigger = UNCalendarNotificationTrigger(dateMatching: comp, repeats: false)
-            let req = UNNotificationRequest(identifier: "\(invoice.id)-due3day", content: content3Day, trigger: trigger)
+            let req = UNNotificationRequest(identifier: "\(invoice.id)-due3day", content: content, trigger: trigger)
             UNUserNotificationCenter.current().add(req, withCompletionHandler: nil)
         }
 
-        // Day of at 9am
-        var comp = Calendar.current.dateComponents([.year, .month, .day], from: invoice.dueDate)
-        comp.hour = 9
-        comp.minute = 0
-        let trigger = UNCalendarNotificationTrigger(dateMatching: comp, repeats: false)
-        let req = UNNotificationRequest(identifier: "\(invoice.id)-dueToday", content: contentDayOf, trigger: trigger)
-        UNUserNotificationCenter.current().add(req, withCompletionHandler: nil)
+        // Day of due at 9am
+        if Calendar.current.startOfDay(for: invoice.dueDate) >= Calendar.current.startOfDay(for: Date()) {
+            let content = UNMutableNotificationContent()
+            content.title = "Invoice Due Today"
+            content.body = "\(invoice.invoiceNumber) for \(invoice.clientName) — \(invoice.subtotal.currency) is due today"
+            content.sound = .default
+            content.userInfo = ["invoiceId": invoice.id.uuidString]
+            content.categoryIdentifier = "INVOICE_REMINDER"
+
+            var comp = Calendar.current.dateComponents([.year, .month, .day], from: invoice.dueDate)
+            comp.hour = 9; comp.minute = 0
+            let trigger = UNCalendarNotificationTrigger(dateMatching: comp, repeats: false)
+            let req = UNNotificationRequest(identifier: "\(invoice.id)-dueToday", content: content, trigger: trigger)
+            UNUserNotificationCenter.current().add(req, withCompletionHandler: nil)
+        }
+
+        // 1 day overdue at 9am — escalation
+        if let dayAfterDue = Calendar.current.date(byAdding: .day, value: 1, to: invoice.dueDate),
+           dayAfterDue > Date() {
+            let content = UNMutableNotificationContent()
+            content.title = "Invoice Overdue"
+            content.body = "\(invoice.invoiceNumber) for \(invoice.clientName) was due yesterday — \(invoice.subtotal.currency) still unpaid"
+            content.sound = .defaultCritical
+            content.userInfo = ["invoiceId": invoice.id.uuidString]
+            content.categoryIdentifier = "INVOICE_REMINDER"
+
+            var comp = Calendar.current.dateComponents([.year, .month, .day], from: dayAfterDue)
+            comp.hour = 9; comp.minute = 0
+            let trigger = UNCalendarNotificationTrigger(dateMatching: comp, repeats: false)
+            let req = UNNotificationRequest(identifier: "\(invoice.id)-overdue", content: content, trigger: trigger)
+            UNUserNotificationCenter.current().add(req, withCompletionHandler: nil)
+        }
     }
 
     func cancelInvoiceReminders(for invoiceId: UUID) {
-        let ids = ["\(invoiceId)-due3day", "\(invoiceId)-dueToday"]
+        let ids = ["\(invoiceId)-due3day", "\(invoiceId)-dueToday", "\(invoiceId)-overdue"]
         UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: ids)
     }
 
-    // MARK: - Private Helpers
+    // MARK: - Helpers
 
-    private func scheduleCalendar(hour: Int, minute: Int, dayOffset: Int, job: Job, suffix: String, title: String, body: String) {
-        guard let triggerDate = Calendar.current.date(byAdding: .day, value: dayOffset, to: job.date) else { return }
-        var components = Calendar.current.dateComponents([.year, .month, .day], from: triggerDate)
-        components.hour = hour
-        components.minute = minute
-        let content = UNMutableNotificationContent()
-        content.title = title
-        content.body = body
-        content.sound = .default
-        content.userInfo = ["jobId": job.id.uuidString]
-        content.categoryIdentifier = "JOB_REMINDER"
-        let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: false)
-        let request = UNNotificationRequest(identifier: "\(job.id)-\(suffix)", content: content, trigger: trigger)
-        UNUserNotificationCenter.current().add(request, withCompletionHandler: nil)
+    private func dayIdentifier(for date: Date) -> String {
+        let f = DateFormatter()
+        f.dateFormat = "yyyy-MM-dd"
+        return f.string(from: date)
     }
 
-    private func scheduleAt(timeInterval: TimeInterval, job: Job, suffix: String, title: String, body: String) {
-        let fireDate = job.date.addingTimeInterval(timeInterval)
-        guard fireDate > Date() else { return }
-        let interval = fireDate.timeIntervalSinceNow
-        let content = UNMutableNotificationContent()
-        content.title = title
-        content.body = body
-        content.sound = .default
-        content.userInfo = ["jobId": job.id.uuidString]
-        content.categoryIdentifier = "JOB_REMINDER"
-        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: max(interval, 1), repeats: false)
-        let request = UNNotificationRequest(identifier: "\(job.id)-\(suffix)", content: content, trigger: trigger)
-        UNUserNotificationCenter.current().add(request, withCompletionHandler: nil)
+    private func shortTime(_ date: Date) -> String {
+        let f = DateFormatter()
+        f.timeStyle = .short
+        f.dateStyle = .none
+        return f.string(from: date)
+    }
+
+    private func shortDate(_ date: Date) -> String {
+        date.formatted(.dateTime.month(.abbreviated).day())
     }
 
     // MARK: - UNUserNotificationCenterDelegate
 
-    func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification, withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
+    func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        willPresent notification: UNNotification,
+        withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
+    ) {
         completionHandler([.banner, .sound, .badge])
     }
 
-    func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse, withCompletionHandler completionHandler: @escaping () -> Void) {
+    func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        didReceive response: UNNotificationResponse,
+        withCompletionHandler completionHandler: @escaping () -> Void
+    ) {
         let userInfo = response.notification.request.content.userInfo
 
         switch response.actionIdentifier {
@@ -264,14 +408,12 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
 
         default:
             // Default tap — navigate via deep link
-            if let jobIdString = userInfo["jobId"] as? String, let jobId = UUID(uuidString: jobIdString) {
-                DispatchQueue.main.async {
-                    self.pendingDeepLink = .job(jobId)
-                }
-            } else if let invoiceIdString = userInfo["invoiceId"] as? String, let invoiceId = UUID(uuidString: invoiceIdString) {
-                DispatchQueue.main.async {
-                    self.pendingDeepLink = .invoice(invoiceId)
-                }
+            if let jobIdString = userInfo["jobId"] as? String,
+               let jobId = UUID(uuidString: jobIdString) {
+                DispatchQueue.main.async { self.pendingDeepLink = .job(jobId) }
+            } else if let invoiceIdString = userInfo["invoiceId"] as? String,
+                      let invoiceId = UUID(uuidString: invoiceIdString) {
+                DispatchQueue.main.async { self.pendingDeepLink = .invoice(invoiceId) }
             }
         }
 

@@ -211,7 +211,7 @@ struct JobFiltersView: View {
 
 // MARK: - Subviews
 
-private struct FilterHeader: View {
+struct FilterHeader: View {
     let title: String
     let subtitle: String
     
@@ -228,7 +228,7 @@ private struct FilterHeader: View {
     }
 }
 
-private struct FilterChip: View {
+struct FilterChip: View {
     let label: String
     let isSelected: Bool
     var color: Color = Color.sweeplyNavy
@@ -252,7 +252,7 @@ private struct FilterChip: View {
     }
 }
 
-private struct TypeCard: View {
+struct TypeCard: View {
     let label: String
     let icon: String
     let isSelected: Bool
@@ -280,7 +280,7 @@ private struct TypeCard: View {
     }
 }
 
-private struct ToggleRow: View {
+struct ToggleRow: View {
     let label: String
     let icon: String
     let isOn: Bool
@@ -347,7 +347,7 @@ private struct FlowLayout: View {
 }
 
 // Re-implementing FlowLayout properly for the chips
-private struct ChipGroup<Content: View>: View {
+struct ChipGroup<Content: View>: View {
     let spacing: CGFloat
     let content: Content
     

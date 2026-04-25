@@ -72,7 +72,6 @@ final class InvoicesStore {
             let finalInvoice = inserted.toInvoice()
             invoices.insert(finalInvoice, at: 0)
             NotificationManager.shared.scheduleInvoiceReminder(for: finalInvoice)
-            await NotificationHelper.insert(userId: userId, title: "Invoice Sent", message: "\(finalInvoice.invoiceNumber) for \(finalInvoice.clientName) — due \(finalInvoice.dueDate.formatted(date: .abbreviated, time: .omitted)).", kind: "billing")
             return true
         } catch {
             lastError = error.localizedDescription
@@ -104,9 +103,13 @@ final class InvoicesStore {
                 .single()
                 .execute()
                 .value
+            let updated = refreshed.toInvoice()
             if let idx = invoices.firstIndex(where: { $0.id == invoice.id }) {
-                invoices[idx] = refreshed.toInvoice()
+                invoices[idx] = updated
             }
+            // Reschedule reminders in case due date changed
+            NotificationManager.shared.cancelInvoiceReminders(for: invoice.id)
+            NotificationManager.shared.scheduleInvoiceReminder(for: updated)
             return true
         } catch {
             lastError = error.localizedDescription
@@ -241,7 +244,7 @@ private struct InvoiceRow: Decodable {
     let paidAt: Date?
 
     enum CodingKeys: String, CodingKey {
-        case id, amount, status, notes, paidAmount, paymentMethod, paidAt
+        case id, amount, status, notes
         case userId        = "user_id"
         case clientId      = "client_id"
         case clientName    = "client_name"
@@ -249,6 +252,9 @@ private struct InvoiceRow: Decodable {
         case dueDate       = "due_date"
         case invoiceNumber = "invoice_number"
         case lineItems     = "line_items"
+        case paidAmount    = "paid_amount"
+        case paymentMethod = "payment_method"
+        case paidAt        = "paid_at"
     }
 
     func toInvoice() -> Invoice {
@@ -307,7 +313,10 @@ private struct InvoicePaymentPatch: Encodable {
     let paidAt: Date
     
     enum CodingKeys: String, CodingKey {
-        case status, paidAmount, paymentMethod, paidAt
+        case status
+        case paidAmount    = "paid_amount"
+        case paymentMethod = "payment_method"
+        case paidAt        = "paid_at"
     }
 }
 
