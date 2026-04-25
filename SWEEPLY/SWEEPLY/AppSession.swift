@@ -12,6 +12,7 @@ struct PendingInvite: Identifiable {
 
 struct TeamMembership: Identifiable {
     let id: UUID          // team_members.id
+    let ownerId: UUID     // owner's auth user ID (needed for owner notifications)
     let businessName: String
     let role: String
 }
@@ -107,6 +108,23 @@ final class AppSession {
     func acceptInvite(memberId: UUID) async {
         guard let client = SupabaseManager.shared, let uid = userId else { return }
         do {
+            // Fetch member name + owner before updating (needed for the notification)
+            struct MemberInfo: Decodable {
+                let name: String
+                let ownerId: UUID
+                enum CodingKeys: String, CodingKey {
+                    case name
+                    case ownerId = "owner_id"
+                }
+            }
+            let info = try? await client
+                .from("team_members")
+                .select("name, owner_id")
+                .eq("id", value: memberId.uuidString)
+                .single()
+                .execute()
+                .value as MemberInfo
+
             struct StatusPatch: Encodable { let status: String }
             try await client
                 .from("team_members")
@@ -114,10 +132,20 @@ final class AppSession {
                 .eq("id", value: memberId.uuidString)
                 .execute()
             await resolveTeamMemberships(userId: uid)
-            // Auto-switch to the accepted team view
+
             if let membership = activeMemberships.first(where: { $0.id == memberId }) {
                 currentViewMode = .memberOf(membership)
                 UserDefaults.standard.set(membership.id.uuidString, forKey: "persistedActiveMembershipId")
+            }
+
+            // Notify the owner that the cleaner accepted
+            if let info {
+                await NotificationHelper.insert(
+                    userId: info.ownerId,
+                    title: "Team Update",
+                    message: "\(info.name) accepted your invite and joined the team — you can now assign them jobs.",
+                    kind: "team"
+                )
             }
         } catch {
             print("[AppSession] acceptInvite error: \(error)")
@@ -271,7 +299,7 @@ final class AppSession {
 
             activeMemberships = rows
                 .filter { $0.status == "active" }
-                .map { TeamMembership(id: $0.id, businessName: profileMap[$0.ownerId] ?? "A Team", role: $0.role) }
+                .map { TeamMembership(id: $0.id, ownerId: $0.ownerId, businessName: profileMap[$0.ownerId] ?? "A Team", role: $0.role) }
 
             // Restore persisted view mode from previous session
             if case .memberOf(let m) = currentViewMode {

@@ -131,7 +131,7 @@ struct CleanerUpcomingView: View {
             .background(Color.sweeplyBackground.ignoresSafeArea())
             .navigationBarHidden(true)
             .navigationDestination(item: $selectedJobId) { jobId in
-                CleanerJobDetailView(jobId: jobId)
+                CleanerJobDetailView(jobId: jobId, ownerId: membership.ownerId)
             }
             .sheet(isPresented: $showMonthPicker) {
                 CleanerMonthPicker(selectedDay: $selectedDay, jobs: myJobs)
@@ -151,7 +151,7 @@ struct CleanerUpcomingView: View {
             }
             .sheet(isPresented: $showMapJobDetail) {
                 if let jobId = mapSelectedJobId {
-                    CleanerJobDetailView(jobId: jobId)
+                    CleanerJobDetailView(jobId: jobId, ownerId: membership.ownerId)
                         .onDisappear { mapSelectedJobId = nil }
                 }
             }

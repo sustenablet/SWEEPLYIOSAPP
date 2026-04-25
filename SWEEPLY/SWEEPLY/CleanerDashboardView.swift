@@ -202,7 +202,7 @@ struct CleanerDashboardView: View {
             }
             .background(Color.sweeplyBackground.ignoresSafeArea())
             .navigationDestination(item: $selectedJobId) { jobId in
-                CleanerJobDetailView(jobId: jobId)
+                CleanerJobDetailView(jobId: jobId, ownerId: membership.ownerId)
             }
             .sheet(isPresented: $showNotifications) {
                 NotificationsView()

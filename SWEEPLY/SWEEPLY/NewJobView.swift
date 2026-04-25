@@ -596,6 +596,16 @@ struct NewJobForm: View {
                 assignedMemberName: assignedMember?.name
             )
             success = await jobsStore.insert(newJob, userId: userId)
+            // Notify assigned member that a new job has been given to them
+            if success, let cleanerUserId = assignedMember?.cleanerUserId {
+                let dateStr = date.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day().hour().minute())
+                await NotificationHelper.insert(
+                    userId: cleanerUserId,
+                    title: "New Job Assigned",
+                    message: "\(serviceType.rawValue) at \(client.name) — \(dateStr). \(finalPrice.currency)",
+                    kind: "jobs"
+                )
+            }
         } else {
             let rule = RecurrenceRule(
                 id: UUID(),

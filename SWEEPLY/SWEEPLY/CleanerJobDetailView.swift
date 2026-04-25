@@ -3,6 +3,7 @@ import MapKit
 
 struct CleanerJobDetailView: View {
     let jobId: UUID
+    let ownerId: UUID  // owner to notify on check-in and completion
 
     @Environment(JobsStore.self) private var jobsStore
     @Environment(\.dismiss) private var dismiss
@@ -142,16 +143,26 @@ struct CleanerJobDetailView: View {
 
     private func statusActions(_ job: Job) -> some View {
         VStack(spacing: 10) {
+            // Check In — shown when scheduled
             if job.status == .scheduled {
-                actionButton(label: "Start Job", icon: "play.fill", color: .orange) {
-                    updateStatus(id: job.id, status: .inProgress)
+                actionButton(label: "Check In — I'm Here", icon: "mappin.circle.fill", color: Color.sweeplyAccent) {
+                    checkIn(job)
                 }
             }
+
+            // Mark Complete — shown when in progress (or scheduled for quick finish)
             if job.status == .scheduled || job.status == .inProgress {
-                actionButton(label: "Mark Complete", icon: "checkmark.circle.fill", color: .green) {
-                    updateStatus(id: job.id, status: .completed)
+                actionButton(
+                    label: "Mark Complete",
+                    icon: "checkmark.circle.fill",
+                    color: .green,
+                    secondary: job.status == .scheduled
+                ) {
+                    completeJob(job)
                 }
             }
+
+            // Completed state
             if job.status == .completed {
                 HStack(spacing: 8) {
                     Image(systemName: "checkmark.circle.fill")
@@ -168,28 +179,31 @@ struct CleanerJobDetailView: View {
         }
     }
 
-    private func actionButton(label: String, icon: String, color: Color, action: @escaping () -> Void) -> some View {
+    private func actionButton(
+        label: String,
+        icon: String,
+        color: Color,
+        secondary: Bool = false,
+        action: @escaping () -> Void
+    ) -> some View {
         Button {
             UIImpactFeedbackGenerator(style: .medium).impactOccurred()
             action()
         } label: {
             HStack(spacing: 8) {
                 if isUpdatingStatus {
-                    ProgressView()
-                        .tint(.white)
-                        .scaleEffect(0.8)
+                    ProgressView().tint(secondary ? color : .white).scaleEffect(0.8)
                 } else {
-                    Image(systemName: icon)
-                        .font(.system(size: 15, weight: .semibold))
+                    Image(systemName: icon).font(.system(size: 15, weight: .semibold))
                 }
-                Text(label)
-                    .font(.system(size: 15, weight: .semibold))
+                Text(label).font(.system(size: 15, weight: .semibold))
             }
-            .foregroundStyle(.white)
+            .foregroundStyle(secondary ? color : .white)
             .frame(maxWidth: .infinity)
             .padding(.vertical, 14)
-            .background(color)
+            .background(secondary ? color.opacity(0.1) : color)
             .clipShape(RoundedRectangle(cornerRadius: 12))
+            .overlay(secondary ? RoundedRectangle(cornerRadius: 12).stroke(color.opacity(0.3), lineWidth: 1) : nil)
         }
         .disabled(isUpdatingStatus)
     }
@@ -219,10 +233,34 @@ struct CleanerJobDetailView: View {
         return String(format: "%.1f hours", hours)
     }
 
-    private func updateStatus(id: UUID, status: JobStatus) {
+    private func checkIn(_ job: Job) {
         isUpdatingStatus = true
         Task {
-            _ = await jobsStore.updateStatus(id: id, status: status)
+            _ = await jobsStore.updateStatus(id: job.id, status: .inProgress)
+            // Notify owner of check-in
+            let memberName = job.assignedMemberName ?? "Your cleaner"
+            await NotificationHelper.insert(
+                userId: ownerId,
+                title: "Job Check-In",
+                message: "\(memberName) just arrived at \(job.clientName) for \(job.serviceType.rawValue).",
+                kind: "jobs"
+            )
+            isUpdatingStatus = false
+        }
+    }
+
+    private func completeJob(_ job: Job) {
+        isUpdatingStatus = true
+        Task {
+            _ = await jobsStore.updateStatus(id: job.id, status: .completed)
+            // Notify owner of completion
+            let memberName = job.assignedMemberName ?? "Your cleaner"
+            await NotificationHelper.insert(
+                userId: ownerId,
+                title: "Job Completed",
+                message: "\(memberName) completed the \(job.serviceType.rawValue) at \(job.clientName). Ready to invoice.",
+                kind: "jobs"
+            )
             isUpdatingStatus = false
         }
     }
