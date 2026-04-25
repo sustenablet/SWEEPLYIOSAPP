@@ -543,11 +543,13 @@ struct MemberDetailView: View {
             .sheet(isPresented: $showRecordPayment) {
                 RecordPaymentSheet(member: member) { amount, notes in
                     guard let ownerId = session.userId else { return }
+                    let biz = profileStore.profile?.businessName ?? ""
                     let ok = await teamStore.recordPayment(
                         memberId: member.id,
                         ownerId: ownerId,
                         amount: amount,
-                        notes: notes
+                        notes: notes,
+                        businessName: biz
                     )
                     if ok {
                         UINotificationFeedbackGenerator().notificationOccurred(.success)

@@ -316,6 +316,13 @@ struct RootView: View {
                 expenseStore.clear()
             }
         }
+        // Rebuild pay-day reminders whenever jobs or team members change
+        .onChange(of: jobsStore.jobs.count) { _, _ in
+            notificationManager.schedulePayReminders(jobs: jobsStore.jobs, members: teamStore.members)
+        }
+        .onChange(of: teamStore.members.count) { _, _ in
+            notificationManager.schedulePayReminders(jobs: jobsStore.jobs, members: teamStore.members)
+        }
         .onChange(of: notificationManager.pendingDeepLink) { _, link in
             guard let link else { return }
             switch link {

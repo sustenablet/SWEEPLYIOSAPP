@@ -418,6 +418,8 @@ struct TeamMember: Identifiable, Codable {
     var payRateEnabled: Bool = false
     // Which day of week to pay (Calendar weekday: 1=Sun, 2=Mon…7=Sat). Only used for .perWeek.
     var payDayOfWeek: Int? = nil
+    // Supabase auth user ID of the cleaner (set after they accept the invite)
+    var cleanerUserId: UUID? = nil
 
     var initials: String {
         name.split(separator: " ")

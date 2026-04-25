@@ -192,7 +192,7 @@ final class TeamStore {
         }
     }
 
-    func recordPayment(memberId: UUID, ownerId: UUID, amount: Double, notes: String) async -> Bool {
+    func recordPayment(memberId: UUID, ownerId: UUID, amount: Double, notes: String, businessName: String) async -> Bool {
         guard let client = SupabaseManager.shared else { return true }
         do {
             let insert = TeamMemberPaymentInsert(
@@ -206,6 +206,18 @@ final class TeamStore {
                 .from("team_member_payments")
                 .insert(insert)
                 .execute()
+
+            // Notify the member's app that they've been paid
+            if let cleanerUserId = members.first(where: { $0.id == memberId })?.cleanerUserId {
+                let senderLabel = businessName.isEmpty ? "your manager" : businessName
+                await NotificationHelper.insert(
+                    userId: cleanerUserId,
+                    title: "Payment Received",
+                    message: "You received \(amount.currency) from \(senderLabel). Check your Finance tab.",
+                    kind: "billing"
+                )
+            }
+
             return true
         } catch {
             lastError = error.localizedDescription
@@ -266,15 +278,17 @@ private struct TeamMemberDTO: Decodable {
     let payRateAmount: Double?
     let payRateEnabled: Bool?
     let payDayOfWeek: Int?
+    let cleanerUserId: UUID?
 
     enum CodingKeys: String, CodingKey {
         case id, name, email, phone, role, status
-        case ownerId       = "owner_id"
-        case addedAt       = "added_at"
-        case payRateType   = "pay_rate_type"
-        case payRateAmount = "pay_rate_amount"
+        case ownerId        = "owner_id"
+        case addedAt        = "added_at"
+        case payRateType    = "pay_rate_type"
+        case payRateAmount  = "pay_rate_amount"
         case payRateEnabled = "pay_rate_enabled"
-        case payDayOfWeek  = "pay_day_of_week"
+        case payDayOfWeek   = "pay_day_of_week"
+        case cleanerUserId  = "cleaner_user_id"
     }
 
     func toMember() -> TeamMember {
@@ -290,7 +304,8 @@ private struct TeamMemberDTO: Decodable {
             payRateType: PayRateType(rawValue: payRateType ?? "per_day") ?? .perDay,
             payRateAmount: payRateAmount ?? 0,
             payRateEnabled: payRateEnabled ?? false,
-            payDayOfWeek: payDayOfWeek
+            payDayOfWeek: payDayOfWeek,
+            cleanerUserId: cleanerUserId
         )
     }
 }

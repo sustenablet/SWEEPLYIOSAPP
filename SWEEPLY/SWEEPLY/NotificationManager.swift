@@ -267,6 +267,66 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
         UNUserNotificationCenter.current().add(request, withCompletionHandler: nil)
     }
 
+    // MARK: - Pay Day Reminders (owner)
+
+    /// Rebuilds per-member pay-day reminders from the current job list.
+    /// Fires 1 hour after the last job ends on days when a member is due to be paid.
+    func schedulePayReminders(jobs: [Job], members: [TeamMember]) {
+        let center = UNUserNotificationCenter.current()
+        center.getPendingNotificationRequests { requests in
+            let toRemove = requests
+                .filter { $0.identifier.hasPrefix("pay-reminder-") }
+                .map(\.identifier)
+            center.removePendingNotificationRequests(withIdentifiers: toRemove)
+
+            let today = Calendar.current.startOfDay(for: Date())
+            let upcoming = jobs.filter {
+                ($0.status == .scheduled || $0.status == .inProgress) &&
+                Calendar.current.startOfDay(for: $0.date) >= today
+            }
+            let grouped = Dictionary(grouping: upcoming) { Calendar.current.startOfDay(for: $0.date) }
+
+            for (day, dayJobs) in grouped {
+                let weekday = Calendar.current.component(.weekday, from: day)
+
+                // Members who are due to be paid on this day
+                let payDueMembers = members.filter { member in
+                    guard member.payRateEnabled && member.payRateAmount > 0 else { return false }
+                    switch member.payRateType {
+                    case .perDay:  return true
+                    case .perWeek: return member.payDayOfWeek == weekday
+                    default:       return false
+                    }
+                }
+                guard !payDueMembers.isEmpty else { continue }
+
+                // Find the last job end time: start + duration hours
+                let lastEndTime = dayJobs.map { $0.date.addingTimeInterval($0.duration * 3600) }.max()
+                guard let endTime = lastEndTime else { continue }
+                let reminderTime = endTime.addingTimeInterval(3600)  // 1 hour after last job ends
+                guard reminderTime > Date() else { continue }
+
+                for member in payDueMembers {
+                    let content = UNMutableNotificationContent()
+                    content.title = "Time to Pay \(member.name)"
+                    content.body = "\(member.name) is owed \(member.payRateAmount.currency) today. Open Sweeply to record the payment."
+                    content.sound = .default
+
+                    let trigger = UNTimeIntervalNotificationTrigger(
+                        timeInterval: reminderTime.timeIntervalSinceNow,
+                        repeats: false
+                    )
+                    let request = UNNotificationRequest(
+                        identifier: "pay-reminder-\(self.dayIdentifier(for: day))-\(member.id.uuidString)",
+                        content: content,
+                        trigger: trigger
+                    )
+                    center.add(request, withCompletionHandler: nil)
+                }
+            }
+        }
+    }
+
     // MARK: - Invoice Reminders
 
     func scheduleInvoiceReminder(for invoice: Invoice) {
