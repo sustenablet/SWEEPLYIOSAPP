@@ -17,9 +17,10 @@ struct NotificationsView: View {
     enum NotificationTab: String, CaseIterable {
         case all = "All"
         case unread = "Unread"
-        case schedule = "Schedule"
         case jobs = "Jobs"
         case billing = "Billing"
+        case team = "Team"
+        case schedule = "Schedule"
     }
 
     private var unreadCount: Int {
@@ -32,12 +33,14 @@ struct NotificationsView: View {
             return notificationsStore.notifications
         case .unread:
             return notificationsStore.notifications.filter { !$0.isRead }
-        case .schedule:
-            return notificationsStore.notifications.filter { $0.kind == .schedule }
         case .jobs:
             return notificationsStore.notifications.filter { $0.kind == .jobs }
         case .billing:
             return notificationsStore.notifications.filter { $0.kind == .billing }
+        case .team:
+            return notificationsStore.notifications.filter { $0.kind == .team }
+        case .schedule:
+            return notificationsStore.notifications.filter { $0.kind == .schedule }
         }
     }
     
@@ -161,11 +164,12 @@ struct NotificationsView: View {
     
     private func tabIcon(_ tab: NotificationTab) -> String {
         switch tab {
-        case .all: return "bell.fill"
-        case .unread: return "envelope.open.fill"
+        case .all:      return "bell.fill"
+        case .unread:   return "envelope.open.fill"
+        case .jobs:     return "briefcase.fill"
+        case .billing:  return "creditcard.fill"
+        case .team:     return "person.2.fill"
         case .schedule: return "calendar"
-        case .jobs: return "briefcase.fill"
-        case .billing: return "creditcard.fill"
         }
     }
     
@@ -214,16 +218,12 @@ private struct TabButton: View {
 
 private func tabLabel(_ tab: NotificationTab) -> String {
     switch tab {
-    case .all:
-        return "All"
-    case .unread:
-        return unreadCount > 0 ? "Unread (\(unreadCount))" : "Unread"
-    case .schedule:
-        return "Schedule"
-    case .jobs:
-        return "Jobs"
-    case .billing:
-        return "Billing"
+    case .all:      return "All"
+    case .unread:   return unreadCount > 0 ? "Unread (\(unreadCount))" : "Unread"
+    case .jobs:     return "Jobs"
+    case .billing:  return "Billing"
+    case .team:     return "Team"
+    case .schedule: return "Schedule"
     }
 }
 
@@ -306,41 +306,45 @@ private func tabLabel(_ tab: NotificationTab) -> String {
     
     private func kindColorForTab(_ tab: NotificationTab) -> Color {
         switch tab {
-        case .all: return Color.sweeplyTextSub
-        case .unread: return Color.sweeplyNavy
+        case .all:      return Color.sweeplyTextSub
+        case .unread:   return Color.sweeplyNavy
+        case .jobs:     return Color.sweeplyAccent
+        case .billing:  return Color.sweeplySuccess
+        case .team:     return Color.sweeplyNavy
         case .schedule: return Color.sweeplyNavy
-        case .jobs: return Color.sweeplyAccent
-        case .billing: return Color.sweeplySuccess
         }
     }
-    
+
     private var emptyIcon: String {
         switch selectedTab {
-        case .all: return "bell.slash"
-        case .unread: return "envelope.open"
+        case .all:      return "bell.slash"
+        case .unread:   return "envelope.open"
+        case .jobs:     return "briefcase.fill"
+        case .billing:  return "creditcard.slash"
+        case .team:     return "person.2"
         case .schedule: return "calendar.badge.exclamationmark"
-        case .jobs: return "briefcase.fill"
-        case .billing: return "creditcard.slash"
         }
     }
-    
+
     private var emptyTitle: String {
         switch selectedTab {
-        case .all: return "No notifications"
-        case .unread: return "All caught up"
+        case .all:      return "No notifications"
+        case .unread:   return "All caught up"
+        case .jobs:     return "No job updates"
+        case .billing:  return "No billing activity"
+        case .team:     return "No team activity"
         case .schedule: return "No schedule updates"
-        case .jobs: return "No job updates"
-        case .billing: return "No billing activity"
         }
     }
-    
+
     private var emptyMessage: String {
         switch selectedTab {
-        case .all: return "You're up to date. New notifications will appear here."
-        case .unread: return "You've read everything. Check back later for updates."
+        case .all:      return "You're up to date. New notifications will appear here."
+        case .unread:   return "You've read everything. Check back later for updates."
+        case .jobs:     return "Check-ins, completions, and job assignments will appear here."
+        case .billing:  return "Invoice due dates and payment confirmations will appear here."
+        case .team:     return "Invite acceptances and team updates will appear here."
         case .schedule: return "No schedule changes or updates at the moment."
-        case .jobs: return "No job updates at the moment."
-        case .billing: return "No invoice or payment activity to show."
         }
     }
 }
