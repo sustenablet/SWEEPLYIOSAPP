@@ -37,10 +37,16 @@ struct WidgetDataWriter {
             .filter { $0.status == .paid && $0.createdAt >= weekStart }
             .reduce(0.0) { $0 + $1.total }
 
+        // Total value of today's jobs (all non-cancelled)
+        let todayRevenue = jobs
+            .filter { cal.isDateInToday($0.date) && $0.status != .cancelled }
+            .reduce(0.0) { $0 + $1.price }
+
         let snapshot = WidgetSnapshotData(
             nextJob: nextJob,
             todayJobs: todayJobs,
             weekRevenue: weekRevenue,
+            todayRevenue: todayRevenue,
             updatedAt: Date()
         )
 
@@ -59,10 +65,11 @@ struct WidgetDataWriter {
 // Widget target is a separate module — it cannot be imported here.
 
 private struct WidgetSnapshotData: Codable {
-    let nextJob:     WidgetJobData?
-    let todayJobs:   [WidgetJobData]
-    let weekRevenue: Double
-    let updatedAt:   Date
+    let nextJob:      WidgetJobData?
+    let todayJobs:    [WidgetJobData]
+    let weekRevenue:  Double
+    let todayRevenue: Double
+    let updatedAt:    Date
 }
 
 private struct WidgetJobData: Codable {

@@ -14,5 +14,9 @@ struct SweeplyWIdgetsBundle: WidgetBundle {
         NextJobWidget()
         TodayScheduleWidget()
         LargeScheduleWidget()
+        // Lock screen widgets
+        WeekRevenueWidget()
+        JobsTodayWidget()
+        TodayRevenueWidget()
     }
 }

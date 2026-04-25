@@ -10,7 +10,7 @@ private extension Color {
     static let stone       = Color(red: 0.965, green: 0.961, blue: 0.945)
     static let amber       = Color(red: 0.72,  green: 0.55,  blue: 0.35)
     static let coral       = Color(red: 0.70,  green: 0.25,  blue: 0.25)
-    static let mutedText   = Color(red: 0.45,  green: 0.45,  blue: 0.48)      // Medium gray for secondary text
+    static let mutedText   = Color(red: 0.45,  green: 0.45,  blue: 0.48)
 
     @available(iOSApplicationExtension 16.0, *)
     static func adaptiveTeal(_ scheme: ColorScheme) -> Color {
@@ -40,7 +40,6 @@ struct SweeplyProvider: TimelineProvider {
     func getTimeline(in context: Context, completion: @escaping (Timeline<SweeplyEntry>) -> Void) {
         let snapshot = WidgetSnapshot.load()
         let entry    = SweeplyEntry(date: Date(), snapshot: snapshot)
-        // Refresh every 30 minutes
         let nextUpdate = Calendar.current.date(byAdding: .minute, value: 30, to: Date()) ?? Date()
         completion(Timeline(entries: [entry], policy: .after(nextUpdate)))
     }
@@ -64,8 +63,6 @@ private func relativeDay(for date: Date) -> String {
     return f.string(from: date)
 }
 
-// MARK: - Status Dot Color
-
 private func statusColor(_ statusRaw: String) -> Color {
     switch statusRaw.lowercased() {
     case "completed":   return .teal
@@ -75,12 +72,19 @@ private func statusColor(_ statusRaw: String) -> Color {
     }
 }
 
+private func formattedCurrency(_ amount: Double) -> String {
+    let f = NumberFormatter()
+    f.numberStyle = .currency
+    f.locale = .current
+    f.maximumFractionDigits = 0
+    return f.string(from: NSNumber(value: amount)) ?? "$0"
+}
+
 // MARK: - Next Job Widget (systemSmall)
 
 struct NextJobEntryView: View {
     let entry: SweeplyEntry
     @Environment(\.colorScheme) private var scheme
-    @Environment(\.widgetFamily) private var family
 
     private var accent: Color { scheme == .dark ? .tealLight : .teal }
 
@@ -94,21 +98,12 @@ struct NextJobEntryView: View {
         return URL(string: "sweeply://schedule")!
     }
 
-    private func formattedPrice(_ price: Double) -> String {
-        let f = NumberFormatter()
-        f.numberStyle = .currency
-        f.locale = .current
-        f.maximumFractionDigits = 0
-        return f.string(from: NSNumber(value: price)) ?? "$\(Int(price))"
-    }
-
     var body: some View {
         ZStack {
             Color.white.ignoresSafeArea()
 
             if let job = entry.snapshot.nextJob {
                 VStack(alignment: .leading, spacing: 0) {
-                    // Label
                     Text("NEXT JOB")
                         .font(.system(size: 8, weight: .bold))
                         .foregroundStyle(Color.charcoal.opacity(0.45))
@@ -116,14 +111,12 @@ struct NextJobEntryView: View {
 
                     Spacer(minLength: 8)
 
-                    // Client name — hero text
                     Text(job.clientName)
                         .font(.system(size: 19, weight: .bold))
                         .foregroundStyle(Color.charcoal)
                         .lineLimit(1)
                         .minimumScaleFactor(0.78)
 
-                    // Service type
                     Text(job.serviceType)
                         .font(.system(size: 11, weight: .medium))
                         .foregroundStyle(Color.charcoal.opacity(0.55))
@@ -132,14 +125,12 @@ struct NextJobEntryView: View {
 
                     Spacer(minLength: 10)
 
-                    // Price
-                    Text(formattedPrice(job.price))
+                    Text(formattedCurrency(job.price))
                         .font(.system(size: 22, weight: .bold, design: .monospaced))
                         .foregroundStyle(Color.charcoal)
 
                     Spacer(minLength: 6)
 
-                    // Date + time
                     HStack(spacing: 0) {
                         Text(relativeDay(for: job.date))
                             .font(.system(size: 10, weight: .semibold))
@@ -154,7 +145,6 @@ struct NextJobEntryView: View {
                 }
                 .padding(14)
             } else {
-                // All caught up state
                 VStack(alignment: .leading, spacing: 0) {
                     Text("SCHEDULE")
                         .font(.system(size: 8, weight: .bold))
@@ -212,7 +202,6 @@ struct TodayScheduleEntryView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // Header
             HStack {
                 Text("TODAY'S SCHEDULE")
                     .font(.system(size: 8, weight: .black, design: .rounded))
@@ -263,14 +252,6 @@ struct TodayScheduleEntryView: View {
             }
         }
         .padding(14)
-    }
-
-    private func formattedCurrency(_ amount: Double) -> String {
-        let f = NumberFormatter()
-        f.numberStyle = .currency
-        f.locale = .current
-        f.maximumFractionDigits = 0
-        return f.string(from: NSNumber(value: amount)) ?? "$0"
     }
 }
 
@@ -339,7 +320,6 @@ struct LargeScheduleEntryView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // Header — date + branding
             HStack(alignment: .firstTextBaseline) {
                 VStack(alignment: .leading, spacing: 1) {
                     Text("SWEEPLY")
@@ -365,7 +345,6 @@ struct LargeScheduleEntryView: View {
 
             Divider().padding(.bottom, 10)
 
-            // Job list
             if jobs.isEmpty {
                 Spacer()
                 HStack {
@@ -377,9 +356,6 @@ struct LargeScheduleEntryView: View {
                         Text("No jobs today")
                             .font(.system(size: 14, weight: .semibold))
                             .foregroundStyle(Color.mutedText)
-                        Text("Enjoy the day off")
-                            .font(.system(size: 11))
-                            .foregroundStyle(Color.mutedText.opacity(0.7))
                     }
                     Spacer()
                 }
@@ -395,7 +371,6 @@ struct LargeScheduleEntryView: View {
                         }
                     }
                 }
-                // "+N more" overflow hint
                 let overflow = entry.snapshot.todayJobs.count - jobs.count
                 if overflow > 0 {
                     Text("+ \(overflow) more job\(overflow == 1 ? "" : "s")")
@@ -407,7 +382,6 @@ struct LargeScheduleEntryView: View {
 
             Spacer(minLength: 8)
 
-            // Stats footer
             Divider().padding(.bottom, 8)
             HStack(spacing: 0) {
                 statPill(label: "7-day rev.", value: formattedCurrency(entry.snapshot.weekRevenue), accent: accent)
@@ -436,14 +410,6 @@ struct LargeScheduleEntryView: View {
                 .font(.system(size: 12, weight: .bold, design: .monospaced))
                 .foregroundStyle(accent)
         }
-    }
-
-    private func formattedCurrency(_ amount: Double) -> String {
-        let f = NumberFormatter()
-        f.numberStyle = .currency
-        f.locale = .current
-        f.maximumFractionDigits = 0
-        return f.string(from: NSNumber(value: amount)) ?? "$0"
     }
 
     private func shortTime(_ date: Date) -> String {
@@ -482,19 +448,11 @@ private struct LargeJobRow: View {
 
             Spacer()
 
-            Text(formattedPrice(job.price))
+            Text(formattedCurrency(job.price))
                 .font(.system(size: 11, weight: .bold, design: .monospaced))
                 .foregroundStyle(job.isCompleted ? accent : Color(red: 0.15, green: 0.15, blue: 0.18))
         }
         .padding(.vertical, 7)
-    }
-
-    private func formattedPrice(_ price: Double) -> String {
-        let f = NumberFormatter()
-        f.numberStyle = .currency
-        f.locale = .current
-        f.maximumFractionDigits = 0
-        return f.string(from: NSNumber(value: price)) ?? "$\(Int(price))"
     }
 }
 
@@ -509,5 +467,200 @@ struct LargeScheduleWidget: Widget {
         .configurationDisplayName("Full Day Schedule")
         .description("Your complete today schedule with up to 6 jobs and revenue stats.")
         .supportedFamilies([.systemLarge])
+    }
+}
+
+// MARK: - Lock Screen Shared Helpers
+
+private func formattedLockScreen(_ amount: Double) -> String {
+    if amount >= 1000 { return String(format: "$%.1fk", amount / 1000) }
+    return "$\(Int(amount))"
+}
+
+// MARK: - Revenue This Week Widget (accessoryCircular + accessoryRectangular)
+
+struct WeekRevenueEntryView: View {
+    let entry: SweeplyEntry
+    @Environment(\.widgetFamily) private var family
+
+    var body: some View {
+        switch family {
+        case .accessoryCircular:
+            circularView
+        case .accessoryRectangular:
+            rectangularView
+        default:
+            circularView
+        }
+    }
+
+    private var circularView: some View {
+        VStack(spacing: 1) {
+            Text(formattedLockScreen(entry.snapshot.weekRevenue))
+                .font(.system(size: 16, weight: .bold, design: .monospaced))
+                .widgetAccentable()
+                .minimumScaleFactor(0.7)
+                .lineLimit(1)
+            Text("THIS WK")
+                .font(.system(size: 8, weight: .bold))
+                .opacity(0.65)
+        }
+    }
+
+    private var rectangularView: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text("WEEK REVENUE")
+                .font(.system(size: 9, weight: .bold))
+                .opacity(0.6)
+            Text(formattedCurrency(entry.snapshot.weekRevenue))
+                .font(.system(size: 18, weight: .bold, design: .monospaced))
+                .widgetAccentable()
+                .minimumScaleFactor(0.75)
+                .lineLimit(1)
+            Text("7-day earnings")
+                .font(.system(size: 10))
+                .opacity(0.6)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+struct WeekRevenueWidget: Widget {
+    let kind = "SweeplyWeekRevenue"
+
+    var body: some WidgetConfiguration {
+        StaticConfiguration(kind: kind, provider: SweeplyProvider()) { entry in
+            WeekRevenueEntryView(entry: entry)
+                .containerBackground(.clear, for: .widget)
+        }
+        .configurationDisplayName("Week Revenue")
+        .description("Your earnings over the past 7 days.")
+        .supportedFamilies([.accessoryCircular, .accessoryRectangular])
+    }
+}
+
+// MARK: - Jobs Today Widget (accessoryCircular + accessoryRectangular)
+
+struct JobsTodayEntryView: View {
+    let entry: SweeplyEntry
+    @Environment(\.widgetFamily) private var family
+
+    private var count: Int { entry.snapshot.todayJobs.count }
+    private var completedCount: Int { entry.snapshot.todayJobs.filter { $0.isCompleted }.count }
+
+    var body: some View {
+        switch family {
+        case .accessoryCircular:
+            circularView
+        case .accessoryRectangular:
+            rectangularView
+        default:
+            circularView
+        }
+    }
+
+    private var circularView: some View {
+        VStack(spacing: 1) {
+            Text("\(count)")
+                .font(.system(size: 22, weight: .bold, design: .monospaced))
+                .widgetAccentable()
+            Text("TODAY")
+                .font(.system(size: 8, weight: .bold))
+                .opacity(0.65)
+        }
+    }
+
+    private var rectangularView: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text("JOBS TODAY")
+                .font(.system(size: 9, weight: .bold))
+                .opacity(0.6)
+            Text("\(count) \(count == 1 ? "job" : "jobs")")
+                .font(.system(size: 18, weight: .bold, design: .monospaced))
+                .widgetAccentable()
+                .lineLimit(1)
+            Text(completedCount > 0 ? "\(completedCount) completed" : "none completed yet")
+                .font(.system(size: 10))
+                .opacity(0.6)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+struct JobsTodayWidget: Widget {
+    let kind = "SweeplyJobsToday"
+
+    var body: some WidgetConfiguration {
+        StaticConfiguration(kind: kind, provider: SweeplyProvider()) { entry in
+            JobsTodayEntryView(entry: entry)
+                .containerBackground(.clear, for: .widget)
+        }
+        .configurationDisplayName("Jobs Today")
+        .description("How many jobs you have scheduled for today.")
+        .supportedFamilies([.accessoryCircular, .accessoryRectangular])
+    }
+}
+
+// MARK: - Revenue Today Widget (accessoryCircular + accessoryRectangular)
+
+struct TodayRevenueEntryView: View {
+    let entry: SweeplyEntry
+    @Environment(\.widgetFamily) private var family
+
+    private var jobCount: Int { entry.snapshot.todayJobs.count }
+
+    var body: some View {
+        switch family {
+        case .accessoryCircular:
+            circularView
+        case .accessoryRectangular:
+            rectangularView
+        default:
+            circularView
+        }
+    }
+
+    private var circularView: some View {
+        VStack(spacing: 1) {
+            Text(formattedLockScreen(entry.snapshot.todayRevenue))
+                .font(.system(size: 16, weight: .bold, design: .monospaced))
+                .widgetAccentable()
+                .minimumScaleFactor(0.7)
+                .lineLimit(1)
+            Text("TODAY")
+                .font(.system(size: 8, weight: .bold))
+                .opacity(0.65)
+        }
+    }
+
+    private var rectangularView: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text("TODAY'S VALUE")
+                .font(.system(size: 9, weight: .bold))
+                .opacity(0.6)
+            Text(formattedCurrency(entry.snapshot.todayRevenue))
+                .font(.system(size: 18, weight: .bold, design: .monospaced))
+                .widgetAccentable()
+                .minimumScaleFactor(0.75)
+                .lineLimit(1)
+            Text("\(jobCount) \(jobCount == 1 ? "job" : "jobs") on schedule")
+                .font(.system(size: 10))
+                .opacity(0.6)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+struct TodayRevenueWidget: Widget {
+    let kind = "SweeplyTodayRevenue"
+
+    var body: some WidgetConfiguration {
+        StaticConfiguration(kind: kind, provider: SweeplyProvider()) { entry in
+            TodayRevenueEntryView(entry: entry)
+                .containerBackground(.clear, for: .widget)
+        }
+        .configurationDisplayName("Today's Revenue")
+        .description("Total value of all jobs scheduled for today.")
+        .supportedFamilies([.accessoryCircular, .accessoryRectangular])
     }
 }

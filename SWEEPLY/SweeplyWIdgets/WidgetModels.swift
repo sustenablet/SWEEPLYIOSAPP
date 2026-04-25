@@ -8,6 +8,7 @@ struct WidgetSnapshot: Codable {
     let nextJob: WidgetJob?
     let todayJobs: [WidgetJob]
     let weekRevenue: Double
+    let todayRevenue: Double
     let updatedAt: Date
 
     static let appGroupID  = "group.com.sweeply.app"
@@ -43,6 +44,7 @@ struct WidgetSnapshot: Codable {
                           statusRaw: "scheduled", price: 280),
             ],
             weekRevenue: 1240,
+            todayRevenue: 600,
             updatedAt: Date()
         )
     }
