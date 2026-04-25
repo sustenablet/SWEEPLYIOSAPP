@@ -17,6 +17,7 @@ struct ScheduleView: View {
     @Environment(JobsStore.self) private var jobsStore
     @Environment(ClientsStore.self) private var clientsStore
     @Environment(InvoicesStore.self) private var invoicesStore
+    @Environment(TeamStore.self) private var teamStore
     @Environment(AppSession.self) private var session
     @State private var appeared = false
     @AppStorage("scheduleViewModeRaw") private var viewModeRaw: String = ScheduleViewMode.day.rawValue
@@ -386,6 +387,7 @@ struct ScheduleView: View {
 
     private var dayView: some View {
         let jobs = filteredJobsForDate(selectedDay)
+        let paychecks = paycheckMembers(for: selectedDay)
         return VStack(spacing: 0) {
             // Stats bar
             HStack(spacing: 0) {
@@ -408,17 +410,28 @@ struct ScheduleView: View {
             .overlay(Rectangle().frame(height: 1).foregroundStyle(Color.sweeplyBorder), alignment: .bottom)
 
             ScrollView {
+                // Paycheck cards — shown before timeline
+                if !paychecks.isEmpty {
+                    VStack(spacing: 8) {
+                        ForEach(paychecks, id: \.id) { member in
+                            paycheckCard(for: member)
+                        }
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.top, 14)
+                    .padding(.bottom, 4)
+                }
+
                 if jobsStore.isLoading && jobsStore.jobs.isEmpty {
                     SkeletonList(count: 4).padding(.top, 16).padding(.horizontal, 20)
-                } else if jobs.isEmpty {
+                } else if jobs.isEmpty && paychecks.isEmpty {
                     scheduleEmptyState
-                } else {
+                } else if !jobs.isEmpty {
                     // Timeline grid
                     let hours = Array(timelineStartHour...timelineEndHour)
                     let totalHeight = CGFloat(hours.count) * timelineHourHeight
 
                     ZStack(alignment: .topLeading) {
-                        // Hour grid rows
                         VStack(spacing: 0) {
                             ForEach(hours, id: \.self) { hour in
                                 HStack(alignment: .top, spacing: 0) {
@@ -437,7 +450,6 @@ struct ScheduleView: View {
                             }
                         }
 
-                        // Current time indicator (today only)
                         if calendar.isDateInToday(selectedDay) {
                             let now = Date()
                             let nowHour = Calendar.current.component(.hour, from: now)
@@ -456,7 +468,6 @@ struct ScheduleView: View {
                             .offset(y: max(0, yNow) + timelineHourHeight * 0.5)
                         }
 
-                        // Job blocks
                         ForEach(jobs) { job in
                             let jobHour = Calendar.current.component(.hour, from: job.date)
                             let jobMinute = Calendar.current.component(.minute, from: job.date)
@@ -507,8 +518,14 @@ struct ScheduleView: View {
     }
 
     private var listView: some View {
-        VStack(spacing: 0) {
-            // Stats bar — selected day totals
+        let paychecks = paycheckMembers(for: selectedDay)
+        let dayInvoices = invoicesForDate(selectedDay)
+        let hasJobs = !listJobsForSelectedDay.isEmpty
+        let hasInvoices = !dayInvoices.isEmpty
+        let hasPaychecks = !paychecks.isEmpty
+
+        return VStack(spacing: 0) {
+            // Stats bar
             HStack(spacing: 0) {
                 HStack(spacing: 4) {
                     Text("\(listJobsForSelectedDay.count)")
@@ -535,14 +552,26 @@ struct ScheduleView: View {
             .overlay(Rectangle().frame(height: 1).foregroundStyle(Color.sweeplyBorder), alignment: .bottom)
 
             ScrollView {
+                // Paycheck cards
+                if hasPaychecks {
+                    VStack(spacing: 8) {
+                        ForEach(paychecks, id: \.id) { member in
+                            paycheckCard(for: member)
+                        }
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.top, 14)
+                    .padding(.bottom, 4)
+                }
+
                 if jobsStore.isLoading && jobsStore.jobs.isEmpty {
                     SkeletonList(count: 4).padding(.top, 16).padding(.horizontal, 20)
-                } else if listJobsForSelectedDay.isEmpty {
+                } else if !hasJobs && !hasInvoices && !hasPaychecks {
                     VStack(spacing: 12) {
                         Image(systemName: "calendar.badge.clock")
                             .font(.system(size: 44))
                             .foregroundStyle(Color.sweeplyTextSub.opacity(0.3))
-                        Text("No jobs on \(agendaDateLabel(selectedDay))")
+                        Text("Nothing on \(agendaDateLabel(selectedDay))")
                             .font(.system(size: 16, weight: .semibold))
                             .foregroundStyle(Color.sweeplyTextSub)
                         Text("Tap the date to choose another day.")
@@ -553,33 +582,61 @@ struct ScheduleView: View {
                     .padding(.vertical, 60)
                 } else {
                     LazyVStack(alignment: .leading, spacing: 0, pinnedViews: [.sectionHeaders]) {
-                        Section {
-                            VStack(spacing: 8) {
-                                ForEach(listJobsForSelectedDay) { job in
-                                    ScheduleJobRow(job: job)
+                        // Jobs section
+                        if hasJobs {
+                            Section {
+                                VStack(spacing: 8) {
+                                    ForEach(listJobsForSelectedDay) { job in
+                                        ScheduleJobRow(job: job)
+                                    }
                                 }
+                                .padding(.horizontal, 20)
+                                .padding(.bottom, 16)
+                            } header: {
+                                HStack(spacing: 8) {
+                                    Text(agendaDateLabel(selectedDay))
+                                        .font(.system(size: 13, weight: .bold))
+                                        .foregroundStyle(Color.sweeplyAccent)
+                                    Text("·")
+                                        .foregroundStyle(Color.sweeplyBorder)
+                                    Text(listJobsForSelectedDay.reduce(0) { $0 + $1.price }.currency)
+                                        .font(.system(size: 12, weight: .semibold, design: .monospaced))
+                                        .foregroundStyle(Color.sweeplyTextSub)
+                                    Spacer()
+                                    Text("\(listJobsForSelectedDay.count) job\(listJobsForSelectedDay.count == 1 ? "" : "s")")
+                                        .font(.system(size: 11, weight: .medium))
+                                        .foregroundStyle(Color.sweeplyTextSub.opacity(0.7))
+                                }
+                                .padding(.horizontal, 20)
+                                .padding(.vertical, 10)
+                                .background(Color.sweeplyBackground)
+                                .overlay(Rectangle().frame(height: 1).foregroundStyle(Color.sweeplyBorder.opacity(0.5)), alignment: .bottom)
                             }
-                            .padding(.horizontal, 20)
-                            .padding(.bottom, 16)
-                        } header: {
-                            HStack(spacing: 8) {
-                                Text(agendaDateLabel(selectedDay))
-                                    .font(.system(size: 13, weight: .bold))
-                                    .foregroundStyle(Color.sweeplyAccent)
-                                Text("·")
-                                    .foregroundStyle(Color.sweeplyBorder)
-                                Text(listJobsForSelectedDay.reduce(0) { $0 + $1.price }.currency)
-                                    .font(.system(size: 12, weight: .semibold, design: .monospaced))
-                                    .foregroundStyle(Color.sweeplyTextSub)
-                                Spacer()
-                                Text("\(listJobsForSelectedDay.count) job\(listJobsForSelectedDay.count == 1 ? "" : "s")")
-                                    .font(.system(size: 11, weight: .medium))
-                                    .foregroundStyle(Color.sweeplyTextSub.opacity(0.7))
+                        }
+
+                        // Invoices section
+                        if hasInvoices {
+                            Section {
+                                VStack(spacing: 8) {
+                                    ForEach(dayInvoices) { invoice in
+                                        ScheduleInvoiceRow(invoice: invoice)
+                                    }
+                                }
+                                .padding(.horizontal, 20)
+                                .padding(.bottom, 16)
+                            } header: {
+                                HStack(spacing: 6) {
+                                    Rectangle().fill(Color.sweeplyBorder).frame(height: 1)
+                                    Text("INVOICES DUE")
+                                        .font(.system(size: 10, weight: .bold))
+                                        .foregroundStyle(Color.sweeplyTextSub)
+                                        .tracking(0.8)
+                                    Rectangle().fill(Color.sweeplyBorder).frame(height: 1)
+                                }
+                                .padding(.horizontal, 20)
+                                .padding(.vertical, 10)
+                                .background(Color.sweeplyBackground)
                             }
-                            .padding(.horizontal, 20)
-                            .padding(.vertical, 10)
-                            .background(Color.sweeplyBackground)
-                            .overlay(Rectangle().frame(height: 1).foregroundStyle(Color.sweeplyBorder.opacity(0.5)), alignment: .bottom)
                         }
                     }
                     .padding(.bottom, 100)
@@ -797,6 +854,61 @@ private extension ScheduleView {
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 60)
+    }
+
+    // MARK: - Paycheck Cards
+
+    private func paycheckMembers(for date: Date) -> [TeamMember] {
+        let weekday = Calendar.current.component(.weekday, from: date)
+        return teamStore.members.filter { member in
+            guard member.payRateEnabled && member.payRateAmount > 0 else { return false }
+            switch member.payRateType {
+            case .perDay:
+                return true
+            case .perWeek:
+                return member.payDayOfWeek == weekday
+            default:
+                return false
+            }
+        }
+    }
+
+    private func paycheckCard(for member: TeamMember) -> some View {
+        let isWeekly = member.payRateType == .perWeek
+        return HStack(spacing: 14) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill(Color.sweeplySuccess.opacity(0.12))
+                    .frame(width: 40, height: 40)
+                Image(systemName: "dollarsign.circle.fill")
+                    .font(.system(size: 20))
+                    .foregroundStyle(Color.sweeplySuccess)
+            }
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(isWeekly ? "WEEKLY PAYDAY" : "DAILY PAY")
+                    .font(.system(size: 9, weight: .bold))
+                    .foregroundStyle(Color.sweeplySuccess)
+                    .tracking(0.8)
+                Text(member.name)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(Color.sweeplyNavy)
+            }
+
+            Spacer()
+
+            Text(member.payRateAmount.currency)
+                .font(.system(size: 15, weight: .bold, design: .monospaced))
+                .foregroundStyle(Color.sweeplyNavy)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .background(Color.sweeplySuccess.opacity(0.06))
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .stroke(Color.sweeplySuccess.opacity(0.25), lineWidth: 1)
+        )
     }
 
 }

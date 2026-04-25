@@ -413,9 +413,11 @@ struct TeamMember: Identifiable, Codable {
     var addedAt : Date
     
     // Pay rate settings
-    var payRateType: PayRateType = .perJob
+    var payRateType: PayRateType = .perDay
     var payRateAmount: Double = 0
     var payRateEnabled: Bool = false
+    // Which day of week to pay (Calendar weekday: 1=Sun, 2=Mon…7=Sat). Only used for .perWeek.
+    var payDayOfWeek: Int? = nil
 
     var initials: String {
         name.split(separator: " ")

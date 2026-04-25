@@ -215,12 +215,13 @@ final class TeamStore {
 
     // MARK: - Update Pay Rate
 
-    func updatePayRate(id: UUID, rateType: PayRateType, amount: Double, enabled: Bool) async -> Bool {
+    func updatePayRate(id: UUID, rateType: PayRateType, amount: Double, enabled: Bool, payDay: Int?) async -> Bool {
         guard let client = SupabaseManager.shared else {
             if let idx = members.firstIndex(where: { $0.id == id }) {
                 members[idx].payRateType = rateType
                 members[idx].payRateAmount = amount
                 members[idx].payRateEnabled = enabled
+                members[idx].payDayOfWeek = payDay
             }
             return true
         }
@@ -231,7 +232,8 @@ final class TeamStore {
                 .update(TeamMemberPayRatePatch(
                     payRateType: rateType.rawValue,
                     payRateAmount: amount,
-                    payRateEnabled: enabled
+                    payRateEnabled: enabled,
+                    payDayOfWeek: payDay
                 ))
                 .eq("id", value: id.uuidString)
                 .execute()
@@ -239,6 +241,7 @@ final class TeamStore {
                 members[idx].payRateType = rateType
                 members[idx].payRateAmount = amount
                 members[idx].payRateEnabled = enabled
+                members[idx].payDayOfWeek = payDay
             }
             return true
         } catch {
@@ -262,14 +265,16 @@ private struct TeamMemberDTO: Decodable {
     let payRateType: String?
     let payRateAmount: Double?
     let payRateEnabled: Bool?
+    let payDayOfWeek: Int?
 
     enum CodingKeys: String, CodingKey {
         case id, name, email, phone, role, status
-        case ownerId  = "owner_id"
-        case addedAt  = "added_at"
-        case payRateType = "pay_rate_type"
+        case ownerId       = "owner_id"
+        case addedAt       = "added_at"
+        case payRateType   = "pay_rate_type"
         case payRateAmount = "pay_rate_amount"
         case payRateEnabled = "pay_rate_enabled"
+        case payDayOfWeek  = "pay_day_of_week"
     }
 
     func toMember() -> TeamMember {
@@ -282,9 +287,10 @@ private struct TeamMemberDTO: Decodable {
             role: TeamRole(rawValue: role) ?? .member,
             status: TeamMemberStatus(rawValue: status) ?? .invited,
             addedAt: addedAt,
-            payRateType: PayRateType(rawValue: payRateType ?? "per_job") ?? .perJob,
+            payRateType: PayRateType(rawValue: payRateType ?? "per_day") ?? .perDay,
             payRateAmount: payRateAmount ?? 0,
-            payRateEnabled: payRateEnabled ?? false
+            payRateEnabled: payRateEnabled ?? false,
+            payDayOfWeek: payDayOfWeek
         )
     }
 }
@@ -324,11 +330,13 @@ private struct TeamMemberPayRatePatch: Encodable {
     let payRateType: String
     let payRateAmount: Double
     let payRateEnabled: Bool
+    let payDayOfWeek: Int?
 
     enum CodingKeys: String, CodingKey {
-        case payRateType = "pay_rate_type"
-        case payRateAmount = "pay_rate_amount"
+        case payRateType    = "pay_rate_type"
+        case payRateAmount  = "pay_rate_amount"
         case payRateEnabled = "pay_rate_enabled"
+        case payDayOfWeek   = "pay_day_of_week"
     }
 }
 

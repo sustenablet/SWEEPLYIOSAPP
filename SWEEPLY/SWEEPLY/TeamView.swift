@@ -413,6 +413,7 @@ struct MemberDetailView: View {
     @State private var localRateType: PayRateType
     @State private var localRateAmountText: String
     @State private var localPayMethod: PaymentMethod = .cash
+    @State private var localPayDay: Int = 6  // Calendar weekday: 1=Sun, 2=Mon…7=Sat; default Friday
     @State private var isSavingPayRate = false
     @State private var payRateSaved = false
 
@@ -432,8 +433,9 @@ struct MemberDetailView: View {
         _localEmail = State(initialValue: member.email)
         _localPhone = State(initialValue: member.phone)
         _localRateEnabled = State(initialValue: member.payRateEnabled)
-        _localRateType = State(initialValue: member.payRateType)
+        _localRateType = State(initialValue: member.payRateType == .perJob ? .perDay : member.payRateType)
         _localRateAmountText = State(initialValue: member.payRateAmount > 0 ? String(format: "%.2f", member.payRateAmount) : "")
+        _localPayDay = State(initialValue: member.payDayOfWeek ?? 6)
     }
 
     // MARK: - Derived
@@ -449,19 +451,33 @@ struct MemberDetailView: View {
     private var hasPayRateChanges: Bool {
         localRateEnabled != member.payRateEnabled ||
         localRateType != member.payRateType ||
-        abs(parsedRateAmount - member.payRateAmount) > 0.001
+        abs(parsedRateAmount - member.payRateAmount) > 0.001 ||
+        (localRateType == .perWeek && localPayDay != (member.payDayOfWeek ?? 6))
     }
 
     private var payRateSummary: String {
-        guard localRateEnabled, parsedRateAmount > 0 else { return "" }
-        let amount = parsedRateAmount.currency
+        guard localRateEnabled else { return "" }
         let via = localPayMethod.rawValue
         switch localRateType {
-        case .perJob:  return "\(amount) per job · \(via)"
-        case .perDay:  return "\(amount) per day · \(via)"
-        case .perWeek: return "\(amount) per week · \(via)"
-        case .custom:  return "Custom arrangement · \(via)"
+        case .perDay:
+            guard parsedRateAmount > 0 else { return "" }
+            return "\(parsedRateAmount.currency) every day · \(via)"
+        case .perWeek:
+            guard parsedRateAmount > 0 else { return "" }
+            let dayName = weekdayName(localPayDay)
+            return "\(parsedRateAmount.currency) every \(dayName) · \(via)"
+        case .custom:
+            return "Custom arrangement · \(via)"
+        default:
+            return ""
         }
+    }
+
+    private func weekdayName(_ weekday: Int) -> String {
+        // Calendar weekday: 1=Sun, 2=Mon, 3=Tue, 4=Wed, 5=Thu, 6=Fri, 7=Sat
+        let names = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+        let idx = max(0, min(6, weekday - 1))
+        return names[idx]
     }
 
     // MARK: - Body
@@ -810,14 +826,14 @@ struct MemberDetailView: View {
             if localRateEnabled {
                 Divider()
 
-                // Pay type selector
+                // Pay type selector (Per Job removed)
                 VStack(alignment: .leading, spacing: 10) {
                     Text("Pay Type")
                         .font(.system(size: 12, weight: .semibold))
                         .foregroundStyle(Color.sweeplyTextSub)
 
                     HStack(spacing: 8) {
-                        ForEach(PayRateType.allCases, id: \.self) { type in
+                        ForEach([PayRateType.perDay, .perWeek, .custom], id: \.self) { type in
                             Button {
                                 UIImpactFeedbackGenerator(style: .light).impactOccurred()
                                 withAnimation(.easeInOut(duration: 0.15)) { localRateType = type }
@@ -838,10 +854,10 @@ struct MemberDetailView: View {
                 .padding(.horizontal, 16)
                 .padding(.vertical, 14)
 
+                // Amount field (not for custom)
                 if localRateType != .custom {
                     Divider()
 
-                    // Amount field
                     HStack(spacing: 10) {
                         Text("$")
                             .font(.system(size: 18, weight: .bold, design: .monospaced))
@@ -854,6 +870,45 @@ struct MemberDetailView: View {
                         Text("per \(localRateType.perLabel)")
                             .font(.system(size: 13))
                             .foregroundStyle(Color.sweeplyTextSub)
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 14)
+                }
+
+                // Pay day picker — only for Per Week
+                if localRateType == .perWeek {
+                    Divider()
+
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("Pay Day")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(Color.sweeplyTextSub)
+
+                        // Calendar weekday: 2=Mon, 3=Tue, 4=Wed, 5=Thu, 6=Fri, 7=Sat, 1=Sun
+                        let dayOrder: [(Int, String)] = [
+                            (2,"Mon"),(3,"Tue"),(4,"Wed"),(5,"Thu"),(6,"Fri"),(7,"Sat"),(1,"Sun")
+                        ]
+                        HStack(spacing: 6) {
+                            ForEach(dayOrder, id: \.0) { weekday, label in
+                                Button {
+                                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                    withAnimation(.easeInOut(duration: 0.15)) { localPayDay = weekday }
+                                } label: {
+                                    Text(label)
+                                        .font(.system(size: 13, weight: localPayDay == weekday ? .bold : .medium))
+                                        .foregroundStyle(localPayDay == weekday ? .white : Color.sweeplyNavy)
+                                        .frame(maxWidth: .infinity)
+                                        .padding(.vertical, 8)
+                                        .background(localPayDay == weekday ? Color.sweeplyNavy : Color.sweeplyBackground)
+                                        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                                .stroke(localPayDay == weekday ? Color.clear : Color.sweeplyBorder, lineWidth: 1)
+                                        )
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
                     }
                     .padding(.horizontal, 16)
                     .padding(.vertical, 14)
@@ -1199,7 +1254,8 @@ struct MemberDetailView: View {
             id: member.id,
             rateType: localRateType,
             amount: localRateType == .custom ? 0 : parsedRateAmount,
-            enabled: localRateEnabled
+            enabled: localRateEnabled,
+            payDay: localRateType == .perWeek ? localPayDay : nil
         )
         if ok {
             UINotificationFeedbackGenerator().notificationOccurred(.success)
