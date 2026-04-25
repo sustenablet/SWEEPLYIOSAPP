@@ -11,13 +11,9 @@ struct MapJobCard: View {
         VStack(alignment: .leading, spacing: 16) {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 4) {
-                    HStack(spacing: 8) {
-                        Text(job.clientName)
-                            .font(.system(size: 18, weight: .bold))
-                            .foregroundStyle(Color.sweeplyNavy)
-                        
-                        StatusBadge(status: job.status)
-                    }
+                    Text(job.clientName)
+                        .font(.system(size: 18, weight: .bold))
+                        .foregroundStyle(Color.sweeplyNavy)
                     
                     Text(job.address)
                         .font(.system(size: 14))

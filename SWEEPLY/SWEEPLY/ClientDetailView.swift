@@ -6,7 +6,6 @@ struct ClientDetailView: View {
     @Environment(ClientsStore.self) private var clientsStore
     @Environment(JobsStore.self) private var jobsStore
     @Environment(InvoicesStore.self) private var invoicesStore
-    @Environment(MessagesStore.self) private var messagesStore
     @Environment(AppSession.self) private var session
 
     let clientId: UUID
@@ -19,7 +18,6 @@ struct ClientDetailView: View {
     @State private var showDeleteConfirmation = false
     @State private var isArchiving = false
     @State private var jobHistoryFilter: JobHistoryFilter = .upcoming
-    @State private var showClientChat = false
 
     private enum JobHistoryFilter: String, CaseIterable {
         case upcoming = "Upcoming"
@@ -143,11 +141,6 @@ struct ClientDetailView: View {
                 }
                 .sheet(isPresented: $showEditSheet) {
                     NewClientForm(editingClient: client)
-                }
-                .sheet(isPresented: $showClientChat) {
-                    ClientChatView(client: client)
-                        .environment(messagesStore)
-                        .environment(session)
                 }
                 .confirmationDialog("Delete Client?", isPresented: $showDeleteConfirmation, titleVisibility: .visible) {
                     Button("Delete permanently", role: .destructive) {
@@ -285,9 +278,6 @@ struct ClientDetailView: View {
                 }
                 QuickActionButton(icon: "map.fill", label: "Navigate", color: Color.sweeplyNavy) {
                     navigateClient()
-                }
-                QuickActionButton(icon: "message.fill", label: "Message", color: Color.sweeplyAccent) {
-                    showClientChat = true
                 }
             }
         }

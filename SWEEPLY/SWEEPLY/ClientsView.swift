@@ -73,7 +73,6 @@ struct ClientsView: View {
     @State private var archiveHaptic = false
     @State private var newJobForClient: Client? = nil
     @State private var viewingClientId: UUID? = nil
-    @State private var showFilters = false
 
     private var displayClients: [Client] {
         let base = clientsStore.clients.filter { $0.isActive || showArchived }
