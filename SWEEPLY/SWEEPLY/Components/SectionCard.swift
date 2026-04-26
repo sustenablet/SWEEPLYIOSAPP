@@ -19,7 +19,7 @@ struct SectionCard<Content: View>: View {
     ZStack {
         Color.sweeplyBackground.ignoresSafeArea()
         SectionCard {
-            Text("Sample Card Content")
+            Text("Sample Card Content".translated())
                 .font(.headline)
         }
         .padding()

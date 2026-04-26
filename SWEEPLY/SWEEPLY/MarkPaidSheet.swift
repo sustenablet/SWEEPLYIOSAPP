@@ -73,7 +73,7 @@ struct MarkPaidSheet: View {
 
                     SectionCard {
                         VStack(alignment: .leading, spacing: 12) {
-                            Text("Payment Method")
+                            Text("Payment Method".translated())
                                 .font(.system(size: 12, weight: .medium))
                                 .foregroundStyle(Color.sweeplyTextSub)
                             
@@ -94,7 +94,7 @@ struct MarkPaidSheet: View {
                             if isSaving {
                                 ProgressView().tint(.white).scaleEffect(0.85)
                             } else {
-                                Label("Mark as Paid", systemImage: "checkmark.circle.fill")
+                                Label("Mark as Paid".translated(), systemImage: "checkmark.circle.fill")
                                     .font(.system(size: 16, weight: .semibold))
                             }
                         }
@@ -111,11 +111,11 @@ struct MarkPaidSheet: View {
                 .padding(.top, 16)
                 .padding(.bottom, 32)
             }
-            .navigationTitle("Record Payment")
+            .navigationTitle("Record Payment".translated())
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel") { dismiss() }
+                    Button("Cancel".translated()) { dismiss() }
                         .foregroundStyle(Color.sweeplyTextSub)
                 }
             }

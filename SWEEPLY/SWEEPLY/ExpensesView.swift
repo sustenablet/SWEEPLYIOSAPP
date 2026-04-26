@@ -143,13 +143,13 @@ struct ExpensesView: View {
     @ViewBuilder
     private var totalLabel: some View {
         if selectedDay != nil {
-            Text("Day Total")
+            Text("Day Total".translated())
                 .font(.system(size: 12, weight: .medium))
                 .foregroundStyle(Color.sweeplyTextSub)
                 .textCase(.uppercase)
                 .tracking(0.8)
         } else {
-            Text("Total Spent")
+            Text("Total Spent".translated())
                 .font(.system(size: 12, weight: .medium))
                 .foregroundStyle(Color.sweeplyTextSub)
                 .textCase(.uppercase)
@@ -210,12 +210,12 @@ struct ExpensesView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Done") { dismiss() }
+                    Button("Done".translated()) { dismiss() }
                         .font(.system(size: 15, weight: .medium))
                         .foregroundStyle(Color.sweeplyNavy)
                 }
                 ToolbarItem(placement: .principal) {
-                    Text("Expenses")
+                    Text("Expenses".translated())
                         .font(.system(size: 16, weight: .semibold))
                         .foregroundStyle(Color.sweeplyNavy)
                 }
@@ -473,7 +473,7 @@ struct ExpensesView: View {
 
     private var categoryCard: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text("By Category")
+            Text("By Category".translated())
                 .font(.system(size: 12, weight: .semibold))
                 .foregroundStyle(Color.sweeplyTextSub)
                 .textCase(.uppercase)
@@ -563,13 +563,13 @@ struct ExpensesView: View {
     @ViewBuilder
     private var expenseListTitle: some View {
         if selectedDay != nil {
-            Text("Day's Expenses")
+            Text("Day's Expenses".translated())
                 .font(.system(size: 12, weight: .semibold))
                 .foregroundStyle(Color.sweeplyTextSub)
                 .textCase(.uppercase)
                 .tracking(0.6)
         } else {
-            Text("Transactions")
+            Text("Transactions".translated())
                 .font(.system(size: 12, weight: .semibold))
                 .foregroundStyle(Color.sweeplyTextSub)
                 .textCase(.uppercase)
@@ -639,14 +639,14 @@ struct ExpensesView: View {
             Button(role: .destructive) {
                 Task { await expenseStore.remove(id: expense.id) }
             } label: {
-                Label("Delete", systemImage: "trash")
+                Label("Delete".translated(), systemImage: "trash")
             }
         }
         .swipeActions(edge: .trailing, allowsFullSwipe: true) {
             Button(role: .destructive) {
                 Task { await expenseStore.remove(id: expense.id) }
             } label: {
-                Label("Delete", systemImage: "trash")
+                Label("Delete".translated(), systemImage: "trash")
             }
         }
     }
@@ -688,7 +688,7 @@ struct ExpensesView: View {
             HStack(spacing: 8) {
                 Image(systemName: "plus")
                     .font(.system(size: 15, weight: .bold))
-                Text("Add Expense")
+                Text("Add Expense".translated())
                     .font(.system(size: 16, weight: .semibold))
             }
             .foregroundStyle(canAddExpense ? .white : .white.opacity(0.5))
@@ -752,7 +752,7 @@ struct AddExpenseSheet: View {
                         // Amount
                         SectionCard {
                             VStack(alignment: .leading, spacing: 6) {
-                                Text("Amount")
+                                Text("Amount".translated())
                                     .font(.system(size: 12, weight: .medium))
                                     .foregroundStyle(Color.sweeplyTextSub)
                                 HStack(alignment: .firstTextBaseline, spacing: 4) {
@@ -767,7 +767,7 @@ struct AddExpenseSheet: View {
                                         .toolbar {
                                             ToolbarItemGroup(placement: .keyboard) {
                                                 Spacer()
-                                                Button("Done") {
+                                                Button("Done".translated()) {
                                                     isAmountFocused = false
                                                 }
                                                 .font(.system(size: 15, weight: .semibold))
@@ -781,7 +781,7 @@ struct AddExpenseSheet: View {
                         // Category
                         SectionCard {
                             VStack(alignment: .leading, spacing: 10) {
-                                Text("Category")
+                                Text("Category".translated())
                                     .font(.system(size: 12, weight: .medium))
                                     .foregroundStyle(Color.sweeplyTextSub)
                                 LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 3), spacing: 8) {
@@ -796,7 +796,7 @@ struct AddExpenseSheet: View {
                         SectionCard {
                             VStack(spacing: 0) {
                                 HStack {
-                                    Text("Notes")
+                                    Text("Notes".translated())
                                         .font(.system(size: 13, weight: .medium))
                                         .foregroundStyle(Color.sweeplyTextSub)
                                         .frame(width: 60, alignment: .leading)
@@ -808,7 +808,7 @@ struct AddExpenseSheet: View {
                                 Divider()
 
                                 HStack {
-                                    Text("Date")
+                                    Text("Date".translated())
                                         .font(.system(size: 13, weight: .medium))
                                         .foregroundStyle(Color.sweeplyTextSub)
                                         .frame(width: 60, alignment: .leading)
@@ -827,7 +827,7 @@ struct AddExpenseSheet: View {
                                 if isSaving {
                                     ProgressView().tint(.white).scaleEffect(0.85)
                                 } else {
-                                    Text("Save Expense")
+                                    Text("Save Expense".translated())
                                         .font(.system(size: 16, weight: .semibold))
                                 }
                             }
@@ -847,11 +847,11 @@ struct AddExpenseSheet: View {
                     .padding(.bottom, 32)
                 }
             }
-            .navigationTitle("New Expense")
+            .navigationTitle("New Expense".translated())
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel") { dismiss() }
+                    Button("Cancel".translated()) { dismiss() }
                         .foregroundStyle(Color.sweeplyTextSub)
                 }
             }

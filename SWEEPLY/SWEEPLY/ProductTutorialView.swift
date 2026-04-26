@@ -109,7 +109,7 @@ struct ProductTutorialView: View {
                 UINotificationFeedbackGenerator().notificationOccurred(.success)
                 onComplete()
             } label: {
-                Text("Skip")
+                Text("Skip".translated())
                     .font(.system(size: 14, weight: .medium))
                     .foregroundStyle(.white.opacity(0.45))
                     .padding(.horizontal, 12)
@@ -217,7 +217,7 @@ private struct TutorialPhoneFrame<Content: View>: View {
 private struct ScheduleTutorialPreview: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Today")
+            Text("Today".translated())
                 .font(.system(size: 11, weight: .bold))
                 .foregroundStyle(Color.sweeplyNavy)
 
@@ -277,11 +277,11 @@ private struct FinancesTutorialPreview: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             VStack(alignment: .leading, spacing: 2) {
-                Text("THIS MONTH")
+                Text("THIS MONTH".translated())
                     .font(.system(size: 8, weight: .bold))
                     .foregroundStyle(Color.sweeplyTextSub)
                     .tracking(0.5)
-                Text("$3,200")
+                Text("$3,200".translated())
                     .font(.system(size: 22, weight: .black, design: .monospaced))
                     .foregroundStyle(Color.sweeplyNavy)
             }
@@ -350,10 +350,10 @@ private struct ReadyTutorialPreview: View {
             }
 
             VStack(spacing: 5) {
-                Text("Sweeply")
+                Text("Sweeply".translated())
                     .font(.system(size: 18, weight: .bold))
                     .foregroundStyle(Color.sweeplyNavy)
-                Text("Run jobs. Get paid. Grow.")
+                Text("Run jobs. Get paid. Grow.".translated())
                     .font(.system(size: 11, weight: .medium))
                     .foregroundStyle(Color.sweeplyTextSub)
             }

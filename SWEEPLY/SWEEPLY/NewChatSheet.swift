@@ -30,11 +30,11 @@ struct NewChatSheet: View {
                 }
             }
             .background(Color.sweeplyBackground.ignoresSafeArea())
-            .navigationTitle("New Message")
+            .navigationTitle("New Message".translated())
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel") {
+                    Button("Cancel".translated()) {
                         dismiss()
                     }
                     .font(.system(size: 14, weight: .medium))
@@ -51,10 +51,10 @@ struct NewChatSheet: View {
             Image(systemName: "person.3")
                 .font(.system(size: 32))
                 .foregroundStyle(Color.sweeplyTextSub.opacity(0.4))
-            Text("No clients yet")
+            Text("No clients yet".translated())
                 .font(.system(size: 17, weight: .semibold))
                 .foregroundStyle(Color.sweeplyNavy)
-            Text("Add a client first to start messaging.")
+            Text("Add a client first to start messaging.".translated())
                 .font(.system(size: 13))
                 .foregroundStyle(Color.sweeplyTextSub)
             Spacer()
@@ -67,7 +67,7 @@ struct NewChatSheet: View {
             Image(systemName: "magnifyingglass")
                 .font(.system(size: 32))
                 .foregroundStyle(Color.sweeplyTextSub.opacity(0.4))
-            Text("No clients found")
+            Text("No clients found".translated())
                 .font(.system(size: 17, weight: .semibold))
                 .foregroundStyle(Color.sweeplyNavy)
             Spacer()

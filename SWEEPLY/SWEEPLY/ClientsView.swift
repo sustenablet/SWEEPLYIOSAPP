@@ -20,11 +20,11 @@ enum ClientFrequency {
     var label: String? {
         switch self {
         case .none:      return nil
-        case .oneTime:   return "One-time"
-        case .recurring: return "Recurring"
-        case .weekly:    return "Weekly"
-        case .biweekly:  return "Biweekly"
-        case .monthly:   return "Monthly"
+        case .oneTime:   return "One-time".translated()
+        case .recurring: return "Recurring".translated()
+        case .weekly:    return "Weekly".translated()
+        case .biweekly:  return "Biweekly".translated()
+        case .monthly:   return "Monthly".translated()
         }
     }
 
@@ -300,7 +300,7 @@ struct ClientsView: View {
                                 UIApplication.shared.open(url)
                             }
                         } label: {
-                            Label("Call", systemImage: "phone.fill")
+                            Label("Call".translated(), systemImage: "phone.fill")
                         }
                         .tint(.green)
                     }
@@ -308,7 +308,7 @@ struct ClientsView: View {
                         Button {
                             newJobForClient = client
                         } label: {
-                            Label("New Job", systemImage: "plus.circle.fill")
+                            Label("New Job".translated(), systemImage: "plus.circle.fill")
                         }
                         .tint(Color.sweeplyNavy)
 
@@ -318,7 +318,7 @@ struct ClientsView: View {
                                 UIApplication.shared.open(url)
                             }
                         } label: {
-                            Label("Text", systemImage: "message.fill")
+                            Label("Text".translated(), systemImage: "message.fill")
                         }
                         .tint(.blue)
                     }
@@ -501,9 +501,9 @@ private struct ClientCard: View {
                 }
 
                 Menu {
-                    Button { onView() } label: { Label("View Profile", systemImage: "person.fill") }
+                    Button { onView() } label: { Label("View Profile".translated(), systemImage: "person.fill") }
                     Divider()
-                    Button { onEdit() } label: { Label("Edit Client", systemImage: "pencil") }
+                    Button { onEdit() } label: { Label("Edit Client".translated(), systemImage: "pencil") }
                     Button { onToggleArchive() } label: {
                         Label(
                             client.isActive ? "Archive Client" : "Unarchive Client",
@@ -512,7 +512,7 @@ private struct ClientCard: View {
                     }
                     Divider()
                     Button(role: .destructive) { onDelete() } label: {
-                        Label("Delete Client", systemImage: "trash")
+                        Label("Delete Client".translated(), systemImage: "trash")
                     }
                 } label: {
                     Image(systemName: "ellipsis")
@@ -569,7 +569,7 @@ private struct ClientFiltersSheet: View {
                     .font(.system(size: 17, weight: .bold))
                     .foregroundStyle(Color.sweeplyNavy)
                 Spacer()
-                Button("Done") { dismiss() }
+                Button("Done".translated()) { dismiss() }
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundStyle(Color.sweeplyAccent)
             }

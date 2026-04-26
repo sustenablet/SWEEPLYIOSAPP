@@ -19,15 +19,18 @@ final class JobsStore {
 
     func load(isAuthenticated: Bool) async {
         guard let client = SupabaseManager.shared else {
-            jobs = []
+            if jobs.isEmpty { jobs = [] }
             lastError = "Unable to connect. Please try again."
             return
         }
         guard isAuthenticated else {
-            jobs = []
+            if jobs.isEmpty { jobs = [] }
             return
         }
 
+        // Preserve existing jobs during refresh to avoid UI flickering
+        let previousJobs = jobs
+        let hadJobs = !previousJobs.isEmpty
         isLoading = true
         lastError = nil
         defer { isLoading = false }
@@ -43,7 +46,13 @@ final class JobsStore {
             SpotlightIndexer.shared.indexJobs(jobs)
         } catch {
             lastError = error.localizedDescription
-            jobs = []
+            // Only clear jobs if this was an initial load (not a refresh)
+            if !hadJobs {
+                jobs = []
+            } else {
+                // Restore previous jobs on error during refresh
+                jobs = previousJobs
+            }
         }
     }
 

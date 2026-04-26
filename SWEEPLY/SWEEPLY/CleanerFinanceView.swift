@@ -180,10 +180,10 @@ struct CleanerFinanceView: View {
                 .foregroundStyle(Color.sweeplyAccent)
 
             VStack(alignment: .leading, spacing: 2) {
-                Text("Your Pay Rate")
+                Text("Your Pay Rate".translated())
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(Color.sweeplyTextSub)
-                Text("Contact your manager to set up your pay rate")
+                Text("Contact your manager to set up your pay rate".translated())
                     .font(.system(size: 13, weight: .medium))
                     .foregroundStyle(Color.sweeplyNavy)
             }
@@ -220,7 +220,7 @@ struct CleanerFinanceView: View {
     private var completedSection: some View {
         SectionCard {
             VStack(alignment: .leading, spacing: 14) {
-                CardHeader(title: "Completed Jobs", subtitle: selectedPeriod.rawValue, action: nil)
+                CardHeader(title: "Completed Jobs".translated(), subtitle: selectedPeriod.rawValue, action: nil)
 
                 if jobsStore.isLoading {
                     skeletonRows
@@ -239,7 +239,7 @@ struct CleanerFinanceView: View {
                     Divider().padding(.top, 8)
 
                     HStack {
-                        Text("Total")
+                        Text("Total".translated())
                             .font(.system(size: 14, weight: .semibold))
                             .foregroundStyle(Color.sweeplyTextSub)
                         Spacer()
@@ -271,7 +271,7 @@ struct CleanerFinanceView: View {
     private var scheduledSection: some View {
         SectionCard {
             VStack(alignment: .leading, spacing: 14) {
-                CardHeader(title: "Upcoming Earnings", subtitle: "Scheduled jobs", action: nil)
+                CardHeader(title: "Upcoming Earnings".translated(), subtitle: "Scheduled jobs".translated(), action: nil)
 
                 VStack(alignment: .leading, spacing: 0) {
                     ForEach(Array(upcomingEarningsJobs.prefix(5).enumerated()), id: \.element.id) { index, job in
@@ -285,7 +285,7 @@ struct CleanerFinanceView: View {
                 if scheduledTotal > 0 {
                     Divider().padding(.top, 8)
                     HStack {
-                        Text("Potential")
+                        Text("Potential".translated())
                             .font(.system(size: 14, weight: .semibold))
                             .foregroundStyle(Color.sweeplyTextSub)
                         Spacer()

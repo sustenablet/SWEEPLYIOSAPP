@@ -71,7 +71,7 @@ struct NewInvoiceView: View {
                         VStack(spacing: 24) {
                             // Header
                             VStack(alignment: .leading, spacing: 6) {
-                                Text("New Invoice")
+                                Text("New Invoice".translated())
                                     .font(.system(size: 28, weight: .bold))
                                     .foregroundStyle(Color.sweeplyNavy)
                                 Text(autoInvoiceNumber)
@@ -110,7 +110,7 @@ struct NewInvoiceView: View {
                         Divider().background(Color.sweeplyBorder.opacity(0.3))
 
                         HStack(spacing: 16) {
-                            Button("Cancel") { dismiss() }
+                            Button("Cancel".translated()) { dismiss() }
                                 .font(.system(size: 16, weight: .semibold))
                                 .foregroundStyle(Color.sweeplyTextSub)
                                 .frame(maxWidth: .infinity)
@@ -124,7 +124,7 @@ struct NewInvoiceView: View {
                                     if isSubmitting {
                                         ProgressView().tint(.white)
                                     } else {
-                                        Text("Create Invoice")
+                                        Text("Create Invoice".translated())
                                     }
                                 }
                                 .font(.system(size: 16, weight: .bold))
@@ -146,7 +146,7 @@ struct NewInvoiceView: View {
             .toolbar {
                 ToolbarItemGroup(placement: .keyboard) {
                     Spacer()
-                    Button("Done") {
+                    Button("Done".translated()) {
                         UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
                     }
                     .font(.system(size: 15, weight: .semibold))
@@ -216,7 +216,7 @@ struct NewInvoiceView: View {
                 }
 
                 if activeClients.isEmpty {
-                    Text("No active clients. Add a client first.")
+                    Text("No active clients. Add a client first.".translated())
                         .font(.system(size: 12))
                         .foregroundStyle(Color.sweeplyDestructive)
                         .padding(.leading, 4)
@@ -246,10 +246,10 @@ struct NewInvoiceView: View {
                                 .foregroundStyle(Color.sweeplyAccent)
                         }
                         VStack(alignment: .leading, spacing: 2) {
-                            Text("Select a service or extra")
+                            Text("Select a service or extra".translated())
                                 .font(.system(size: 15, weight: .semibold))
                                 .foregroundStyle(Color.sweeplyNavy)
-                            Text("Choose from your catalog to build the invoice")
+                            Text("Choose from your catalog to build the invoice".translated())
                                 .font(.system(size: 12))
                                 .foregroundStyle(Color.sweeplyTextSub)
                         }
@@ -287,7 +287,7 @@ struct NewInvoiceView: View {
                     HStack(spacing: 6) {
                         Image(systemName: "plus.circle.fill")
                             .foregroundStyle(Color.sweeplyAccent)
-                        Text("Add another service")
+                        Text("Add another service".translated())
                             .font(.system(size: 14, weight: .semibold))
                             .foregroundStyle(Color.sweeplyNavy)
                     }
@@ -309,7 +309,7 @@ struct NewInvoiceView: View {
 
             VStack(spacing: 8) {
                 HStack {
-                    Text("Invoice No.")
+                    Text("Invoice No.".translated())
                         .font(.system(size: 15))
                         .foregroundStyle(Color.sweeplyTextSub)
                     Spacer()
@@ -323,7 +323,7 @@ struct NewInvoiceView: View {
                 .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.sweeplyBorder, lineWidth: 1))
 
                 VStack(alignment: .leading, spacing: 6) {
-                    Text("Notes (optional)")
+                    Text("Notes (optional)".translated())
                         .font(.system(size: 13, weight: .semibold))
                         .foregroundStyle(Color.sweeplyTextSub)
 
@@ -347,7 +347,7 @@ struct NewInvoiceView: View {
             InvoiceFormSectionHeader(title: "PAYMENT")
 
             VStack(alignment: .leading, spacing: 8) {
-                Text("Due Date")
+                Text("Due Date".translated())
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(Color.sweeplyTextSub)
 
@@ -390,7 +390,7 @@ struct NewInvoiceView: View {
     private var totalBar: some View {
         VStack(spacing: 10) {
             HStack {
-                Text("Subtotal")
+                Text("Subtotal".translated())
                     .font(.system(size: 14))
                     .foregroundStyle(Color.sweeplyTextSub)
                 Spacer()
@@ -592,7 +592,7 @@ private struct CustomLineItemSheet: View {
         NavigationStack {
             VStack(spacing: 24) {
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("Description")
+                    Text("Description".translated())
                         .font(.system(size: 13, weight: .medium))
                         .foregroundStyle(Color.sweeplyTextSub)
                     
@@ -609,7 +609,7 @@ private struct CustomLineItemSheet: View {
                 
                 HStack(spacing: 16) {
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("Quantity")
+                        Text("Quantity".translated())
                             .font(.system(size: 13, weight: .medium))
                             .foregroundStyle(Color.sweeplyTextSub)
                         
@@ -626,7 +626,7 @@ private struct CustomLineItemSheet: View {
                     }
                     
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("Unit Price ($)")
+                        Text("Unit Price ($)".translated())
                             .font(.system(size: 13, weight: .medium))
                             .foregroundStyle(Color.sweeplyTextSub)
                         
@@ -645,7 +645,7 @@ private struct CustomLineItemSheet: View {
                 
                 if let qty = Double(quantity), let price = Double(unitPrice), qty > 0 && price > 0 {
                     HStack {
-                        Text("Total:")
+                        Text("Total:".translated())
                             .font(.system(size: 15, weight: .medium))
                             .foregroundStyle(Color.sweeplyTextSub)
                         Spacer()
@@ -661,15 +661,15 @@ private struct CustomLineItemSheet: View {
                 Spacer()
             }
             .padding(24)
-            .navigationTitle("Custom Line Item")
+            .navigationTitle("Custom Line Item".translated())
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
+                    Button("Cancel".translated()) { dismiss() }
                         .foregroundStyle(Color.sweeplyTextSub)
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Add") {
+                    Button("Add".translated()) {
                         let qty = Double(quantity) ?? 1
                         let price = Double(unitPrice) ?? 0
                         onAdd(InvoiceLineItem(description: description, quantity: qty, unitPrice: price))
@@ -751,11 +751,11 @@ private struct ServicePickerSheet: View {
                 }
 
             }
-            .navigationTitle("Add Service")
+            .navigationTitle("Add Service".translated())
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
+                    Button("Cancel".translated()) { dismiss() }
                 }
             }
         }

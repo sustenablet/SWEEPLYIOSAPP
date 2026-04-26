@@ -1,5 +1,4 @@
 import SwiftUI
-import Charts
 
 struct ClientDetailView: View {
     @Environment(\.dismiss) private var dismiss
@@ -107,7 +106,7 @@ struct ClientDetailView: View {
                 .toolbar {
                     ToolbarItem(placement: .topBarTrailing) {
                         HStack(spacing: 8) {
-                            Button("Edit") {
+                            Button("Edit".translated()) {
                                 UIImpactFeedbackGenerator(style: .light).impactOccurred()
                                 showEditSheet = true
                             }
@@ -129,7 +128,7 @@ struct ClientDetailView: View {
                                     UIImpactFeedbackGenerator(style: .heavy).impactOccurred()
                                     showDeleteConfirmation = true
                                 } label: {
-                                    Label("Delete Client", systemImage: "trash")
+                                    Label("Delete Client".translated(), systemImage: "trash")
                                 }
                             } label: {
                                 Image(systemName: "ellipsis.circle")
@@ -142,7 +141,7 @@ struct ClientDetailView: View {
                 .sheet(isPresented: $showEditSheet) {
                     NewClientForm(editingClient: client)
                 }
-                .confirmationDialog("Delete Client?", isPresented: $showDeleteConfirmation, titleVisibility: .visible) {
+                .confirmationDialog("Delete Client?".translated(), isPresented: $showDeleteConfirmation, titleVisibility: .visible) {
                     Button("Delete permanently", role: .destructive) {
                         UIImpactFeedbackGenerator(style: .heavy).impactOccurred()
                         Task {
@@ -158,10 +157,10 @@ struct ClientDetailView: View {
                     Image(systemName: "person.crop.circle.badge.exclamationmark")
                         .font(.system(size: 42))
                         .foregroundStyle(Color.sweeplyTextSub.opacity(0.5))
-                    Text("Client not found")
+                    Text("Client not found".translated())
                         .font(.system(size: 18, weight: .semibold))
                         .foregroundStyle(Color.sweeplyNavy)
-                    Button("Go Back") {
+                    Button("Go Back".translated()) {
                         dismiss()
                     }
                     .font(.system(size: 14, weight: .semibold))
@@ -317,70 +316,20 @@ struct ClientDetailView: View {
         isArchiving = false
     }
 
-    // MARK: - Stats Row
-    private var paidInvoiceSparklineData: [(index: Int, amount: Double)] {
-        clientInvoices
-            .filter { $0.status == .paid }
-            .sorted { $0.createdAt < $1.createdAt }
-            .suffix(6)
-            .enumerated()
-            .map { (index: $0.offset, amount: $0.element.subtotal) }
+    private var completedJobsCount: Int {
+        clientJobs.filter { $0.status == .completed }.count
     }
-
+    
+    // MARK: - Stats Row
     private var statsRow: some View {
-        VStack(spacing: 0) {
-            HStack(spacing: 0) {
-                StatCell(label: "Total Revenue", value: totalRevenue.currency, valueColor: .sweeplySuccess)
-                dividerLine
-                StatCell(label: "Outstanding", value: outstanding.currency, valueColor: outstanding > 0 ? .sweeplyWarning : .sweeplyTextSub)
-                dividerLine
-                StatCell(label: "Total Jobs", value: "\(clientJobs.count)")
-            }
-            .padding(.vertical, 16)
-
-            if paidInvoiceSparklineData.count >= 2 {
-                Divider()
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("REVENUE HISTORY")
-                        .font(.system(size: 9, weight: .bold))
-                        .foregroundStyle(Color.sweeplyTextSub)
-                        .tracking(0.8)
-                        .padding(.horizontal, 16)
-                        .padding(.top, 10)
-
-                    Chart(paidInvoiceSparklineData, id: \.index) { point in
-                        AreaMark(
-                            x: .value("Invoice", point.index),
-                            y: .value("Amount", point.amount)
-                        )
-                        .foregroundStyle(
-                            LinearGradient(
-                                colors: [Color.sweeplyAccent.opacity(0.25), Color.sweeplyAccent.opacity(0)],
-                                startPoint: .top,
-                                endPoint: .bottom
-                            )
-                        )
-                        LineMark(
-                            x: .value("Invoice", point.index),
-                            y: .value("Amount", point.amount)
-                        )
-                        .foregroundStyle(Color.sweeplyAccent)
-                        .lineStyle(StrokeStyle(lineWidth: 2))
-                        PointMark(
-                            x: .value("Invoice", point.index),
-                            y: .value("Amount", point.amount)
-                        )
-                        .foregroundStyle(Color.sweeplyAccent)
-                        .symbolSize(20)
-                    }
-                    .chartXAxis(.hidden)
-                    .chartYAxis(.hidden)
-                    .frame(height: 48)
-                    .padding(.horizontal, 16)
-                    .padding(.bottom, 12)
-                }
-            }
+        HStack(spacing: 0) {
+            StatCell(label: "Total Revenue", value: totalRevenue.currency, valueColor: .sweeplySuccess)
+            dividerLine
+            StatCell(label: "Outstanding", value: outstanding.currency, valueColor: outstanding > 0 ? .sweeplyWarning : .sweeplyTextSub)
+            dividerLine
+            StatCell(label: "Completed", value: "\(completedJobsCount)")
         }
+        .padding(.vertical, 16)
         .background(Color.sweeplySurface)
         .clipShape(RoundedRectangle(cornerRadius: 12))
         .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.sweeplyBorder, lineWidth: 1))

@@ -13,15 +13,15 @@ struct CleanerRootView: View {
     var body: some View {
         TabView(selection: $selectedTab) {
             CleanerDashboardView(membership: membership)
-                .tabItem { Label("Dashboard", systemImage: "square.grid.2x2.fill") }
+                .tabItem { Label("Dashboard".translated(), systemImage: "square.grid.2x2.fill") }
                 .tag(Tab.dashboard)
 
             CleanerUpcomingView(membership: membership)
-                .tabItem { Label("Schedule", systemImage: "calendar.badge.clock") }
+                .tabItem { Label("Schedule".translated(), systemImage: "calendar.badge.clock") }
                 .tag(Tab.upcoming)
 
             CleanerFinanceView(membership: membership)
-                .tabItem { Label("Finance", systemImage: "dollarsign.circle.fill") }
+                .tabItem { Label("Finance".translated(), systemImage: "dollarsign.circle.fill") }
                 .tag(Tab.finance)
         }
         .tint(Color.sweeplyAccent)

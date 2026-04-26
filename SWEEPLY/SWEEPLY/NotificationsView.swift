@@ -64,7 +64,7 @@ struct NotificationsView: View {
                 }
             }
             .background(Color.sweeplyBackground.ignoresSafeArea())
-            .navigationTitle("Notifications")
+            .navigationTitle("Notifications".translated())
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
@@ -220,10 +220,10 @@ private func tabLabel(_ tab: NotificationTab) -> String {
     switch tab {
     case .all:      return "All"
     case .unread:   return unreadCount > 0 ? "Unread (\(unreadCount))" : "Unread"
-    case .jobs:     return "Jobs"
-    case .billing:  return "Billing"
-    case .team:     return "Team"
-    case .schedule: return "Schedule"
+    case .jobs:     return "Jobs".translated()
+    case .billing:  return "Billing".translated()
+    case .team:     return "Team".translated()
+    case .schedule: return "Schedule".translated()
     }
 }
 
@@ -328,23 +328,23 @@ private func tabLabel(_ tab: NotificationTab) -> String {
 
     private var emptyTitle: String {
         switch selectedTab {
-        case .all:      return "No notifications"
-        case .unread:   return "All caught up"
-        case .jobs:     return "No job updates"
-        case .billing:  return "No billing activity"
-        case .team:     return "No team activity"
-        case .schedule: return "No schedule updates"
+        case .all:      return "No notifications".translated()
+        case .unread:   return "All caught up".translated()
+        case .jobs:     return "No job updates".translated()
+        case .billing:  return "No billing activity".translated()
+        case .team:     return "No team activity".translated()
+        case .schedule: return "No schedule updates".translated()
         }
     }
 
     private var emptyMessage: String {
         switch selectedTab {
-        case .all:      return "You're up to date. New notifications will appear here."
-        case .unread:   return "You've read everything. Check back later for updates."
-        case .jobs:     return "Check-ins, completions, and job assignments will appear here."
-        case .billing:  return "Invoice due dates and payment confirmations will appear here."
-        case .team:     return "Invite acceptances and team updates will appear here."
-        case .schedule: return "No schedule changes or updates at the moment."
+        case .all:      return "You're up to date. New notifications will appear here.".translated()
+        case .unread:   return "You've read everything. Check back later for updates.".translated()
+        case .jobs:     return "Check-ins, completions, and job assignments will appear here.".translated()
+        case .billing:  return "Invoice due dates and payment confirmations will appear here.".translated()
+        case .team:     return "Invite acceptances and team updates will appear here.".translated()
+        case .schedule: return "No schedule changes or updates at the moment.".translated()
         }
     }
 }
@@ -477,20 +477,20 @@ private struct NotificationRow: View {
                 Button {
                     onMarkUnread()
                 } label: {
-                    Label("Mark as Unread", systemImage: "envelope.badge")
+                    Label("Mark as Unread".translated(), systemImage: "envelope.badge")
                 }
             } else {
                 Button {
                     onMarkRead()
                 } label: {
-                    Label("Mark as Read", systemImage: "checkmark.circle")
+                    Label("Mark as Read".translated(), systemImage: "checkmark.circle")
                 }
             }
             Divider()
             Button(role: .destructive) {
                 onDelete()
             } label: {
-                Label("Delete", systemImage: "trash")
+                Label("Delete".translated(), systemImage: "trash")
             }
         }
 

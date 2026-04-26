@@ -9,7 +9,7 @@ struct CleanerProfileMenuView: View {
     @Binding var showSettings: Bool
 
     private var displayName: String {
-        guard let name = profileStore.profile?.fullName, !name.isEmpty else { return "Team Member" }
+        guard let name = profileStore.profile?.fullName, !name.isEmpty else { return "Team Member".translated() }
         return name
     }
 
@@ -94,7 +94,7 @@ struct CleanerProfileMenuView: View {
                 HStack(spacing: 12) {
                     Image(systemName: "rectangle.portrait.and.arrow.right")
                         .font(.system(size: 14, weight: .medium))
-                    Text("Sign Out")
+                    Text("Sign Out".translated())
                         .font(.system(size: 15, weight: .semibold))
                     Spacer()
                 }

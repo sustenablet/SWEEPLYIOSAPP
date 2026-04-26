@@ -56,9 +56,9 @@ struct DashboardView: View {
     private var greeting: String {
         let hour = Calendar.current.component(.hour, from: Date())
         switch hour {
-        case 5..<12:  return "Good morning"
-        case 12..<17: return "Good afternoon"
-        default:      return "Good evening"
+        case 5..<12:  return "Good morning".translated()
+        case 12..<17: return "Good afternoon".translated()
+        default:      return "Good evening".translated()
         }
     }
 
@@ -132,7 +132,7 @@ private var healthCards: [DashboardHealthCardModel] {
         [
             DashboardHealthCardModel(
                 title: "Weekly Revenue",
-                subtitle: "Total earned from completed jobs this week",
+                subtitle: "Total earned from completed jobs this week".translated(),
                 value: (healthStats?.revenue ?? weekEarned).currency,
                 trend: healthStats?.revenue_trend ?? "+18%",
                 isPositive: healthStats?.is_rev_positive ?? true,
@@ -143,7 +143,7 @@ private var healthCards: [DashboardHealthCardModel] {
             ),
             DashboardHealthCardModel(
                 title: "Weekly Jobs",
-                subtitle: "Jobs scheduled and completed this week",
+                subtitle: "Jobs scheduled and completed this week".translated(),
                 value: "\(healthStats?.job_count ?? currentWeekJobs.count)",
                 trend: healthStats?.job_trend ?? "+5%",
                 isPositive: healthStats?.is_job_positive ?? true,
@@ -154,7 +154,7 @@ private var healthCards: [DashboardHealthCardModel] {
             ),
             DashboardHealthCardModel(
                 title: "Outstanding Balance",
-                subtitle: "Invoices sent that haven't been paid yet",
+                subtitle: "Invoices sent that haven't been paid yet".translated(),
                 value: outstandingTotal.currency,
                 trend: overdueInvoicesCount == 0 ? "All on track" : "\(overdueInvoicesCount) overdue",
                 isPositive: overdueInvoicesCount == 0,
@@ -165,7 +165,7 @@ private var healthCards: [DashboardHealthCardModel] {
             ),
             DashboardHealthCardModel(
                 title: "Active Clients",
-                subtitle: "Clients with visits scheduled this week",
+                subtitle: "Clients with visits scheduled this week".translated(),
                 value: "\(activeClientsThisWeek)",
                 trend: activeClientsThisWeek > 0 ? "Active week" : "Quiet week",
                 isPositive: activeClientsThisWeek > 0,
@@ -425,7 +425,7 @@ private var healthCards: [DashboardHealthCardModel] {
     private var todayScheduleSection: some View {
         SectionCard {
             VStack(alignment: .leading, spacing: 14) {
-                CardHeader(title: "Today's Schedule", action: onViewAllSchedule)
+                CardHeader(title: "Today's Schedule".translated(), action: onViewAllSchedule)
                 
                 if todayJobs.isEmpty {
                     VStack(spacing: 8) {
@@ -455,7 +455,7 @@ private var healthCards: [DashboardHealthCardModel] {
     private var businessHealthSection: some View {
         SectionCard {
             VStack(alignment: .leading, spacing: 16) {
-                CardHeader(title: "Business Health", subtitle: "Swipe through your operating metrics", action: nil)
+                CardHeader(title: "Business Health".translated(), subtitle: "Swipe through your operating metrics".translated(), action: nil)
 
                 TabView(selection: $selectedHealthSlide) {
                     ForEach(Array(healthCards.enumerated()), id: \.offset) { index, card in
@@ -486,7 +486,7 @@ private var healthCards: [DashboardHealthCardModel] {
     private var outstandingInvoicesSection: some View {
         SectionCard {
             VStack(alignment: .leading, spacing: 14) {
-                CardHeader(title: "Outstanding Invoices", action: { showInvoicesList = true })
+                CardHeader(title: "Outstanding Invoices".translated(), action: { showInvoicesList = true })
                 
                 if ongoingInvoices.isEmpty {
                     VStack(spacing: 8) {

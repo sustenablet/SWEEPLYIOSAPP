@@ -37,7 +37,7 @@ struct CleanerJobDetailView: View {
                     .foregroundStyle(Color.sweeplyTextSub)
             }
         }
-        .navigationTitle("Job Details")
+        .navigationTitle("Job Details".translated())
         .navigationBarTitleDisplayMode(.inline)
     }
 

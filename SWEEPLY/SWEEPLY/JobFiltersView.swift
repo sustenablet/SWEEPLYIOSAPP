@@ -17,7 +17,7 @@ struct JobFiltersView: View {
         VStack(spacing: 0) {
             // Header
             HStack {
-                Text("Filters")
+                Text("Filters".translated())
                     .font(.system(size: 20, weight: .bold))
                 Spacer()
                 Button {
@@ -38,7 +38,7 @@ struct JobFiltersView: View {
                 VStack(alignment: .leading, spacing: 32) {
                     // Status Group
                     VStack(alignment: .leading, spacing: 16) {
-                        FilterHeader(title: "JOB STATUS", subtitle: "Filter by current job progress")
+                        FilterHeader(title: "JOB STATUS", subtitle: "Filter by current job progress".translated())
                         
                         ChipGroup(spacing: 8) {
                             FilterChip(label: "All Statuses", isSelected: localStatus == nil) {
@@ -59,7 +59,7 @@ struct JobFiltersView: View {
                     
                     // Job Type Group
                     VStack(alignment: .leading, spacing: 16) {
-                        FilterHeader(title: "SCHEDULE TYPE", subtitle: "One-time or recurring jobs")
+                        FilterHeader(title: "SCHEDULE TYPE", subtitle: "One-time or recurring jobs".translated())
                         
                         HStack(spacing: 12) {
                             TypeCard(label: "All", icon: "square.grid.2x2.fill", isSelected: localType == "All") {
@@ -77,11 +77,11 @@ struct JobFiltersView: View {
                     // View Modes Group
                     VStack(alignment: .leading, spacing: 16) {
                          VStack(alignment: .leading, spacing: 4) {
-                            Text("VIEW OPTIONS")
+                            Text("VIEW OPTIONS".translated())
                                 .font(.system(size: 11, weight: .bold))
                                 .foregroundStyle(Color.sweeplyNavy)
                                 .tracking(1.0)
-                            Text("Select which tabs appear in the schedule")
+                            Text("Select which tabs appear in the schedule".translated())
                                 .font(.system(size: 13))
                                 .foregroundStyle(Color.sweeplyTextSub)
                         }
@@ -115,11 +115,11 @@ struct JobFiltersView: View {
                     // Content Type Group
                     VStack(alignment: .leading, spacing: 16) {
                         VStack(alignment: .leading, spacing: 4) {
-                            Text("SHOW CONTENT")
+                            Text("SHOW CONTENT".translated())
                                 .font(.system(size: 11, weight: .bold))
                                 .foregroundStyle(Color.sweeplyNavy)
                                 .tracking(1.0)
-                            Text("Choose what appears on your schedule")
+                            Text("Choose what appears on your schedule".translated())
                                 .font(.system(size: 13))
                                 .foregroundStyle(Color.sweeplyTextSub)
                         }
@@ -162,7 +162,7 @@ struct JobFiltersView: View {
                     showInvoices = localShowInvoices
                     dismiss()
                 } label: {
-                    Text("Apply Changes")
+                    Text("Apply Changes".translated())
                         .font(.system(size: 16, weight: .bold))
                         .foregroundStyle(.white)
                         .frame(maxWidth: .infinity)
@@ -172,7 +172,7 @@ struct JobFiltersView: View {
                         .shadow(color: Color.sweeplyNavy.opacity(0.2), radius: 10, x: 0, y: 5)
                 }
                 
-                Button("Cancel") { dismiss() }
+                Button("Cancel".translated()) { dismiss() }
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundStyle(Color.sweeplyTextSub)
                     .padding(.bottom, 8)
@@ -306,7 +306,7 @@ struct ToggleRow: View {
                 Spacer()
 
                 if !enabled {
-                    Text("Always on")
+                    Text("Always on".translated())
                         .font(.system(size: 11, weight: .medium))
                         .foregroundStyle(Color.sweeplyTextSub)
                 } else {

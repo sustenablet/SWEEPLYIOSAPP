@@ -67,11 +67,11 @@ struct TeamView: View {
                     }
                 }
             }
-            .navigationTitle("My Team")
+            .navigationTitle("My Team".translated())
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Done") { dismiss() }
+                    Button("Done".translated()) { dismiss() }
                         .font(.system(size: 15, weight: .medium))
                         .foregroundStyle(Color.sweeplyNavy)
                 }
@@ -310,10 +310,14 @@ struct TeamView: View {
                     Text(member.name)
                         .font(.system(size: 15, weight: .semibold))
                         .foregroundStyle(Color.primary)
-                    Text(member.email)
-                        .font(.system(size: 12))
-                        .foregroundStyle(Color.sweeplyTextSub)
-                        .lineLimit(1)
+                    
+                    HStack(spacing: 4) {
+                        Image(systemName: "dollarsign.circle.fill")
+                            .font(.system(size: 11))
+                        Text(member.payRateDescription)
+                            .font(.system(size: 12, weight: .medium))
+                    }
+                    .foregroundStyle(Color.sweeplySuccess)
                 }
 
                 Spacer()
@@ -337,7 +341,7 @@ struct TeamView: View {
                 deleteTarget = member
                 showDeleteConfirm = true
             } label: {
-                Label("Remove", systemImage: "trash")
+                Label("Remove".translated(), systemImage: "trash")
             }
         }
     }
@@ -490,6 +494,7 @@ struct MemberDetailView: View {
                     contactCard
                     performanceCard
                     paySetupCard
+                    jobHistoryCard
                     paymentHistoryCard
                     statusActionsCard
                     removeButton
@@ -502,7 +507,7 @@ struct MemberDetailView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Close") { dismiss() }
+                    Button("Close".translated()) { dismiss() }
                         .foregroundStyle(Color.sweeplyTextSub)
                 }
                 ToolbarItem(placement: .principal) {
@@ -1003,6 +1008,113 @@ struct MemberDetailView: View {
         .animation(.easeInOut(duration: 0.15), value: hasPayRateChanges)
     }
 
+    // MARK: - Job History Card
+
+    private var jobHistoryCard: some View {
+        VStack(spacing: 0) {
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("JOB HISTORY".translated())
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundStyle(Color.sweeplyTextSub)
+                        .tracking(0.8)
+                    Text("Work this cleaner has done".translated())
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(Color.sweeplyNavy)
+                }
+                Spacer()
+                Text("\(memberJobHistory.count) total")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(Color.sweeplyTextSub)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 14)
+
+            Divider()
+
+            if memberJobHistory.isEmpty {
+                VStack(spacing: 8) {
+                    Image(systemName: "briefcase")
+                        .font(.system(size: 28))
+                        .foregroundStyle(Color.sweeplyTextSub.opacity(0.35))
+                    Text("No jobs assigned yet".translated())
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(Color.sweeplyTextSub)
+                    Text("Jobs will appear here once \(member.name.components(separatedBy: " ").first ?? member.name) is assigned work")
+                        .font(.system(size: 12))
+                        .foregroundStyle(Color.sweeplyTextSub.opacity(0.6))
+                        .multilineTextAlignment(.center)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 28)
+                .padding(.horizontal, 16)
+            } else {
+                VStack(spacing: 0) {
+                    ForEach(Array(memberJobHistory.enumerated()), id: \.element.id) { idx, job in
+                        jobHistoryRow(job)
+                        if idx < memberJobHistory.count - 1 {
+                            Divider().padding(.leading, 16)
+                        }
+                    }
+                }
+            }
+        }
+        .background(Color.sweeplySurface)
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(Color.sweeplyBorder, lineWidth: 1))
+    }
+
+    private func jobHistoryRow(_ job: Job) -> some View {
+        HStack(spacing: 12) {
+            VStack(alignment: .center, spacing: 3) {
+                Text(job.date.formatted(.dateTime.day()))
+                    .font(.system(size: 16, weight: .bold, design: .rounded))
+                    .foregroundStyle(Color.sweeplyNavy)
+                Text(job.date.formatted(.dateTime.month(.abbreviated)))
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(Color.sweeplyTextSub)
+            }
+            .frame(width: 36)
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(job.clientName)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(Color.sweeplyNavy)
+                    .lineLimit(1)
+                HStack(spacing: 6) {
+                    Text(job.serviceType.rawValue)
+                        .font(.system(size: 12))
+                        .foregroundStyle(Color.sweeplyTextSub)
+                    if !job.address.isEmpty {
+                        Text("·")
+                            .foregroundStyle(Color.sweeplyBorder)
+                        Text(job.address)
+                            .font(.system(size: 11))
+                            .foregroundStyle(Color.sweeplyTextSub)
+                            .lineLimit(1)
+                    }
+                }
+            }
+
+            Spacer()
+
+            VStack(alignment: .trailing, spacing: 3) {
+                Text(job.price.currency)
+                    .font(.system(size: 14, weight: .semibold, design: .monospaced))
+                    .foregroundStyle(Color.sweeplyNavy)
+                StatusBadge(status: job.status)
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+    }
+
+    private var memberJobHistory: [Job] {
+        jobsStore.jobs
+            .filter { $0.assignedMemberId == member.id && $0.status != .cancelled }
+            .sorted { $0.date > $1.date }
+    }
+
     // MARK: - Payment History Card
 
     private var paymentHistoryCard: some View {
@@ -1317,10 +1429,10 @@ struct MemberDetailView: View {
 private extension PayRateType {
     var shortLabel: String {
         switch self {
-        case .perJob:  return "Per Job"
-        case .perDay:  return "Per Day"
-        case .perWeek: return "Per Week"
-        case .custom:  return "Custom"
+        case .perJob:  return "Per Job".translated()
+        case .perDay:  return "Per Day".translated()
+        case .perWeek: return "Per Week".translated()
+        case .custom:  return "Custom".translated()
         }
     }
 
@@ -1575,11 +1687,11 @@ struct InviteMemberSheet: View {
                     .padding(.top, 20)
                 }
             }
-            .navigationTitle("Invite Cleaner")
+            .navigationTitle("Invite Cleaner".translated())
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel") { dismiss() }
+                    Button("Cancel".translated()) { dismiss() }
                         .foregroundStyle(Color.sweeplyTextSub)
                 }
             }

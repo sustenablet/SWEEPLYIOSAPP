@@ -21,9 +21,9 @@ struct CleanerDashboardView: View {
     private var greeting: String {
         let h = Calendar.current.component(.hour, from: Date())
         switch h {
-        case 5..<12:  return "Good morning"
-        case 12..<17: return "Good afternoon"
-        default:      return "Good evening"
+        case 5..<12:  return "Good morning".translated()
+        case 12..<17: return "Good afternoon".translated()
+        default:      return "Good evening".translated()
         }
     }
 
@@ -109,7 +109,7 @@ struct CleanerDashboardView: View {
         [
             DashboardHealthCardModel(
                 title: "Earnings This Week",
-                subtitle: "From completed jobs this week",
+                subtitle: "From completed jobs this week".translated(),
                 value: weekEarned.currency,
                 trend: weekCompleted > 0 ? "+\(weekCompleted) jobs" : "No completions",
                 isPositive: weekCompleted > 0,
@@ -120,7 +120,7 @@ struct CleanerDashboardView: View {
             ),
             DashboardHealthCardModel(
                 title: "This Month",
-                subtitle: "Earnings from completed jobs this month",
+                subtitle: "Earnings from completed jobs this month".translated(),
                 value: monthEarned.currency,
                 trend: "\(monthJobCount) completed",
                 isPositive: monthJobCount > 0,
@@ -130,7 +130,7 @@ struct CleanerDashboardView: View {
             ),
             DashboardHealthCardModel(
                 title: "Completion Rate",
-                subtitle: "Share of your jobs marked complete",
+                subtitle: "Share of your jobs marked complete".translated(),
                 value: completionRate > 0 ? String(format: "%.0f%%", completionRate) : "—",
                 trend: completionRate >= 90 ? "On track" : completionRate > 0 ? "Keep it up" : "No data yet",
                 isPositive: completionRate >= 80,
@@ -269,7 +269,7 @@ struct CleanerDashboardView: View {
 
     private var revenueHero: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("EARNINGS THIS WEEK")
+            Text("EARNINGS THIS WEEK".translated())
                 .font(.system(size: 11, weight: .semibold))
                 .foregroundStyle(Color.sweeplyTextSub)
                 .tracking(0.8)
@@ -286,7 +286,7 @@ struct CleanerDashboardView: View {
                     .font(.system(size: 13))
                     .foregroundStyle(Color.sweeplyTextSub)
             } else {
-                Text("No completed jobs yet this week")
+                Text("No completed jobs yet this week".translated())
                     .font(.system(size: 13))
                     .foregroundStyle(Color.sweeplyTextSub)
             }
@@ -348,7 +348,7 @@ struct CleanerDashboardView: View {
             }
 
             VStack(alignment: .leading, spacing: 2) {
-                Text("Working with")
+                Text("Working with".translated())
                     .font(.system(size: 11, weight: .medium))
                     .foregroundStyle(Color.sweeplyTextSub)
                 Text(membership.businessName)
@@ -380,7 +380,7 @@ struct CleanerDashboardView: View {
     private var todaySection: some View {
         SectionCard {
             VStack(alignment: .leading, spacing: 14) {
-                CardHeader(title: "Today's Schedule", action: nil)
+                CardHeader(title: "Today's Schedule".translated(), action: nil)
 
                 if jobsStore.isLoading {
                     skeletonRows
@@ -409,7 +409,7 @@ struct CleanerDashboardView: View {
             Image(systemName: "sun.max")
                 .font(.system(size: 32))
                 .foregroundStyle(Color.sweeplyAccent.opacity(0.5))
-            Text("You're all clear today")
+            Text("You're all clear today".translated())
                 .font(.system(size: 14, weight: .medium))
                 .foregroundStyle(Color.sweeplyTextSub)
         }
@@ -432,7 +432,7 @@ struct CleanerDashboardView: View {
     private var performanceSection: some View {
         SectionCard {
             VStack(alignment: .leading, spacing: 16) {
-                CardHeader(title: "Performance", subtitle: "Swipe through your stats", action: nil)
+                CardHeader(title: "Performance".translated(), subtitle: "Swipe through your stats".translated(), action: nil)
 
                 TabView(selection: $selectedHealthSlide) {
                     ForEach(Array(performanceCards.enumerated()), id: \.offset) { index, card in

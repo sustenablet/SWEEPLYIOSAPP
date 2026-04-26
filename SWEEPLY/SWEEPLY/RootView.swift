@@ -182,10 +182,10 @@ struct RootView: View {
                         .foregroundStyle(.white)
                 }
                 VStack(spacing: 10) {
-                    Text("Sweeply is Locked")
+                    Text("Sweeply is Locked".translated())
                         .font(.system(size: 22, weight: .bold))
                         .foregroundStyle(.white)
-                    Text("Your business data is protected.")
+                    Text("Your business data is protected.".translated())
                         .font(.system(size: 15))
                         .foregroundStyle(.white.opacity(0.6))
                 }
@@ -197,7 +197,7 @@ struct RootView: View {
                     HStack(spacing: 8) {
                         Image(systemName: "faceid")
                             .font(.system(size: 16, weight: .semibold))
-                        Text("Unlock Sweeply")
+                        Text("Unlock Sweeply".translated())
                             .font(.system(size: 16, weight: .semibold))
                     }
                     .foregroundStyle(Color.sweeplyNavy)

@@ -512,8 +512,8 @@ struct ScheduleView: View {
     }
 
     private func agendaDateLabel(_ date: Date) -> String {
-        if calendar.isDateInToday(date) { return "Today" }
-        if calendar.isDateInTomorrow(date) { return "Tomorrow" }
+        if calendar.isDateInToday(date) { return "Today".translated() }
+        if calendar.isDateInTomorrow(date) { return "Tomorrow".translated() }
         return date.formatted(.dateTime.weekday(.wide).month(.abbreviated).day())
     }
 
@@ -1203,7 +1203,7 @@ private struct ScheduleJobRow: View {
         }
         .alert("Create Invoice?", isPresented: $showInvoicePrompt) {
             Button("Not Now", role: .cancel) {}
-            Button("Create Invoice") { showInvoiceSheet = true }
+            Button("Create Invoice".translated()) { showInvoiceSheet = true }
         } message: {
             Text("Generate an invoice for \(job.clientName) — \(job.price.currency)?")
         }

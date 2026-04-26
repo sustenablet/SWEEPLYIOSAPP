@@ -45,12 +45,29 @@ struct JobDetailView: View {
                         jobDetailsCard(job: job)
                         jobPhotosSection(job: job)
 
+                        // Cancel Job button — visible when job is scheduled or in progress
+                        if job.status == .scheduled || job.status == .inProgress {
+                            Button {
+                                UIImpactFeedbackGenerator(style: .heavy).impactOccurred()
+                                Task { await jobsStore.updateStatus(id: job.id, status: .cancelled) }
+                            } label: {
+                                Label("Cancel Job".translated(), systemImage: "xmark.circle.fill")
+                                    .font(.system(size: 14, weight: .bold))
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 14)
+                                    .background(Color.sweeplyDestructive.opacity(0.1))
+                                    .foregroundStyle(Color.sweeplyDestructive)
+                                    .clipShape(RoundedRectangle(cornerRadius: 14))
+                                    .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.sweeplyDestructive.opacity(0.3), lineWidth: 1))
+                            }
+                        }
+
                         Spacer(minLength: 40)
                     }
                     .padding(20)
                 }
                 .background(Color.sweeplyBackground.ignoresSafeArea())
-                .navigationTitle("Job Details")
+                .navigationTitle("Job Details".translated())
                 .navigationBarTitleDisplayMode(.inline)
                 .sheet(isPresented: $showInvoiceSheet) {
                     NewInvoiceView(prefill: job)
@@ -60,10 +77,10 @@ struct JobDetailView: View {
                     Image(systemName: "exclamationmark.square")
                         .font(.system(size: 42))
                         .foregroundStyle(Color.sweeplyTextSub.opacity(0.5))
-                    Text("Job not found")
+                    Text("Job not found".translated())
                         .font(.system(size: 18, weight: .semibold))
                         .foregroundStyle(Color.sweeplyNavy)
-                    Button("Go Back") {
+                    Button("Go Back".translated()) {
                         dismiss()
                     }
                     .buttonStyle(.borderedProminent)
@@ -101,7 +118,7 @@ struct JobDetailView: View {
                 if job.isRecurring {
                     HStack(spacing: 4) {
                         Image(systemName: "arrow.triangle.2.circlepath")
-                        Text("Recurring")
+                        Text("Recurring".translated())
                     }
                     .font(.system(size: 12, weight: .bold))
                     .foregroundStyle(Color.sweeplyAccent)
@@ -114,17 +131,17 @@ struct JobDetailView: View {
         }
     }
 
-    // MARK: - Action Buttons
+// MARK: - Action Buttons
     private func actionButtons(job: Job) -> some View {
         VStack(spacing: 10) {
             HStack(spacing: 12) {
-                if job.status != .completed {
+                if job.status == .scheduled || job.status == .inProgress {
                     Button {
                         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                         UINotificationFeedbackGenerator().notificationOccurred(.success)
                         Task { await jobsStore.updateStatus(id: job.id, status: .completed) }
                     } label: {
-                        Label("Complete Job", systemImage: "checkmark.circle.fill")
+                        Label("Complete Job".translated(), systemImage: "checkmark.circle.fill")
                             .font(.system(size: 14, weight: .bold))
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 14)
@@ -132,12 +149,26 @@ struct JobDetailView: View {
                             .foregroundStyle(.white)
                             .clipShape(RoundedRectangle(cornerRadius: 14))
                     }
+                } else if job.status == .cancelled {
+                    Button {
+                        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                        Task { await jobsStore.updateStatus(id: job.id, status: .scheduled) }
+                    } label: {
+                        Label("Re-open Job".translated(), systemImage: "arrow.uturn.backward")
+                            .font(.system(size: 14, weight: .bold))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 14)
+                            .background(Color.sweeplySurface)
+                            .foregroundStyle(Color.sweeplyNavy)
+                            .clipShape(RoundedRectangle(cornerRadius: 14))
+                            .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.sweeplyBorder, lineWidth: 1))
+                    }
                 } else {
                     Button {
                         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                         Task { await jobsStore.updateStatus(id: job.id, status: .scheduled) }
                     } label: {
-                        Label("Re-open Job", systemImage: "arrow.uturn.backward")
+                        Label("Re-open Job".translated(), systemImage: "arrow.uturn.backward")
                             .font(.system(size: 14, weight: .bold))
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 14)
@@ -155,7 +186,7 @@ struct JobDetailView: View {
                         UIApplication.shared.open(url)
                     }
                 } label: {
-                    Label("Navigate", systemImage: "location.fill")
+                    Label("Navigate".translated(), systemImage: "location.fill")
                         .font(.system(size: 14, weight: .bold))
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 14)
@@ -171,7 +202,7 @@ struct JobDetailView: View {
                     UIImpactFeedbackGenerator(style: .light).impactOccurred()
                     showInvoiceSheet = true
                 } label: {
-                    Label("Create Invoice", systemImage: "doc.text.fill")
+                    Label("Create Invoice".translated(), systemImage: "doc.text.fill")
                         .font(.system(size: 14, weight: .bold))
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 14)
@@ -187,7 +218,7 @@ struct JobDetailView: View {
     // MARK: - Client Profile Card
     private func clientProfileCard(client: Client) -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("CLIENT PROFILE")
+            Text("CLIENT PROFILE".translated())
                 .font(.system(size: 11, weight: .bold))
                 .foregroundStyle(Color.sweeplyTextSub)
                 .tracking(1.0)
@@ -232,7 +263,7 @@ struct JobDetailView: View {
     // MARK: - Property Notes
     private func propertyNotesCard(client: Client) -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("PROPERTY INSTRUCTIONS")
+            Text("PROPERTY INSTRUCTIONS".translated())
                 .font(.system(size: 11, weight: .bold))
                 .foregroundStyle(Color.sweeplyTextSub)
                 .tracking(1.0)
@@ -256,7 +287,7 @@ struct JobDetailView: View {
     // MARK: - Job Details
     private func jobDetailsCard(job: Job) -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("JOB DETAILS")
+            Text("JOB DETAILS".translated())
                 .font(.system(size: 11, weight: .bold))
                 .foregroundStyle(Color.sweeplyTextSub)
                 .tracking(1.0)
@@ -289,7 +320,7 @@ struct JobDetailView: View {
                                 .foregroundStyle(Color.sweeplyAccent)
                         }
                         VStack(alignment: .leading, spacing: 2) {
-                            Text("Assigned To")
+                            Text("Assigned To".translated())
                                 .font(.system(size: 11, weight: .semibold))
                                 .foregroundStyle(Color.sweeplyTextSub)
                             Text(job.assignedMemberName ?? "Unassigned")
@@ -339,7 +370,7 @@ struct JobDetailView: View {
                     HStack(spacing: 4) {
                         Image(systemName: "plus")
                             .font(.system(size: 12, weight: .semibold))
-                        Text("Add Photo")
+                        Text("Add Photo".translated())
                             .font(.system(size: 12, weight: .medium))
                     }
                     .foregroundStyle(Color.sweeplyAccent)
@@ -513,11 +544,11 @@ struct ReassignCleanerSheet: View {
                     .padding(20)
                 }
             }
-            .navigationTitle("Assign Cleaner")
+            .navigationTitle("Assign Cleaner".translated())
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel") { dismiss() }.foregroundStyle(Color.sweeplyTextSub)
+                    Button("Cancel".translated()) { dismiss() }.foregroundStyle(Color.sweeplyTextSub)
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button {
@@ -526,7 +557,7 @@ struct ReassignCleanerSheet: View {
                         if isSaving {
                             ProgressView().scaleEffect(0.8)
                         } else {
-                            Text("Save").font(.system(size: 15, weight: .semibold)).foregroundStyle(Color.sweeplyNavy)
+                            Text("Save".translated()).font(.system(size: 15, weight: .semibold)).foregroundStyle(Color.sweeplyNavy)
                         }
                     }
                     .disabled(isSaving)

@@ -50,7 +50,7 @@ struct MapJobCard: View {
                 Button(action: onDirections) {
                     HStack {
                         Image(systemName: "arrow.turn.up.right")
-                        Text("Directions")
+                        Text("Directions".translated())
                     }
                     .font(.system(size: 15, weight: .bold))
                     .foregroundStyle(.white)
@@ -62,7 +62,7 @@ struct MapJobCard: View {
                 .buttonStyle(.plain)
                 
                 Button(action: onDetails) {
-                    Text("View Job")
+                    Text("View Job".translated())
                         .font(.system(size: 15, weight: .bold))
                         .foregroundStyle(Color.sweeplyNavy)
                         .frame(maxWidth: .infinity)

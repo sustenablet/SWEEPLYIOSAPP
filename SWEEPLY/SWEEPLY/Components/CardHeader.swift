@@ -17,7 +17,7 @@ struct CardHeader: View {
             if let action {
                 Button(action: action) {
                     HStack(spacing: 3) {
-                        Text("View all")
+                        Text("View all".translated())
                         Image(systemName: "chevron.right")
                     }
                     .font(.system(size: 12, weight: .medium))

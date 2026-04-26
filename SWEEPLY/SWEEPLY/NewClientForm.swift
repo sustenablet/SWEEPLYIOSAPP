@@ -49,7 +49,7 @@ struct NewClientForm: View {
     }
 
     private var preferredServiceLabel: String {
-        guard let preferredService else { return "Select Service..." }
+        guard let preferredService else { return "Select Service...".translated() }
         if let service = serviceCatalog.first(where: {
             $0.name.trimmingCharacters(in: .whitespacesAndNewlines).caseInsensitiveCompare(preferredService.rawValue) == .orderedSame
         }) {
@@ -65,7 +65,7 @@ struct NewClientForm: View {
                 Text(editingClient == nil ? "New Client" : "Edit Client")
                     .font(.system(size: 20, weight: .bold))
                 Spacer()
-                Button("Cancel") { dismiss() }
+                Button("Cancel".translated()) { dismiss() }
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(Color.sweeplyTextSub)
             }
@@ -82,7 +82,7 @@ struct NewClientForm: View {
                             HStack(spacing: 8) {
                                 Image(systemName: "person.crop.circle.badge.plus")
                                     .font(.system(size: 15, weight: .semibold))
-                                Text("Import from Contacts")
+                                Text("Import from Contacts".translated())
                                     .font(.system(size: 14, weight: .semibold))
                             }
                             .foregroundStyle(Color.sweeplyNavy)
@@ -97,7 +97,7 @@ struct NewClientForm: View {
 
                     // Contact
                     VStack(alignment: .leading, spacing: 14) {
-                        Text("CONTACT INFO").font(.system(size: 10, weight: .bold)).foregroundStyle(Color.sweeplyTextSub).tracking(1.0)
+                        Text("CONTACT INFO".translated()).font(.system(size: 10, weight: .bold)).foregroundStyle(Color.sweeplyTextSub).tracking(1.0)
                         HStack(spacing: 12) {
                             FormTextField(
                                 label: "First Name *",
@@ -127,9 +127,9 @@ struct NewClientForm: View {
                     VStack(alignment: .leading, spacing: 14) {
                         Text("PREFERENCES").font(.system(size: 10, weight: .bold)).foregroundStyle(Color.sweeplyTextSub).tracking(1.0)
                         VStack(alignment: .leading, spacing: 6) {
-                            Text("Preferred Service").font(.system(size: 12)).foregroundStyle(Color.sweeplyTextSub)
+                            Text("Preferred Service".translated()).font(.system(size: 12)).foregroundStyle(Color.sweeplyTextSub)
                             Menu {
-                                Button("None") { preferredService = nil }
+                                Button("None".translated()) { preferredService = nil }
                                 ForEach(serviceCatalog) { service in
                                     Button("\(service.name) · \(service.price.currency)") {
                                         preferredService = ServiceType(rawValue: service.name)
@@ -153,7 +153,7 @@ struct NewClientForm: View {
 
                     // Address
                     VStack(alignment: .leading, spacing: 14) {
-                        Text("SERVICE ADDRESS").font(.system(size: 10, weight: .bold)).foregroundStyle(Color.sweeplyTextSub).tracking(1.0)
+                        Text("SERVICE ADDRESS".translated()).font(.system(size: 10, weight: .bold)).foregroundStyle(Color.sweeplyTextSub).tracking(1.0)
                         AddressAutocompleteTF(
                             label: "Street Address",
                             street: $street,
@@ -170,11 +170,11 @@ HStack(spacing: 12) {
 
                     // Notes
                     VStack(alignment: .leading, spacing: 14) {
-                        Text("OPERATIONAL NOTES").font(.system(size: 10, weight: .bold)).foregroundStyle(Color.sweeplyTextSub).tracking(1.0)
+                        Text("OPERATIONAL NOTES".translated()).font(.system(size: 10, weight: .bold)).foregroundStyle(Color.sweeplyTextSub).tracking(1.0)
                         FormTextField(label: "Entry Instructions", text: $entryInstructions, placeholder: "Gate code #1234...")
                         
                         VStack(alignment: .leading, spacing: 6) {
-                            Text("Notes").font(.system(size: 12)).foregroundStyle(Color.sweeplyTextSub)
+                            Text("Notes".translated()).font(.system(size: 12)).foregroundStyle(Color.sweeplyTextSub)
                             TextEditor(text: $notes)
                                 .frame(minHeight: 100)
                                 .padding(12)
@@ -215,7 +215,7 @@ HStack(spacing: 12) {
         .toolbar {
             ToolbarItemGroup(placement: .keyboard) {
                 Spacer()
-                Button("Done") {
+                Button("Done".translated()) {
                     UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
                 }
                 .font(.system(size: 15, weight: .semibold))

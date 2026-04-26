@@ -34,7 +34,7 @@ struct ConversationsListView: View {
                 }
             }
             .background(Color.sweeplyBackground.ignoresSafeArea())
-            .navigationTitle("Messages")
+            .navigationTitle("Messages".translated())
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
@@ -96,10 +96,10 @@ struct ConversationsListView: View {
             Image(systemName: "magnifyingglass")
                 .font(.system(size: 32))
                 .foregroundStyle(Color.sweeplyTextSub.opacity(0.4))
-            Text("No conversations found")
+            Text("No conversations found".translated())
                 .font(.system(size: 17, weight: .semibold))
                 .foregroundStyle(Color.sweeplyNavy)
-            Text("Try searching for a different client.")
+            Text("Try searching for a different client.".translated())
                 .font(.system(size: 13))
                 .foregroundStyle(Color.sweeplyTextSub)
             Spacer()
@@ -121,10 +121,10 @@ struct ConversationsListView: View {
                             .foregroundStyle(Color.sweeplyNavy.opacity(0.4))
                     }
                     VStack(spacing: 6) {
-                        Text("No conversations yet")
+                        Text("No conversations yet".translated())
                             .font(.system(size: 17, weight: .bold))
                             .foregroundStyle(Color.sweeplyNavy)
-                        Text("Start a conversation with a client.")
+                        Text("Start a conversation with a client.".translated())
                             .font(.system(size: 13))
                             .foregroundStyle(Color.sweeplyTextSub)
                             .multilineTextAlignment(.center)
@@ -134,7 +134,7 @@ struct ConversationsListView: View {
                 .padding(.top, 20)
 
                 VStack(alignment: .leading, spacing: 12) {
-                    Text("Your Clients")
+                    Text("Your Clients".translated())
                         .font(.system(size: 15, weight: .semibold))
                         .foregroundStyle(Color.sweeplyNavy)
                         .padding(.horizontal, 20)
@@ -145,7 +145,7 @@ struct ConversationsListView: View {
                             Image(systemName: "person.3")
                                 .font(.system(size: 28))
                                 .foregroundStyle(Color.sweeplyTextSub.opacity(0.3))
-                            Text("No clients yet")
+                            Text("No clients yet".translated())
                                 .font(.system(size: 13))
                                 .foregroundStyle(Color.sweeplyTextSub)
                         }
@@ -283,7 +283,7 @@ private struct ConversationRow: View {
                                 .foregroundStyle(conversation.unreadCount > 0 ? Color.sweeplyNavy : Color.sweeplyTextSub)
                                 .lineLimit(1)
                         } else {
-                            Text("No messages yet")
+                            Text("No messages yet".translated())
                                 .font(.system(size: 13))
                                 .foregroundStyle(Color.sweeplyTextSub.opacity(0.5))
                         }

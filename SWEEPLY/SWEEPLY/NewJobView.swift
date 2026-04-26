@@ -95,7 +95,7 @@ struct NewJobForm: View {
             // Header
             HStack {
                 Spacer()
-                Text("Schedule a Job")
+                Text("Schedule a Job".translated())
                     .font(.system(size: 18, weight: .bold))
                 Spacer()
                 Button { dismiss() } label: {
@@ -131,7 +131,7 @@ struct NewJobForm: View {
                         
                         // Client Selector
                         VStack(alignment: .leading, spacing: 8) {
-                            Text("Client *").font(.system(size: 13, weight: .medium)).foregroundStyle(showValidationErrors && selectedClientId == nil ? Color.sweeplyDestructive : Color.sweeplyTextSub)
+                            Text("Client *".translated()).font(.system(size: 13, weight: .medium)).foregroundStyle(showValidationErrors && selectedClientId == nil ? Color.sweeplyDestructive : Color.sweeplyTextSub)
                             Menu {
                                 ForEach(clientsStore.clients) { client in
                                     Button(client.name) {
@@ -150,7 +150,7 @@ struct NewJobForm: View {
                                     .stroke(showValidationErrors && selectedClientId == nil ? Color.sweeplyDestructive : Color.clear, lineWidth: 1.5)
                             )
                             if showValidationErrors && selectedClientId == nil {
-                                Text("Please select a client")
+                                Text("Please select a client".translated())
                                     .font(.system(size: 12))
                                     .foregroundStyle(Color.sweeplyDestructive)
                                     .padding(.top, 2)
@@ -159,7 +159,7 @@ struct NewJobForm: View {
                         
                         // Service Type Selector
                         VStack(alignment: .leading, spacing: 8) {
-                            Text("Service Type *").font(.system(size: 13, weight: .medium)).foregroundStyle(Color.sweeplyTextSub)
+                            Text("Service Type *".translated()).font(.system(size: 13, weight: .medium)).foregroundStyle(Color.sweeplyTextSub)
                             Menu {
                                 ForEach(serviceCatalog) { service in
                                     Button("\(service.name) · \(service.price.currency)") {
@@ -184,7 +184,7 @@ struct NewJobForm: View {
                         HStack(spacing: 16) {
                             // Date
                             VStack(alignment: .leading, spacing: 8) {
-                                Text("Date *").font(.system(size: 13, weight: .medium)).foregroundStyle(showValidationErrors && date < Date() ? Color.sweeplyDestructive : Color.sweeplyTextSub)
+                                Text("Date *".translated()).font(.system(size: 13, weight: .medium)).foregroundStyle(showValidationErrors && date < Date() ? Color.sweeplyDestructive : Color.sweeplyTextSub)
                                 DatePicker("", selection: $date, displayedComponents: .date)
                                     .labelsHidden()
                                     .frame(maxWidth: .infinity)
@@ -197,7 +197,7 @@ struct NewJobForm: View {
 
                             // Time
                             VStack(alignment: .leading, spacing: 8) {
-                                Text("Time *").font(.system(size: 13, weight: .medium)).foregroundStyle(Color.sweeplyTextSub)
+                                Text("Time *".translated()).font(.system(size: 13, weight: .medium)).foregroundStyle(Color.sweeplyTextSub)
                                 DatePicker("", selection: $date, displayedComponents: .hourAndMinute)
                                     .labelsHidden()
                                     .frame(maxWidth: .infinity)
@@ -209,7 +209,7 @@ struct NewJobForm: View {
                             }
                         }
                         if showValidationErrors && date < Date() {
-                            Text("Job date must be in the future")
+                            Text("Job date must be in the future".translated())
                                 .font(.system(size: 12))
                                 .foregroundStyle(Color.sweeplyDestructive)
                                 .padding(.top, 2)
@@ -223,7 +223,7 @@ struct NewJobForm: View {
                         HStack(spacing: 16) {
                             // Duration
                             VStack(alignment: .leading, spacing: 8) {
-                                Text("Duration (hrs)").font(.system(size: 13, weight: .medium)).foregroundStyle(Color.sweeplyTextSub)
+                                Text("Duration (hrs)".translated()).font(.system(size: 13, weight: .medium)).foregroundStyle(Color.sweeplyTextSub)
                                 TextField("2", text: $duration)
                                     .keyboardType(.decimalPad)
                                     .padding(.horizontal, 16)
@@ -235,7 +235,7 @@ struct NewJobForm: View {
 
                             // Price
                             VStack(alignment: .leading, spacing: 8) {
-                                Text("Price ($)").font(.system(size: 13, weight: .medium)).foregroundStyle(showValidationErrors && (Double(price) ?? 0) <= 0 ? Color.sweeplyDestructive : Color.sweeplyTextSub)
+                                Text("Price ($)".translated()).font(.system(size: 13, weight: .medium)).foregroundStyle(showValidationErrors && (Double(price) ?? 0) <= 0 ? Color.sweeplyDestructive : Color.sweeplyTextSub)
                                 TextField("120.00", text: $price)
                                     .keyboardType(.decimalPad)
                                     .padding(.horizontal, 16)
@@ -244,7 +244,7 @@ struct NewJobForm: View {
                                     .clipShape(RoundedRectangle(cornerRadius: 12))
                                     .overlay(RoundedRectangle(cornerRadius: 12).stroke(showValidationErrors && (Double(price) ?? 0) <= 0 ? Color.sweeplyDestructive : Color.sweeplyBorder, lineWidth: 1))
                                 if showValidationErrors && (Double(price) ?? 0) <= 0 {
-                                    Text("Enter a price greater than $0")
+                                    Text("Enter a price greater than $0".translated())
                                         .font(.system(size: 12))
                                         .foregroundStyle(Color.sweeplyDestructive)
                                         .padding(.top, 2)
@@ -296,7 +296,7 @@ struct NewJobForm: View {
                             VStack(alignment: .leading, spacing: 16) {
                                 if recurrence == .custom {
                                     HStack(spacing: 8) {
-                                        Text("Every")
+                                        Text("Every".translated())
                                             .font(.system(size: 14))
                                         TextField("7", text: $customInterval)
                                             .keyboardType(.numberPad)
@@ -315,7 +315,7 @@ struct NewJobForm: View {
                                 // Next occurrence preview
                                 let nextDates = generateNextOccurrences(from: date, recurrence: recurrence, interval: Int(customInterval) ?? 7, count: 3)
                                 VStack(alignment: .leading, spacing: 4) {
-                                    Text("Next occurrences")
+                                    Text("Next occurrences".translated())
                                         .font(.system(size: 12, weight: .medium))
                                         .foregroundStyle(Color.sweeplyTextSub)
                                     ForEach(nextDates, id: \.self) { nextDate in
@@ -333,7 +333,7 @@ struct NewJobForm: View {
                                 .transition(.opacity.combined(with: .move(edge: .top)))
 
                                 Toggle(isOn: $showEndDatePicker) {
-                                    Text("Set end date")
+                                    Text("Set end date".translated())
                                         .font(.system(size: 14))
                                 }
                                 .tint(Color.sweeplyNavy)
@@ -395,7 +395,7 @@ struct NewJobForm: View {
                                 HStack(spacing: 8) {
                                     Image(systemName: "plus.circle.fill")
                                         .font(.system(size: 14, weight: .semibold))
-                                    Text("Add Extra")
+                                    Text("Add Extra".translated())
                                         .font(.system(size: 14, weight: .semibold))
                                 }
                                 .foregroundStyle(Color.sweeplyAccent)
@@ -417,7 +417,7 @@ struct NewJobForm: View {
                                 Button {
                                     assignedMemberId = nil
                                 } label: {
-                                    Label("Unassigned", systemImage: "person.slash")
+                                    Label("Unassigned".translated(), systemImage: "person.slash")
                                 }
                                 Divider()
                                 ForEach(activeCleaners) { cleaner in
@@ -472,7 +472,7 @@ struct NewJobForm: View {
 
             // Footer Actions
             HStack(spacing: 12) {
-                Button("Cancel") { dismiss() }
+                Button("Cancel".translated()) { dismiss() }
                     .font(.system(size: 15, weight: .bold))
                     .foregroundStyle(Color.sweeplyNavy)
                     .frame(maxWidth: .infinity)
@@ -511,7 +511,7 @@ struct NewJobForm: View {
         .toolbar {
             ToolbarItemGroup(placement: .keyboard) {
                 Spacer()
-                Button("Done") {
+                Button("Done".translated()) {
                     UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
                 }
                 .font(.system(size: 15, weight: .semibold))
@@ -692,18 +692,18 @@ private struct ExtrasPickerSheet: View {
                         .buttonStyle(.plain)
                     }
                 } header: {
-                    Text("JOB EXTRAS")
+                    Text("JOB EXTRAS".translated())
                 }
             }
-            .navigationTitle("Add Extras")
+            .navigationTitle("Add Extras".translated())
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
+                    Button("Cancel".translated()) { dismiss() }
                         .foregroundStyle(Color.sweeplyTextSub)
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") {
+                    Button("Done".translated()) {
                         let picked = catalog.filter { localSelected.contains($0.id) }
                         onConfirm(picked)
                         dismiss()

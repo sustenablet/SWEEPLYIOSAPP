@@ -386,11 +386,11 @@ private struct StatePickerSheet: View {
                 .buttonStyle(.plain)
             }
             .searchable(text: $search, prompt: "Search states")
-            .navigationTitle("Select State")
+            .navigationTitle("Select State".translated())
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Done") { dismiss() }
+                    Button("Done".translated()) { dismiss() }
                         .foregroundStyle(Color.sweeplyTextSub)
                 }
             }

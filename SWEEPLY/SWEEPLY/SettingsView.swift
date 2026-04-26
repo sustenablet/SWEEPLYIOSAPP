@@ -31,14 +31,14 @@ struct SettingsView: View {
 
     private var validationMessage: String? {
         if localProfile.fullName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            return "Full name is required."
+            return "Full name is required.".translated()
         }
         if localProfile.businessName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            return "Business name is required."
+            return "Business name is required.".translated()
         }
         let email = localProfile.email.trimmingCharacters(in: .whitespacesAndNewlines)
         if email.isEmpty || !email.contains("@") {
-            return "Enter a valid email address."
+            return "Enter a valid email address.".translated()
         }
         return nil
     }
@@ -88,11 +88,11 @@ struct SettingsView: View {
             }
             .background(Color.sweeplyBackground.ignoresSafeArea())
             .scrollDismissesKeyboard(.interactively)
-            .navigationTitle("Settings")
+            .navigationTitle("Settings".translated())
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Close") { dismiss() }
+                    Button("Close".translated()) { dismiss() }
                         .foregroundStyle(Color.sweeplyTextSub)
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
@@ -192,7 +192,7 @@ struct SettingsView: View {
 
     private var profileSection: some View {
         VStack(alignment: .leading, spacing: 6) {
-            sectionLabel("PERSONAL INFO")
+            sectionLabel("PERSONAL INFO".translated())
             SectionCard {
                 VStack(spacing: 14) {
                     SettingsField(label: "Full Name", text: $localProfile.fullName)
@@ -212,7 +212,7 @@ struct SettingsView: View {
 
     private var businessSection: some View {
         VStack(alignment: .leading, spacing: 6) {
-            sectionLabel("BUSINESS ADDRESS")
+            sectionLabel("BUSINESS ADDRESS".translated())
             SectionCard {
                 VStack(spacing: 14) {
                     SettingsAddressField(
@@ -231,11 +231,11 @@ struct SettingsView: View {
                 }
             }
 
-            sectionLabel("JOB DEFAULTS").padding(.top, 16)
+            sectionLabel("JOB DEFAULTS".translated()).padding(.top, 16)
             SectionCard {
                 VStack(spacing: 0) {
                     HStack {
-                        Text("Default Hourly Rate")
+                        Text("Default Hourly Rate".translated())
                             .font(.system(size: 15))
                             .foregroundStyle(Color.primary)
                         Spacer()
@@ -252,7 +252,7 @@ struct SettingsView: View {
                     }
                     Divider().padding(.vertical, 12)
                     HStack {
-                        Text("Default Duration (hrs)")
+                        Text("Default Duration (hrs)".translated())
                             .font(.system(size: 15))
                             .foregroundStyle(Color.primary)
                         Spacer()
@@ -270,7 +270,7 @@ struct SettingsView: View {
                 }
             }
 
-            sectionLabel("SERVICE CATALOG").padding(.top, 16)
+            sectionLabel("SERVICE CATALOG".translated()).padding(.top, 16)
             settingsNavRow(
                 icon: "list.bullet.clipboard",
                 iconBg: Color.sweeplyAccent,
@@ -307,7 +307,7 @@ struct SettingsView: View {
                 HStack(spacing: 14) {
                     settingsIcon("bell.badge.fill", color: Color(red: 0.95, green: 0.45, blue: 0.2))
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Push Notifications")
+                        Text("Push Notifications".translated())
                             .font(.system(size: 15))
                             .foregroundStyle(Color.primary)
                         Text(notificationManager.isAuthorized
@@ -353,7 +353,7 @@ struct SettingsView: View {
                     } label: {
                         HStack(spacing: 14) {
                             settingsIcon("paperplane.fill", color: Color.sweeplyAccent)
-                            Text("Test Notification")
+                            Text("Test Notification".translated())
                                 .font(.system(size: 15))
                                 .foregroundStyle(Color.primary)
                             Spacer()
@@ -381,7 +381,7 @@ struct SettingsView: View {
                         Text("App Language".translated())
                             .font(.system(size: 15))
                             .foregroundStyle(Color.primary)
-                        Text("English · Português (Brasil)")
+                        Text("English · Português (Brasil)".translated())
                             .font(.system(size: 12))
                             .foregroundStyle(Color.sweeplyTextSub)
                     }
@@ -393,15 +393,15 @@ struct SettingsView: View {
             }
 
             // MARK: Security & Sync
-            sectionLabel("SECURITY & SYNC").padding(.top, 16)
+            sectionLabel("SECURITY & SYNC".translated()).padding(.top, 16)
             settingsGroup {
                 HStack(spacing: 14) {
                     settingsIcon("faceid", color: Color.sweeplyNavy)
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Face ID Lock")
+                        Text("Face ID Lock".translated())
                             .font(.system(size: 15))
                             .foregroundStyle(Color.primary)
-                        Text("Require Face ID when returning to app")
+                        Text("Require Face ID when returning to app".translated())
                             .font(.system(size: 12))
                             .foregroundStyle(Color.sweeplyTextSub)
                     }
@@ -416,10 +416,10 @@ struct SettingsView: View {
                 HStack(spacing: 14) {
                     settingsIcon("calendar.badge.plus", color: Color(red: 0.2, green: 0.5, blue: 0.9))
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Sync to Calendar")
+                        Text("Sync to Calendar".translated())
                             .font(.system(size: 15))
                             .foregroundStyle(Color.primary)
-                        Text("Adds scheduled jobs to your Calendar app")
+                        Text("Adds scheduled jobs to your Calendar app".translated())
                             .font(.system(size: 12))
                             .foregroundStyle(Color.sweeplyTextSub)
                     }
@@ -434,15 +434,15 @@ struct SettingsView: View {
 
     private var systemLanguageLabel: String {
         let code = Locale.current.language.languageCode?.identifier ?? "en"
-        if code.hasPrefix("pt") { return "🇧🇷 Português" }
-        if code.hasPrefix("es") { return "🇪🇸 Español" }
-        return "🇺🇸 English"
+        if code.hasPrefix("pt") { return "🇧🇷 Português".translated() }
+        if code.hasPrefix("es") { return "🇪🇸 Español".translated() }
+        return "🇺🇸 English".translated()
     }
 
     private var accountSection: some View {
         VStack(alignment: .leading, spacing: 6) {
             if !session.activeMemberships.isEmpty {
-                sectionLabel("MY TEAMS")
+                sectionLabel("MY TEAMS".translated())
                 settingsGroup {
                     VStack(spacing: 0) {
                         ForEach(Array(session.activeMemberships.enumerated()), id: \.element.id) { idx, membership in
@@ -461,7 +461,7 @@ struct SettingsView: View {
                                             .foregroundStyle(Color.sweeplyTextSub)
                                     }
                                     Spacer()
-                                    Text("Switch")
+                                    Text("Switch".translated())
                                         .font(.system(size: 13, weight: .semibold))
                                         .foregroundStyle(Color.sweeplyAccent)
                                 }
@@ -486,7 +486,7 @@ struct SettingsView: View {
                 } label: {
                     HStack(spacing: 14) {
                         settingsIcon("arrow.triangle.2.circlepath", color: Color.sweeplyAccent)
-                        Text("Re-run App Intro")
+                        Text("Re-run App Intro".translated())
                             .font(.system(size: 15))
                             .foregroundStyle(Color.primary)
                         Spacer()
@@ -507,7 +507,7 @@ struct SettingsView: View {
                 } label: {
                     HStack(spacing: 14) {
                         settingsIcon("sparkles", color: Color.sweeplyNavy)
-                        Text("Re-run Business Setup")
+                        Text("Re-run Business Setup".translated())
                             .font(.system(size: 15))
                             .foregroundStyle(Color.primary)
                         Spacer()
@@ -525,7 +525,7 @@ struct SettingsView: View {
                 Button { resetPassword() } label: {
                     HStack(spacing: 14) {
                         settingsIcon("lock.shield.fill", color: Color.sweeplyAccent)
-                        Text("Reset Password")
+                        Text("Reset Password".translated())
                             .font(.system(size: 15))
                             .foregroundStyle(Color.primary)
                         Spacer()
@@ -543,7 +543,7 @@ struct SettingsView: View {
             settingsGroup {
                 HStack(spacing: 14) {
                     settingsIcon("info.circle.fill", color: Color(red: 0.5, green: 0.5, blue: 0.55))
-                    Text("Version")
+                    Text("Version".translated())
                         .font(.system(size: 15))
                         .foregroundStyle(Color.primary)
                     Spacer()
@@ -558,7 +558,7 @@ struct SettingsView: View {
 
                 HStack(spacing: 14) {
                     settingsIcon("hammer.fill", color: Color(red: 0.5, green: 0.5, blue: 0.55))
-                    Text("Build")
+                    Text("Build".translated())
                         .font(.system(size: 15))
                         .foregroundStyle(Color.primary)
                     Spacer()
@@ -573,7 +573,7 @@ struct SettingsView: View {
             Button { showDeleteConfirmation = true } label: {
                 HStack(spacing: 14) {
                     settingsIcon("trash.fill", color: Color.sweeplyDestructive)
-                    Text("Delete Account")
+                    Text("Delete Account".translated())
                         .font(.system(size: 15, weight: .semibold))
                         .foregroundStyle(Color.sweeplyDestructive)
                     Spacer()
@@ -590,13 +590,13 @@ struct SettingsView: View {
             .buttonStyle(.plain)
             .padding(.top, 16)
         }
-        .confirmationDialog("Delete Account?", isPresented: $showDeleteConfirmation) {
+        .confirmationDialog("Delete Account?".translated(), isPresented: $showDeleteConfirmation) {
             Button("Permanently Delete", role: .destructive) {
                 feedbackStyle = .warning
                 feedbackMessage = "Account deletion is not self-serve yet. Contact support before removing your workspace."
             }
         } message: {
-            Text("This action cannot be undone. All your business data will be lost.")
+            Text("This action cannot be undone. All your business data will be lost.".translated())
         }
     }
 

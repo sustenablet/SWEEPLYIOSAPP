@@ -248,8 +248,12 @@ struct BusinessView: View {
                 PageHeader(
                     eyebrow: profile.businessName.isEmpty ? "Business" : profile.businessName.uppercased(),
                     title: "Operational Overview",
-                    subtitle: "Business"
-                )
+                    subtitle: nil
+                ) {
+                    HeaderIconButton(systemName: "person.3.fill") {
+                        showTeam = true
+                    }
+                }
                 .padding(.top, 16)
 
                 // Team membership switcher
@@ -269,7 +273,7 @@ struct BusinessView: View {
                                         .foregroundStyle(Color.sweeplyAccent)
                                 }
                                 VStack(alignment: .leading, spacing: 2) {
-                                    Text("You're on a team")
+                                    Text("You're on a team".translated())
                                         .font(.system(size: 12, weight: .medium))
                                         .foregroundStyle(Color.sweeplyTextSub)
                                     Text(membership.businessName)
@@ -277,7 +281,7 @@ struct BusinessView: View {
                                         .foregroundStyle(Color.primary)
                                 }
                                 Spacer()
-                                Text("Switch →")
+                                Text("Switch →".translated())
                                     .font(.system(size: 13, weight: .semibold))
                                     .foregroundStyle(Color.sweeplyAccent)
                             }
@@ -308,7 +312,7 @@ struct BusinessView: View {
                                 Image(systemName: "plus")
                                     .font(.system(size: 18, weight: .semibold))
                                     .foregroundStyle(Color.sweeplyAccent)
-                                Text("Customize")
+                                Text("Customize".translated())
                                     .font(.system(size: 10, weight: .medium))
                                     .foregroundStyle(Color.sweeplyTextSub)
                             }
@@ -345,7 +349,7 @@ struct BusinessView: View {
                 // 2. Snapshot
                 SectionCard {
                     VStack(alignment: .leading, spacing: 14) {
-                        CardHeader(title: "Business Snapshot", subtitle: "How the operation is moving this month", action: nil)
+                        CardHeader(title: "Business Snapshot".translated(), subtitle: "How the operation is moving this month".translated(), action: nil)
 
                         TabView(selection: $selectedSnapshotSlide) {
                             // Slide 1 — Monthly Operations
@@ -476,7 +480,7 @@ struct BusinessView: View {
                 // 3. Next Job
                 SectionCard {
                     VStack(alignment: .leading, spacing: 16) {
-                        CardHeader(title: "Next Up", subtitle: "Your nearest scheduled visit", action: nil)
+                        CardHeader(title: "Next Up".translated(), subtitle: "Your nearest scheduled visit".translated(), action: nil)
 
                         if let nextJob {
                             VStack(alignment: .leading, spacing: 10) {
@@ -519,7 +523,7 @@ struct BusinessView: View {
                 // 4. Service Distribution
                 SectionCard {
                     VStack(alignment: .leading, spacing: 16) {
-                        CardHeader(title: "Service Distribution", subtitle: "Most requested services this month", action: nil)
+                        CardHeader(title: "Service Distribution".translated(), subtitle: "Most requested services this month".translated(), action: nil)
 
                         if serviceMix.isEmpty {
                             overviewEmptyState(
@@ -540,7 +544,7 @@ struct BusinessView: View {
                 // 5. Top Clients
                 SectionCard {
                     VStack(alignment: .leading, spacing: 12) {
-                        CardHeader(title: "Top Clients", subtitle: "Highest activity this month", action: nil)
+                        CardHeader(title: "Top Clients".translated(), subtitle: "Highest activity this month".translated(), action: nil)
 
                         if topClients.isEmpty {
                             overviewEmptyState(
@@ -650,7 +654,7 @@ struct BusinessView: View {
                             Button {
                                 showTeam = true
                             } label: {
-                                Text("Manage Team")
+                                Text("Manage Team".translated())
                                     .font(.system(size: 13, weight: .semibold))
                                     .foregroundStyle(Color.sweeplyNavy)
                                     .padding(.horizontal, 16)
@@ -759,7 +763,7 @@ struct BusinessView: View {
         SectionCard {
             VStack(alignment: .leading, spacing: 14) {
                 HStack {
-                    Text("Service Catalog")
+                    Text("Service Catalog".translated())
                         .font(.system(size: 15, weight: .semibold))
                         .foregroundStyle(Color.sweeplyNavy)
                     Spacer()
@@ -767,7 +771,7 @@ struct BusinessView: View {
                         UIImpactFeedbackGenerator(style: .light).impactOccurred()
                         showServiceCatalog = true
                     } label: {
-                        Text("View All")
+                        Text("View All".translated())
                             .font(.system(size: 12, weight: .semibold))
                             .foregroundStyle(Color.sweeplyAccent)
                             .padding(.horizontal, 12)
@@ -980,7 +984,7 @@ private struct KPICustomizerSheet: View {
             VStack(spacing: 0) {
                 // Time range filter pills
                 VStack(alignment: .leading, spacing: 10) {
-                    Text("Filter data")
+                    Text("Filter data".translated())
                         .font(.system(size: 12, weight: .semibold))
                         .foregroundStyle(Color.sweeplyTextSub)
                         .textCase(.uppercase)
@@ -1040,15 +1044,15 @@ private struct KPICustomizerSheet: View {
                 .background(Color.sweeplyBackground)
             }
             .background(Color.sweeplyBackground)
-            .navigationTitle("Edit Dashboard")
+            .navigationTitle("Edit Dashboard".translated())
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel") { dismiss() }
+                    Button("Cancel".translated()) { dismiss() }
                         .foregroundStyle(Color.sweeplyTextSub)
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Save") {
+                    Button("Save".translated()) {
                         onSave(Array(localEnabled), localOrder, selectedTimeRange)
                         dismiss()
                     }
@@ -1069,8 +1073,8 @@ enum KPITimeRange: String, CaseIterable, Codable {
 
     var label: String {
         switch self {
-        case .week: return "Week"
-        case .month: return "Month"
+        case .week: return "Week".translated()
+        case .month: return "Month".translated()
         case .threeMonths: return "3 Months"
         case .all: return "All"
         }

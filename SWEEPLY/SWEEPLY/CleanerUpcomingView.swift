@@ -171,7 +171,7 @@ struct CleanerUpcomingView: View {
     private var topToolbar: some View {
         HStack(alignment: .center, spacing: 16) {
             VStack(alignment: .leading, spacing: 4) {
-                Text("Schedule")
+                Text("Schedule".translated())
                     .font(.system(size: 28, weight: .semibold))
                     .foregroundStyle(Color.sweeplyNavy)
 
@@ -485,8 +485,8 @@ struct CleanerUpcomingView: View {
     // MARK: - List View (Agenda)
 
     private func agendaDateLabel(_ date: Date) -> String {
-        if calendar.isDateInToday(date) { return "Today" }
-        if calendar.isDateInTomorrow(date) { return "Tomorrow" }
+        if calendar.isDateInToday(date) { return "Today".translated() }
+        if calendar.isDateInTomorrow(date) { return "Tomorrow".translated() }
         return date.formatted(.dateTime.weekday(.wide).month(.abbreviated).day())
     }
 
@@ -503,7 +503,7 @@ struct CleanerUpcomingView: View {
                         Image(systemName: "calendar.badge.clock")
                             .font(.system(size: 44))
                             .foregroundStyle(Color.sweeplyTextSub.opacity(0.3))
-                        Text("No upcoming jobs")
+                        Text("No upcoming jobs".translated())
                             .font(.system(size: 16, weight: .semibold))
                             .foregroundStyle(Color.sweeplyTextSub)
                         Text(hasActiveFilters ? "Try adjusting your filters." : "Nothing scheduled yet.")
@@ -572,7 +572,7 @@ struct CleanerUpcomingView: View {
                         Image(systemName: "calendar.badge.clock")
                             .font(.system(size: 44))
                             .foregroundStyle(Color.sweeplyTextSub.opacity(0.3))
-                        Text("No jobs this day")
+                        Text("No jobs this day".translated())
                             .font(.system(size: 16, weight: .semibold))
                             .foregroundStyle(Color.sweeplyTextSub)
                         Text(hasActiveFilters ? "Try adjusting your filters." : "Nothing scheduled.")
@@ -630,7 +630,7 @@ private struct CleanerJobFiltersView: View {
         VStack(spacing: 0) {
             // Header
             HStack {
-                Text("Filters")
+                Text("Filters".translated())
                     .font(.system(size: 20, weight: .bold))
                 Spacer()
                 Button {
@@ -651,7 +651,7 @@ private struct CleanerJobFiltersView: View {
                 VStack(alignment: .leading, spacing: 32) {
                     // Status filter
                     VStack(alignment: .leading, spacing: 16) {
-                        FilterHeader(title: "JOB STATUS", subtitle: "Filter by current job progress")
+                        FilterHeader(title: "JOB STATUS", subtitle: "Filter by current job progress".translated())
                         ChipGroup(spacing: 8) {
                             FilterChip(label: "All Statuses", isSelected: localStatus == nil) {
                                 localStatus = nil
@@ -668,7 +668,7 @@ private struct CleanerJobFiltersView: View {
 
                     // Job type filter
                     VStack(alignment: .leading, spacing: 16) {
-                        FilterHeader(title: "SCHEDULE TYPE", subtitle: "One-time or recurring jobs")
+                        FilterHeader(title: "SCHEDULE TYPE", subtitle: "One-time or recurring jobs".translated())
                         HStack(spacing: 12) {
                             TypeCard(label: "All", icon: "square.grid.2x2.fill", isSelected: localType == "All") {
                                 localType = "All"
@@ -685,11 +685,11 @@ private struct CleanerJobFiltersView: View {
                     // View mode toggles
                     VStack(alignment: .leading, spacing: 16) {
                         VStack(alignment: .leading, spacing: 4) {
-                            Text("VIEW OPTIONS")
+                            Text("VIEW OPTIONS".translated())
                                 .font(.system(size: 11, weight: .bold))
                                 .foregroundStyle(Color.sweeplyNavy)
                                 .tracking(1.0)
-                            Text("Select which tabs appear in the schedule")
+                            Text("Select which tabs appear in the schedule".translated())
                                 .font(.system(size: 13))
                                 .foregroundStyle(Color.sweeplyTextSub)
                         }
@@ -730,7 +730,7 @@ private struct CleanerJobFiltersView: View {
                     enabledViewModes = localViewModes
                     dismiss()
                 } label: {
-                    Text("Apply Changes")
+                    Text("Apply Changes".translated())
                         .font(.system(size: 16, weight: .bold))
                         .foregroundStyle(.white)
                         .frame(maxWidth: .infinity)
@@ -739,7 +739,7 @@ private struct CleanerJobFiltersView: View {
                         .clipShape(RoundedRectangle(cornerRadius: 16))
                         .shadow(color: Color.sweeplyNavy.opacity(0.2), radius: 10, x: 0, y: 5)
                 }
-                Button("Cancel") { dismiss() }
+                Button("Cancel".translated()) { dismiss() }
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundStyle(Color.sweeplyTextSub)
                     .padding(.bottom, 8)
@@ -966,7 +966,7 @@ private struct CleanerMonthPicker: View {
                     }
                     dismiss()
                 } label: {
-                    Text("Today")
+                    Text("Today".translated())
                         .font(.system(size: 13, weight: .semibold))
                         .foregroundStyle(.white)
                         .padding(.horizontal, 14)
@@ -986,7 +986,7 @@ private struct CleanerMonthPicker: View {
             Spacer(minLength: 12)
 
             Button { dismiss() } label: {
-                Text("Done")
+                Text("Done".translated())
                     .font(.system(size: 16, weight: .bold))
                     .foregroundStyle(.white)
                     .frame(maxWidth: .infinity)

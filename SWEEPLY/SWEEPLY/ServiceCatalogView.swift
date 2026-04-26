@@ -47,32 +47,32 @@ struct ServiceCatalogView: View {
 
     private var navTitle: String { addonsOnly ? "Job Extras" : "Service Catalog" }
     private var sectionTitle: String {
-        if addonsOnly { return "Extras" }
+        if addonsOnly { return "Extras".translated() }
         return selectedTab == .extras ? "Extras" : "Services"
     }
     private var sectionSubtitle: String {
         if addonsOnly || selectedTab == .extras {
-            return "Add-ons charged on top of the main service"
+            return "Add-ons charged on top of the main service".translated()
         }
-        return "Primary services offered"
+        return "Primary services offered".translated()
     }
     private var emptyTitle: String {
         if addonsOnly || selectedTab == .extras {
-            return "No extras yet"
+            return "No extras yet".translated()
         }
-        return "No services yet"
+        return "No services yet".translated()
     }
     private var emptyBody: String {
         if addonsOnly || selectedTab == .extras {
-            return "Add small add-ons like laundry, dishes, or window cleaning — these appear as extras when booking a job."
+            return "Add small add-ons like laundry, dishes, or window cleaning — these appear as extras when booking a job.".translated()
         }
         return "Create your service catalog — these appear\nin new job and invoice pickers."
     }
     private var emptyButtonLabel: String {
         if addonsOnly || selectedTab == .extras {
-            return "Add First Extra"
+            return "Add First Extra".translated()
         }
-        return "Add First Service"
+        return "Add First Service".translated()
     }
 
     // MARK: - Tab Picker
@@ -141,7 +141,7 @@ struct ServiceCatalogView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Done") { dismiss() }
+                    Button("Done".translated()) { dismiss() }
                         .foregroundStyle(Color.sweeplyTextSub)
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
@@ -152,7 +152,7 @@ struct ServiceCatalogView: View {
                     } label: {
                         HStack(spacing: 5) {
                             Image(systemName: "plus")
-                            Text("Add")
+                            Text("Add".translated())
                         }
                         .font(.system(size: 14, weight: .semibold))
                     }

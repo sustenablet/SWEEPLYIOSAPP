@@ -129,10 +129,10 @@ struct FinancesView: View {
         
         var displayText: String {
             switch self {
-            case .paid: return "Paid"
-            case .pending: return "Pending"
-            case .due: return "Pay due"
-            case .partial: return "Partial"
+            case .paid: return "Paid".translated()
+            case .pending: return "Pending".translated()
+            case .due: return "Pay due".translated()
+            case .partial: return "Partial".translated()
             }
         }
         
@@ -310,13 +310,13 @@ struct FinancesView: View {
                         UIImpactFeedbackGenerator(style: .light).impactOccurred()
                         showInvoicesList = true
                     } label: {
-                        Label("Invoices", systemImage: "doc.text.fill")
+                        Label("Invoices".translated(), systemImage: "doc.text.fill")
                     }
                     Button {
                         UIImpactFeedbackGenerator(style: .light).impactOccurred()
                         showExpenses = true
                     } label: {
-                        Label("Expenses", systemImage: "creditcard.fill")
+                        Label("Expenses".translated(), systemImage: "creditcard.fill")
                     }
                 } label: {
                     Image(systemName: "line.3.horizontal")
@@ -598,7 +598,7 @@ struct FinancesView: View {
             Button(role: .destructive) {
                 Task { await expenseStore.remove(id: expense.id) }
             } label: {
-                Label("Delete", systemImage: "trash")
+                Label("Delete".translated(), systemImage: "trash")
             }
         }
     }
@@ -1057,7 +1057,7 @@ struct FinancesView: View {
             if status == .due || (status != .paid && status != .pending) {
                 HStack(spacing: 8) {
                     if status == .due {
-                        Label("Payment due", systemImage: "exclamationmark.circle.fill")
+                        Label("Payment due".translated(), systemImage: "exclamationmark.circle.fill")
                             .font(.system(size: 11, weight: .medium))
                             .foregroundStyle(Color.sweeplyDestructive)
                     }
@@ -1539,11 +1539,11 @@ struct InvoicesListView: View {
             }
             .searchable(text: $searchText, placement: .navigationBarDrawer(displayMode: .always), prompt: "Search invoices…")
             .background(Color.sweeplyBackground.ignoresSafeArea())
-            .navigationTitle("Invoices")
+            .navigationTitle("Invoices".translated())
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    Button("Close") { dismiss() }
+                    Button("Close".translated()) { dismiss() }
                         .foregroundStyle(Color.sweeplyTextSub)
                 }
                 ToolbarItem(placement: .topBarTrailing) {
@@ -1741,7 +1741,7 @@ private struct PaymentSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel") { dismiss() }
+                    Button("Cancel".translated()) { dismiss() }
                         .foregroundStyle(Color.sweeplyTextSub)
                 }
             }

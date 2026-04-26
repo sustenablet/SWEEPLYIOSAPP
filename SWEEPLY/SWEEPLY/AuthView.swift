@@ -308,7 +308,7 @@ struct AuthView: View {
     private var footerLinks: some View {
         VStack(spacing: 2) {
             if !isSignUp {
-                Button("Forgot password?") {
+                Button("Forgot password?".translated()) {
                     resetEmail = email
                     resetSent = false
                     resetError = nil
@@ -404,7 +404,7 @@ private struct ForgotPasswordSheet: View {
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 8)
             }
-            Button("Done") { dismiss() }
+            Button("Done".translated()) { dismiss() }
                 .font(.system(size: 16, weight: .bold))
                 .foregroundStyle(.white)
                 .frame(maxWidth: .infinity)

@@ -51,11 +51,11 @@ struct InvoiceDetailView: View {
                     .padding(20)
                 }
                 .background(Color.sweeplyBackground.ignoresSafeArea())
-                .navigationTitle("Invoice Details")
+                .navigationTitle("Invoice Details".translated())
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
                     ToolbarItem(placement: .primaryAction) {
-                        Button("Edit") { showingEdit = true }
+                        Button("Edit".translated()) { showingEdit = true }
                             .font(.system(size: 15, weight: .semibold))
                             .foregroundStyle(Color.sweeplyNavy)
                     }
@@ -72,16 +72,16 @@ struct InvoiceDetailView: View {
                 .sheet(isPresented: $showPDFPreview) {
                     NavigationStack {
                         PDFPreviewView(data: pdfData ?? Data())
-                            .navigationTitle("Invoice Preview")
+                            .navigationTitle("Invoice Preview".translated())
                             .navigationBarTitleDisplayMode(.inline)
                             .toolbar {
                                 ToolbarItem(placement: .topBarLeading) {
-                                    Button("Close") { showPDFPreview = false }
+                                    Button("Close".translated()) { showPDFPreview = false }
                                         .foregroundStyle(Color.sweeplyTextSub)
                                 }
                                 ToolbarItem(placement: .topBarTrailing) {
                                     Button(action: { showPDFPreview = false; DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { showPDFShare = true } }) {
-                                        Label("Share", systemImage: "square.and.arrow.up")
+                                        Label("Share".translated(), systemImage: "square.and.arrow.up")
                                             .font(.system(size: 14, weight: .bold))
                                             .foregroundStyle(Color.sweeplyNavy)
                                     }
@@ -100,10 +100,10 @@ struct InvoiceDetailView: View {
                     Image(systemName: "doc.text.magnifyingglass")
                         .font(.system(size: 42))
                         .foregroundStyle(Color.sweeplyTextSub.opacity(0.5))
-                    Text("Invoice not found")
+                    Text("Invoice not found".translated())
                         .font(.system(size: 18, weight: .semibold))
                         .foregroundStyle(Color.sweeplyNavy)
-                    Button("Go Back") { dismiss() }
+                    Button("Go Back".translated()) { dismiss() }
                         .buttonStyle(.borderedProminent)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -139,7 +139,7 @@ struct InvoiceDetailView: View {
                 if invoice.status == .overdue {
                     HStack(spacing: 4) {
                         Image(systemName: "exclamationmark.triangle.fill")
-                        Text("Overdue")
+                        Text("Overdue".translated())
                     }
                     .font(.system(size: 12, weight: .bold))
                     .foregroundStyle(Color.sweeplyDestructive)
@@ -162,7 +162,7 @@ struct InvoiceDetailView: View {
                 Button {
                     showMarkPaidSheet = true
                 } label: {
-                    Label("Mark Paid", systemImage: "checkmark.circle.fill")
+                    Label("Mark Paid".translated(), systemImage: "checkmark.circle.fill")
                         .font(.system(size: 14, weight: .bold))
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 14)
@@ -171,7 +171,7 @@ struct InvoiceDetailView: View {
                         .clipShape(RoundedRectangle(cornerRadius: 14))
                 }
             } else {
-                Label("Already Paid", systemImage: "checkmark.seal.fill")
+                Label("Already Paid".translated(), systemImage: "checkmark.seal.fill")
                     .font(.system(size: 14, weight: .bold))
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 14)
@@ -186,7 +186,7 @@ struct InvoiceDetailView: View {
                 pdfData = generateInvoicePDF(invoice: invoice, businessName: profileStore.profile?.businessName ?? "My Business")
                 showPDFPreview = true
             } label: {
-                Label("Send", systemImage: "paperplane.fill")
+                Label("Send".translated(), systemImage: "paperplane.fill")
                     .font(.system(size: 14, weight: .bold))
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 14)
@@ -201,7 +201,7 @@ struct InvoiceDetailView: View {
 
     private func clientProfileCard(client: Client) -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("BILLED TO")
+            Text("BILLED TO".translated())
                 .font(.system(size: 11, weight: .bold))
                 .foregroundStyle(Color.sweeplyTextSub)
                 .tracking(1.0)
@@ -298,7 +298,7 @@ struct InvoiceDetailView: View {
 
     private func invoiceDetailsCard(invoice: Invoice) -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("DOCUMENT DETAILS")
+            Text("DOCUMENT DETAILS".translated())
                 .font(.system(size: 11, weight: .bold))
                 .foregroundStyle(Color.sweeplyTextSub)
                 .tracking(1.0)
@@ -331,7 +331,7 @@ struct InvoiceDetailView: View {
                     ProgressView().tint(Color.sweeplyDestructive)
                 } else {
                     Image(systemName: "trash")
-                    Text("Delete Invoice")
+                    Text("Delete Invoice".translated())
                 }
             }
             .font(.system(size: 15, weight: .semibold))
@@ -727,7 +727,7 @@ private struct EditInvoiceSheet: View {
                 VStack(spacing: 0) {
                     Divider()
                     HStack(spacing: 16) {
-                        Button("Cancel") { dismiss() }
+                        Button("Cancel".translated()) { dismiss() }
                             .font(.system(size: 16, weight: .semibold))
                             .foregroundStyle(Color.sweeplyTextSub)
                             .frame(maxWidth: .infinity)
@@ -739,7 +739,7 @@ private struct EditInvoiceSheet: View {
                         Button { saveChanges() } label: {
                             Group {
                                 if isSubmitting { ProgressView().tint(.white) }
-                                else { Text("Save Changes") }
+                                else { Text("Save Changes".translated()) }
                             }
                             .font(.system(size: 16, weight: .bold))
                             .foregroundStyle(.white)
@@ -755,7 +755,7 @@ private struct EditInvoiceSheet: View {
                 }
                 .frame(maxHeight: .infinity, alignment: .bottom)
             }
-            .navigationTitle("Edit Invoice")
+            .navigationTitle("Edit Invoice".translated())
             .navigationBarTitleDisplayMode(.inline)
             .navigationBarHidden(false)
         }

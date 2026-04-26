@@ -168,7 +168,7 @@ struct ClientChatView: View {
                     .foregroundStyle(Color.sweeplyNavy.opacity(0.4))
             }
             VStack(spacing: 6) {
-                Text("No messages yet")
+                Text("No messages yet".translated())
                     .font(.system(size: 17, weight: .bold))
                     .foregroundStyle(Color.sweeplyNavy)
                 Text("Start a conversation with \(client.name).")
@@ -280,7 +280,7 @@ private struct ChatBubble: View {
                         .font(.system(size: 10, weight: .medium))
                         .foregroundStyle(message.isRead ? Color.sweeplyAccent : Color.sweeplyTextSub.opacity(0.6))
                 } else {
-                    Text("Received")
+                    Text("Received".translated())
                         .font(.system(size: 10, weight: .medium))
                         .foregroundStyle(Color.sweeplyTextSub.opacity(0.6))
                 }

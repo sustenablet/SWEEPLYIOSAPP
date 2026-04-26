@@ -23,9 +23,9 @@ struct CleanerSettingsView: View {
     private var hasUnsavedChanges: Bool { localProfile.fullName != baselineProfile.fullName || localProfile.email != baselineProfile.email || localProfile.phone != baselineProfile.phone }
 
     private var validationMessage: String? {
-        if localProfile.fullName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { return "Full name is required." }
+        if localProfile.fullName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { return "Full name is required.".translated() }
         let email = localProfile.email.trimmingCharacters(in: .whitespacesAndNewlines)
-        if email.isEmpty || !email.contains("@") { return "Enter a valid email address." }
+        if email.isEmpty || !email.contains("@") { return "Enter a valid email address.".translated() }
         return nil
     }
 
@@ -63,11 +63,11 @@ struct CleanerSettingsView: View {
             }
             .background(Color.sweeplyBackground.ignoresSafeArea())
             .scrollDismissesKeyboard(.interactively)
-            .navigationTitle("Settings")
+            .navigationTitle("Settings".translated())
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Close") { dismiss() }
+                    Button("Close".translated()) { dismiss() }
                         .foregroundStyle(Color.sweeplyTextSub)
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
@@ -89,7 +89,7 @@ struct CleanerSettingsView: View {
                 Button("Sign Out", role: .destructive) { Task { await session.signOut() } }
                 Button("Cancel", role: .cancel) {}
             } message: {
-                Text("Are you sure you want to sign out?")
+                Text("Are you sure you want to sign out?".translated())
             }
         }
     }
@@ -152,7 +152,7 @@ struct CleanerSettingsView: View {
 
     private var profileSection: some View {
         VStack(alignment: .leading, spacing: 6) {
-            sectionLabel("PERSONAL INFO")
+            sectionLabel("PERSONAL INFO".translated())
             SectionCard {
                 VStack(spacing: 14) {
                     SettingsField(label: "Full Name", text: $localProfile.fullName)
@@ -166,7 +166,7 @@ struct CleanerSettingsView: View {
             sectionLabel("TEAM").padding(.top, 16)
             SectionCard {
                 HStack {
-                    Text("Working with")
+                    Text("Working with".translated())
                         .font(.system(size: 15))
                         .foregroundStyle(Color.sweeplyTextSub)
                     Spacer()
@@ -191,7 +191,7 @@ struct CleanerSettingsView: View {
                 HStack(spacing: 8) {
                     Image(systemName: "arrow.left.arrow.right")
                         .font(.system(size: 15, weight: .semibold))
-                    Text("Switch to My Business")
+                    Text("Switch to My Business".translated())
                         .font(.system(size: 15, weight: .semibold))
                 }
                 .foregroundStyle(Color.sweeplyNavy)
@@ -209,7 +209,7 @@ struct CleanerSettingsView: View {
                 HStack(spacing: 8) {
                     Image(systemName: "rectangle.portrait.and.arrow.right")
                         .font(.system(size: 15, weight: .semibold))
-                    Text("Sign Out")
+                    Text("Sign Out".translated())
                         .font(.system(size: 15, weight: .semibold))
                 }
                 .foregroundStyle(.red)

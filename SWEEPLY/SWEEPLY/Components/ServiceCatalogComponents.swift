@@ -14,7 +14,7 @@ struct ServiceCatalogRow: View {
                         .foregroundStyle(Color.sweeplyNavy)
                         .lineLimit(1)
                     if service.isAddon {
-                        Text("+ EXTRA")
+                        Text("+ EXTRA".translated())
                             .font(.system(size: 8, weight: .bold))
                             .foregroundStyle(Color.sweeplyAccent)
                             .padding(.horizontal, 5)
@@ -105,7 +105,7 @@ struct ServiceCatalogEditorSheet: View {
         NavigationStack {
             VStack(spacing: 20) {
                 VStack(alignment: .leading, spacing: 6) {
-                    Text("Service Name")
+                    Text("Service Name".translated())
                         .font(.system(size: 12, weight: .semibold))
                         .foregroundStyle(Color.sweeplyTextSub)
                     TextField("Deep Clean", text: $draft.name)
@@ -121,7 +121,7 @@ struct ServiceCatalogEditorSheet: View {
                 }
 
                 VStack(alignment: .leading, spacing: 6) {
-                    Text("Price")
+                    Text("Price".translated())
                         .font(.system(size: 12, weight: .semibold))
                         .foregroundStyle(Color.sweeplyTextSub)
                     HStack(spacing: 10) {
@@ -149,10 +149,10 @@ struct ServiceCatalogEditorSheet: View {
                     } label: {
                         HStack(spacing: 12) {
                             VStack(alignment: .leading, spacing: 2) {
-                                Text("Extra Cost")
+                                Text("Extra Cost".translated())
                                     .font(.system(size: 14, weight: .semibold))
                                     .foregroundStyle(Color.sweeplyNavy)
-                                Text("Add-on charged on top of the main service")
+                                Text("Add-on charged on top of the main service".translated())
                                     .font(.system(size: 11))
                                     .foregroundStyle(Color.sweeplyTextSub)
                             }
@@ -188,11 +188,11 @@ struct ServiceCatalogEditorSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel") { dismiss() }
+                    Button("Cancel".translated()) { dismiss() }
                         .foregroundStyle(Color.sweeplyTextSub)
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Save") {
+                    Button("Save".translated()) {
                         onSave(draft)
                         dismiss()
                     }
