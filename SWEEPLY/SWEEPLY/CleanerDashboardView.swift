@@ -15,6 +15,7 @@ struct CleanerDashboardView: View {
     @State private var showProfileMenu = false
     @State private var showMemberSettings = false
     @State private var selectedHealthSlide = 0
+    @State private var showAllJobs = false
 
     // MARK: - Derived
 
@@ -106,16 +107,20 @@ struct CleanerDashboardView: View {
     }
 
     private var performanceCards: [DashboardHealthCardModel] {
-        [
+        let todayEarnings = todayJobs.filter { $0.status == .completed }.reduce(0) { $0 + $1.price }
+        let totalCompleted = myJobs.filter { $0.status == .completed }.count
+        let allTimeEarnings = myJobs.filter { $0.status == .completed }.reduce(0) { $0 + $1.price }
+        
+        return [
             DashboardHealthCardModel(
-                title: "Earnings This Week",
-                subtitle: "From completed jobs this week".translated(),
-                value: weekEarned.currency,
-                trend: weekCompleted > 0 ? "+\(weekCompleted) jobs" : "No completions",
-                isPositive: weekCompleted > 0,
-                icon: "dollarsign",
+                title: "Today's Earnings",
+                subtitle: "From completed jobs today".translated(),
+                value: todayEarnings.currency,
+                trend: todayJobs.count > 0 ? "\(todayJobs.count) scheduled" : "No jobs today",
+                isPositive: todayEarnings > 0,
+                icon: "sun.max",
                 iconColor: .sweeplyAccent,
-                footnote: "\(weekCompleted) job\(weekCompleted == 1 ? "" : "s") completed this week",
+                footnote: "\(todayJobs.filter { $0.status == .completed }.count) completed today",
                 showTrendBadge: false
             ),
             DashboardHealthCardModel(
@@ -129,24 +134,26 @@ struct CleanerDashboardView: View {
                 footnote: "\(monthJobCount) job\(monthJobCount == 1 ? "" : "s") done this month"
             ),
             DashboardHealthCardModel(
-                title: "Completion Rate",
-                subtitle: "Share of your jobs marked complete".translated(),
-                value: completionRate > 0 ? String(format: "%.0f%%", completionRate) : "—",
-                trend: completionRate >= 90 ? "On track" : completionRate > 0 ? "Keep it up" : "No data yet",
-                isPositive: completionRate >= 80,
-                icon: "checkmark.circle",
+                title: "Jobs Done",
+                subtitle: "Total jobs you've completed".translated(),
+                value: "\(totalCompleted)",
+                trend: totalCompleted > 0 ? "Great work!" : "No jobs yet",
+                isPositive: totalCompleted > 0,
+                icon: "checkmark.circle.fill",
                 iconColor: .sweeplyAccent,
-                footnote: "\(myJobs.filter { $0.status == .completed }.count) of \(myJobs.filter { $0.status != .scheduled }.count) jobs completed"
+                footnote: "All time completed jobs",
+                showTrendBadge: true
             ),
             DashboardHealthCardModel(
-                title: "Next Job",
-                subtitle: nextJob.map { "For \($0.clientName)" } ?? "Nothing coming up",
-                value: nextJob.map { timeUntil($0.date) } ?? "—",
-                trend: nextJob?.serviceType.rawValue ?? "Clear schedule",
-                isPositive: nextJob != nil,
-                icon: "clock",
+                title: "Upcoming",
+                subtitle: "Jobs scheduled for the next 7 days".translated(),
+                value: "\(upcomingCount)",
+                trend: upcomingCount > 0 ? "Coming up" : "Clear schedule",
+                isPositive: upcomingCount > 0,
+                icon: "calendar.badge.clock",
                 iconColor: .sweeplyNavy,
-                footnote: nextJob?.address.isEmpty == false ? nextJob!.address : "No upcoming jobs scheduled"
+                footnote: "\(upcomingCount) job\(upcomingCount == 1 ? "" : "s") in next 7 days",
+                showTrendBadge: true
             )
         ]
     }
@@ -174,6 +181,11 @@ struct CleanerDashboardView: View {
 
                     Divider()
 
+                    // Team indicator - minimalist
+                    teamIndicator
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 12)
+
                     // Revenue hero + stats grid
                     HStack(alignment: .center, spacing: 20) {
                         revenueHero
@@ -186,9 +198,9 @@ struct CleanerDashboardView: View {
 
                     // Card sections
                     VStack(spacing: 12) {
-                        teamBanner
                         todaySection
                         performanceSection
+                        recentJobsSection
                     }
                     .padding(.horizontal, 20)
                     .padding(.top, 4)
@@ -334,45 +346,28 @@ struct CleanerDashboardView: View {
         }
     }
 
-    // MARK: - Team Banner
+    // MARK: - Team Indicator
 
-    private var teamBanner: some View {
-        HStack(spacing: 12) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .fill(Color.sweeplyNavy)
-                    .frame(width: 36, height: 36)
-                Image(systemName: "building.2")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(.white)
-            }
+    private var teamIndicator: some View {
+        HStack(spacing: 8) {
+            Circle()
+                .fill(Color.sweeplyAccent)
+                .frame(width: 8, height: 8)
 
-            VStack(alignment: .leading, spacing: 2) {
-                Text("Working with".translated())
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundStyle(Color.sweeplyTextSub)
-                Text(membership.businessName)
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(Color.primary)
-            }
+            Text(membership.businessName)
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(Color.sweeplyTextSub)
 
-            Spacer()
+            Text("·")
+                .font(.system(size: 13))
+                .foregroundStyle(Color.sweeplyTextSub.opacity(0.4))
 
             Text(membership.role.capitalized)
-                .font(.system(size: 11, weight: .semibold))
+                .font(.system(size: 12, weight: .semibold))
                 .foregroundStyle(Color.sweeplyNavy)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 5)
-                .background(Color.sweeplyNavy.opacity(0.08))
-                .clipShape(Capsule())
+
+            Spacer()
         }
-        .padding(14)
-        .background(Color.sweeplySurface)
-        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .stroke(Color.sweeplyBorder, lineWidth: 1)
-        )
     }
 
     // MARK: - Today's Schedule
@@ -457,6 +452,87 @@ struct CleanerDashboardView: View {
                         .foregroundStyle(Color.sweeplyTextSub)
                 }
             }
+        }
+    }
+
+    // MARK: - Recent Jobs Section
+
+    private var recentJobsSection: some View {
+        let recentJobs = Array(myJobs.sorted { $0.date > $1.date }.prefix(3))
+        
+        return SectionCard {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    Text("Recent Jobs".translated())
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(Color.sweeplyNavy)
+                    Spacer()
+                    Button {
+                        showAllJobs = true
+                    } label: {
+                        HStack(spacing: 4) {
+                            Text("View All".translated())
+                                .font(.system(size: 13, weight: .medium))
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 11, weight: .semibold))
+                        }
+                        .foregroundStyle(Color.sweeplyAccent)
+                    }
+                    .buttonStyle(.plain)
+                }
+                
+                if recentJobs.isEmpty {
+                    Text("No jobs yet".translated())
+                        .font(.system(size: 14))
+                        .foregroundStyle(Color.sweeplyTextSub)
+                        .frame(maxWidth: .infinity, alignment: .center)
+                        .padding(.vertical, 16)
+                } else {
+                    VStack(spacing: 0) {
+                        ForEach(recentJobs) { job in
+                            recentJobRow(job)
+                            if job.id != recentJobs.last?.id {
+                                Divider().padding(.leading, 12)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        .sheet(isPresented: $showAllJobs) {
+            CleanerJobsHistoryView(membership: membership)
+        }
+    }
+
+    private func recentJobRow(_ job: Job) -> some View {
+        HStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(job.clientName)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(Color.primary)
+                Text("\(job.serviceType.rawValue) · \(job.date.formatted(.dateTime.month(.abbreviated).day()))")
+                    .font(.system(size: 12))
+                    .foregroundStyle(Color.sweeplyTextSub)
+            }
+            Spacer()
+            VStack(alignment: .trailing, spacing: 3) {
+                Text(job.price.currency)
+                    .font(.system(size: 13, weight: .bold, design: .monospaced))
+                    .foregroundStyle(job.status == .completed ? Color.sweeplyAccent : Color.sweeplyTextSub)
+                Text(job.status.rawValue)
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(statusColor(job.status))
+            }
+        }
+        .padding(.vertical, 8)
+    }
+
+    private func statusColor(_ status: JobStatus) -> Color {
+        switch status {
+        case .completed:  return Color.sweeplyAccent
+        case .inProgress: return .orange
+        case .scheduled:  return Color.sweeplyNavy
+        case .cancelled:  return Color.sweeplyDestructive
         }
     }
 }

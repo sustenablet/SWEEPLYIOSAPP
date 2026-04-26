@@ -583,6 +583,7 @@ struct NewJobForm: View {
         if recurrence == .once {
             let newJob = Job(
                 id: UUID(),
+                userId: userId,
                 clientId: client.id,
                 clientName: client.name,
                 serviceType: serviceType,
