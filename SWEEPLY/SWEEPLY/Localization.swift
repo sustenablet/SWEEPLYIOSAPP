@@ -117,7 +117,10 @@ enum Localization {
     "Deep Clean": ["pt-BR": "Limpeza Profunda"],
     "Move-in Clean": ["pt-BR": "Limpeza de Mudança"],
     "Move-out Clean": ["pt-BR": "Limpeza de Saída"],
-    "Post-Construction": ["pt-BR": "Pós-Obra"],
+    "Move In/Out": ["pt-BR": "Entrada/Saída"],
+    "Post Construction": ["pt-BR": "Pós-Obra"],
+    "Office Clean": ["pt-BR": "Limpeza Comercial"],
+    "inProgress": ["pt-BR": "Em Andamento"],
     
     // MARK: - Expenses
     "Expenses": ["pt-BR": "Despesas"],

@@ -199,7 +199,7 @@ struct ScheduleView: View {
                     withAnimation(.easeInOut(duration: 0.2)) { viewModeRaw = mode.rawValue }
                 } label: {
                     let isSelected = viewMode == mode
-                    Text(mode.rawValue)
+                    Text(mode.rawValue.translated())
                         .font(.system(size: 14, weight: isSelected ? .semibold : .medium))
                         .foregroundStyle(isSelected ? Color.sweeplyNavy : Color.sweeplyTextSub)
                         .frame(maxWidth: .infinity)
@@ -956,7 +956,7 @@ private struct TimelineJobBlock: View {
                             .font(.system(size: 13, weight: .bold))
                             .foregroundStyle(Color.sweeplyNavy)
                             .lineLimit(1)
-                        Text(job.serviceType.rawValue)
+                        Text(job.serviceType.rawValue.translated())
                             .font(.system(size: 11, weight: .medium))
                             .foregroundStyle(accentColor)
                             .lineLimit(1)
@@ -1144,7 +1144,7 @@ private struct ScheduleJobRow: View {
 
                         // Row 3: service pill + status badge
                         HStack(spacing: 8) {
-                            Text(job.serviceType.rawValue)
+                            Text(job.serviceType.rawValue.translated())
                                 .font(.system(size: 11, weight: .semibold))
                                 .foregroundStyle(serviceAccentColor)
                                 .padding(.horizontal, 8)

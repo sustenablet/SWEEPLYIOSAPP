@@ -224,7 +224,7 @@ struct CleanerUpcomingView: View {
                     withAnimation(.easeInOut(duration: 0.2)) { viewModeRaw = mode.rawValue }
                 } label: {
                     let isSelected = viewMode == mode
-                    Text(mode.rawValue)
+                    Text(mode.rawValue.translated())
                         .font(.system(size: 14, weight: isSelected ? .semibold : .medium))
                         .foregroundStyle(isSelected ? Color.sweeplyNavy : Color.sweeplyTextSub)
                         .frame(maxWidth: .infinity)
@@ -812,7 +812,7 @@ private struct CleanerTimelineJobBlock: View {
                             .font(.system(size: 13, weight: .bold))
                             .foregroundStyle(Color.sweeplyNavy)
                             .lineLimit(1)
-                        Text(job.serviceType.rawValue)
+                        Text(job.serviceType.rawValue.translated())
                             .font(.system(size: 11, weight: .medium))
                             .foregroundStyle(accentColor)
                             .lineLimit(1)
@@ -907,7 +907,7 @@ private struct CleanerListJobRow: View {
                                 .foregroundStyle(Color.sweeplyTextSub)
                         }
                         HStack(spacing: 8) {
-                            Text(job.serviceType.rawValue)
+                            Text(job.serviceType.rawValue.translated())
                                 .font(.system(size: 11, weight: .semibold))
                                 .foregroundStyle(accentColor)
                                 .padding(.horizontal, 8)

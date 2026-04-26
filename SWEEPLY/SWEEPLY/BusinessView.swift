@@ -492,7 +492,7 @@ struct BusinessView: View {
                                     StatusBadge(status: nextJob.status)
                                 }
 
-                                Text(nextJob.serviceType.rawValue)
+                                Text(nextJob.serviceType.rawValue.translated())
                                     .font(.system(size: 14, weight: .medium))
                                     .foregroundStyle(Color.sweeplyTextSub)
 

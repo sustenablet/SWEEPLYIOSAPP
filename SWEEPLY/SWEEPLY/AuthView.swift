@@ -15,7 +15,17 @@ struct AuthView: View {
     @State private var appeared = false
 
     private var canSubmit: Bool {
-        email.contains("@") && password.count >= 6 && !isSubmitting
+        isValidEmail(email) && password.count >= 6 && !isSubmitting
+    }
+    
+    private func isValidEmail(_ email: String) -> Bool {
+        let regex = #"^[A-Z0-9a-z._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$"#
+        return email.range(of: regex, options: .regularExpression) != nil
+    }
+    
+    private var emailError: String? {
+        guard !email.isEmpty else { return nil }
+        return isValidEmail(email) ? nil : "Enter a valid email address"
     }
 
     var body: some View {
@@ -216,8 +226,18 @@ struct AuthView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                 .overlay(
                     RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .stroke(Color.sweeplyBorder, lineWidth: 1)
+                        .stroke(
+                            emailError != nil ? Color.sweeplyDestructive : Color.sweeplyBorder,
+                            lineWidth: 1
+                        )
                 )
+            
+            if let err = emailError {
+                Text(err)
+                    .font(.system(size: 11))
+                    .foregroundStyle(Color.sweeplyDestructive)
+                    .padding(.leading, 4)
+            }
         }
     }
 
@@ -238,20 +258,74 @@ struct AuthView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                 .overlay(
                     RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .stroke(Color.sweeplyBorder, lineWidth: 1)
+                        .stroke(password.count > 0 && password.count < 6 ? Color.sweeplyDestructive : Color.sweeplyBorder, lineWidth: 1)
                 )
 
             if isSignUp {
-                Text("At least 6 characters".translated())
-                    .font(.system(size: 11))
-                    .foregroundStyle(Color.sweeplyTextSub.opacity(0.7))
-                    .padding(.leading, 2)
-                    .transition(.opacity.combined(with: .move(edge: .top)))
+                passwordStrengthIndicator
             }
         }
-        .animation(.easeInOut(duration: 0.18), value: isSignUp)
     }
-
+    
+    private var passwordStrengthIndicator: some View {
+        HStack(spacing: 4) {
+            ForEach(0..<3) { index in
+                Rectangle()
+                    .fill(passwordStrengthColor(for: index))
+                    .frame(height: 3)
+                    .clipShape(RoundedRectangle(cornerRadius: 1.5))
+            }
+            Spacer()
+            Text(passwordStrengthLabel)
+                .font(.system(size: 10, weight: .medium))
+                .foregroundStyle(passwordStrengthLabelColor)
+        }
+    }
+    
+    private func passwordStrengthColor(for index: Int) -> Color {
+        let strength = passwordStrength
+        if password.count == 0 { return Color.sweeplyBorder }
+        if index < strength { return strengthColor }
+        return Color.sweeplyBorder.opacity(0.4)
+    }
+    
+    private var passwordStrength: Int {
+        if password.count < 6 { return 0 }
+        if password.count < 10 { return 1 }
+        let hasSpecial = password.range(of: "[^A-Za-z0-9]", options: .regularExpression) != nil
+        if hasSpecial && password.count >= 10 { return 3 }
+        return 2
+    }
+    
+    private var strengthColor: Color {
+        switch passwordStrength {
+        case 1: return Color.sweeplyWarning
+        case 2: return Color.sweeplySuccess
+        case 3: return Color.sweeplySuccess
+        default: return Color.sweeplyBorder
+        }
+    }
+    
+    private var passwordStrengthLabel: String {
+        switch passwordStrength {
+        case 0: return "Too short"
+        case 1: return "Weak"
+        case 2: return "Good"
+        case 3: return "Strong"
+        default: return ""
+        }
+    }
+    
+    private var passwordStrengthLabelColor: Color {
+        switch passwordStrength {
+        case 0: return Color.sweeplyDestructive
+        case 1: return Color.sweeplyWarning
+        case 2: return Color.sweeplySuccess
+        case 3: return Color.sweeplySuccess
+        default: return Color.sweeplyTextSub
+        }
+    }
+    
     // MARK: - Error Banner
 
     private func errorBanner(_ message: String) -> some View {

@@ -138,7 +138,7 @@ struct SettingsView: View {
                         UIImpactFeedbackGenerator(style: .light).impactOccurred()
                         withAnimation(.spring(duration: 0.25)) { selectedTab = tab }
                     } label: {
-                        Text(tab.rawValue)
+                        Text(tab.rawValue.translated())
                             .font(.system(size: 13, weight: selectedTab == tab ? .bold : .medium))
                             .foregroundStyle(selectedTab == tab ? .white : Color.sweeplyTextSub)
                             .padding(.horizontal, 18)

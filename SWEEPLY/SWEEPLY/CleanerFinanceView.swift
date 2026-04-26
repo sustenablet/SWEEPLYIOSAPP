@@ -319,7 +319,7 @@ struct CleanerFinanceView: View {
                 Text(job.clientName)
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(Color.primary)
-                Text(job.serviceType.rawValue)
+                Text(job.serviceType.rawValue.translated())
                     .font(.system(size: 12))
                     .foregroundStyle(Color.sweeplyTextSub)
             }
@@ -338,7 +338,7 @@ struct CleanerFinanceView: View {
 
     private func statusPill(_ status: JobStatus) -> some View {
         let color: Color = status == .completed ? .green : status == .inProgress ? .orange : Color.sweeplyAccent
-        return Text(status.rawValue)
+        return Text(status.rawValue.translated())
             .font(.system(size: 10, weight: .semibold))
             .padding(.horizontal, 7)
             .padding(.vertical, 3)

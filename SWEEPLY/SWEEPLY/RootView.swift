@@ -28,6 +28,9 @@ struct RootView: View {
 
     @AppStorage("hasSeenProductTutorial") private var hasSeenProductTutorial = false
     @AppStorage("hasSeenIntroOnboarding") private var hasSeenIntroOnboarding = false
+    // Observing appLanguage forces the entire view hierarchy to re-render on language change,
+    // so all .translated() calls pick up the new language immediately.
+    @AppStorage("appLanguage") private var appLanguage: String = "en"
     @AppStorage("biometricLockEnabled") private var biometricLockEnabled: Bool = false
     @AppStorage("pendingShortcut") private var pendingShortcut: String = ""
     @AppStorage("pendingSpotlightLink") private var pendingSpotlightLink: String = ""
@@ -63,8 +66,10 @@ struct RootView: View {
                     switch session.currentViewMode {
                     case .ownBusiness:
                         mainTabs
+                            .id(appLanguage)
                     case .memberOf(let membership):
                         CleanerRootView(membership: membership)
+                            .id(appLanguage)
                     }
                     if isLocked {
                         biometricLockOverlay

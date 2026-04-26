@@ -96,7 +96,7 @@ struct JobDetailView: View {
         VStack(spacing: 12) {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 6) {
-                    Text(job.serviceType.rawValue)
+                    Text(job.serviceType.rawValue.translated())
                         .font(.system(size: 24, weight: .bold))
                         .foregroundStyle(Color.sweeplyNavy)
                     Text(job.price.currency)
