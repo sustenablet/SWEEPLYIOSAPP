@@ -36,32 +36,32 @@ enum MockData {
         let cal   = Calendar.current
 
         return [
-            Job(id: UUID(), clientId: c[0].id, clientName: c[0].name, serviceType: .standard,
+            Job(id: UUID(), userId: UUID(), clientId: c[0].id, clientName: c[0].name, serviceType: .standard,
                 date: cal.date(byAdding: .hour, value: 8, to: today)!,
                 duration: 2.5, price: 180, status: .scheduled,
                 address: c[0].address, isRecurring: true),
 
-            Job(id: UUID(), clientId: c[1].id, clientName: c[1].name, serviceType: .deep,
+            Job(id: UUID(), userId: UUID(), clientId: c[1].id, clientName: c[1].name, serviceType: .deep,
                 date: cal.date(byAdding: .hour, value: 11, to: today)!,
                 duration: 4, price: 320, status: .scheduled,
                 address: c[1].address, isRecurring: false),
 
-            Job(id: UUID(), clientId: c[2].id, clientName: c[2].name, serviceType: .standard,
+            Job(id: UUID(), userId: UUID(), clientId: c[2].id, clientName: c[2].name, serviceType: .standard,
                 date: cal.date(byAdding: .hour, value: 14, to: today)!,
                 duration: 2, price: 160, status: .inProgress,
                 address: c[2].address, isRecurring: true),
 
-            Job(id: UUID(), clientId: c[3].id, clientName: c[3].name, serviceType: .office,
+            Job(id: UUID(), userId: UUID(), clientId: c[3].id, clientName: c[3].name, serviceType: .office,
                 date: cal.date(byAdding: .day, value: 1, to: cal.date(byAdding: .hour, value: 9, to: today)!)!,
                 duration: 3, price: 240, status: .scheduled,
                 address: c[3].address, isRecurring: true),
 
-            Job(id: UUID(), clientId: c[4].id, clientName: c[4].name, serviceType: .deep,
+            Job(id: UUID(), userId: UUID(), clientId: c[4].id, clientName: c[4].name, serviceType: .deep,
                 date: cal.date(byAdding: .day, value: -1, to: cal.date(byAdding: .hour, value: 10, to: today)!)!,
                 duration: 4, price: 320, status: .completed,
                 address: c[4].address, isRecurring: false),
 
-            Job(id: UUID(), clientId: c[0].id, clientName: c[0].name, serviceType: .standard,
+            Job(id: UUID(), userId: UUID(), clientId: c[0].id, clientName: c[0].name, serviceType: .standard,
                 date: cal.date(byAdding: .day, value: -3, to: cal.date(byAdding: .hour, value: 8, to: today)!)!,
                 duration: 2.5, price: 180, status: .completed,
                 address: c[0].address, isRecurring: true),

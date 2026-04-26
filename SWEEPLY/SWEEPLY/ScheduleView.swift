@@ -83,7 +83,7 @@ struct ScheduleView: View {
                     .padding(.top, 12)
 
                 if viewMode != .month {
-                    WeekStripView(selectedDay: $selectedDay, jobs: jobsStore.jobs)
+                    WeekStripView(selectedDay: $selectedDay, jobs: ownJobs)
                         .padding(.top, 12)
                 }
 
@@ -119,7 +119,7 @@ struct ScheduleView: View {
                     .presentationDetents([.large])
             }
             .sheet(isPresented: $showMonthPicker) {
-                ScheduleMonthPicker(selectedDay: $selectedDay, jobs: jobsStore.jobs)
+                ScheduleMonthPicker(selectedDay: $selectedDay, jobs: ownJobs)
                     .presentationDetents([.fraction(0.65)])
                     .presentationDragIndicator(.visible)
             }
@@ -505,7 +505,7 @@ struct ScheduleView: View {
     // MARK: - List View (Single Day Focus)
 
     private var listJobsForSelectedDay: [Job] {
-        jobsStore.jobs
+        ownJobs
             .filter { calendar.isDate($0.date, inSameDayAs: selectedDay) }
             .filter { applyFilters($0) }
             .sorted { $0.date < $1.date }
@@ -653,7 +653,7 @@ struct ScheduleView: View {
     private var monthView: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
-                JobberCalendarView(selectedDay: $selectedDay, jobs: jobsStore.jobs)
+                JobberCalendarView(selectedDay: $selectedDay, jobs: ownJobs)
                     .padding(.horizontal, 20)
                     .padding(.top, 12)
 
@@ -819,8 +819,13 @@ struct CalendarDayCell: View {
 
 private extension ScheduleView {
 
+    // Only jobs belonging to this user's own business (excludes jobs assigned by other owners)
+    private var ownJobs: [Job] {
+        jobsStore.jobs.filter { $0.userId == session.userId }
+    }
+
     private func filteredJobsForDate(_ date: Date) -> [Job] {
-        jobsStore.jobs
+        ownJobs
             .filter { calendar.isDate($0.date, inSameDayAs: date) }
             .filter { applyFilters($0) }
             .sorted { $0.date < $1.date }

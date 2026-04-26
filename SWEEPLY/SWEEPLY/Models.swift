@@ -208,6 +208,7 @@ struct Client: Identifiable {
 
 struct Job: Identifiable, Codable {
     let id: UUID
+    var userId: UUID        // owner's auth user ID — used to filter own-business jobs vs assigned jobs
     var clientId: UUID
     var clientName: String
     var serviceType: ServiceType

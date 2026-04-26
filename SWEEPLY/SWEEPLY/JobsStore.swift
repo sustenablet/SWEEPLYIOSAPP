@@ -378,6 +378,7 @@ private struct JobRow: Decodable {
     func toJob() -> Job {
         Job(
             id: id,
+            userId: userId,
             clientId: clientId,
             clientName: clientName,
             serviceType: ServiceType(rawValue: serviceType) ?? .standard,

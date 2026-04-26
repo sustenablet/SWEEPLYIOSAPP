@@ -3,6 +3,7 @@ import SwiftUI
 struct CleanerRootView: View {
     @Environment(AppSession.self)   private var session
     @Environment(ProfileStore.self) private var profileStore
+    @Environment(JobsStore.self)    private var jobsStore
 
     let membership: TeamMembership
 
@@ -30,9 +31,15 @@ struct CleanerRootView: View {
         }
         .onAppear { applyTabBarAppearance() }
         .task {
-            // Ensure profile is loaded when entering member view (handles app-restore race condition)
+            // Load jobs and profile immediately when entering member view.
+            // This ensures member data is ready on app restart, not relying solely
+            // on RootView's onChange(of: currentViewMode) which fires asynchronously.
+            async let jobsLoad: () = jobsStore.load(isAuthenticated: session.isAuthenticated)
             if profileStore.profile == nil, let uid = session.userId {
-                await profileStore.load(userId: uid)
+                async let profileLoad: () = profileStore.load(userId: uid)
+                _ = await (jobsLoad, profileLoad)
+            } else {
+                await jobsLoad
             }
         }
     }

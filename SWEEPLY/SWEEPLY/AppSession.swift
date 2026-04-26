@@ -38,6 +38,14 @@ final class AppSession {
     var isAuthenticated: Bool = false
     var userId: UUID?
     var lastAuthError: String?
+    
+    var isWaitingForEmailConfirmation: Bool = false
+    var pendingConfirmationEmail: String = ""
+    var confirmationResendCooldown: Int = 0
+    var confirmationDeadline: Date?
+    
+    private var confirmationTask: Task<Void, Never>?
+    private var resendCooldownTask: Task<Void, Never>?
 
     var currentViewMode: ViewMode = .ownBusiness
     var pendingInvites: [PendingInvite] = []
@@ -75,8 +83,55 @@ final class AppSession {
         lastAuthError = nil
         do {
             _ = try await client.auth.signUp(email: email, password: password)
+            pendingConfirmationEmail = email
+            isWaitingForEmailConfirmation = true
+            confirmationDeadline = Date().addingTimeInterval(600)
+            startConfirmationPolling()
         } catch {
             lastAuthError = humanizedAuthError(error)
+        }
+    }
+    
+    func resendConfirmation() async {
+        guard let client = SupabaseManager.shared else { return }
+        guard confirmationResendCooldown == 0 else { return }
+        do {
+            _ = try await client.auth.resend(email: pendingConfirmationEmail, type: .signup)
+            confirmationResendCooldown = 60
+            resendCooldownTask?.cancel()
+            resendCooldownTask = Task {
+                for i in (0..<60).reversed() {
+                    try? await Task.sleep(nanoseconds: 1_000_000_000)
+                    confirmationResendCooldown = i
+                }
+                confirmationResendCooldown = 0
+            }
+        } catch {
+            lastAuthError = humanizedAuthError(error)
+        }
+    }
+    
+    func cancelConfirmation() {
+        confirmationTask?.cancel()
+        resendCooldownTask?.cancel()
+        isWaitingForEmailConfirmation = false
+        pendingConfirmationEmail = ""
+        confirmationDeadline = nil
+        confirmationResendCooldown = 0
+    }
+    
+    private func startConfirmationPolling() {
+        confirmationTask?.cancel()
+        confirmationTask = Task {
+            for _ in (0..<120) {
+                try? await Task.sleep(nanoseconds: 3_000_000_000)
+                guard !Task.isCancelled else { break }
+                guard isWaitingForEmailConfirmation else { break }
+                if isAuthenticated {
+                    cancelConfirmation()
+                    break
+                }
+            }
         }
     }
 

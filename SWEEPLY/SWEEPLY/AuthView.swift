@@ -13,6 +13,7 @@ struct AuthView: View {
     @State private var resetSent = false
     @State private var resetError: String? = nil
     @State private var appeared = false
+    @State private var confirmationCountdown: Int = 600
 
     private var canSubmit: Bool {
         isValidEmail(email) && password.count >= 6 && !isSubmitting
@@ -42,6 +43,19 @@ struct AuthView: View {
         }
         .animation(.easeInOut(duration: 0.2), value: isSignUp)
         .animation(.easeInOut(duration: 0.15), value: session.lastAuthError)
+        .overlay {
+            if session.isWaitingForEmailConfirmation {
+                WaitingForConfirmationView(
+                    email: session.pendingConfirmationEmail,
+                    cooldown: session.confirmationResendCooldown,
+                    deadline: session.confirmationDeadline,
+                    onResend: { Task { await session.resendConfirmation() } },
+                    onCancel: { session.cancelConfirmation() }
+                )
+                .transition(.opacity.combined(with: .scale(scale: 0.95)))
+            }
+        }
+        .animation(.easeInOut(duration: 0.3), value: session.isWaitingForEmailConfirmation)
     }
 
     // MARK: - Decorative Blobs
@@ -427,6 +441,162 @@ struct AuthView: View {
         } else {
             UINotificationFeedbackGenerator().notificationOccurred(.error)
         }
+    }
+}
+
+// MARK: - Waiting For Confirmation View
+
+private struct WaitingForConfirmationView: View {
+    let email: String
+    let cooldown: Int
+    let deadline: Date?
+    let onResend: () -> Void
+    let onCancel: () -> Void
+    
+    @State private var dots: Int = 1
+    @State private var remainingSeconds: Int = 600
+    @State private var timer: Timer?
+    
+    private var maskedEmail: String {
+        guard let at = email.firstIndex(of: "@") else { return email }
+        let local = email[..<at]
+        let domain = email[at...]
+        let masked: String
+        if local.count <= 2 {
+            masked = String(local)
+        } else {
+            masked = String(local.prefix(1)) + String(repeating: "*", count: max(0, local.count - 2)) + String(local.suffix(1))
+        }
+        return masked + String(domain)
+    }
+    
+    private var dotAnimation: String {
+        String(repeating: ".", count: dots)
+    }
+    
+    var body: some View {
+        ZStack {
+            Color.black.opacity(0.45).ignoresSafeArea()
+            
+            VStack(spacing: 28) {
+                Spacer()
+                
+                VStack(spacing: 16) {
+                    ZStack {
+                        Circle()
+                            .fill(Color.sweeplyAccent.opacity(0.12))
+                            .frame(width: 80, height: 80)
+                        Image(systemName: "envelope.badge.fill")
+                            .font(.system(size: 32, weight: .light))
+                            .foregroundStyle(Color.sweeplyAccent)
+                    }
+                    
+                    VStack(spacing: 8) {
+                        Text("Check your email".translated())
+                            .font(.system(size: 22, weight: .bold))
+                            .foregroundStyle(Color.primary)
+                        
+                        Text("We sent a confirmation link to:".translated())
+                            .font(.system(size: 14))
+                            .foregroundStyle(Color.sweeplyTextSub)
+                        
+                        Text(maskedEmail)
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundStyle(Color.sweeplyAccent)
+                    }
+                    
+                    Text("Tap the link to verify your account and sign in.".translated())
+                        .font(.system(size: 13))
+                        .foregroundStyle(Color.sweeplyTextSub)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 32)
+                }
+                
+                VStack(spacing: 16) {
+                    if deadline != nil {
+                        HStack(spacing: 4) {
+                            Image(systemName: "clock")
+                                .font(.system(size: 11))
+                            Text("Link expires in \(formatTime(remainingSeconds))")
+                                .font(.system(size: 12, weight: .medium))
+                        }
+                        .foregroundStyle(Color.sweeplyTextSub)
+                    }
+                    
+                    Text("Waiting for verification\(dotAnimation)")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(Color.sweeplyTextSub.opacity(0.7))
+                        .animation(.none)
+                }
+                
+                VStack(spacing: 10) {
+                    Button {
+                        onResend()
+                    } label: {
+                        HStack(spacing: 6) {
+                            Image(systemName: "arrow.clockwise")
+                                .font(.system(size: 13))
+                            Text(cooldown > 0 ? "Resend (\(cooldown)s)" : "Resend email".translated())
+                                .font(.system(size: 14, weight: .medium))
+                        }
+                        .foregroundStyle(cooldown > 0 ? Color.sweeplyTextSub : Color.sweeplyAccent)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 48)
+                        .background(Color.sweeplyBackground)
+                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                .stroke(Color.sweeplyBorder, lineWidth: 1)
+                        )
+                    }
+                    .disabled(cooldown > 0)
+                    
+                    Button {
+                        onCancel()
+                    } label: {
+                        Text("Cancel".translated())
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundStyle(Color.sweeplyTextSub)
+                    }
+                }
+                .padding(.horizontal, 40)
+                
+                Spacer()
+            }
+        }
+        .onAppear {
+            startDotsAnimation()
+            startCountdown()
+        }
+        .onDisappear {
+            timer?.invalidate()
+        }
+    }
+    
+    private func startDotsAnimation() {
+        Timer.scheduledTimer(withTimeInterval: 0.6, repeats: true) { _ in
+            dots = dots >= 3 ? 1 : dots + 1
+        }
+    }
+    
+    private func startCountdown() {
+        if let deadline {
+            remainingSeconds = max(0, Int(deadline.timeIntervalSinceNow))
+        }
+        timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in
+            if remainingSeconds > 0 {
+                remainingSeconds -= 1
+            } else {
+                timer?.invalidate()
+                onCancel()
+            }
+        }
+    }
+    
+    private func formatTime(_ seconds: Int) -> String {
+        let mins = seconds / 60
+        let secs = seconds % 60
+        return String(format: "%d:%02d", mins, secs)
     }
 }
 

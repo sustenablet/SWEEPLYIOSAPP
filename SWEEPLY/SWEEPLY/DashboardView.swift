@@ -80,23 +80,28 @@ struct DashboardView: View {
         return f.string(from: Date())
     }
 
+    // Only jobs belonging to this user's own business
+    private var ownJobs: [Job] {
+        jobsStore.jobs.filter { $0.userId == session.userId }
+    }
+
     private var todayJobs: [Job] {
         let cal = Calendar.current
         let start = cal.startOfDay(for: Date())
         let end = cal.date(byAdding: .day, value: 1, to: start)!
-        return jobsStore.jobs.filter { $0.date >= start && $0.date < end }.sorted { $0.date < $1.date }
+        return ownJobs.filter { $0.date >= start && $0.date < end }.sorted { $0.date < $1.date }
     }
 
     private var completedCount: Int {
         let cal = Calendar.current
         let start = cal.dateInterval(of: .weekOfYear, for: Date())?.start ?? Date()
-        return jobsStore.jobs.filter { $0.date >= start && $0.status == .completed }.count
+        return ownJobs.filter { $0.date >= start && $0.status == .completed }.count
     }
 
     private var weekEarned: Double {
         let cal = Calendar.current
         let start = cal.dateInterval(of: .weekOfYear, for: Date())?.start ?? Date()
-        return jobsStore.jobs
+        return ownJobs
             .filter { $0.date >= start && $0.status == .completed }
             .reduce(0) { $0 + $1.price }
     }
@@ -117,7 +122,7 @@ struct DashboardView: View {
 
     private var currentWeekJobs: [Job] {
         let calendar = Calendar.current
-        return jobsStore.jobs.filter { calendar.isDate($0.date, equalTo: Date(), toGranularity: .weekOfYear) }
+        return ownJobs.filter { calendar.isDate($0.date, equalTo: Date(), toGranularity: .weekOfYear) }
     }
 
     private var activeClientsThisWeek: Int {
