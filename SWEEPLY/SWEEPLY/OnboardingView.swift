@@ -87,6 +87,9 @@ struct OnboardingView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
+        .onTapGesture {
+            focusedField = nil
+        }
         .interactiveDismissDisabled(true)
         .sheet(isPresented: $showCreateService) {
             CreateServiceSheet(
@@ -126,6 +129,17 @@ struct OnboardingView: View {
                             .font(.system(size: 14, weight: .medium))
                     }
                     .foregroundStyle(Color.sweeplyNavy)
+                }
+                .buttonStyle(.plain)
+            } else if step == 1 {
+                // Dismiss keyboard button on identity step
+                Button {
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    focusedField = nil
+                } label: {
+                    Image(systemName: "keyboard.chevron.compact.down")
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundStyle(Color.sweeplyTextSub)
                 }
                 .buttonStyle(.plain)
             }
@@ -291,6 +305,7 @@ struct OnboardingView: View {
                     isEnabled: identityStepValid,
                     action: {
                         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                        focusedField = nil
                         advance()
                     }
                 )
@@ -300,9 +315,7 @@ struct OnboardingView: View {
             .background(Color.sweeplyBackground)
         }
         .onAppear {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
-                focusedField = .name
-            }
+            focusedField = nil
         }
     }
 
@@ -458,6 +471,7 @@ struct OnboardingView: View {
                     isEnabled: servicesStepValid,
                     action: {
                         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                        focusedField = nil
                         advance()
                     }
                 )
