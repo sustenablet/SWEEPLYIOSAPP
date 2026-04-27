@@ -49,7 +49,7 @@ struct AuthView: View {
                             .scaledToFill()
                             .frame(maxWidth: .infinity)
                             .frame(height: 200)
-                            .offset(y: 40)
+                            .offset(y: 80)
                             .overlay(Color.sweeplyWordmarkBlue.opacity(0.35))
 
                         Text(isSignUp ? "Create your account and simplify your workday" : "Welcome back! Sign in to continue")
@@ -66,7 +66,7 @@ struct AuthView: View {
                 // White card (overlays image)
                 authCard
                     .frame(maxWidth: .infinity)
-                    .offset(y: appeared ? -keyboardHeight + 160 : 220 - keyboardHeight)
+                    .offset(y: appeared ? -keyboardHeight + 200 : 260 - keyboardHeight)
                     .opacity(appeared ? 1 : 0)
             }
             .ignoresSafeArea(edges: .bottom)
