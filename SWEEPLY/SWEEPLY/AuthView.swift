@@ -32,8 +32,14 @@ struct AuthView: View {
     var body: some View {
         GeometryReader { geo in
             ZStack(alignment: .top) {
-                // White background that fills entire screen
+                // Color above the image
+                Color(red: 0.827, green: 0.867, blue: 0.992)
+                    .frame(height: 120)
+                    .frame(maxWidth: .infinity)
+
+                // White background below
                 Color.white
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .ignoresSafeArea()
 
                 // Image above the white card with tint and text
@@ -62,7 +68,7 @@ struct AuthView: View {
                 // White card (below the image)
                 authCard
                     .frame(maxWidth: .infinity)
-                    .offset(y: appeared ? -keyboardHeight + 180 : 240 - keyboardHeight)
+                    .offset(y: appeared ? -keyboardHeight + 240 : 300 - keyboardHeight)
                     .opacity(appeared ? 1 : 0)
             }
             .ignoresSafeArea(edges: .bottom)
