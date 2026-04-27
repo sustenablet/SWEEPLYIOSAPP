@@ -17,6 +17,10 @@
 			</array>
 		</dict>
 	</array>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Sweeply uses your location to center the map on your current position when viewing today's job locations.</string>
+	<key>NSCalendarsUsageDescription</key>
+	<string>Sweeply can add your scheduled jobs to your Calendar app so you always know what's coming up.</string>
 	<key>NSUserNotificationsUsageDescription</key>
 	<string>Sweeply sends reminders for upcoming jobs and overdue invoices so you never miss a beat.</string>
 	<key>UIBackgroundModes</key>
