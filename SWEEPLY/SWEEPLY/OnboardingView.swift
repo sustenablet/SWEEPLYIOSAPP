@@ -270,8 +270,10 @@ struct OnboardingView: View {
                         text: $fullName,
                         icon: "person",
                         keyboardType: .default,
-                        submitLabel: .next
-                    ) { focusedField = .business }
+                        submitLabel: .next,
+                        onSubmit: { focusedField = .business },
+                        onDismissKeyboard: { focusedField = nil }
+                    )
                         .focused($focusedField, equals: .name)
 
                     OnboardingField(
@@ -279,8 +281,10 @@ struct OnboardingView: View {
                         text: $businessName,
                         icon: "building.2",
                         keyboardType: .default,
-                        submitLabel: .next
-                    ) { focusedField = .phone }
+                        submitLabel: .next,
+                        onSubmit: { focusedField = .phone },
+                        onDismissKeyboard: { focusedField = nil }
+                    )
                         .focused($focusedField, equals: .business)
 
                     OnboardingField(
@@ -288,8 +292,10 @@ struct OnboardingView: View {
                         text: $phone,
                         icon: "phone",
                         keyboardType: .phonePad,
-                        submitLabel: .done
-                    ) { focusedField = nil }
+                        submitLabel: .done,
+                        onSubmit: { focusedField = nil },
+                        onDismissKeyboard: { focusedField = nil }
+                    )
                         .focused($focusedField, equals: .phone)
                 }
                 .padding(.horizontal, 24)
@@ -297,6 +303,14 @@ struct OnboardingView: View {
                 Spacer().frame(height: 40)
             }
         }
+        .gesture(
+            DragGesture(minimumDistance: 50)
+                .onEnded { value in
+                    if value.translation.height > 50 {
+                        focusedField = nil
+                    }
+                }
+        )
         .safeAreaInset(edge: .bottom, spacing: 0) {
             VStack(spacing: 0) {
                 Divider().opacity(0.5)
@@ -808,6 +822,7 @@ private struct OnboardingField: View {
     var keyboardType: UIKeyboardType = .default
     var submitLabel: SubmitLabel = .next
     var onSubmit: (() -> Void)? = nil
+    var onDismissKeyboard: (() -> Void)? = nil
 
     var body: some View {
         HStack(spacing: 12) {
@@ -823,6 +838,14 @@ private struct OnboardingField: View {
                 .submitLabel(submitLabel)
                 .autocorrectionDisabled()
                 .onSubmit { onSubmit?() }
+                .toolbar {
+                    ToolbarItemGroup(placement: .keyboard) {
+                        Spacer()
+                        Button("Done") {
+                            onDismissKeyboard?()
+                        }
+                    }
+                }
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 16)
