@@ -21,13 +21,6 @@
 			remoteGlobalIDString = E9743F9F2F87116D0075413E;
 			remoteInfo = SweeplyWIdgetsExtension;
 		};
-		E9D0784F2F7E357400E31AC7 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = E9D078352F7E357300E31AC7 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = E9D0783C2F7E357300E31AC7;
-			remoteInfo = SWEEPLY;
-		};
 		E9D078592F7E357400E31AC7 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = E9D078352F7E357300E31AC7 /* Project object */;
@@ -57,7 +50,6 @@
 		E9743FA42F87116D0075413E /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = /System/Library/Frameworks/SwiftUI.framework; sourceTree = "<absolute>"; };
 		E9743FBF2F876B5D0075413E /* SweeplyWIdgetsExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = SweeplyWIdgetsExtension.entitlements; sourceTree = "<group>"; };
 		E9D0783D2F7E357300E31AC7 /* SWEEPLY.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SWEEPLY.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		E9D0784E2F7E357400E31AC7 /* SWEEPLYTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SWEEPLYTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		E9D078582F7E357400E31AC7 /* SWEEPLYUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SWEEPLYUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -125,13 +117,6 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		E9D0784B2F7E357400E31AC7 /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		E9D078552F7E357400E31AC7 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -168,7 +153,6 @@
 			isa = PBXGroup;
 			children = (
 				E9D0783D2F7E357300E31AC7 /* SWEEPLY.app */,
-				E9D0784E2F7E357400E31AC7 /* SWEEPLYTests.xctest */,
 				E9D078582F7E357400E31AC7 /* SWEEPLYUITests.xctest */,
 				E9743FA02F87116D0075413E /* SweeplyWIdgetsExtension.appex */,
 			);
@@ -225,29 +209,6 @@
 			productReference = E9D0783D2F7E357300E31AC7 /* SWEEPLY.app */;
 			productType = "com.apple.product-type.application";
 		};
-		E9D0784D2F7E357400E31AC7 /* SWEEPLYTests */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = E9D078662F7E357400E31AC7 /* Build configuration list for PBXNativeTarget "SWEEPLYTests" */;
-			buildPhases = (
-				E9D0784A2F7E357400E31AC7 /* Sources */,
-				E9D0784B2F7E357400E31AC7 /* Frameworks */,
-				E9D0784C2F7E357400E31AC7 /* Resources */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-				E9D078502F7E357400E31AC7 /* PBXTargetDependency */,
-			);
-			fileSystemSynchronizedGroups = (
-				E9D078512F7E357400E31AC7 /* SWEEPLYTests */,
-			);
-			name = SWEEPLYTests;
-			packageProductDependencies = (
-			);
-			productName = SWEEPLYTests;
-			productReference = E9D0784E2F7E357400E31AC7 /* SWEEPLYTests.xctest */;
-			productType = "com.apple.product-type.bundle.unit-test";
-		};
 		E9D078572F7E357400E31AC7 /* SWEEPLYUITests */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = E9D078692F7E357400E31AC7 /* Build configuration list for PBXNativeTarget "SWEEPLYUITests" */;
@@ -287,10 +248,6 @@
 					E9D0783C2F7E357300E31AC7 = {
 						CreatedOnToolsVersion = 26.4;
 					};
-					E9D0784D2F7E357400E31AC7 = {
-						CreatedOnToolsVersion = 26.4;
-						TestTargetID = E9D0783C2F7E357300E31AC7;
-					};
 					E9D078572F7E357400E31AC7 = {
 						CreatedOnToolsVersion = 26.4;
 						TestTargetID = E9D0783C2F7E357300E31AC7;
@@ -315,7 +272,6 @@
 			projectRoot = "";
 			targets = (
 				E9D0783C2F7E357300E31AC7 /* SWEEPLY */,
-				E9D0784D2F7E357400E31AC7 /* SWEEPLYTests */,
 				E9D078572F7E357400E31AC7 /* SWEEPLYUITests */,
 				E9743F9F2F87116D0075413E /* SweeplyWIdgetsExtension */,
 			);
@@ -331,13 +287,6 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		E9D0783B2F7E357300E31AC7 /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		E9D0784C2F7E357400E31AC7 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -368,13 +317,6 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		E9D0784A2F7E357400E31AC7 /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		E9D078542F7E357400E31AC7 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -389,11 +331,6 @@
 			isa = PBXTargetDependency;
 			target = E9743F9F2F87116D0075413E /* SweeplyWIdgetsExtension */;
 			targetProxy = E9743FB02F87116F0075413E /* PBXContainerItemProxy */;
-		};
-		E9D078502F7E357400E31AC7 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = E9D0783C2F7E357300E31AC7 /* SWEEPLY */;
-			targetProxy = E9D0784F2F7E357400E31AC7 /* PBXContainerItemProxy */;
 		};
 		E9D0785A2F7E357400E31AC7 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
@@ -698,50 +635,6 @@
 			};
 			name = Release;
 		};
-		E9D078672F7E357400E31AC7 /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				BUNDLE_LOADER = "$(TEST_HOST)";
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = YCZQ7F8K2U;
-				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 26.4;
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = SWEEPLY.SWEEPLYTests;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				STRING_CATALOG_GENERATE_SYMBOLS = NO;
-				SWIFT_APPROACHABLE_CONCURRENCY = YES;
-				SWIFT_EMIT_LOC_STRINGS = NO;
-				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/SWEEPLY.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/SWEEPLY";
-			};
-			name = Debug;
-		};
-		E9D078682F7E357400E31AC7 /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				BUNDLE_LOADER = "$(TEST_HOST)";
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = YCZQ7F8K2U;
-				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 26.4;
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = SWEEPLY.SWEEPLYTests;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				STRING_CATALOG_GENERATE_SYMBOLS = NO;
-				SWIFT_APPROACHABLE_CONCURRENCY = YES;
-				SWIFT_EMIT_LOC_STRINGS = NO;
-				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/SWEEPLY.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/SWEEPLY";
-			};
-			name = Release;
-		};
 		E9D0786A2F7E357400E31AC7 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -808,15 +701,6 @@
 			buildConfigurations = (
 				E9D078622F7E357400E31AC7 /* Debug */,
 				E9D078632F7E357400E31AC7 /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
-		E9D078662F7E357400E31AC7 /* Build configuration list for PBXNativeTarget "SWEEPLYTests" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				E9D078672F7E357400E31AC7 /* Debug */,
-				E9D078682F7E357400E31AC7 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

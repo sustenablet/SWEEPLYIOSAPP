@@ -69,6 +69,8 @@ struct JobDetailView: View {
                 .background(Color.sweeplyBackground.ignoresSafeArea())
                 .navigationTitle("Job Details".translated())
                 .navigationBarTitleDisplayMode(.inline)
+                .toolbarBackground(.visible, for: .navigationBar)
+                .toolbar(.visible, for: .navigationBar)
                 .sheet(isPresented: $showInvoiceSheet) {
                     NewInvoiceView(prefill: job)
                 }

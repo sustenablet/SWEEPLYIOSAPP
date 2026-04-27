@@ -53,6 +53,8 @@ struct InvoiceDetailView: View {
                 .background(Color.sweeplyBackground.ignoresSafeArea())
                 .navigationTitle("Invoice Details".translated())
                 .navigationBarTitleDisplayMode(.inline)
+                .toolbarBackground(.visible, for: .navigationBar)
+                .toolbar(.visible, for: .navigationBar)
                 .toolbar {
                     ToolbarItem(placement: .primaryAction) {
                         Button("Edit".translated()) { showingEdit = true }

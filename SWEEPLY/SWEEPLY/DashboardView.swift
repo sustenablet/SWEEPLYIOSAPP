@@ -106,6 +106,12 @@ struct DashboardView: View {
             .reduce(0) { $0 + $1.price }
     }
 
+    private var avgJobValue: Double {
+        let completed = ownJobs.filter { $0.status == .completed }
+        guard !completed.isEmpty else { return 0 }
+        return completed.reduce(0) { $0 + $1.price } / Double(completed.count)
+    }
+
     private var outstandingTotal: Double {
         invoicesStore.invoices.filter { $0.status != .paid }.reduce(0) { $0 + $1.total }
     }
@@ -136,14 +142,14 @@ struct DashboardView: View {
 private var healthCards: [DashboardHealthCardModel] {
         [
             DashboardHealthCardModel(
-                title: "Weekly Revenue",
-                subtitle: "Total earned from completed jobs this week".translated(),
-                value: (healthStats?.revenue ?? weekEarned).currency,
-                trend: healthStats?.revenue_trend ?? "+18%",
-                isPositive: healthStats?.is_rev_positive ?? true,
-                icon: "dollarsign",
+                title: "Avg Job Value",
+                subtitle: "Average revenue per completed job".translated(),
+                value: avgJobValue > 0 ? avgJobValue.currency : "—",
+                trend: avgJobValue > 0 ? "\(ownJobs.filter { $0.status == .completed }.count) jobs done" : "No data yet",
+                isPositive: avgJobValue > 0,
+                icon: "chart.bar.fill",
                 iconColor: .sweeplyAccent,
-                footnote: "\(completedCount) jobs completed this week",
+                footnote: "Based on all \(ownJobs.filter { $0.status == .completed }.count) completed jobs",
                 showTrendBadge: false
             ),
             DashboardHealthCardModel(

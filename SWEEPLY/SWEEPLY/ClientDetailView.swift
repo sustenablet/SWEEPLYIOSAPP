@@ -103,6 +103,8 @@ struct ClientDetailView: View {
                 .background(Color.sweeplyBackground.ignoresSafeArea())
                 .navigationBarTitleDisplayMode(.inline)
                 .navigationTitle(client.name)
+                .toolbarBackground(.visible, for: .navigationBar)
+                .toolbar(.visible, for: .navigationBar)
                 .toolbar {
                     ToolbarItem(placement: .topBarTrailing) {
                         HStack(spacing: 8) {
