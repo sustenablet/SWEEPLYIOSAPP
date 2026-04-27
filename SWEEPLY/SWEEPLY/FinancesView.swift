@@ -1547,76 +1547,73 @@ struct InvoicesListView: View {
                     }
                     .padding(.horizontal, -20)
 
-                    // Sort + Client filter bar
+                    // Combined Sort + Client filter
                     HStack(spacing: 8) {
-                        // Sort order
                         Menu {
-                            ForEach(InvoiceSortOrder.allCases, id: \.self) { order in
+                            // Sort section
+                            Section("Sort") {
+                                ForEach(InvoiceSortOrder.allCases, id: \.self) { order in
+                                    Button {
+                                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                        withAnimation { sortOrder = order }
+                                    } label: {
+                                        HStack {
+                                            Text(order.rawValue)
+                                            if sortOrder == order {
+                                                Image(systemName: "checkmark")
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            
+                            // Client section
+                            Section("Client") {
                                 Button {
                                     UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                                    withAnimation { sortOrder = order }
+                                    withAnimation { selectedClientId = nil }
                                 } label: {
                                     HStack {
-                                        Text(order.rawValue)
-                                        if sortOrder == order {
+                                        Text("All Clients")
+                                        if selectedClientId == nil {
                                             Image(systemName: "checkmark")
+                                        }
+                                    }
+                                }
+                                ForEach(clientsStore.clients.sorted { $0.name < $1.name }) { client in
+                                    Button {
+                                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                        withAnimation { selectedClientId = client.id }
+                                    } label: {
+                                        HStack {
+                                            Text(client.name)
+                                            if selectedClientId == client.id {
+                                                Image(systemName: "checkmark")
+                                            }
                                         }
                                     }
                                 }
                             }
                         } label: {
-                            HStack(spacing: 5) {
+                            HStack(spacing: 6) {
                                 Image(systemName: sortOrder.icon)
                                     .font(.system(size: 12, weight: .semibold))
                                 Text(sortOrder.rawValue)
                                     .font(.system(size: 13, weight: .medium))
-                            }
-                            .foregroundStyle(sortOrder != .newestFirst ? Color.sweeplyNavy : Color.sweeplyTextSub)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 8)
-                            .background(sortOrder != .newestFirst ? Color.sweeplyNavy.opacity(0.08) : Color.sweeplySurface)
-                            .clipShape(Capsule())
-                            .overlay(Capsule().stroke(sortOrder != .newestFirst ? Color.sweeplyNavy.opacity(0.3) : Color.sweeplyBorder, lineWidth: 1))
-                        }
-                        .buttonStyle(.plain)
-
-                        // Client filter
-                        Menu {
-                            Button {
-                                UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                                withAnimation { selectedClientId = nil }
-                            } label: {
-                                HStack {
-                                    Text("All Clients")
-                                    if selectedClientId == nil { Image(systemName: "checkmark") }
+                                if selectedClientId != nil {
+                                    Text("•")
+                                        .foregroundStyle(Color.sweeplyTextSub)
+                                    Text(selectedClientName)
+                                        .font(.system(size: 13, weight: .medium))
+                                        .lineLimit(1)
                                 }
                             }
-                            Divider()
-                            ForEach(clientsStore.clients.sorted { $0.name < $1.name }) { client in
-                                Button {
-                                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                                    withAnimation { selectedClientId = client.id }
-                                } label: {
-                                    HStack {
-                                        Text(client.name)
-                                        if selectedClientId == client.id { Image(systemName: "checkmark") }
-                                    }
-                                }
-                            }
-                        } label: {
-                            HStack(spacing: 5) {
-                                Image(systemName: "person")
-                                    .font(.system(size: 12, weight: .semibold))
-                                Text(selectedClientName)
-                                    .font(.system(size: 13, weight: .medium))
-                                    .lineLimit(1)
-                            }
-                            .foregroundStyle(selectedClientId != nil ? Color.sweeplyNavy : Color.sweeplyTextSub)
-                            .padding(.horizontal, 12)
+                            .foregroundStyle(hasActiveFilters ? Color.sweeplyNavy : Color.sweeplyTextSub)
+                            .padding(.horizontal, 14)
                             .padding(.vertical, 8)
-                            .background(selectedClientId != nil ? Color.sweeplyNavy.opacity(0.08) : Color.sweeplySurface)
+                            .background(hasActiveFilters ? Color.sweeplyNavy.opacity(0.08) : Color.sweeplySurface)
                             .clipShape(Capsule())
-                            .overlay(Capsule().stroke(selectedClientId != nil ? Color.sweeplyNavy.opacity(0.3) : Color.sweeplyBorder, lineWidth: 1))
+                            .overlay(Capsule().stroke(hasActiveFilters ? Color.sweeplyNavy.opacity(0.3) : Color.sweeplyBorder, lineWidth: 1))
                         }
                         .buttonStyle(.plain)
 
