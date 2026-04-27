@@ -307,6 +307,14 @@ struct RootView: View {
                 await profileStore.load(userId: uid)
                 await teamStore.load(ownerId: uid)
                 await expenseStore.load(userId: uid)
+                
+                // Trigger business onboarding for new users who haven't set up their profile
+                let businessName = profileStore.profile?.businessName ?? ""
+                if businessName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                        showOnboarding = true
+                    }
+                }
             }
             await clientsStore.load(isAuthenticated: session.isAuthenticated)
             WidgetDataWriter.write(jobs: jobsStore.jobs, invoices: invoicesStore.invoices)

@@ -84,6 +84,17 @@ struct NewJobForm: View {
         return errors
     }
 
+    private var conflictingJob: Job? {
+        let durationSecs = (Double(duration) ?? 2.0) * 3600.0
+        let newStart = date
+        let newEnd   = date.addingTimeInterval(durationSecs)
+        return jobsStore.jobs.first { existing in
+            guard Calendar.current.isDate(existing.date, inSameDayAs: newStart) else { return false }
+            let existingEnd = existing.date.addingTimeInterval(existing.duration * 3600.0)
+            return newStart < existingEnd && existing.date < newEnd
+        }
+    }
+
     private var selectedService: BusinessService? {
         serviceCatalog.first {
             $0.name.trimmingCharacters(in: .whitespacesAndNewlines).caseInsensitiveCompare(serviceType.rawValue) == .orderedSame
@@ -213,6 +224,35 @@ struct NewJobForm: View {
                                 .font(.system(size: 12))
                                 .foregroundStyle(Color.sweeplyDestructive)
                                 .padding(.top, 2)
+                        }
+                        if let conflict = conflictingJob {
+                            let conflictEnd = conflict.date.addingTimeInterval(conflict.duration * 3600)
+                            let fmt: DateFormatter = {
+                                let f = DateFormatter()
+                                f.timeStyle = .short
+                                f.dateStyle = .none
+                                return f
+                            }()
+                            HStack(alignment: .top, spacing: 10) {
+                                Image(systemName: "exclamationmark.triangle.fill")
+                                    .font(.system(size: 13, weight: .semibold))
+                                    .foregroundStyle(Color.sweeplyWarning)
+                                    .padding(.top, 1)
+                                Text("Overlaps with \(conflict.clientName)'s job (\(fmt.string(from: conflict.date)) – \(fmt.string(from: conflictEnd)))")
+                                    .font(.system(size: 12, weight: .medium))
+                                    .foregroundStyle(Color.sweeplyNavy)
+                                    .fixedSize(horizontal: false, vertical: true)
+                                Spacer()
+                            }
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 10)
+                            .background(Color.sweeplyWarning.opacity(0.09))
+                            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                    .stroke(Color.sweeplyWarning.opacity(0.35), lineWidth: 1)
+                            )
+                            .animation(.easeInOut(duration: 0.2), value: conflict.id)
                         }
                     }
                     

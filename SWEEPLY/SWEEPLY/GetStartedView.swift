@@ -4,6 +4,18 @@ struct GetStartedView: View {
     let onGetStarted: () -> Void
 
     @State private var appeared = false
+    @State private var displayedText = ""
+    private let fullText = "Welcome to Sweeply"
+    private var typedText: AttributedString {
+        var result = AttributedString()
+        let welcome = AttributedString("Welcome to ")
+        var sweeply = AttributedString("Sweeply")
+        sweeply.foregroundColor = Color.sweeplyWordmarkBlue
+        result.append(welcome)
+        result.append(sweeply)
+        return result
+    }
+    @State private var charIndex = 0
 
     var body: some View {
         ZStack {
@@ -45,12 +57,26 @@ struct GetStartedView: View {
             withAnimation(.easeOut(duration: 0.55).delay(0.1)) {
                 appeared = true
             }
+            startTypewriter()
+        }
+    }
+
+    private func startTypewriter() {
+        Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { timer in
+            if charIndex <= fullText.count {
+                let index = fullText.index(fullText.startIndex, offsetBy: charIndex)
+                displayedText = String(fullText[..<index])
+                charIndex += 1
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            } else {
+                timer.invalidate()
+            }
         }
     }
 
     private var textSection: some View {
         VStack(spacing: 10) {
-            Text("Welcome to Sweeply".translated())
+            Text(displayedText)
                 .font(.system(size: 34, weight: .bold, design: .rounded))
                 .foregroundStyle(.white)
                 .multilineTextAlignment(.center)
