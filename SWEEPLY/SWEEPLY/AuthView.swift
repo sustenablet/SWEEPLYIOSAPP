@@ -48,9 +48,13 @@ struct AuthView: View {
                             .resizable()
                             .scaledToFill()
                             .frame(maxWidth: .infinity)
-                            .frame(height: 200)
-                            .offset(y: 80)
-                            .overlay(Color.sweeplyWordmarkBlue.opacity(0.35))
+                            .frame(height: 280)
+                            .offset(y: 40)
+
+                        Rectangle()
+                            .fill(Color.sweeplyWordmarkBlue.opacity(0.35))
+                            .frame(height: 280)
+                            .offset(y: 40)
 
                         Text(isSignUp ? "Create your account and simplify your workday" : "Welcome back! Sign in to continue")
                             .font(.system(size: 16, weight: .medium))
