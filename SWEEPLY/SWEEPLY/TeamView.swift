@@ -421,6 +421,10 @@ struct MemberDetailView: View {
     @State private var isSavingPayRate = false
     @State private var payRateSaved = false
 
+    // History tab (combines Job History + Payment History)
+    enum HistoryTab { case jobs, payments }
+    @State private var historyTab: HistoryTab = .jobs
+
     // Status / removal
     @State private var showDeleteConfirm = false
     @State private var showShareSheet = false
@@ -477,6 +481,11 @@ struct MemberDetailView: View {
         }
     }
 
+    private func cityFromAddress(_ address: String) -> String {
+        let parts = address.components(separatedBy: ",").map { $0.trimmingCharacters(in: .whitespaces) }
+        return parts.count >= 2 ? parts[1] : (parts.first ?? address)
+    }
+
     private func weekdayName(_ weekday: Int) -> String {
         // Calendar weekday: 1=Sun, 2=Mon, 3=Tue, 4=Wed, 5=Thu, 6=Fri, 7=Sat
         let names = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
@@ -494,8 +503,7 @@ struct MemberDetailView: View {
                     contactCard
                     performanceCard
                     paySetupCard
-                    jobHistoryCard
-                    paymentHistoryCard
+                    historyCard
                     statusActionsCard
                     removeButton
                 }
@@ -1008,7 +1016,146 @@ struct MemberDetailView: View {
         .animation(.easeInOut(duration: 0.15), value: hasPayRateChanges)
     }
 
-    // MARK: - Job History Card
+    // MARK: - Combined History Card (Job History + Payment History)
+
+    private var historyCard: some View {
+        VStack(spacing: 0) {
+            // Header with tab switcher
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(historyTab == .jobs ? "JOB HISTORY" : "PAYMENT HISTORY")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundStyle(Color.sweeplyTextSub)
+                        .tracking(0.8)
+                        .animation(.none, value: historyTab)
+                    Text(historyTab == .jobs ? "Work this cleaner has done" : "Payments you've recorded")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(Color.sweeplyNavy)
+                        .animation(.none, value: historyTab)
+                }
+                Spacer()
+
+                // Compact pill switcher
+                HStack(spacing: 0) {
+                    tabPillButton("Jobs", isActive: historyTab == .jobs) {
+                        withAnimation(.easeInOut(duration: 0.18)) { historyTab = .jobs }
+                    }
+                    tabPillButton("Payments", isActive: historyTab == .payments) {
+                        withAnimation(.easeInOut(duration: 0.18)) { historyTab = .payments }
+                    }
+                }
+                .padding(3)
+                .background(Color.sweeplyBackground)
+                .clipShape(Capsule())
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 14)
+
+            Divider()
+
+            // Content — switches between job history and payment history
+            if historyTab == .jobs {
+                jobHistoryContent
+            } else {
+                paymentHistoryContent
+            }
+        }
+        .background(Color.sweeplySurface)
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(Color.sweeplyBorder, lineWidth: 1))
+    }
+
+    private func tabPillButton(_ title: String, isActive: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(title)
+                .font(.system(size: 12, weight: isActive ? .semibold : .medium))
+                .foregroundStyle(isActive ? .white : Color.sweeplyTextSub)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 5)
+                .background(isActive ? Color.sweeplyNavy : Color.clear)
+                .clipShape(Capsule())
+        }
+        .buttonStyle(.plain)
+    }
+
+    // MARK: - Job History Content
+
+    @ViewBuilder
+    private var jobHistoryContent: some View {
+        if memberJobHistory.isEmpty {
+            VStack(spacing: 8) {
+                Image(systemName: "briefcase")
+                    .font(.system(size: 28))
+                    .foregroundStyle(Color.sweeplyTextSub.opacity(0.35))
+                Text("No jobs assigned yet")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(Color.sweeplyTextSub)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 28)
+        } else {
+            VStack(spacing: 0) {
+                ForEach(Array(memberJobHistory.enumerated()), id: \.element.id) { idx, job in
+                    jobHistoryRow(job)
+                    if idx < memberJobHistory.count - 1 {
+                        Divider().padding(.leading, 16)
+                    }
+                }
+            }
+        }
+    }
+
+    // MARK: - Payment History Content
+
+    @ViewBuilder
+    private var paymentHistoryContent: some View {
+        if isLoadingPayments {
+            ProgressView()
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 24)
+        } else if payments.isEmpty {
+            VStack(spacing: 8) {
+                Image(systemName: "dollarsign.circle")
+                    .font(.system(size: 28))
+                    .foregroundStyle(Color.sweeplyTextSub.opacity(0.35))
+                Text("No payments recorded yet")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(Color.sweeplyTextSub)
+                Text("Tap Record to log a payment")
+                    .font(.system(size: 12))
+                    .foregroundStyle(Color.sweeplyTextSub.opacity(0.6))
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 28)
+        } else {
+            VStack(spacing: 0) {
+                ForEach(Array(payments.enumerated()), id: \.element.id) { idx, payment in
+                    paymentRow(payment)
+                    if idx < payments.count - 1 {
+                        Divider().padding(.leading, 16)
+                    }
+                }
+            }
+            Divider()
+            Button {
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                showRecordPayment = true
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "plus.circle.fill")
+                        .font(.system(size: 14))
+                    Text("Record Payment")
+                        .font(.system(size: 14, weight: .semibold))
+                }
+                .foregroundStyle(Color.sweeplyNavy)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 14)
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    // MARK: - Job History Card (kept for reference, now replaced by historyCard)
 
     private var jobHistoryCard: some View {
         VStack(spacing: 0) {
@@ -1088,7 +1235,7 @@ struct MemberDetailView: View {
                     if !job.address.isEmpty {
                         Text("·")
                             .foregroundStyle(Color.sweeplyBorder)
-                        Text(job.address)
+                        Text(cityFromAddress(job.address))
                             .font(.system(size: 11))
                             .foregroundStyle(Color.sweeplyTextSub)
                             .lineLimit(1)

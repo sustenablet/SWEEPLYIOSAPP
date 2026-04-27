@@ -125,7 +125,7 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
         let content = UNMutableNotificationContent()
         content.title = "Starting in 1 Hour"
         var body = "\(job.serviceType.rawValue) for \(job.clientName) at \(shortTime(job.date))"
-        if !job.address.isEmpty { body += " — \(job.address)" }
+        if !job.address.isEmpty { body += " — \(cityFromAddress(job.address))" }
         content.body = body
         content.sound = .default
         content.userInfo = ["jobId": job.id.uuidString]
@@ -187,7 +187,7 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
             let job = jobs[0]
             content.title = "Job Today"
             content.body = "\(job.serviceType.rawValue) for \(job.clientName) at \(shortTime(job.date))"
-            if !job.address.isEmpty { content.body += " — \(job.address)" }
+            if !job.address.isEmpty { content.body += " — \(cityFromAddress(job.address))" }
             content.userInfo = ["jobId": job.id.uuidString]
         case 2:
             content.title = "2 Jobs Today"
@@ -389,6 +389,12 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
     }
 
     // MARK: - Helpers
+
+    /// Extracts just the city from a full address ("123 Main St, Miami, FL 33101" → "Miami")
+    private func cityFromAddress(_ address: String) -> String {
+        let parts = address.components(separatedBy: ",").map { $0.trimmingCharacters(in: .whitespaces) }
+        return parts.count >= 2 ? parts[1] : (parts.first ?? address)
+    }
 
     private func dayIdentifier(for date: Date) -> String {
         let f = DateFormatter()
