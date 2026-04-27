@@ -327,6 +327,44 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
         }
     }
 
+    // MARK: - Member Pay Day Push Notification
+
+    /// Schedules a recurring local push for the cleaner on their own pay day.
+    /// Called from CleanerRootView when the member view loads.
+    func scheduleMemberPayDayNotification(membership: TeamMembership) {
+        let identifier = "member-payday-\(membership.id.uuidString)"
+        UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: [identifier])
+
+        guard membership.payRateEnabled && membership.payRateAmount > 0 else { return }
+
+        let content = UNMutableNotificationContent()
+        content.title = "It's Pay Day!"
+        content.body = "Your \(membership.payRateAmount.currency) from \(membership.businessName) should be processed today."
+        content.sound = .default
+
+        switch membership.payRateType {
+        case .perDay:
+            var comp = DateComponents()
+            comp.hour = 9; comp.minute = 0
+            let trigger = UNCalendarNotificationTrigger(dateMatching: comp, repeats: true)
+            UNUserNotificationCenter.current().add(
+                UNNotificationRequest(identifier: identifier, content: content, trigger: trigger),
+                withCompletionHandler: nil
+            )
+        case .perWeek:
+            guard let weekday = membership.payDayOfWeek else { return }
+            var comp = DateComponents()
+            comp.weekday = weekday; comp.hour = 9; comp.minute = 0
+            let trigger = UNCalendarNotificationTrigger(dateMatching: comp, repeats: true)
+            UNUserNotificationCenter.current().add(
+                UNNotificationRequest(identifier: identifier, content: content, trigger: trigger),
+                withCompletionHandler: nil
+            )
+        default:
+            break
+        }
+    }
+
     // MARK: - Invoice Reminders
 
     func scheduleInvoiceReminder(for invoice: Invoice) {

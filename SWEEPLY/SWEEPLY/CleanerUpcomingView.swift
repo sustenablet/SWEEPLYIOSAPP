@@ -252,6 +252,51 @@ struct CleanerUpcomingView: View {
         )
     }
 
+    // MARK: - Member Pay Day
+
+    private func isMemberPayDay(for date: Date) -> Bool {
+        guard membership.payRateEnabled && membership.payRateAmount > 0 else { return false }
+        switch membership.payRateType {
+        case .perDay:  return true
+        case .perWeek:
+            let weekday = Calendar.current.component(.weekday, from: date)
+            return membership.payDayOfWeek == weekday
+        default: return false
+        }
+    }
+
+    private var memberPaycheckCard: some View {
+        let isWeekly = membership.payRateType == .perWeek
+        return HStack(spacing: 14) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill(Color.sweeplySuccess.opacity(0.12))
+                    .frame(width: 40, height: 40)
+                Image(systemName: "dollarsign.circle.fill")
+                    .font(.system(size: 20))
+                    .foregroundStyle(Color.sweeplySuccess)
+            }
+            VStack(alignment: .leading, spacing: 2) {
+                Text(isWeekly ? "PAYDAY" : "DAILY PAY")
+                    .font(.system(size: 9, weight: .bold))
+                    .foregroundStyle(Color.sweeplySuccess)
+                    .tracking(0.8)
+                Text("From \(membership.businessName)")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(Color.sweeplyNavy)
+            }
+            Spacer()
+            Text(membership.payRateAmount.currency)
+                .font(.system(size: 15, weight: .bold, design: .monospaced))
+                .foregroundStyle(Color.sweeplyNavy)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .background(Color.sweeplySuccess.opacity(0.06))
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(Color.sweeplySuccess.opacity(0.25), lineWidth: 1))
+    }
+
     // MARK: - Stats Bar
 
     private func statsBar(jobs: [Job]) -> some View {
@@ -418,6 +463,14 @@ struct CleanerUpcomingView: View {
             statsBar(jobs: filteredJobsForDay)
 
             ScrollView {
+                // Pay day banner — shown at the top when it's the member's pay day
+                if isMemberPayDay(for: selectedDay) {
+                    memberPaycheckCard
+                        .padding(.horizontal, 20)
+                        .padding(.top, 14)
+                        .padding(.bottom, 4)
+                }
+
                 if jobsStore.isLoading && jobsStore.jobs.isEmpty {
                     SkeletonList(count: 4).padding(.top, 16).padding(.horizontal, 20)
                 } else if allJobsDoneForDay {
@@ -503,6 +556,13 @@ struct CleanerUpcomingView: View {
             statsBar(jobs: filteredJobsForDay)
 
             ScrollView {
+                if isMemberPayDay(for: selectedDay) {
+                    memberPaycheckCard
+                        .padding(.horizontal, 20)
+                        .padding(.top, 14)
+                        .padding(.bottom, 4)
+                }
+
                 if jobsStore.isLoading && jobsStore.jobs.isEmpty {
                     SkeletonList(count: 4).padding(.top, 16).padding(.horizontal, 20)
                 } else if allJobsDoneForDay {

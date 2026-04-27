@@ -15,6 +15,11 @@ struct TeamMembership: Identifiable {
     let ownerId: UUID     // owner's auth user ID (needed for owner notifications)
     let businessName: String
     let role: String
+    // Pay rate set by the owner — visible to the member
+    let payRateType: PayRateType
+    let payRateAmount: Double
+    let payRateEnabled: Bool
+    let payDayOfWeek: Int?    // Calendar weekday: 1=Sun, 2=Mon…7=Sat (perWeek only)
 }
 
 enum ViewMode: Equatable {
@@ -307,9 +312,17 @@ final class AppSession {
             let ownerId: UUID
             let status: String
             let role: String
+            let payRateType: String?
+            let payRateAmount: Double?
+            let payRateEnabled: Bool?
+            let payDayOfWeek: Int?
             enum CodingKeys: String, CodingKey {
                 case id, status, role
-                case ownerId = "owner_id"
+                case ownerId        = "owner_id"
+                case payRateType    = "pay_rate_type"
+                case payRateAmount  = "pay_rate_amount"
+                case payRateEnabled = "pay_rate_enabled"
+                case payDayOfWeek   = "pay_day_of_week"
             }
         }
 
@@ -326,7 +339,7 @@ final class AppSession {
             // Step 1: get all team_member rows for this user
             let rows: [MemberRow] = try await client
                 .from("team_members")
-                .select("id, owner_id, status, role")
+                .select("id, owner_id, status, role, pay_rate_type, pay_rate_amount, pay_rate_enabled, pay_day_of_week")
                 .eq("cleaner_user_id", value: userId.uuidString)
                 .execute()
                 .value
@@ -354,7 +367,18 @@ final class AppSession {
 
             activeMemberships = rows
                 .filter { $0.status == "active" }
-                .map { TeamMembership(id: $0.id, ownerId: $0.ownerId, businessName: profileMap[$0.ownerId] ?? "A Team", role: $0.role) }
+                .map { row in
+                    TeamMembership(
+                        id: row.id,
+                        ownerId: row.ownerId,
+                        businessName: profileMap[row.ownerId] ?? "A Team",
+                        role: row.role,
+                        payRateType: PayRateType(rawValue: row.payRateType ?? "per_day") ?? .perDay,
+                        payRateAmount: row.payRateAmount ?? 0,
+                        payRateEnabled: row.payRateEnabled ?? false,
+                        payDayOfWeek: row.payDayOfWeek
+                    )
+                }
 
             // Restore persisted view mode from previous session
             if case .memberOf(let m) = currentViewMode {
