@@ -25,11 +25,10 @@ struct RootView: View {
     @State private var isLocked = false
     @State private var minimumSplashElapsed = false
     @State private var showIntroOnboarding = false
-    @State private var showGetStarted = false
+    @State private var getStartedDismissed = false
 
     @AppStorage("hasSeenProductTutorial") private var hasSeenProductTutorial = false
     @AppStorage("hasSeenIntroOnboarding") private var hasSeenIntroOnboarding = false
-    @AppStorage("hasSeenGetStarted") private var hasSeenGetStarted = false
     // Observing appLanguage forces the entire view hierarchy to re-render on language change,
     // so all .translated() calls pick up the new language immediately.
     @AppStorage("appLanguage") private var appLanguage: String = "en"
@@ -63,10 +62,9 @@ struct RootView: View {
                     hasSeenIntroOnboarding = true
                     showIntroOnboarding = false
                 }
-            } else if showGetStarted || !hasSeenGetStarted {
+            } else if !session.isAuthenticated && !getStartedDismissed {
                 GetStartedView {
-                    hasSeenGetStarted = true
-                    showGetStarted = false
+                    getStartedDismissed = true
                 }
             } else if session.isAuthenticated {
                 ZStack {
@@ -336,6 +334,7 @@ struct RootView: View {
                 profileStore.clear()
                 teamStore.clear()
                 expenseStore.clear()
+                getStartedDismissed = false
             }
         }
         // Rebuild pay-day reminders whenever jobs or team members change
