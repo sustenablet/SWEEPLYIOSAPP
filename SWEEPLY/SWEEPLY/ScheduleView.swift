@@ -430,61 +430,108 @@ struct ScheduleView: View {
                     // Timeline grid
                     let hours = Array(timelineStartHour...timelineEndHour)
                     let totalHeight = CGFloat(hours.count) * timelineHourHeight
+                    let assignments = computeColumns(jobs)
+                    let maxCols = assignments.map(\.totalColumns).max() ?? 1
 
                     GeometryReader { geo in
-                        ZStack(alignment: .topLeading) {
-                            VStack(spacing: 0) {
-                                ForEach(hours, id: \.self) { hour in
-                                    HStack(alignment: .top, spacing: 0) {
-                                        Text(timelineHourLabel(hour))
-                                            .font(.system(size: 10, weight: .medium, design: .monospaced))
-                                            .foregroundStyle(Color.sweeplyTextSub.opacity(0.55))
-                                            .frame(width: 44, alignment: .trailing)
-                                            .padding(.top, -5)
-                                        Rectangle()
-                                            .fill(Color.sweeplyBorder.opacity(0.45))
-                                            .frame(height: 0.5)
-                                            .padding(.leading, 10)
-                                            .padding(.top, 1)
+                        // Full width a single job column occupies (same as original single-job layout)
+                        let stdColWidth = geo.size.width - 58
+                        // When overlapping: each column keeps stdColWidth; gap between columns = 8pt
+                        let colGap: CGFloat = 8
+                        let expandedWidth = 58 + CGFloat(maxCols) * stdColWidth + CGFloat(maxCols - 1) * colGap + 16
+
+                        if maxCols > 1 {
+                            // Overlapping jobs — expand horizontally, let user scroll left/right
+                            ScrollView(.horizontal, showsIndicators: false) {
+                                ZStack(alignment: .topLeading) {
+                                    VStack(spacing: 0) {
+                                        ForEach(hours, id: \.self) { hour in
+                                            HStack(alignment: .top, spacing: 0) {
+                                                Text(timelineHourLabel(hour))
+                                                    .font(.system(size: 10, weight: .medium, design: .monospaced))
+                                                    .foregroundStyle(Color.sweeplyTextSub.opacity(0.55))
+                                                    .frame(width: 44, alignment: .trailing)
+                                                    .padding(.top, -5)
+                                                Rectangle()
+                                                    .fill(Color.sweeplyBorder.opacity(0.45))
+                                                    .frame(height: 0.5)
+                                                    .padding(.leading, 10)
+                                                    .padding(.top, 1)
+                                            }
+                                            .frame(height: timelineHourHeight, alignment: .top)
+                                        }
                                     }
-                                    .frame(height: timelineHourHeight, alignment: .top)
+                                    if calendar.isDateInToday(selectedDay) {
+                                        let now = Date()
+                                        let nowHour = Calendar.current.component(.hour, from: now)
+                                        let nowMinute = Calendar.current.component(.minute, from: now)
+                                        let yNow = CGFloat(nowHour - timelineStartHour) * timelineHourHeight
+                                                 + CGFloat(nowMinute) / 60.0 * timelineHourHeight
+                                        HStack(spacing: 0) {
+                                            Circle().fill(Color.red).frame(width: 8, height: 8).padding(.leading, 40)
+                                            Rectangle().fill(Color.red.opacity(0.7)).frame(height: 1.5)
+                                        }
+                                        .offset(y: max(0, yNow) + timelineHourHeight * 0.5)
+                                    }
+                                    ForEach(assignments, id: \.job.id) { item in
+                                        let jobHour   = Calendar.current.component(.hour, from: item.job.date)
+                                        let jobMinute = Calendar.current.component(.minute, from: item.job.date)
+                                        let yOffset   = CGFloat(jobHour - timelineStartHour) * timelineHourHeight
+                                                     + CGFloat(jobMinute) / 60.0 * timelineHourHeight
+                                        let blockHeight = max(CGFloat(item.job.duration) * timelineHourHeight, 56)
+                                        let xOffset = 58 + CGFloat(item.column) * (stdColWidth + colGap)
+                                        TimelineJobBlock(job: item.job)
+                                            .frame(width: stdColWidth - 4, height: blockHeight)
+                                            .offset(x: xOffset + 2, y: max(0, yOffset))
+                                    }
+                                }
+                                .frame(width: expandedWidth, height: totalHeight)
+                            }
+                        } else {
+                            // No overlaps — standard full-width layout, identical to original
+                            ZStack(alignment: .topLeading) {
+                                VStack(spacing: 0) {
+                                    ForEach(hours, id: \.self) { hour in
+                                        HStack(alignment: .top, spacing: 0) {
+                                            Text(timelineHourLabel(hour))
+                                                .font(.system(size: 10, weight: .medium, design: .monospaced))
+                                                .foregroundStyle(Color.sweeplyTextSub.opacity(0.55))
+                                                .frame(width: 44, alignment: .trailing)
+                                                .padding(.top, -5)
+                                            Rectangle()
+                                                .fill(Color.sweeplyBorder.opacity(0.45))
+                                                .frame(height: 0.5)
+                                                .padding(.leading, 10)
+                                                .padding(.top, 1)
+                                        }
+                                        .frame(height: timelineHourHeight, alignment: .top)
+                                    }
+                                }
+                                if calendar.isDateInToday(selectedDay) {
+                                    let now = Date()
+                                    let nowHour = Calendar.current.component(.hour, from: now)
+                                    let nowMinute = Calendar.current.component(.minute, from: now)
+                                    let yNow = CGFloat(nowHour - timelineStartHour) * timelineHourHeight
+                                             + CGFloat(nowMinute) / 60.0 * timelineHourHeight
+                                    HStack(spacing: 0) {
+                                        Circle().fill(Color.red).frame(width: 8, height: 8).padding(.leading, 40)
+                                        Rectangle().fill(Color.red.opacity(0.7)).frame(height: 1.5)
+                                    }
+                                    .offset(y: max(0, yNow) + timelineHourHeight * 0.5)
+                                }
+                                ForEach(assignments, id: \.job.id) { item in
+                                    let jobHour   = Calendar.current.component(.hour, from: item.job.date)
+                                    let jobMinute = Calendar.current.component(.minute, from: item.job.date)
+                                    let yOffset   = CGFloat(jobHour - timelineStartHour) * timelineHourHeight
+                                                 + CGFloat(jobMinute) / 60.0 * timelineHourHeight
+                                    let blockHeight = max(CGFloat(item.job.duration) * timelineHourHeight, 56)
+                                    TimelineJobBlock(job: item.job)
+                                        .frame(width: stdColWidth, height: blockHeight)
+                                        .offset(x: 58, y: max(0, yOffset))
                                 }
                             }
-
-                            if calendar.isDateInToday(selectedDay) {
-                                let now = Date()
-                                let nowHour = Calendar.current.component(.hour, from: now)
-                                let nowMinute = Calendar.current.component(.minute, from: now)
-                                let yNow = CGFloat(nowHour - timelineStartHour) * timelineHourHeight
-                                         + CGFloat(nowMinute) / 60.0 * timelineHourHeight
-                                HStack(spacing: 0) {
-                                    Circle()
-                                        .fill(Color.red)
-                                        .frame(width: 8, height: 8)
-                                        .padding(.leading, 40)
-                                    Rectangle()
-                                        .fill(Color.red.opacity(0.7))
-                                        .frame(height: 1.5)
-                                }
-                                .offset(y: max(0, yNow) + timelineHourHeight * 0.5)
-                            }
-
-                            let assignments = computeColumns(jobs)
-                            ForEach(assignments, id: \.job.id) { item in
-                                let jobHour   = Calendar.current.component(.hour, from: item.job.date)
-                                let jobMinute = Calendar.current.component(.minute, from: item.job.date)
-                                let yOffset   = CGFloat(jobHour - timelineStartHour) * timelineHourHeight
-                                             + CGFloat(jobMinute) / 60.0 * timelineHourHeight
-                                let blockHeight    = max(CGFloat(item.job.duration) * timelineHourHeight, 56)
-                                let availableWidth = geo.size.width - 58
-                                let columnWidth    = availableWidth / CGFloat(item.totalColumns)
-                                let xOffset        = 58 + CGFloat(item.column) * columnWidth
-                                TimelineJobBlock(job: item.job)
-                                    .frame(width: columnWidth - 4, height: blockHeight)
-                                    .offset(x: xOffset + 2, y: max(0, yOffset))
-                            }
+                            .frame(height: totalHeight)
                         }
-                        .frame(height: totalHeight)
                     }
                     .frame(height: totalHeight)
                     .padding(.horizontal, 20)
