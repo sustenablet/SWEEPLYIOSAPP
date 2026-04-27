@@ -70,7 +70,7 @@ struct AuthView: View {
                 // White card (overlays image)
                 authCard
                     .frame(maxWidth: .infinity)
-                    .offset(y: appeared ? -keyboardHeight + 200 : 260 - keyboardHeight)
+                    .offset(y: appeared ? -keyboardHeight + 240 : 300 - keyboardHeight)
                     .opacity(appeared ? 1 : 0)
             }
             .ignoresSafeArea(edges: .bottom)
@@ -235,7 +235,6 @@ struct AuthView: View {
         }
         .background(
             Color.white
-                .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
                 .shadow(color: .black.opacity(0.08), radius: 20, x: 0, y: -6)
         )
     }
