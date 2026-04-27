@@ -41,15 +41,15 @@ struct AuthView: View {
                     .frame(height: 180)
                     .frame(maxWidth: .infinity)
 
-                // Image with tint and text (no clipping - show full image)
+                // Image with tint and text
                 VStack(spacing: 0) {
                     ZStack(alignment: .top) {
                         Image("SignupImage")
                             .resizable()
                             .scaledToFill()
                             .frame(maxWidth: .infinity)
-                            .frame(height: 220)
-                            .offset(y: -20)
+                            .frame(height: 200)
+                            .offset(y: 40)
                             .overlay(Color.sweeplyWordmarkBlue.opacity(0.35))
 
                         Text(isSignUp ? "Create your account and simplify your workday" : "Welcome back! Sign in to continue")
@@ -57,17 +57,16 @@ struct AuthView: View {
                             .foregroundStyle(.white)
                             .multilineTextAlignment(.center)
                             .padding(.horizontal, 40)
-                            .padding(.top, 40)
                     }
-                    .frame(height: 180)
+                    .frame(height: 120)
 
                     Spacer()
                 }
 
-                // White card (below the image)
+                // White card (overlays image)
                 authCard
                     .frame(maxWidth: .infinity)
-                    .offset(y: appeared ? -keyboardHeight + 300 : 360 - keyboardHeight)
+                    .offset(y: appeared ? -keyboardHeight + 160 : 220 - keyboardHeight)
                     .opacity(appeared ? 1 : 0)
             }
             .ignoresSafeArea(edges: .bottom)
