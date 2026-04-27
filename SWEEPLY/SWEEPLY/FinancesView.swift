@@ -242,7 +242,7 @@ struct FinancesView: View {
                 teamPayrollSection
             }
             .padding(.horizontal, 20)
-            .padding(.bottom, 36)
+            .padding(.bottom, 80)
             .opacity(appeared ? 1 : 0)
             .offset(y: appeared ? 0 : 6)
             .onAppear {
@@ -1447,6 +1447,8 @@ struct InvoicesListView: View {
     @State private var selectedInvoiceId: UUID? = nil
     @State private var showInvoiceDetail = false
     @State private var markPaidInvoice: Invoice? = nil
+    @State private var selectedClientId: UUID? = nil
+    @State private var sortOrder: InvoiceSortOrder = .newestFirst
 
     init(preselectedFilter: String = "all") {
         _selectedFilter = State(initialValue: InvoiceFilter(rawValue: preselectedFilter) ?? .all)
@@ -1459,23 +1461,63 @@ struct InvoicesListView: View {
         case paid = "Paid"
     }
 
-    private var filtered: [Invoice] {
-        let base: [Invoice]
-        switch selectedFilter {
-        case .all:     base = invoicesStore.invoices
-        case .unpaid:  base = invoicesStore.invoices.filter { $0.status == .unpaid }
-        case .overdue: base = invoicesStore.invoices.filter { $0.status == .overdue }
-        case .paid:    base = invoicesStore.invoices.filter { $0.status == .paid }
+    private enum InvoiceSortOrder: String, CaseIterable {
+        case newestFirst = "Newest First"
+        case oldestFirst = "Oldest First"
+        case highestAmount = "Highest Amount"
+        case lowestAmount = "Lowest Amount"
+
+        var icon: String {
+            switch self {
+            case .newestFirst:   return "arrow.down.circle"
+            case .oldestFirst:   return "arrow.up.circle"
+            case .highestAmount: return "dollarsign.arrow.up"
+            case .lowestAmount:  return "dollarsign.arrow.down"
+            }
         }
-        if searchText.isEmpty { return base.sorted { a, b in statusRank(a) < statusRank(b) } }
-        return base.filter {
-            $0.clientName.localizedCaseInsensitiveContains(searchText) ||
-            $0.invoiceNumber.localizedCaseInsensitiveContains(searchText)
-        }.sorted { a, b in statusRank(a) < statusRank(b) }
     }
 
-    private func statusRank(_ i: Invoice) -> Int {
-        switch i.status { case .overdue: return 0; case .unpaid: return 1; case .paid: return 2 }
+    private var selectedClientName: String {
+        if let id = selectedClientId {
+            return clientsStore.clients.first { $0.id == id }?.name ?? "All Clients"
+        }
+        return "All Clients"
+    }
+
+    private var hasActiveFilters: Bool {
+        selectedClientId != nil || sortOrder != .newestFirst
+    }
+
+    private var filtered: [Invoice] {
+        // Status filter
+        var result: [Invoice]
+        switch selectedFilter {
+        case .all:     result = invoicesStore.invoices
+        case .unpaid:  result = invoicesStore.invoices.filter { $0.status == .unpaid }
+        case .overdue: result = invoicesStore.invoices.filter { $0.status == .overdue }
+        case .paid:    result = invoicesStore.invoices.filter { $0.status == .paid }
+        }
+
+        // Client filter
+        if let clientId = selectedClientId {
+            result = result.filter { $0.clientId == clientId }
+        }
+
+        // Search
+        if !searchText.isEmpty {
+            result = result.filter {
+                $0.clientName.localizedCaseInsensitiveContains(searchText) ||
+                $0.invoiceNumber.localizedCaseInsensitiveContains(searchText)
+            }
+        }
+
+        // Sort
+        switch sortOrder {
+        case .newestFirst:   return result.sorted { $0.createdAt > $1.createdAt }
+        case .oldestFirst:   return result.sorted { $0.createdAt < $1.createdAt }
+        case .highestAmount: return result.sorted { $0.total > $1.total }
+        case .lowestAmount:  return result.sorted { $0.total < $1.total }
+        }
     }
 
     private func count(for filter: InvoiceFilter) -> Int {
@@ -1494,7 +1536,7 @@ struct InvoicesListView: View {
                     // Summary strip
                     summaryStrip
 
-                    // Filter pills
+                    // Status filter pills
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 8) {
                             ForEach(InvoiceFilter.allCases, id: \.self) { filter in
@@ -1504,6 +1546,95 @@ struct InvoicesListView: View {
                         .padding(.horizontal, 20)
                     }
                     .padding(.horizontal, -20)
+
+                    // Sort + Client filter bar
+                    HStack(spacing: 8) {
+                        // Sort order
+                        Menu {
+                            ForEach(InvoiceSortOrder.allCases, id: \.self) { order in
+                                Button {
+                                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                    withAnimation { sortOrder = order }
+                                } label: {
+                                    HStack {
+                                        Text(order.rawValue)
+                                        if sortOrder == order {
+                                            Image(systemName: "checkmark")
+                                        }
+                                    }
+                                }
+                            }
+                        } label: {
+                            HStack(spacing: 5) {
+                                Image(systemName: sortOrder.icon)
+                                    .font(.system(size: 12, weight: .semibold))
+                                Text(sortOrder.rawValue)
+                                    .font(.system(size: 13, weight: .medium))
+                            }
+                            .foregroundStyle(sortOrder != .newestFirst ? Color.sweeplyNavy : Color.sweeplyTextSub)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 8)
+                            .background(sortOrder != .newestFirst ? Color.sweeplyNavy.opacity(0.08) : Color.sweeplySurface)
+                            .clipShape(Capsule())
+                            .overlay(Capsule().stroke(sortOrder != .newestFirst ? Color.sweeplyNavy.opacity(0.3) : Color.sweeplyBorder, lineWidth: 1))
+                        }
+                        .buttonStyle(.plain)
+
+                        // Client filter
+                        Menu {
+                            Button {
+                                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                withAnimation { selectedClientId = nil }
+                            } label: {
+                                HStack {
+                                    Text("All Clients")
+                                    if selectedClientId == nil { Image(systemName: "checkmark") }
+                                }
+                            }
+                            Divider()
+                            ForEach(clientsStore.clients.sorted { $0.name < $1.name }) { client in
+                                Button {
+                                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                    withAnimation { selectedClientId = client.id }
+                                } label: {
+                                    HStack {
+                                        Text(client.name)
+                                        if selectedClientId == client.id { Image(systemName: "checkmark") }
+                                    }
+                                }
+                            }
+                        } label: {
+                            HStack(spacing: 5) {
+                                Image(systemName: "person")
+                                    .font(.system(size: 12, weight: .semibold))
+                                Text(selectedClientName)
+                                    .font(.system(size: 13, weight: .medium))
+                                    .lineLimit(1)
+                            }
+                            .foregroundStyle(selectedClientId != nil ? Color.sweeplyNavy : Color.sweeplyTextSub)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 8)
+                            .background(selectedClientId != nil ? Color.sweeplyNavy.opacity(0.08) : Color.sweeplySurface)
+                            .clipShape(Capsule())
+                            .overlay(Capsule().stroke(selectedClientId != nil ? Color.sweeplyNavy.opacity(0.3) : Color.sweeplyBorder, lineWidth: 1))
+                        }
+                        .buttonStyle(.plain)
+
+                        Spacer()
+
+                        // Clear filters
+                        if hasActiveFilters {
+                            Button {
+                                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                withAnimation { selectedClientId = nil; sortOrder = .newestFirst }
+                            } label: {
+                                Text("Clear")
+                                    .font(.system(size: 12, weight: .medium))
+                                    .foregroundStyle(Color.sweeplyTextSub)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
 
                     // List
                     if filtered.isEmpty {
