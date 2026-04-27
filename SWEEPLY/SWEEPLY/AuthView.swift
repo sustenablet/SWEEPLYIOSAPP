@@ -13,6 +13,7 @@ struct AuthView: View {
     @State private var resetSent = false
     @State private var resetError: String? = nil
     @State private var appeared = false
+    @State private var keyboardHeight: CGFloat = 0
 
     private var canSubmit: Bool {
         isValidEmail(email) && password.count >= 6 && !isSubmitting
@@ -30,19 +31,54 @@ struct AuthView: View {
 
     var body: some View {
         GeometryReader { geo in
-            ZStack(alignment: .bottom) {
-                // Hero background
-                heroSection(geo: geo)
+            ZStack(alignment: .top) {
+                // White background that fills entire screen
+                Color.white
+                    .ignoresSafeArea()
 
-                // White card
+                // Image above the white card with tint and text
+                VStack(spacing: 0) {
+                    ZStack {
+                        Image("SignupImage")
+                            .resizable()
+                            .scaledToFill()
+.frame(height: 180)
+                    .frame(maxWidth: .infinity)
+                    .offset(y: 80)
+                            .clipped()
+                            .overlay(Color.sweeplyWordmarkBlue.opacity(0.35))
+
+                        Text(isSignUp ? "Create your account and simplify your workday" : "Welcome back! Sign in to continue")
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundStyle(.white)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 40)
+                    }
+                    .frame(height: 180)
+
+                    Spacer()
+                }
+
+                // White card (below the image)
                 authCard
                     .frame(maxWidth: .infinity)
-                    .offset(y: appeared ? 0 : 60)
+                    .offset(y: appeared ? -keyboardHeight + 180 : 240 - keyboardHeight)
                     .opacity(appeared ? 1 : 0)
             }
             .ignoresSafeArea(edges: .bottom)
         }
         .ignoresSafeArea(edges: .bottom)
+        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { notification in
+            guard let keyboardFrame = notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect else { return }
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                keyboardHeight = keyboardFrame.height * 0.5
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                keyboardHeight = 0
+            }
+        }
         .animation(.easeInOut(duration: 0.2), value: isSignUp)
         .animation(.easeInOut(duration: 0.15), value: session.lastAuthError)
         .onAppear {
@@ -183,51 +219,15 @@ struct AuthView: View {
                     .transition(.opacity.combined(with: .move(edge: .top)))
             }
 
-            // CTA button
+// CTA button
             ctaButton
                 .padding(.horizontal, 28)
                 .padding(.top, 20)
-
-            // Divider
-            HStack(spacing: 12) {
-                Rectangle().fill(Color.sweeplyBorder).frame(height: 1)
-                Text("Or Continue With")
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(Color.sweeplyTextSub)
-                    .fixedSize()
-                Rectangle().fill(Color.sweeplyBorder).frame(height: 1)
-            }
-            .padding(.horizontal, 28)
-            .padding(.top, 20)
-
-            // Social buttons
-            HStack(spacing: 14) {
-                socialButton(
-                    icon: "apple.logo",
-                    label: "Apple",
-                    background: Color.sweeplyNavy,
-                    foreground: .white
-                ) {
-                    // Apple Sign In — coming soon
-                }
-
-                socialButton(
-                    icon: "g.circle.fill",
-                    label: "Google",
-                    background: Color(white: 0.96),
-                    foreground: Color.sweeplyNavy
-                ) {
-                    // Google Sign In — coming soon
-                }
-            }
-            .padding(.horizontal, 28)
-            .padding(.top, 14)
-            .padding(.bottom, 40)
+                .padding(.bottom, 40)
         }
         .background(
             Color.white
                 .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
-                .ignoresSafeArea(edges: .bottom)
                 .shadow(color: .black.opacity(0.08), radius: 20, x: 0, y: -6)
         )
     }
@@ -400,30 +400,6 @@ struct AuthView: View {
         }
         .disabled(!canSubmit)
         .animation(.easeInOut(duration: 0.15), value: canSubmit)
-    }
-
-    // MARK: - Social Button
-
-    private func socialButton(
-        icon: String,
-        label: String,
-        background: Color,
-        foreground: Color,
-        action: @escaping () -> Void
-    ) -> some View {
-        Button(action: action) {
-            HStack(spacing: 8) {
-                Image(systemName: icon)
-                    .font(.system(size: 16, weight: .medium))
-                Text(label)
-                    .font(.system(size: 15, weight: .semibold))
-            }
-            .foregroundStyle(foreground)
-            .frame(maxWidth: .infinity)
-            .frame(height: 50)
-            .background(background)
-            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-        }
     }
 
     // MARK: - Submit
