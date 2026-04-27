@@ -431,54 +431,60 @@ struct ScheduleView: View {
                     let hours = Array(timelineStartHour...timelineEndHour)
                     let totalHeight = CGFloat(hours.count) * timelineHourHeight
 
-                    ZStack(alignment: .topLeading) {
-                        VStack(spacing: 0) {
-                            ForEach(hours, id: \.self) { hour in
-                                HStack(alignment: .top, spacing: 0) {
-                                    Text(timelineHourLabel(hour))
-                                        .font(.system(size: 10, weight: .medium, design: .monospaced))
-                                        .foregroundStyle(Color.sweeplyTextSub.opacity(0.55))
-                                        .frame(width: 44, alignment: .trailing)
-                                        .padding(.top, -5)
-                                    Rectangle()
-                                        .fill(Color.sweeplyBorder.opacity(0.45))
-                                        .frame(height: 0.5)
-                                        .padding(.leading, 10)
-                                        .padding(.top, 1)
+                    GeometryReader { geo in
+                        ZStack(alignment: .topLeading) {
+                            VStack(spacing: 0) {
+                                ForEach(hours, id: \.self) { hour in
+                                    HStack(alignment: .top, spacing: 0) {
+                                        Text(timelineHourLabel(hour))
+                                            .font(.system(size: 10, weight: .medium, design: .monospaced))
+                                            .foregroundStyle(Color.sweeplyTextSub.opacity(0.55))
+                                            .frame(width: 44, alignment: .trailing)
+                                            .padding(.top, -5)
+                                        Rectangle()
+                                            .fill(Color.sweeplyBorder.opacity(0.45))
+                                            .frame(height: 0.5)
+                                            .padding(.leading, 10)
+                                            .padding(.top, 1)
+                                    }
+                                    .frame(height: timelineHourHeight, alignment: .top)
                                 }
-                                .frame(height: timelineHourHeight, alignment: .top)
+                            }
+
+                            if calendar.isDateInToday(selectedDay) {
+                                let now = Date()
+                                let nowHour = Calendar.current.component(.hour, from: now)
+                                let nowMinute = Calendar.current.component(.minute, from: now)
+                                let yNow = CGFloat(nowHour - timelineStartHour) * timelineHourHeight
+                                         + CGFloat(nowMinute) / 60.0 * timelineHourHeight
+                                HStack(spacing: 0) {
+                                    Circle()
+                                        .fill(Color.red)
+                                        .frame(width: 8, height: 8)
+                                        .padding(.leading, 40)
+                                    Rectangle()
+                                        .fill(Color.red.opacity(0.7))
+                                        .frame(height: 1.5)
+                                }
+                                .offset(y: max(0, yNow) + timelineHourHeight * 0.5)
+                            }
+
+                            let assignments = computeColumns(jobs)
+                            ForEach(assignments, id: \.job.id) { item in
+                                let jobHour   = Calendar.current.component(.hour, from: item.job.date)
+                                let jobMinute = Calendar.current.component(.minute, from: item.job.date)
+                                let yOffset   = CGFloat(jobHour - timelineStartHour) * timelineHourHeight
+                                             + CGFloat(jobMinute) / 60.0 * timelineHourHeight
+                                let blockHeight    = max(CGFloat(item.job.duration) * timelineHourHeight, 56)
+                                let availableWidth = geo.size.width - 58
+                                let columnWidth    = availableWidth / CGFloat(item.totalColumns)
+                                let xOffset        = 58 + CGFloat(item.column) * columnWidth
+                                TimelineJobBlock(job: item.job)
+                                    .frame(width: columnWidth - 4, height: blockHeight)
+                                    .offset(x: xOffset + 2, y: max(0, yOffset))
                             }
                         }
-
-                        if calendar.isDateInToday(selectedDay) {
-                            let now = Date()
-                            let nowHour = Calendar.current.component(.hour, from: now)
-                            let nowMinute = Calendar.current.component(.minute, from: now)
-                            let yNow = CGFloat(nowHour - timelineStartHour) * timelineHourHeight
-                                     + CGFloat(nowMinute) / 60.0 * timelineHourHeight
-                            HStack(spacing: 0) {
-                                Circle()
-                                    .fill(Color.red)
-                                    .frame(width: 8, height: 8)
-                                    .padding(.leading, 40)
-                                Rectangle()
-                                    .fill(Color.red.opacity(0.7))
-                                    .frame(height: 1.5)
-                            }
-                            .offset(y: max(0, yNow) + timelineHourHeight * 0.5)
-                        }
-
-                        ForEach(jobs) { job in
-                            let jobHour = Calendar.current.component(.hour, from: job.date)
-                            let jobMinute = Calendar.current.component(.minute, from: job.date)
-                            let yOffset = CGFloat(jobHour - timelineStartHour) * timelineHourHeight
-                                        + CGFloat(jobMinute) / 60.0 * timelineHourHeight
-                            let blockHeight = max(CGFloat(job.duration) * timelineHourHeight, 56)
-                            TimelineJobBlock(job: job)
-                                .frame(height: blockHeight)
-                                .padding(.leading, 58)
-                                .offset(y: max(0, yOffset))
-                        }
+                        .frame(height: totalHeight)
                     }
                     .frame(height: totalHeight)
                     .padding(.horizontal, 20)
@@ -914,6 +920,38 @@ private extension ScheduleView {
             RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .stroke(Color.sweeplySuccess.opacity(0.25), lineWidth: 1)
         )
+    }
+
+    private func computeColumns(_ jobs: [Job]) -> [(job: Job, column: Int, totalColumns: Int)] {
+        let sorted = jobs.sorted { $0.date < $1.date }
+        var result: [(job: Job, column: Int, totalColumns: Int)] = []
+        var groupStart = 0
+
+        while groupStart < sorted.count {
+            var groupMaxEnd = sorted[groupStart].date.addingTimeInterval(sorted[groupStart].duration * 3600)
+            var groupEnd = groupStart + 1
+            while groupEnd < sorted.count {
+                let job = sorted[groupEnd]
+                if job.date < groupMaxEnd {
+                    let end = job.date.addingTimeInterval(job.duration * 3600)
+                    if end > groupMaxEnd { groupMaxEnd = end }
+                    groupEnd += 1
+                } else { break }
+            }
+            let group = Array(sorted[groupStart..<groupEnd])
+            var columnEndTimes: [Date] = []
+            var assignments: [(job: Job, column: Int)] = []
+            for job in group {
+                let col = columnEndTimes.firstIndex(where: { $0 <= job.date }) ?? columnEndTimes.count
+                if col == columnEndTimes.count { columnEndTimes.append(Date.distantPast) }
+                columnEndTimes[col] = job.date.addingTimeInterval(job.duration * 3600)
+                assignments.append((job: job, column: col))
+            }
+            let total = columnEndTimes.count
+            result.append(contentsOf: assignments.map { (job: $0.job, column: $0.column, totalColumns: total) })
+            groupStart = groupEnd
+        }
+        return result
     }
 
 }
