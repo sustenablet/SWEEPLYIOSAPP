@@ -32,25 +32,18 @@ struct AuthView: View {
     var body: some View {
         GeometryReader { geo in
             ZStack(alignment: .top) {
-                // Color above the image
+                // Background
                 Color(red: 0.827, green: 0.867, blue: 0.992)
-                    .frame(height: 120)
-                    .frame(maxWidth: .infinity)
-
-                // White background below
-                Color.white
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .ignoresSafeArea()
 
-                // Image above the white card with tint and text
+                // Image with tint and text
                 VStack(spacing: 0) {
                     ZStack {
                         Image("SignupImage")
                             .resizable()
                             .scaledToFill()
-.frame(height: 180)
-                    .frame(maxWidth: .infinity)
-                    .offset(y: 80)
+                            .frame(height: 160)
+                            .frame(maxWidth: .infinity)
                             .clipped()
                             .overlay(Color.sweeplyWordmarkBlue.opacity(0.35))
 
@@ -60,7 +53,7 @@ struct AuthView: View {
                             .multilineTextAlignment(.center)
                             .padding(.horizontal, 40)
                     }
-                    .frame(height: 180)
+                    .frame(height: 160)
 
                     Spacer()
                 }
@@ -68,7 +61,7 @@ struct AuthView: View {
                 // White card (below the image)
                 authCard
                     .frame(maxWidth: .infinity)
-                    .offset(y: appeared ? -keyboardHeight + 240 : 300 - keyboardHeight)
+                    .offset(y: appeared ? -keyboardHeight + 340 : 400 - keyboardHeight)
                     .opacity(appeared ? 1 : 0)
             }
             .ignoresSafeArea(edges: .bottom)
