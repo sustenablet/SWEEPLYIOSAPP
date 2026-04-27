@@ -381,7 +381,7 @@ struct ScheduleView: View {
 
     // MARK: - Day View (Timeline)
 
-    private let timelineHourHeight: CGFloat = 68
+    private let timelineHourHeight: CGFloat = 56
     private let timelineStartHour: Int = 6
     private let timelineEndHour: Int = 21
 
@@ -433,12 +433,11 @@ struct ScheduleView: View {
                     let maxCols = assignments.map(\.totalColumns).max() ?? 1
 
                     GeometryReader { geo in
-                        // colWidth = the natural full width of a single job column
-                        let colWidth = geo.size.width - 54
-                        let colGap: CGFloat = 8
-                        // When overlapping: each column keeps full colWidth; content expands
+                        let labelW: CGFloat = 38         // width of the pinned hour labels column
+                        let colWidth = geo.size.width - labelW
+                        let colGap: CGFloat = 6
                         let scrollW = maxCols > 1
-                            ? CGFloat(maxCols) * colWidth + CGFloat(maxCols - 1) * colGap + 16
+                            ? CGFloat(maxCols) * colWidth + CGFloat(maxCols - 1) * colGap
                             : colWidth
 
                         HStack(alignment: .top, spacing: 0) {
@@ -449,12 +448,12 @@ struct ScheduleView: View {
                                     Text(timelineHourLabel(hour))
                                         .font(.system(size: 10, weight: .medium, design: .monospaced))
                                         .foregroundStyle(Color.sweeplyTextSub.opacity(0.55))
-                                        .frame(width: 44, alignment: .trailing)
+                                        .frame(width: labelW, alignment: .trailing)
                                         .padding(.top, -5)
                                         .frame(height: timelineHourHeight, alignment: .top)
                                 }
                             }
-                            .frame(width: 54)
+                            .frame(width: labelW)
 
                             // ── Scrollable job area ────────────────────────────
                             ScrollView(.horizontal, showsIndicators: false) {
@@ -491,7 +490,7 @@ struct ScheduleView: View {
                                         let jobMinute = Calendar.current.component(.minute, from: item.job.date)
                                         let yOffset     = CGFloat(jobHour - timelineStartHour) * timelineHourHeight
                                                         + CGFloat(jobMinute) / 60.0 * timelineHourHeight
-                                        let blockHeight = max(CGFloat(item.job.duration) * timelineHourHeight, 56)
+                                        let blockHeight = max(CGFloat(item.job.duration) * timelineHourHeight, 44)
                                         let xOffset     = CGFloat(item.column) * (colWidth + colGap)
                                         TimelineJobBlock(job: item.job)
                                             .frame(width: colWidth - 4, height: blockHeight)
@@ -504,7 +503,8 @@ struct ScheduleView: View {
                         }
                     }
                     .frame(height: totalHeight)
-                    .padding(.horizontal, 20)
+                    .padding(.leading, 8)
+                    .padding(.trailing, 16)
                     .padding(.vertical, 16)
                     .padding(.bottom, 100)
                 }
