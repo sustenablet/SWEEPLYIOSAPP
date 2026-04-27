@@ -13,36 +13,43 @@ struct AuthView: View {
     @State private var resetSent = false
     @State private var resetError: String? = nil
     @State private var appeared = false
-    @State private var confirmationCountdown: Int = 600
 
     private var canSubmit: Bool {
         isValidEmail(email) && password.count >= 6 && !isSubmitting
     }
-    
+
     private func isValidEmail(_ email: String) -> Bool {
         let regex = #"^[A-Z0-9a-z._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$"#
         return email.range(of: regex, options: .regularExpression) != nil
     }
-    
+
     private var emailError: String? {
         guard !email.isEmpty else { return nil }
         return isValidEmail(email) ? nil : "Enter a valid email address"
     }
 
     var body: some View {
-        ZStack {
-            Color.sweeplySurface.ignoresSafeArea()
-            VStack(spacing: 0) {
-                Spacer()
-                brandMark
-                Spacer()
+        GeometryReader { geo in
+            ZStack(alignment: .bottom) {
+                // Hero background
+                heroSection(geo: geo)
+
+                // White card
+                authCard
+                    .frame(maxWidth: .infinity)
+                    .offset(y: appeared ? 0 : 60)
+                    .opacity(appeared ? 1 : 0)
             }
+            .ignoresSafeArea(edges: .bottom)
         }
-        .safeAreaInset(edge: .bottom, spacing: 0) {
-            authCard
-        }
+        .ignoresSafeArea(edges: .bottom)
         .animation(.easeInOut(duration: 0.2), value: isSignUp)
         .animation(.easeInOut(duration: 0.15), value: session.lastAuthError)
+        .onAppear {
+            withAnimation(.spring(response: 0.5, dampingFraction: 0.82).delay(0.08)) {
+                appeared = true
+            }
+        }
         .overlay {
             if session.isWaitingForEmailConfirmation {
                 WaitingForConfirmationView(
@@ -56,112 +63,6 @@ struct AuthView: View {
             }
         }
         .animation(.easeInOut(duration: 0.3), value: session.isWaitingForEmailConfirmation)
-    }
-
-    // MARK: - Decorative Blobs
-
-    private var accentBlobs: some View {
-        GeometryReader { geo in
-            ZStack {
-                Circle()
-                    .fill(Color.sweeplyWordmarkBlue.opacity(0.09))
-                    .frame(width: 340)
-                    .offset(x: geo.size.width * 0.5, y: -geo.size.height * 0.12)
-                    .blur(radius: 2)
-
-                Circle()
-                    .fill(Color.sweeplyWordmarkBlue.opacity(0.05))
-                    .frame(width: 180)
-                    .offset(x: -geo.size.width * 0.25, y: geo.size.height * 0.08)
-                    .blur(radius: 1)
-            }
-        }
-        .ignoresSafeArea()
-        .allowsHitTesting(false)
-    }
-
-    // MARK: - Brand Mark
-
-    private var brandMark: some View {
-        VStack(spacing: 18) {
-            Image("SweeplyLogo")
-                .resizable()
-                .scaledToFit()
-                .frame(width: 72, height: 72)
-                .opacity(0.95)
-
-            VStack(spacing: 7) {
-                HStack(spacing: 0) {
-                    Text("Sweep".translated())
-                        .foregroundStyle(Color.sweeplyNavy)
-                    Text("ly".translated())
-                        .foregroundStyle(Color.sweeplyWordmarkBlue)
-                }
-                .font(.system(size: 44, weight: .bold, design: .rounded))
-                .tracking(-1.2)
-
-                Text("Run your cleaning business.".translated())
-                    .font(.system(size: 15, weight: .regular))
-                    .foregroundStyle(Color.sweeplyTextSub)
-                    .tracking(0.1)
-            }
-        }
-        .opacity(appeared ? 1 : 0)
-        .offset(y: appeared ? 0 : 14)
-        .onAppear {
-            withAnimation(.easeOut(duration: 0.42).delay(0.08)) {
-                appeared = true
-            }
-        }
-    }
-
-    // MARK: - Auth Card
-
-    private var authCard: some View {
-        VStack(spacing: 0) {
-            // Pull handle
-            Capsule()
-                .fill(Color.sweeplyBorder)
-                .frame(width: 36, height: 4)
-                .padding(.top, 14)
-                .padding(.bottom, 22)
-
-            // Animated tab switcher
-            tabSwitcher
-                .padding(.horizontal, 24)
-                .padding(.bottom, 22)
-
-            // Form fields
-            VStack(spacing: 14) {
-                emailField
-                passwordField
-            }
-            .padding(.horizontal, 24)
-
-            // Error banner
-            if let err = session.lastAuthError, !err.isEmpty {
-                errorBanner(err)
-                    .padding(.horizontal, 24)
-                    .padding(.top, 14)
-                    .transition(.opacity.combined(with: .move(edge: .top)))
-            }
-
-            // Primary CTA
-            ctaButton
-                .padding(.horizontal, 24)
-                .padding(.top, 20)
-
-            // Footer links
-            footerLinks
-                .padding(.top, 6)
-                .padding(.bottom, 40)
-        }
-        .background(
-            Color.sweeplySurface
-                .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
-                .ignoresSafeArea(edges: .bottom)
-                .shadow(color: .black.opacity(0.06), radius: 16, x: 0, y: -4)
-        )
         .sheet(isPresented: $showForgotPassword) {
             ForgotPasswordSheet(
                 resetEmail: $resetEmail,
@@ -171,81 +72,193 @@ struct AuthView: View {
         }
     }
 
-    // MARK: - Tab Switcher
+    // MARK: - Hero
 
-    private var tabSwitcher: some View {
-        ZStack {
-            // Track
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .fill(Color.sweeplyBackground)
-                .frame(height: 44)
+    private func heroSection(geo: GeometryProxy) -> some View {
+        VStack(spacing: 0) {
+            ZStack(alignment: .bottomLeading) {
+                Color.sweeplyWordmarkBlue
+                    .frame(height: geo.size.height * 0.46)
 
-            // Sliding pill — splits space evenly with a Spacer
-            HStack(spacing: 0) {
-                if isSignUp { Spacer() }
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .fill(Color.sweeplySurface)
-                    .shadow(color: .black.opacity(0.08), radius: 3, x: 0, y: 1.5)
-                    .frame(maxWidth: .infinity)
-                    .padding(4)
-                if !isSignUp { Spacer() }
-            }
-            .animation(.spring(response: 0.3, dampingFraction: 0.78), value: isSignUp)
+                // Decorative circles
+                Circle()
+                    .fill(Color.white.opacity(0.06))
+                    .frame(width: 220)
+                    .offset(x: geo.size.width * 0.6, y: -40)
 
-            // Labels on top
-            HStack(spacing: 0) {
-                tabPill("Sign In".translated(), isActive: !isSignUp) {
-                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                    withAnimation { isSignUp = false; session.lastAuthError = nil }
+                Circle()
+                    .fill(Color.white.opacity(0.04))
+                    .frame(width: 140)
+                    .offset(x: geo.size.width * 0.75, y: 20)
+
+                // Headline
+                VStack(alignment: .leading, spacing: 10) {
+                    Image("SweeplyLogo")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 44, height: 44)
+                        .opacity(0.9)
+
+                    Text(isSignUp
+                         ? "Create your\nSweeply account."
+                         : "Sign in to manage\nyour business.")
+                        .font(.system(size: 28, weight: .bold, design: .rounded))
+                        .foregroundStyle(.white)
+                        .tracking(-0.5)
+                        .lineSpacing(2)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .animation(.easeInOut(duration: 0.2), value: isSignUp)
                 }
-                tabPill("Create Account".translated(), isActive: isSignUp) {
-                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                    withAnimation { isSignUp = true; session.lastAuthError = nil }
-                }
+                .padding(.horizontal, 28)
+                .padding(.bottom, 36)
             }
+            Spacer()
         }
-        .frame(height: 44)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .ignoresSafeArea(edges: .top)
     }
 
-    private func tabPill(_ title: String, isActive: Bool, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Text(title)
-                .font(.system(size: 14, weight: isActive ? .semibold : .medium))
-                .foregroundStyle(isActive ? Color.sweeplyNavy : Color.sweeplyTextSub)
-                .animation(.easeInOut(duration: 0.15), value: isActive)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+    // MARK: - Auth Card
+
+    private var authCard: some View {
+        VStack(spacing: 0) {
+            // Title row
+            VStack(alignment: .leading, spacing: 4) {
+                Text(isSignUp ? "Create Account" : "Login")
+                    .font(.system(size: 26, weight: .bold, design: .rounded))
+                    .foregroundStyle(Color.sweeplyNavy)
+                    .tracking(-0.4)
+
+                HStack(spacing: 4) {
+                    Text(isSignUp ? "Already have an account?" : "Don't have an account?")
+                        .font(.system(size: 13))
+                        .foregroundStyle(Color.sweeplyTextSub)
+                    Button {
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            isSignUp.toggle()
+                            session.lastAuthError = nil
+                        }
+                    } label: {
+                        Text(isSignUp ? "Sign In" : "Sign Up")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(Color.sweeplyWordmarkBlue)
+                    }
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 28)
+            .padding(.top, 28)
+            .padding(.bottom, 22)
+
+            // Fields
+            VStack(spacing: 14) {
+                emailField
+                passwordField
+            }
+            .padding(.horizontal, 28)
+
+            // Forgot / error row
+            if !isSignUp {
+                HStack {
+                    Spacer()
+                    Button("Forgot Password?".translated()) {
+                        resetEmail = email
+                        resetSent = false
+                        resetError = nil
+                        showForgotPassword = true
+                    }
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(Color.sweeplyWordmarkBlue)
+                }
+                .padding(.horizontal, 28)
+                .padding(.top, 10)
+            }
+
+            // Error banner
+            if let err = session.lastAuthError, !err.isEmpty {
+                errorBanner(err)
+                    .padding(.horizontal, 28)
+                    .padding(.top, 12)
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+            }
+
+            // CTA button
+            ctaButton
+                .padding(.horizontal, 28)
+                .padding(.top, 20)
+
+            // Divider
+            HStack(spacing: 12) {
+                Rectangle().fill(Color.sweeplyBorder).frame(height: 1)
+                Text("Or Continue With")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(Color.sweeplyTextSub)
+                    .fixedSize()
+                Rectangle().fill(Color.sweeplyBorder).frame(height: 1)
+            }
+            .padding(.horizontal, 28)
+            .padding(.top, 20)
+
+            // Social buttons
+            HStack(spacing: 14) {
+                socialButton(
+                    icon: "apple.logo",
+                    label: "Apple",
+                    background: Color.sweeplyNavy,
+                    foreground: .white
+                ) {
+                    // Apple Sign In — coming soon
+                }
+
+                socialButton(
+                    icon: "g.circle.fill",
+                    label: "Google",
+                    background: Color(white: 0.96),
+                    foreground: Color.sweeplyNavy
+                ) {
+                    // Google Sign In — coming soon
+                }
+            }
+            .padding(.horizontal, 28)
+            .padding(.top, 14)
+            .padding(.bottom, 40)
         }
-        .buttonStyle(.plain)
+        .background(
+            Color.white
+                .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
+                .ignoresSafeArea(edges: .bottom)
+                .shadow(color: .black.opacity(0.08), radius: 20, x: 0, y: -6)
+        )
     }
 
     // MARK: - Fields
 
     private var emailField: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("EMAIL".translated())
-                .font(.system(size: 10, weight: .bold))
-                .foregroundStyle(Color.sweeplyTextSub)
-                .tracking(0.8)
+            HStack(spacing: 12) {
+                Image(systemName: "envelope")
+                    .font(.system(size: 15))
+                    .foregroundStyle(Color.sweeplyTextSub)
+                    .frame(width: 20)
 
-            TextField("you@example.com", text: $email)
-                .textContentType(.emailAddress)
-                .keyboardType(.emailAddress)
-                .textInputAutocapitalization(.never)
-                .autocorrectionDisabled()
-                .font(.system(size: 16))
-                .foregroundStyle(Color.primary)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 14)
-                .background(Color.sweeplyBackground)
-                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .stroke(
-                            emailError != nil ? Color.sweeplyDestructive : Color.sweeplyBorder,
-                            lineWidth: 1
-                        )
-                )
-            
+                TextField("Enter your email address", text: $email)
+                    .textContentType(.emailAddress)
+                    .keyboardType(.emailAddress)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                    .font(.system(size: 15))
+                    .foregroundStyle(Color.primary)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 15)
+            .background(Color(white: 0.96))
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .stroke(emailError != nil ? Color.sweeplyDestructive : Color.clear, lineWidth: 1)
+            )
+
             if let err = emailError {
                 Text(err)
                     .font(.system(size: 11))
@@ -257,30 +270,32 @@ struct AuthView: View {
 
     private var passwordField: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("PASSWORD".translated())
-                .font(.system(size: 10, weight: .bold))
-                .foregroundStyle(Color.sweeplyTextSub)
-                .tracking(0.8)
+            HStack(spacing: 12) {
+                Image(systemName: "lock")
+                    .font(.system(size: 15))
+                    .foregroundStyle(Color.sweeplyTextSub)
+                    .frame(width: 20)
 
-            SecureField("••••••••", text: $password)
-                .textContentType(isSignUp ? .newPassword : .password)
-                .font(.system(size: 16))
-                .foregroundStyle(Color.primary)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 14)
-                .background(Color.sweeplyBackground)
-                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .stroke(password.count > 0 && password.count < 6 ? Color.sweeplyDestructive : Color.sweeplyBorder, lineWidth: 1)
-                )
+                SecureField("••••••••", text: $password)
+                    .textContentType(isSignUp ? .newPassword : .password)
+                    .font(.system(size: 15))
+                    .foregroundStyle(Color.primary)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 15)
+            .background(Color(white: 0.96))
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .stroke(password.count > 0 && password.count < 6 ? Color.sweeplyDestructive : Color.clear, lineWidth: 1)
+            )
 
             if isSignUp {
                 passwordStrengthIndicator
             }
         }
     }
-    
+
     private var passwordStrengthIndicator: some View {
         HStack(spacing: 4) {
             ForEach(0..<3) { index in
@@ -295,14 +310,14 @@ struct AuthView: View {
                 .foregroundStyle(passwordStrengthLabelColor)
         }
     }
-    
+
     private func passwordStrengthColor(for index: Int) -> Color {
         let strength = passwordStrength
         if password.count == 0 { return Color.sweeplyBorder }
         if index < strength { return strengthColor }
         return Color.sweeplyBorder.opacity(0.4)
     }
-    
+
     private var passwordStrength: Int {
         if password.count < 6 { return 0 }
         if password.count < 10 { return 1 }
@@ -310,7 +325,7 @@ struct AuthView: View {
         if hasSpecial && password.count >= 10 { return 3 }
         return 2
     }
-    
+
     private var strengthColor: Color {
         switch passwordStrength {
         case 1: return Color.sweeplyWarning
@@ -319,7 +334,7 @@ struct AuthView: View {
         default: return Color.sweeplyBorder
         }
     }
-    
+
     private var passwordStrengthLabel: String {
         switch passwordStrength {
         case 0: return "Too short"
@@ -329,7 +344,7 @@ struct AuthView: View {
         default: return ""
         }
     }
-    
+
     private var passwordStrengthLabelColor: Color {
         switch passwordStrength {
         case 0: return Color.sweeplyDestructive
@@ -339,7 +354,7 @@ struct AuthView: View {
         default: return Color.sweeplyTextSub
         }
     }
-    
+
     // MARK: - Error Banner
 
     private func errorBanner(_ message: String) -> some View {
@@ -369,7 +384,7 @@ struct AuthView: View {
                 if isSubmitting {
                     ProgressView().tint(.white).scaleEffect(0.85)
                 } else {
-                    Text(isSignUp ? "Create Account" : "Sign In")
+                    Text(isSignUp ? "Create Account" : "Login")
                         .font(.system(size: 16, weight: .bold))
                 }
             }
@@ -378,49 +393,36 @@ struct AuthView: View {
             .frame(height: 54)
             .background(
                 canSubmit
-                    ? Color.sweeplyNavy
-                    : Color.sweeplyNavy.opacity(0.28)
+                    ? Color.sweeplyWordmarkBlue
+                    : Color.sweeplyWordmarkBlue.opacity(0.3)
             )
-            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-            .shadow(
-                color: canSubmit ? Color.sweeplyNavy.opacity(0.28) : .clear,
-                radius: 10, x: 0, y: 4
-            )
+            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
         }
         .disabled(!canSubmit)
         .animation(.easeInOut(duration: 0.15), value: canSubmit)
     }
 
-    // MARK: - Footer Links
+    // MARK: - Social Button
 
-    private var footerLinks: some View {
-        VStack(spacing: 2) {
-            if !isSignUp {
-                Button("Forgot password?".translated()) {
-                    resetEmail = email
-                    resetSent = false
-                    resetError = nil
-                    showForgotPassword = true
-                }
-                .font(.system(size: 13, weight: .medium))
-                .foregroundStyle(Color.sweeplyTextSub)
-                .padding(.top, 10)
+    private func socialButton(
+        icon: String,
+        label: String,
+        background: Color,
+        foreground: Color,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            HStack(spacing: 8) {
+                Image(systemName: icon)
+                    .font(.system(size: 16, weight: .medium))
+                Text(label)
+                    .font(.system(size: 15, weight: .semibold))
             }
-
-            Button {
-                UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                withAnimation(.easeInOut(duration: 0.2)) {
-                    isSignUp.toggle()
-                    session.lastAuthError = nil
-                }
-            } label: {
-                Text(isSignUp
-                     ? "Already have an account? Sign in"
-                     : "Need an account? Create one")
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundStyle(Color.sweeplyTextSub)
-            }
-            .padding(.top, 6)
+            .foregroundStyle(foreground)
+            .frame(maxWidth: .infinity)
+            .frame(height: 50)
+            .background(background)
+            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
         }
     }
 
@@ -452,11 +454,11 @@ private struct WaitingForConfirmationView: View {
     let deadline: Date?
     let onResend: () -> Void
     let onCancel: () -> Void
-    
+
     @State private var dots: Int = 1
     @State private var remainingSeconds: Int = 600
     @State private var timer: Timer?
-    
+
     private var maskedEmail: String {
         guard let at = email.firstIndex(of: "@") else { return email }
         let local = email[..<at]
@@ -469,18 +471,16 @@ private struct WaitingForConfirmationView: View {
         }
         return masked + String(domain)
     }
-    
-    private var dotAnimation: String {
-        String(repeating: ".", count: dots)
-    }
-    
+
+    private var dotAnimation: String { String(repeating: ".", count: dots) }
+
     var body: some View {
         ZStack {
             Color.black.opacity(0.45).ignoresSafeArea()
-            
+
             VStack(spacing: 28) {
                 Spacer()
-                
+
                 VStack(spacing: 16) {
                     ZStack {
                         Circle()
@@ -490,28 +490,26 @@ private struct WaitingForConfirmationView: View {
                             .font(.system(size: 32, weight: .light))
                             .foregroundStyle(Color.sweeplyAccent)
                     }
-                    
+
                     VStack(spacing: 8) {
                         Text("Check your email".translated())
                             .font(.system(size: 22, weight: .bold))
                             .foregroundStyle(Color.primary)
-                        
                         Text("We sent a confirmation link to:".translated())
                             .font(.system(size: 14))
                             .foregroundStyle(Color.sweeplyTextSub)
-                        
                         Text(maskedEmail)
                             .font(.system(size: 15, weight: .semibold))
                             .foregroundStyle(Color.sweeplyAccent)
                     }
-                    
+
                     Text("Tap the link to verify your account and sign in.".translated())
                         .font(.system(size: 13))
                         .foregroundStyle(Color.sweeplyTextSub)
                         .multilineTextAlignment(.center)
                         .padding(.horizontal, 32)
                 }
-                
+
                 VStack(spacing: 16) {
                     if deadline != nil {
                         HStack(spacing: 4) {
@@ -522,20 +520,16 @@ private struct WaitingForConfirmationView: View {
                         }
                         .foregroundStyle(Color.sweeplyTextSub)
                     }
-                    
                     Text("Waiting for verification\(dotAnimation)")
                         .font(.system(size: 12, weight: .medium))
                         .foregroundStyle(Color.sweeplyTextSub.opacity(0.7))
                         .animation(.none)
                 }
-                
+
                 VStack(spacing: 10) {
-                    Button {
-                        onResend()
-                    } label: {
+                    Button { onResend() } label: {
                         HStack(spacing: 6) {
-                            Image(systemName: "arrow.clockwise")
-                                .font(.system(size: 13))
+                            Image(systemName: "arrow.clockwise").font(.system(size: 13))
                             Text(cooldown > 0 ? "Resend (\(cooldown)s)" : "Resend email".translated())
                                 .font(.system(size: 14, weight: .medium))
                         }
@@ -544,59 +538,40 @@ private struct WaitingForConfirmationView: View {
                         .frame(height: 48)
                         .background(Color.sweeplyBackground)
                         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                .stroke(Color.sweeplyBorder, lineWidth: 1)
-                        )
+                        .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(Color.sweeplyBorder, lineWidth: 1))
                     }
                     .disabled(cooldown > 0)
-                    
-                    Button {
-                        onCancel()
-                    } label: {
+
+                    Button { onCancel() } label: {
                         Text("Cancel".translated())
                             .font(.system(size: 14, weight: .medium))
                             .foregroundStyle(Color.sweeplyTextSub)
                     }
                 }
                 .padding(.horizontal, 40)
-                
+
                 Spacer()
             }
         }
-        .onAppear {
-            startDotsAnimation()
-            startCountdown()
-        }
-        .onDisappear {
-            timer?.invalidate()
-        }
+        .onAppear { startDotsAnimation(); startCountdown() }
+        .onDisappear { timer?.invalidate() }
     }
-    
+
     private func startDotsAnimation() {
         Timer.scheduledTimer(withTimeInterval: 0.6, repeats: true) { _ in
             dots = dots >= 3 ? 1 : dots + 1
         }
     }
-    
+
     private func startCountdown() {
-        if let deadline {
-            remainingSeconds = max(0, Int(deadline.timeIntervalSinceNow))
-        }
+        if let deadline { remainingSeconds = max(0, Int(deadline.timeIntervalSinceNow)) }
         timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in
-            if remainingSeconds > 0 {
-                remainingSeconds -= 1
-            } else {
-                timer?.invalidate()
-                onCancel()
-            }
+            if remainingSeconds > 0 { remainingSeconds -= 1 } else { timer?.invalidate(); onCancel() }
         }
     }
-    
+
     private func formatTime(_ seconds: Int) -> String {
-        let mins = seconds / 60
-        let secs = seconds % 60
-        return String(format: "%d:%02d", mins, secs)
+        String(format: "%d:%02d", seconds / 60, seconds % 60)
     }
 }
 
@@ -617,12 +592,7 @@ private struct ForgotPasswordSheet: View {
                 .padding(.top, 12)
                 .padding(.bottom, 28)
 
-            if resetSent {
-                sentState
-            } else {
-                formState
-            }
-
+            if resetSent { sentState } else { formState }
             Spacer()
         }
         .background(Color.sweeplySurface.ignoresSafeArea())
@@ -631,28 +601,19 @@ private struct ForgotPasswordSheet: View {
     private var sentState: some View {
         VStack(spacing: 20) {
             ZStack {
-                Circle()
-                    .fill(Color.sweeplyAccent.opacity(0.1))
-                    .frame(width: 72, height: 72)
-                Image(systemName: "checkmark.circle.fill")
-                    .font(.system(size: 36))
-                    .foregroundStyle(Color.sweeplyAccent)
+                Circle().fill(Color.sweeplyAccent.opacity(0.1)).frame(width: 72, height: 72)
+                Image(systemName: "checkmark.circle.fill").font(.system(size: 36)).foregroundStyle(Color.sweeplyAccent)
             }
             VStack(spacing: 8) {
                 Text("Check your email".translated())
-                    .font(.system(size: 22, weight: .bold))
-                    .foregroundStyle(Color.sweeplyNavy)
+                    .font(.system(size: 22, weight: .bold)).foregroundStyle(Color.sweeplyNavy)
                 Text("We sent a reset link to \(resetEmail). Check your inbox and follow the instructions.")
-                    .font(.system(size: 14))
-                    .foregroundStyle(Color.sweeplyTextSub)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 8)
+                    .font(.system(size: 14)).foregroundStyle(Color.sweeplyTextSub)
+                    .multilineTextAlignment(.center).padding(.horizontal, 8)
             }
             Button("Done".translated()) { dismiss() }
-                .font(.system(size: 16, weight: .bold))
-                .foregroundStyle(.white)
-                .frame(maxWidth: .infinity)
-                .frame(height: 52)
+                .font(.system(size: 16, weight: .bold)).foregroundStyle(.white)
+                .frame(maxWidth: .infinity).frame(height: 52)
                 .background(Color.sweeplyNavy)
                 .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
                 .padding(.top, 8)
@@ -664,51 +625,36 @@ private struct ForgotPasswordSheet: View {
         VStack(alignment: .leading, spacing: 0) {
             VStack(alignment: .leading, spacing: 8) {
                 Text("Reset Password".translated())
-                    .font(.system(size: 24, weight: .bold))
-                    .foregroundStyle(Color.sweeplyNavy)
+                    .font(.system(size: 24, weight: .bold)).foregroundStyle(Color.sweeplyNavy)
                 Text("Enter your email and we'll send you a reset link.".translated())
-                    .font(.system(size: 14))
-                    .foregroundStyle(Color.sweeplyTextSub)
+                    .font(.system(size: 14)).foregroundStyle(Color.sweeplyTextSub)
             }
             .padding(.horizontal, 28)
 
             VStack(alignment: .leading, spacing: 6) {
                 Text("Email".translated())
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(Color.sweeplyTextSub)
+                    .font(.system(size: 12, weight: .semibold)).foregroundStyle(Color.sweeplyTextSub)
                 TextField("you@example.com", text: $resetEmail)
-                    .textContentType(.emailAddress)
-                    .keyboardType(.emailAddress)
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 13)
+                    .textContentType(.emailAddress).keyboardType(.emailAddress)
+                    .textInputAutocapitalization(.never).autocorrectionDisabled()
+                    .padding(.horizontal, 14).padding(.vertical, 13)
                     .background(Color.sweeplyBackground)
                     .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .stroke(Color.sweeplyBorder, lineWidth: 1)
-                    )
+                    .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(Color.sweeplyBorder, lineWidth: 1))
             }
-            .padding(.horizontal, 28)
-            .padding(.top, 24)
+            .padding(.horizontal, 28).padding(.top, 24)
 
             if let err = resetError, !err.isEmpty {
                 HStack(spacing: 8) {
-                    Image(systemName: "exclamationmark.circle.fill")
-                        .font(.system(size: 13))
-                    Text(err)
-                        .font(.system(size: 13))
-                        .fixedSize(horizontal: false, vertical: true)
+                    Image(systemName: "exclamationmark.circle.fill").font(.system(size: 13))
+                    Text(err).font(.system(size: 13)).fixedSize(horizontal: false, vertical: true)
                 }
                 .foregroundStyle(Color.sweeplyDestructive)
-                .padding(.horizontal, 16)
-                .padding(.vertical, 10)
+                .padding(.horizontal, 16).padding(.vertical, 10)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .background(Color.sweeplyDestructive.opacity(0.08))
                 .clipShape(RoundedRectangle(cornerRadius: 10))
-                .padding(.horizontal, 28)
-                .padding(.top, 12)
+                .padding(.horizontal, 28).padding(.top, 12)
             }
 
             Button {
@@ -717,36 +663,27 @@ private struct ForgotPasswordSheet: View {
                 Task {
                     do {
                         guard let client = SupabaseManager.shared else {
-                            await MainActor.run {
-                                resetError = "Not connected. Please try again."
-                                isSending = false
-                            }
+                            await MainActor.run { resetError = "Not connected. Please try again."; isSending = false }
                             return
                         }
                         try await client.auth.resetPasswordForEmail(resetEmail)
                         await MainActor.run { resetSent = true; isSending = false }
                     } catch {
-                        await MainActor.run {
-                            resetError = error.localizedDescription
-                            isSending = false
-                        }
+                        await MainActor.run { resetError = error.localizedDescription; isSending = false }
                     }
                 }
             } label: {
                 HStack(spacing: 10) {
                     if isSending { ProgressView().tint(.white).scaleEffect(0.85) }
-                    Text("Send Reset Link".translated())
-                        .font(.system(size: 16, weight: .bold))
+                    Text("Send Reset Link".translated()).font(.system(size: 16, weight: .bold))
                 }
                 .foregroundStyle(.white)
-                .frame(maxWidth: .infinity)
-                .frame(height: 52)
+                .frame(maxWidth: .infinity).frame(height: 52)
                 .background(resetEmail.contains("@") ? Color.sweeplyNavy : Color.sweeplyNavy.opacity(0.35))
                 .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
             }
             .disabled(isSending || !resetEmail.contains("@"))
-            .padding(.horizontal, 28)
-            .padding(.top, 24)
+            .padding(.horizontal, 28).padding(.top, 24)
         }
     }
 }
