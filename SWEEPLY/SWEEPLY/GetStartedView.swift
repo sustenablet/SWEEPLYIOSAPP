@@ -32,14 +32,14 @@ struct GetStartedView: View {
                     .offset(y: appeared ? 0 : 16)
 
                 Spacer()
-                    .frame(height: 32)
+                    .frame(height: 28)
 
                 getStartedButton
                     .opacity(appeared ? 1 : 0)
                     .offset(y: appeared ? 0 : 12)
             }
             .padding(.horizontal, 24)
-            .padding(.bottom, 48)
+            .padding(.bottom, 80)
         }
         .onAppear {
             withAnimation(.easeOut(duration: 0.55).delay(0.1)) {
@@ -77,7 +77,7 @@ struct GetStartedView: View {
                 .foregroundStyle(.white)
                 .frame(maxWidth: .infinity)
                 .frame(height: 56)
-                .background(Color.sweeplyAccent)
+                .background(Color.sweeplyWordmarkBlue)
                 .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         }
     }
