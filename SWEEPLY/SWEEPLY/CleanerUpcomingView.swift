@@ -97,6 +97,12 @@ struct CleanerUpcomingView: View {
             .sorted { $0.date < $1.date }
     }
 
+    // True when the selected day has jobs and every one is completed/cancelled
+    private var allJobsDoneForDay: Bool {
+        !filteredJobsForDay.isEmpty &&
+        filteredJobsForDay.allSatisfy { $0.status == .completed || $0.status == .cancelled }
+    }
+
     private var monthTitle: String {
         let f = DateFormatter(); f.dateFormat = "MMMM yyyy"
         return f.string(from: selectedDay)
@@ -414,6 +420,8 @@ struct CleanerUpcomingView: View {
             ScrollView {
                 if jobsStore.isLoading && jobsStore.jobs.isEmpty {
                     SkeletonList(count: 4).padding(.top, 16).padding(.horizontal, 20)
+                } else if allJobsDoneForDay {
+                    allDoneState
                 } else if filteredJobsForDay.isEmpty {
                     emptyState
                 } else {
@@ -492,58 +500,23 @@ struct CleanerUpcomingView: View {
 
     private var listView: some View {
         VStack(spacing: 0) {
-            let allUpcoming = upcomingGroupedJobs.flatMap { $0.jobs }
-            statsBar(jobs: allUpcoming)
+            statsBar(jobs: filteredJobsForDay)
 
             ScrollView {
                 if jobsStore.isLoading && jobsStore.jobs.isEmpty {
                     SkeletonList(count: 4).padding(.top, 16).padding(.horizontal, 20)
-                } else if upcomingGroupedJobs.isEmpty {
-                    VStack(spacing: 12) {
-                        Image(systemName: "calendar.badge.clock")
-                            .font(.system(size: 44))
-                            .foregroundStyle(Color.sweeplyTextSub.opacity(0.3))
-                        Text("No upcoming jobs".translated())
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundStyle(Color.sweeplyTextSub)
-                        Text(hasActiveFilters ? "Try adjusting your filters." : "Nothing scheduled yet.")
-                            .font(.system(size: 13))
-                            .foregroundStyle(Color.sweeplyTextSub.opacity(0.6))
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 60)
+                } else if allJobsDoneForDay {
+                    allDoneState
+                } else if filteredJobsForDay.isEmpty {
+                    emptyState
                 } else {
-                    LazyVStack(alignment: .leading, spacing: 0, pinnedViews: [.sectionHeaders]) {
-                        ForEach(upcomingGroupedJobs, id: \.date) { group in
-                            Section {
-                                VStack(spacing: 8) {
-                                    ForEach(group.jobs) { job in
-                                        CleanerListJobRow(job: job) { selectedJobId = job.id }
-                                    }
-                                }
-                                .padding(.horizontal, 20)
-                                .padding(.bottom, 16)
-                            } header: {
-                                HStack(spacing: 8) {
-                                    Text(agendaDateLabel(group.date))
-                                        .font(.system(size: 13, weight: .bold))
-                                        .foregroundStyle(calendar.isDateInToday(group.date) ? Color.sweeplyAccent : Color.sweeplyNavy)
-                                    Text("·").foregroundStyle(Color.sweeplyBorder)
-                                    Text(group.jobs.reduce(0) { $0 + $1.price }.currency)
-                                        .font(.system(size: 12, weight: .semibold, design: .monospaced))
-                                        .foregroundStyle(Color.sweeplyTextSub)
-                                    Spacer()
-                                    Text("\(group.jobs.count) job\(group.jobs.count == 1 ? "" : "s")")
-                                        .font(.system(size: 11, weight: .medium))
-                                        .foregroundStyle(Color.sweeplyTextSub.opacity(0.7))
-                                }
-                                .padding(.horizontal, 20)
-                                .padding(.vertical, 10)
-                                .background(Color.sweeplyBackground)
-                                .overlay(Rectangle().frame(height: 1).foregroundStyle(Color.sweeplyBorder.opacity(0.5)), alignment: .bottom)
-                            }
+                    VStack(spacing: 8) {
+                        ForEach(filteredJobsForDay) { job in
+                            CleanerListJobRow(job: job) { selectedJobId = job.id }
                         }
                     }
+                    .padding(.horizontal, 20)
+                    .padding(.top, 16)
                     .padding(.bottom, 100)
                 }
             }
@@ -596,6 +569,44 @@ struct CleanerUpcomingView: View {
     }
 
     // MARK: - Empty State
+
+    private var allDoneState: some View {
+        VStack(spacing: 14) {
+            ZStack {
+                Circle()
+                    .fill(Color.sweeplyAccent.opacity(0.1))
+                    .frame(width: 80, height: 80)
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 42))
+                    .foregroundStyle(Color.sweeplyAccent)
+            }
+            VStack(spacing: 6) {
+                Text(calendar.isDateInToday(selectedDay) ? "All done for today!" : "All jobs complete!")
+                    .font(.system(size: 18, weight: .bold))
+                    .foregroundStyle(Color.sweeplyNavy)
+                Text(calendar.isDateInToday(selectedDay)
+                     ? "Great work — you've wrapped up everything on your schedule."
+                     : "Every job on this day was completed.")
+                    .font(.system(size: 13))
+                    .foregroundStyle(Color.sweeplyTextSub)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 32)
+            }
+            // Show a summary of what was completed
+            let completedCount = filteredJobsForDay.filter { $0.status == .completed }.count
+            if completedCount > 0 {
+                Text("\(completedCount) job\(completedCount == 1 ? "" : "s") completed")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(Color.sweeplyAccent)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 6)
+                    .background(Color.sweeplyAccent.opacity(0.1))
+                    .clipShape(Capsule())
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 60)
+    }
 
     private var emptyState: some View {
         VStack(spacing: 12) {

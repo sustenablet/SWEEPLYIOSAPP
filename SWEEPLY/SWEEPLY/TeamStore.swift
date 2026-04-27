@@ -9,6 +9,9 @@ final class TeamStore {
     var isLoading = false
     var lastError: String?
 
+    private var lastLoadedAt: Date?
+    private let minimumRefreshInterval: TimeInterval = 0.5
+
     func clear() {
         members = []
         lastError = nil
@@ -16,13 +19,20 @@ final class TeamStore {
 
     func load(ownerId: UUID) async {
         guard let client = SupabaseManager.shared else {
-            // Offline mode: keep whatever is in memory
+            return
+        }
+
+        // Debounce rapid refreshes (e.g., right after a save)
+        if let last = lastLoadedAt, Date().timeIntervalSince(last) < minimumRefreshInterval {
             return
         }
 
         isLoading = true
         lastError = nil
-        defer { isLoading = false }
+        defer {
+            isLoading = false
+            lastLoadedAt = Date()
+        }
 
         do {
             let rows: [TeamMemberDTO] = try await client
@@ -36,6 +46,11 @@ final class TeamStore {
         } catch {
             lastError = error.localizedDescription
         }
+    }
+
+    func refreshIfStale(ownerId: UUID) async {
+        guard let last = lastLoadedAt, Date().timeIntervalSince(last) > minimumRefreshInterval else { return }
+        await load(ownerId: ownerId)
     }
 
     func add(_ member: TeamMember) async -> Bool {
