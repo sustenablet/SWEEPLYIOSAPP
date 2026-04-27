@@ -238,10 +238,15 @@ struct NewJobForm: View {
                                     .font(.system(size: 13, weight: .semibold))
                                     .foregroundStyle(Color.sweeplyWarning)
                                     .padding(.top, 1)
-                                Text("Overlaps with \(conflict.clientName)'s job (\(fmt.string(from: conflict.date)) – \(fmt.string(from: conflictEnd)))")
-                                    .font(.system(size: 12, weight: .medium))
-                                    .foregroundStyle(Color.sweeplyNavy)
-                                    .fixedSize(horizontal: false, vertical: true)
+                                VStack(alignment: .leading, spacing: 3) {
+                                    Text("Time overlap with \(conflict.clientName)'s job (\(fmt.string(from: conflict.date)) – \(fmt.string(from: conflictEnd)))")
+                                        .font(.system(size: 12, weight: .medium))
+                                        .foregroundStyle(Color.sweeplyNavy)
+                                        .fixedSize(horizontal: false, vertical: true)
+                                    Text("You can still schedule this job.")
+                                        .font(.system(size: 11))
+                                        .foregroundStyle(Color.sweeplyTextSub)
+                                }
                                 Spacer()
                             }
                             .padding(.horizontal, 12)
@@ -531,7 +536,7 @@ struct NewJobForm: View {
                 } label: {
                     HStack {
                         if isSaving { ProgressView().tint(.white).padding(.trailing, 8) }
-                        Text(isSaving ? "Scheduling..." : "Schedule Job")
+                        Text(isSaving ? "Scheduling..." : conflictingJob != nil ? "Schedule Anyway" : "Schedule Job")
                     }
                     .font(.system(size: 15, weight: .bold))
                     .foregroundStyle(.white)
