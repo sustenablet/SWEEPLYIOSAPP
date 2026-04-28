@@ -60,7 +60,7 @@ struct ScheduleView: View {
     @State private var showMonthPicker = false
     @State private var selectedJobId: UUID? = nil
     @State private var showJobDetail: Bool = false
-    @State private var mapCameraPosition: MapCameraPosition = .automatic
+    @State private var mapCameraPosition: MapCameraPosition = .userLocation(fallback: .automatic)
     @State private var locationManager = LocationManager.shared
     @Namespace private var mapSelectionNamespace
     
@@ -1541,14 +1541,7 @@ struct MapPinView: View {
     }
     
     private var serviceIcon: String {
-        switch serviceType {
-        case .standard: return "house.fill"
-        case .deep: return "sparkles"
-        case .moveInOut: return "shippingbox.fill"
-        case .postConstruction: return "hammer.fill"
-        case .office: return "building.2.fill"
-        case .custom: return "star.fill"
-        }
+        return "house.fill"
     }
 }
 
