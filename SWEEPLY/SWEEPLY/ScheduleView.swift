@@ -233,8 +233,7 @@ struct ScheduleView: View {
                         Annotation(job.clientName, coordinate: CLLocationCoordinate2D(latitude: lat, longitude: lng)) {
                             MapPinView(
                                 status: job.status,
-                                isSelected: selectedJobId == job.id,
-                                serviceType: job.serviceType
+                                isSelected: selectedJobId == job.id
                             )
                             .onTapGesture {
                                 withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
@@ -252,6 +251,15 @@ struct ScheduleView: View {
                 MapScaleView()
             }
             .ignoresSafeArea(edges: .bottom)
+            .onChange(of: locationManager.location) { _, newLocation in
+                guard viewMode == .map, let newLocation else { return }
+                withAnimation(.easeInOut(duration: 0.5)) {
+                    mapCameraPosition = .region(MKCoordinateRegion(
+                        center: newLocation.coordinate,
+                        span: MKCoordinateSpan(latitudeDelta: 0.10, longitudeDelta: 0.10)
+                    ))
+                }
+            }
 
             // Map Controls Overlay
             VStack {
@@ -302,64 +310,65 @@ struct ScheduleView: View {
                 Spacer()
             }
 
-            // Selected Job Card
-            if let selectedJobId = selectedJobId,
-               let job = dayJobs.first(where: { $0.id == selectedJobId }),
-               let client = clientsStore.clients.first(where: { $0.id == job.clientId }) {
-                MapJobCard(
-                    job: job,
-                    client: client,
-                    onDirections: { openDirections(for: job) },
-                    onDetails: {
-                        self.showJobDetail = true
-                    },
-                    onDismiss: {
-                        withAnimation(.spring(response: 0.3, dampingFraction: 0.9)) {
-                            self.selectedJobId = nil
+            // Job Card Carousel — appears after a pin is tapped, swipeable
+            if selectedJobId != nil {
+                let carouselJobs = dayJobs.filter { job in
+                    clientsStore.clients.first(where: { $0.id == job.clientId })?.latitude != nil
+                }
+                if !carouselJobs.isEmpty {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 12) {
+                            ForEach(carouselJobs) { job in
+                                MapJobCard(
+                                    job: job,
+                                    onDirections: { openDirections(for: job) },
+                                    onDetails: {
+                                        self.selectedJobId = job.id
+                                        self.showJobDetail = true
+                                    },
+                                    onDismiss: {
+                                        withAnimation(.spring(response: 0.3, dampingFraction: 0.9)) {
+                                            self.selectedJobId = nil
+                                        }
+                                    }
+                                )
+                                .frame(width: UIScreen.main.bounds.width - 48)
+                                .id(job.id)
+                            }
+                        }
+                        .scrollTargetLayout()
+                        .padding(.horizontal, 24)
+                    }
+                    .scrollPosition(id: $selectedJobId)
+                    .scrollTargetBehavior(.viewAligned)
+                    .padding(.bottom, 90)
+                    .onChange(of: selectedJobId) { _, newId in
+                        guard let newId,
+                              let job = carouselJobs.first(where: { $0.id == newId }),
+                              let client = clientsStore.clients.first(where: { $0.id == job.clientId }),
+                              let lat = client.latitude, let lon = client.longitude else { return }
+                        withAnimation(.easeInOut(duration: 0.4)) {
+                            mapCameraPosition = .region(MKCoordinateRegion(
+                                center: CLLocationCoordinate2D(latitude: lat, longitude: lon),
+                                span: MKCoordinateSpan(latitudeDelta: 0.02, longitudeDelta: 0.02)
+                            ))
                         }
                     }
-                )
-                .transition(.move(edge: .bottom).combined(with: .opacity))
-                .zIndex(10)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                    .zIndex(10)
+                }
             }
         }
     }
     
     private func updateMapCamera(for day: Date) {
-        let jobs = filteredJobsForDate(day)
-        let jobCoords = jobs.compactMap { job -> CLLocationCoordinate2D? in
-            guard let client = clientsStore.clients.first(where: { $0.id == job.clientId }),
-                  let lat = client.latitude, let lon = client.longitude else { return nil }
-            return CLLocationCoordinate2D(latitude: lat, longitude: lon)
-        }
-        
-        // Get user location or fallback to Cupertino
-        let userLocation = locationManager.location
-        let fallbackCenter = CLLocationCoordinate2D(
-            latitude: userLocation?.coordinate.latitude ?? 37.3346,
-            longitude: userLocation?.coordinate.longitude ?? -122.0090
-        )
-        
+        let center = locationManager.location?.coordinate
+            ?? CLLocationCoordinate2D(latitude: 37.3346, longitude: -122.0090)
         withAnimation(.easeInOut(duration: 0.4)) {
-            if jobCoords.isEmpty {
-                // No jobs — center on user with neighborhood-level zoom
-                mapCameraPosition = .region(MKCoordinateRegion(
-                    center: fallbackCenter,
-                    span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
-                ))
-            } else {
-                // Has jobs — center on jobs with zoom to show all pins
-                let lats = jobCoords.map(\.latitude)
-                let lons = jobCoords.map(\.longitude)
-                
-                let centerLat = (lats.min()! + lats.max()!) / 2
-                let centerLon = (lons.min()! + lons.max()!) / 2
-                
-                mapCameraPosition = .region(MKCoordinateRegion(
-                    center: CLLocationCoordinate2D(latitude: centerLat, longitude: centerLon),
-                    span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
-                ))
-            }
+            mapCameraPosition = .region(MKCoordinateRegion(
+                center: center,
+                span: MKCoordinateSpan(latitudeDelta: 0.10, longitudeDelta: 0.10)
+            ))
         }
     }
 
@@ -1479,7 +1488,6 @@ struct WeekStripView: View {
 struct MapPinView: View {
     let status: JobStatus
     let isSelected: Bool
-    let serviceType: ServiceType
     
     var body: some View {
         VStack(spacing: 0) {
@@ -1519,16 +1527,7 @@ struct MapPinView: View {
         }
     }
     
-    private var serviceIcon: String {
-        switch serviceType {
-        case .standard: return "house.fill"
-        case .deep: return "sparkles"
-        case .moveInOut: return "shippingbox.fill"
-        case .postConstruction: return "hammer.fill"
-        case .office: return "building.2.fill"
-        case .custom: return "star.fill"
-        }
-    }
+    private let serviceIcon = "house.fill"
 }
 
 struct MapActionButton: View {
