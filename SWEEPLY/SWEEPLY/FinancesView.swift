@@ -1504,7 +1504,6 @@ struct InvoicesListView: View {
     @State private var selectedInvoiceId: UUID? = nil
     @State private var showInvoiceDetail = false
     @State private var markPaidInvoice: Invoice? = nil
-    @State private var selectedClientId: UUID? = nil
     @State private var sortOrder: InvoiceSortOrder = .newestFirst
 
     init(preselectedFilter: String = "all") {
@@ -1534,15 +1533,8 @@ struct InvoicesListView: View {
         }
     }
 
-    private var selectedClientName: String {
-        if let id = selectedClientId {
-            return clientsStore.clients.first { $0.id == id }?.name ?? "All Clients"
-        }
-        return "All Clients"
-    }
-
     private var hasActiveFilters: Bool {
-        selectedClientId != nil || sortOrder != .newestFirst
+        sortOrder != .newestFirst
     }
 
     private var filtered: [Invoice] {
@@ -1553,11 +1545,6 @@ struct InvoicesListView: View {
         case .unpaid:  result = invoicesStore.invoices.filter { $0.status == .unpaid }
         case .overdue: result = invoicesStore.invoices.filter { $0.status == .overdue }
         case .paid:    result = invoicesStore.invoices.filter { $0.status == .paid }
-        }
-
-        // Client filter
-        if let clientId = selectedClientId {
-            result = result.filter { $0.clientId == clientId }
         }
 
         // Search
@@ -1604,83 +1591,15 @@ struct InvoicesListView: View {
                     }
                     .padding(.horizontal, -20)
 
-                    // Combined Sort + Client filter
+                    // Sort filter
                     HStack(spacing: 8) {
-                        Menu {
-                            // Sort section
-                            Section("Sort") {
-                                ForEach(InvoiceSortOrder.allCases, id: \.self) { order in
-                                    Button {
-                                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                                        withAnimation { sortOrder = order }
-                                    } label: {
-                                        HStack {
-                                            Text(order.rawValue)
-                                            if sortOrder == order {
-                                                Image(systemName: "checkmark")
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                            
-                            // Client section
-                            Section("Client") {
-                                Button {
-                                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                                    withAnimation { selectedClientId = nil }
-                                } label: {
-                                    HStack {
-                                        Text("All Clients")
-                                        if selectedClientId == nil {
-                                            Image(systemName: "checkmark")
-                                        }
-                                    }
-                                }
-                                ForEach(clientsStore.clients.sorted { $0.name < $1.name }) { client in
-                                    Button {
-                                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                                        withAnimation { selectedClientId = client.id }
-                                    } label: {
-                                        HStack {
-                                            Text(client.name)
-                                            if selectedClientId == client.id {
-                                                Image(systemName: "checkmark")
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        } label: {
-                            HStack(spacing: 6) {
-                                Image(systemName: sortOrder.icon)
-                                    .font(.system(size: 12, weight: .semibold))
-                                Text(sortOrder.rawValue)
-                                    .font(.system(size: 13, weight: .medium))
-                                if selectedClientId != nil {
-                                    Text("•")
-                                        .foregroundStyle(Color.sweeplyTextSub)
-                                    Text(selectedClientName)
-                                        .font(.system(size: 13, weight: .medium))
-                                        .lineLimit(1)
-                                }
-                            }
-                            .foregroundStyle(hasActiveFilters ? Color.sweeplyNavy : Color.sweeplyTextSub)
-                            .padding(.horizontal, 14)
-                            .padding(.vertical, 8)
-                            .background(hasActiveFilters ? Color.sweeplyNavy.opacity(0.08) : Color.sweeplySurface)
-                            .clipShape(Capsule())
-                            .overlay(Capsule().stroke(hasActiveFilters ? Color.sweeplyNavy.opacity(0.3) : Color.sweeplyBorder, lineWidth: 1))
-                        }
-                        .buttonStyle(.plain)
-
                         Spacer()
 
                         // Clear filters
                         if hasActiveFilters {
                             Button {
                                 UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                                withAnimation { selectedClientId = nil; sortOrder = .newestFirst }
+                                withAnimation { sortOrder = .newestFirst }
                             } label: {
                                 Text("Clear")
                                     .font(.system(size: 12, weight: .medium))
@@ -1732,14 +1651,36 @@ struct InvoicesListView: View {
                         .foregroundStyle(Color.sweeplyTextSub)
                 }
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                        showNewInvoice = true
-                    } label: {
-                        Image(systemName: "plus")
-                            .font(.system(size: 16, weight: .semibold))
+                    HStack(spacing: 16) {
+                        Menu {
+                            ForEach(InvoiceSortOrder.allCases, id: \.self) { order in
+                                Button {
+                                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                    withAnimation { sortOrder = order }
+                                } label: {
+                                    HStack {
+                                        Text(order.rawValue)
+                                        if sortOrder == order {
+                                            Image(systemName: "checkmark")
+                                        }
+                                    }
+                                }
+                            }
+                        } label: {
+                            Image(systemName: sortOrder.icon)
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundStyle(hasActiveFilters ? Color.sweeplyAccent : Color.sweeplyTextSub)
+                        }
+
+                        Button {
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                            showNewInvoice = true
+                        } label: {
+                            Image(systemName: "plus")
+                                .font(.system(size: 16, weight: .semibold))
+                        }
+                        .foregroundStyle(Color.sweeplyNavy)
                     }
-                    .foregroundStyle(Color.sweeplyNavy)
                 }
             }
             .sheet(isPresented: $showNewInvoice) {
