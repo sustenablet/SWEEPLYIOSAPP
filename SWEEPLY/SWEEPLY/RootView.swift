@@ -416,6 +416,20 @@ struct RootView: View {
 
         UITabBar.appearance().standardAppearance   = appearance
         UITabBar.appearance().scrollEdgeAppearance = appearance
+
+        // UITabBar.appearance() only affects new instances; patch any already-rendered tab bars directly.
+        func update(_ vc: UIViewController?) {
+            guard let vc else { return }
+            if let tbc = vc as? UITabBarController {
+                tbc.tabBar.standardAppearance   = appearance
+                tbc.tabBar.scrollEdgeAppearance = appearance
+            }
+            vc.children.forEach { update($0) }
+        }
+        UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+            .flatMap { $0.windows }
+            .forEach { update($0.rootViewController) }
     }
 
     /// Notion-style 5-page product tour once per install, after auth (and after profile onboarding if shown).

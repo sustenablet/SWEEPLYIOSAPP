@@ -253,7 +253,7 @@ struct FinancesView: View {
         .refreshable {
             await invoicesStore.load(isAuthenticated: session.isAuthenticated)
         }
-        .sheet(isPresented: $showInvoicesList) {
+        .sheet(isPresented: $showInvoicesList, onDismiss: refreshTabBar) {
             InvoicesListView()
                 .environment(invoicesStore)
                 .environment(clientsStore)
@@ -261,7 +261,7 @@ struct FinancesView: View {
                 .environment(session)
                 .environment(profileStore)
         }
-        .sheet(isPresented: $showNewInvoice) {
+        .sheet(isPresented: $showNewInvoice, onDismiss: refreshTabBar) {
             NewInvoiceView()
                 .environment(invoicesStore)
                 .environment(clientsStore)
@@ -269,7 +269,7 @@ struct FinancesView: View {
                 .environment(session)
                 .environment(profileStore)
         }
-        .sheet(isPresented: $showExpenses) {
+        .sheet(isPresented: $showExpenses, onDismiss: refreshTabBar) {
             ExpensesView()
                 .environment(expenseStore)
                 .environment(session)
@@ -277,13 +277,13 @@ struct FinancesView: View {
         .sheet(isPresented: Binding(
             get: { markPaidInvoice != nil },
             set: { if !$0 { markPaidInvoice = nil } }
-        )) {
+        ), onDismiss: refreshTabBar) {
             if let invoice = markPaidInvoice {
                 MarkPaidSheet(invoice: invoice)
                     .environment(invoicesStore)
             }
         }
-        .sheet(isPresented: $showInvoiceDetail) {
+        .sheet(isPresented: $showInvoiceDetail, onDismiss: refreshTabBar) {
             if let id = selectedInvoiceId {
                 NavigationStack {
                     InvoiceDetailView(invoiceId: id)
@@ -969,7 +969,7 @@ struct FinancesView: View {
                 }
             }
         }
-        .sheet(isPresented: $showPaymentSheet) {
+        .sheet(isPresented: $showPaymentSheet, onDismiss: refreshTabBar) {
             if let member = selectedPaymentMember {
                 PaymentSheet(
                     member: member,
@@ -1111,6 +1111,10 @@ private func payButton(for member: TeamMember, status: PaymentStatus, rateAmount
             .clipShape(Capsule())
         }
         .buttonStyle(.plain)
+    }
+
+    private func refreshTabBar() {
+        NotificationCenter.default.post(name: NSNotification.Name("RefreshTabBar"), object: nil)
     }
 
     private func formatLastPaid(_ date: Date) -> String {
