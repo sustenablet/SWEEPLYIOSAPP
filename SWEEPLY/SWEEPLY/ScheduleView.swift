@@ -978,66 +978,78 @@ private extension ScheduleView {
 private struct TimelineJobBlock: View {
     let job: Job
 
-    private var accentColor: Color {
-        switch job.serviceType {
-        case .standard:         return Color.sweeplyAccent
-        case .deep:             return Color.sweeplyNavy
-        case .moveInOut:        return Color.sweeplyWarning
-        case .postConstruction: return Color.gray
-        case .office:           return Color.sweeplyNavy
-        case .custom:           return Color.sweeplyAccent
+    private var statusColor: Color {
+        switch job.status {
+        case .scheduled:  return Color.sweeplyWordmarkBlue
+        case .inProgress: return Color.sweeplyAccent
+        case .completed:  return Color.sweeplySuccess
+        case .cancelled:  return Color.gray
         }
     }
 
-    private func timeString(from date: Date) -> String {
-        let f = DateFormatter()
-        f.timeStyle = .short
-        f.dateStyle = .none
-        return f.string(from: date)
+    private var timeRange: String {
+        let fmt = DateFormatter()
+        fmt.timeStyle = .short
+        fmt.dateStyle = .none
+        let start = fmt.string(from: job.date)
+        let end   = fmt.string(from: job.date.addingTimeInterval(job.duration * 3600))
+        return "\(start) – \(end)"
     }
 
     var body: some View {
         NavigationLink(destination: JobDetailView(jobId: job.id)) {
-            ZStack(alignment: .leading) {
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .fill(accentColor.opacity(0.08))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 10, style: .continuous)
-                            .stroke(accentColor.opacity(0.25), lineWidth: 1)
+            HStack(spacing: 0) {
+                statusColor
+                    .frame(width: 4)
+                    .clipShape(
+                        UnevenRoundedRectangle(
+                            topLeadingRadius: 10, bottomLeadingRadius: 10,
+                            bottomTrailingRadius: 0, topTrailingRadius: 0,
+                            style: .continuous
+                        )
                     )
-                HStack(spacing: 0) {
-                    RoundedRectangle(cornerRadius: 3, style: .continuous)
-                        .fill(accentColor)
-                        .frame(width: 4)
-                        .padding(.vertical, 8)
-                        .padding(.leading, 6)
-                    VStack(alignment: .leading, spacing: 3) {
+                VStack(alignment: .leading, spacing: 0) {
+                    HStack(alignment: .top, spacing: 4) {
                         Text(job.clientName)
                             .font(.system(size: 13, weight: .bold))
                             .foregroundStyle(Color.sweeplyNavy)
                             .lineLimit(1)
-                        Text(job.serviceType.rawValue.translated())
-                            .font(.system(size: 11, weight: .medium))
-                            .foregroundStyle(accentColor)
-                            .lineLimit(1)
-                        HStack(spacing: 4) {
-                            Text(timeString(from: job.date))
-                                .font(.system(size: 10, design: .monospaced))
-                                .foregroundStyle(Color.sweeplyTextSub)
-                            Text("·".translated())
-                                .foregroundStyle(Color.sweeplyTextSub.opacity(0.4))
-                            Text(job.price.currency)
-                                .font(.system(size: 10, weight: .semibold, design: .monospaced))
-                                .foregroundStyle(Color.sweeplyNavy)
-                        }
+                        Spacer(minLength: 2)
+                        Circle()
+                            .fill(statusColor)
+                            .frame(width: 6, height: 6)
+                            .padding(.top, 4)
                     }
-                    .padding(.leading, 8)
-                    .padding(.vertical, 8)
-                    Spacer()
-                    StatusBadge(status: job.status)
-                        .padding(.trailing, 10)
+                    Text(job.serviceType.rawValue.translated())
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(statusColor.opacity(0.85))
+                        .lineLimit(1)
+                        .padding(.top, 2)
+                    Spacer(minLength: 0)
+                    HStack(spacing: 0) {
+                        Text(timeRange)
+                            .font(.system(size: 10, weight: .medium, design: .monospaced))
+                            .foregroundStyle(Color.sweeplyTextSub)
+                            .lineLimit(1)
+                        Spacer(minLength: 2)
+                        Text(job.price.currency)
+                            .font(.system(size: 11, weight: .bold, design: .monospaced))
+                            .foregroundStyle(Color.sweeplyNavy)
+                    }
                 }
+                .padding(.horizontal, 9)
+                .padding(.vertical, 8)
             }
+            .background(
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill(statusColor.opacity(0.05))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .stroke(statusColor.opacity(0.2), lineWidth: 1)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+            .shadow(color: .black.opacity(0.06), radius: 4, x: 0, y: 2)
         }
         .buttonStyle(.plain)
     }

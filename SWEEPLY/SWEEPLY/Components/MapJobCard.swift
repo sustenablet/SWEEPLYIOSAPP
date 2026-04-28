@@ -11,14 +11,24 @@ struct MapJobCard: View {
         VStack(alignment: .leading, spacing: 16) {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(job.clientName)
-                        .font(.system(size: 18, weight: .bold))
-                        .foregroundStyle(Color.sweeplyNavy)
+                    HStack(spacing: 6) {
+                        Text(job.clientName)
+                            .font(.system(size: 18, weight: .bold))
+                            .foregroundStyle(Color.sweeplyNavy)
+                        
+                        if job.isRecurring {
+                            Image(systemName: "arrow.triangle.2.circlepath")
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundStyle(Color.sweeplyAccent)
+                        }
+                    }
                     
-                    Text(job.address)
-                        .font(.system(size: 14))
-                        .foregroundStyle(Color.sweeplyTextSub)
-                        .lineLimit(1)
+                    if !job.address.isEmpty {
+                        Text(job.address)
+                            .font(.system(size: 14))
+                            .foregroundStyle(Color.sweeplyTextSub)
+                            .lineLimit(1)
+                    }
                 }
                 
                 Spacer()
@@ -40,10 +50,6 @@ struct MapJobCard: View {
                 InfoChip(icon: "clock.fill", text: job.date.formatted(.dateTime.hour().minute()))
                 InfoChip(icon: "hourglass", text: "\(Int(job.duration)) hr")
                 InfoChip(icon: "tag.fill", text: job.price.currencyWithoutTrailingZeros)
-                
-                if job.isRecurring {
-                    InfoChip(icon: "arrow.triangle.2.circlepath", text: "Recurring", color: .sweeplyAccent)
-                }
             }
             
             HStack(spacing: 12) {
