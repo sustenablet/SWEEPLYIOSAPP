@@ -304,9 +304,11 @@ struct ScheduleView: View {
 
             // Selected Job Card
             if let selectedJobId = selectedJobId,
-               let job = dayJobs.first(where: { $0.id == selectedJobId }) {
+               let job = dayJobs.first(where: { $0.id == selectedJobId }),
+               let client = clientsStore.clients.first(where: { $0.id == job.clientId }) {
                 MapJobCard(
                     job: job,
+                    client: client,
                     onDirections: { openDirections(for: job) },
                     onDetails: {
                         self.showJobDetail = true
@@ -386,7 +388,7 @@ struct ScheduleView: View {
         let jobs = filteredJobsForDate(selectedDay)
         guard !jobs.isEmpty else { return 6 }
         let earliestHour = Calendar.current.component(.hour, from: jobs.map { $0.date }.min()!)
-        return max(0, earliestHour - 1)  // 1 hour buffer before earliest job
+        return min(max(0, earliestHour - 1), 6)  // Earlier of: 1hr buffer OR 6am minimum
     }
     private var timelineEndHour: Int {
         let jobs = filteredJobsForDate(selectedDay)
@@ -399,7 +401,7 @@ struct ScheduleView: View {
         }!
         let endTime = latestJob.date.addingTimeInterval(latestJob.duration * 3600)
         let latestHour = Calendar.current.component(.hour, from: endTime)
-        return min(24, latestHour + 1)  // 1 hour buffer after latest job
+        return max(latestHour + 1, 21)  // Later of: 1hr buffer OR 9pm minimum
     }
 
     private var dayView: some View {
