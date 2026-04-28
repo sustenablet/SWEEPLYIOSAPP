@@ -332,8 +332,7 @@ struct CleanerUpcomingView: View {
                         Annotation(job.clientName, coordinate: CLLocationCoordinate2D(latitude: lat, longitude: lng)) {
                             MapPinView(
                                 status: job.status,
-                                isSelected: mapSelectedJobId == job.id,
-                                serviceType: job.serviceType
+                                isSelected: mapSelectedJobId == job.id
                             )
                             .onTapGesture {
                                 withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {

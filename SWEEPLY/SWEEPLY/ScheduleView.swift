@@ -319,8 +319,10 @@ struct ScheduleView: View {
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 12) {
                             ForEach(carouselJobs) { job in
+                                let client = clientsStore.clients.first(where: { $0.id == job.clientId })
                                 MapJobCard(
                                     job: job,
+                                    client: client,
                                     onDirections: { openDirections(for: job) },
                                     onDetails: {
                                         self.selectedJobId = job.id
