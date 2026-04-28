@@ -10,16 +10,18 @@ struct FinancesView: View {
     @Environment(ExpenseStore.self) private var expenseStore
     @Environment(TeamStore.self)    private var teamStore
 
-    @AppStorage("financesChartPeriod")   private var selectedPeriodRaw: String = ChartPeriod.week.rawValue
-    @AppStorage("financesInvoiceFilter") private var selectedFilterRaw: String = InvoiceFilter.all.rawValue
+    @AppStorage("financesChartPeriod")    private var selectedPeriodRaw: String = ChartPeriod.week.rawValue
+    @AppStorage("financesInvoiceFilter")  private var selectedFilterRaw: String = InvoiceFilter.all.rawValue
+    @AppStorage("financesOverviewPeriod") private var overviewPeriodRaw: String = OverviewPeriod.sixMonth.rawValue
 
     private var selectedPeriod: ChartPeriod { ChartPeriod(rawValue: selectedPeriodRaw) ?? .week }
     private var selectedPeriodBinding: Binding<ChartPeriod> {
         Binding(get: { ChartPeriod(rawValue: selectedPeriodRaw) ?? .week }, set: { selectedPeriodRaw = $0.rawValue })
     }
+    private var overviewPeriod: OverviewPeriod { OverviewPeriod(rawValue: overviewPeriodRaw) ?? .sixMonth }
     private var selectedFilter: InvoiceFilter { InvoiceFilter(rawValue: selectedFilterRaw) ?? .all }
     @State private var appeared = false
-    @State private var selectedBarMonth: String? = nil
+    @State private var selectedOverviewMonth: String? = nil
     @State private var showInvoicesList = false
     @State private var showExpenses = false
     @State private var showNewInvoice = false
@@ -42,6 +44,11 @@ struct FinancesView: View {
         case month = "Month"
     }
 
+    enum OverviewPeriod: String, CaseIterable {
+        case threeMonth = "3M"
+        case sixMonth   = "6M"
+    }
+
     enum InvoiceFilter: String, CaseIterable {
         case all     = "All"
         case paid    = "Paid"
@@ -57,6 +64,28 @@ struct FinancesView: View {
     }
     private var totalOverdue: Double {
         invoices.filter { $0.status == .overdue }.reduce(0) { $0 + $1.total }
+    }
+
+    private var cashflowDateInterval: DateInterval {
+        let cal = Calendar.current
+        switch selectedPeriod {
+        case .week:
+            return cal.dateInterval(of: .weekOfYear, for: Date()) ?? DateInterval(start: Date(), duration: 604800)
+        case .month:
+            return cal.dateInterval(of: .month, for: Date()) ?? DateInterval(start: Date(), duration: 2592000)
+        }
+    }
+    private var periodCollected: Double {
+        invoices.filter { $0.status == .paid && cashflowDateInterval.contains($0.createdAt) }
+            .reduce(0) { $0 + $1.total }
+    }
+    private var periodOutstanding: Double {
+        invoices.filter { $0.status == .unpaid && cashflowDateInterval.contains($0.createdAt) }
+            .reduce(0) { $0 + $1.total }
+    }
+    private var periodOverdue: Double {
+        invoices.filter { $0.status == .overdue && cashflowDateInterval.contains($0.createdAt) }
+            .reduce(0) { $0 + $1.total }
     }
     private var collectionRate: Int {
         let total = invoices.reduce(0) { $0 + $1.total }
@@ -145,23 +174,32 @@ struct FinancesView: View {
             }
         }
     }
-    private var sixMonthBarData: [MonthlyBar] {
+    private var overviewBarData: [MonthlyBar] {
+        let count = overviewPeriod == .threeMonth ? 3 : 6
         let calendar = Calendar.current
         let now = Date()
-        return (0..<6).reversed().compactMap { offset -> MonthlyBar? in
+        let f = DateFormatter()
+        f.dateFormat = "MMM"
+        return (0..<count).reversed().compactMap { offset -> MonthlyBar? in
             guard let monthStart = calendar.date(byAdding: .month, value: -offset, to: now),
                   let interval = calendar.dateInterval(of: .month, for: monthStart) else { return nil }
-            let f = DateFormatter()
-            f.dateFormat = "MMM"
             let label = f.string(from: interval.start)
             let collected = invoices.filter {
                 $0.status == .paid && $0.createdAt >= interval.start && $0.createdAt < interval.end
             }.reduce(0) { $0 + $1.total }
-            let scheduled = invoices.filter {
+            let outstanding = invoices.filter {
                 $0.status != .paid && $0.createdAt >= interval.start && $0.createdAt < interval.end
             }.reduce(0) { $0 + $1.total }
-            return MonthlyBar(month: label, collected: collected, scheduled: scheduled)
+            return MonthlyBar(month: label, collected: collected, scheduled: outstanding)
         }
+    }
+
+    private var overviewTrend: Double? {
+        guard overviewBarData.count >= 2 else { return nil }
+        let last = overviewBarData[overviewBarData.count - 1].collected
+        let prev = overviewBarData[overviewBarData.count - 2].collected
+        guard prev > 0 else { return nil }
+        return (last - prev) / prev
     }
     private var chartData: [WeeklyRevenue] {
         selectedPeriod == .week ? weeklyChartData : monthlyChartData
@@ -341,22 +379,38 @@ struct FinancesView: View {
 
             SectionCard {
                 VStack(alignment: .leading, spacing: 16) {
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("Collected".translated())
-                            .font(.system(size: 12, weight: .medium))
-                            .foregroundStyle(Color.sweeplyTextSub)
-                        Text(totalCollected.currency)
-                            .font(.system(size: 34, weight: .semibold, design: .rounded))
-                            .foregroundStyle(Color.sweeplyNavy)
-                            .monospacedDigit()
+                    HStack(alignment: .top) {
+                        VStack(alignment: .leading, spacing: 6) {
+                            HStack(spacing: 6) {
+                                Text("Collected".translated())
+                                    .font(.system(size: 12, weight: .medium))
+                                    .foregroundStyle(Color.sweeplyTextSub)
+                                Text(selectedPeriod == .week ? "This Week" : "This Month")
+                                    .font(.system(size: 10, weight: .semibold))
+                                    .foregroundStyle(Color.sweeplyAccent)
+                                    .padding(.horizontal, 7)
+                                    .padding(.vertical, 2)
+                                    .background(Color.sweeplyAccent.opacity(0.1))
+                                    .clipShape(Capsule())
+                            }
+                            Text(periodCollected.currency)
+                                .font(.system(size: 34, weight: .semibold, design: .rounded))
+                                .foregroundStyle(Color.sweeplyNavy)
+                                .monospacedDigit()
+                                .contentTransition(.numericText())
+                                .animation(.easeInOut(duration: 0.2), value: selectedPeriodRaw)
+                        }
+                        Spacer()
                     }
 
                     Divider()
 
                     HStack(spacing: 24) {
-                        minimalStatColumn(title: "Outstanding", value: totalOutstanding.currency)
-                        minimalStatColumn(title: "Overdue", value: totalOverdue.currency)
+                        minimalStatColumn(title: "Outstanding", value: periodOutstanding.currency)
+                        minimalStatColumn(title: "Overdue", value: periodOverdue.currency)
                     }
+                    .contentTransition(.numericText())
+                    .animation(.easeInOut(duration: 0.2), value: selectedPeriodRaw)
                 }
             }
         }
@@ -650,151 +704,204 @@ struct FinancesView: View {
         .frame(maxWidth: .infinity)
     }
 
-    // MARK: - 6-Month Grouped Bar Chart
+    // MARK: - Revenue Overview (3M / 6M Area Chart)
 
     private var sixMonthChartSection: some View {
         SectionCard {
-            VStack(alignment: .leading, spacing: 20) {
-                headerRow
-                chartArea
-                if let month = selectedBarMonth,
-                   let bar = sixMonthBarData.first(where: { $0.month == month }) {
-                    selectedMonthDetail(bar: bar)
-                        .transition(.opacity.combined(with: .move(edge: .bottom)))
+            VStack(alignment: .leading, spacing: 16) {
+
+                // Header
+                HStack(alignment: .top) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Revenue Overview".translated())
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundStyle(Color.sweeplyNavy)
+                        Text("Collected vs outstanding".translated())
+                            .font(.system(size: 11))
+                            .foregroundStyle(Color.sweeplyTextSub)
+                    }
+                    Spacer()
+                    // 3M / 6M toggle
+                    HStack(spacing: 0) {
+                        ForEach(OverviewPeriod.allCases, id: \.self) { period in
+                            Button {
+                                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                withAnimation(.easeInOut(duration: 0.2)) {
+                                    overviewPeriodRaw = period.rawValue
+                                    selectedOverviewMonth = nil
+                                }
+                            } label: {
+                                Text(period.rawValue)
+                                    .font(.system(size: 12, weight: .semibold))
+                                    .foregroundStyle(overviewPeriod == period ? .white : Color.sweeplyTextSub)
+                                    .padding(.horizontal, 14)
+                                    .padding(.vertical, 6)
+                                    .background {
+                                        if overviewPeriod == period {
+                                            RoundedRectangle(cornerRadius: 7, style: .continuous)
+                                                .fill(Color.sweeplyNavy)
+                                        }
+                                    }
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                    .padding(3)
+                    .background(Color.sweeplyBorder.opacity(0.5))
+                    .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
+                }
+
+                // Summary row
+                HStack(alignment: .bottom) {
+                    let total = overviewBarData.reduce(0) { $0 + $1.collected }
+                    let avg = overviewBarData.isEmpty ? 0 : total / Double(overviewBarData.count)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(total.currency)
+                            .font(.system(size: 22, weight: .bold, design: .rounded))
+                            .foregroundStyle(Color.sweeplyNavy)
+                            .monospacedDigit()
+                            .contentTransition(.numericText())
+                            .animation(.easeInOut(duration: 0.2), value: overviewPeriodRaw)
+                        Text("avg \(avg.currency) / month")
+                            .font(.system(size: 11))
+                            .foregroundStyle(Color.sweeplyTextSub)
+                    }
+                    Spacer()
+                    if let trend = overviewTrend {
+                        overviewTrendBadge(trend: trend)
+                    }
+                }
+
+                // Area chart
+                Chart {
+                    ForEach(overviewBarData) { bar in
+                        AreaMark(
+                            x: .value("Month", bar.month),
+                            y: .value("Collected", bar.collected),
+                            series: .value("S", "collected")
+                        )
+                        .foregroundStyle(
+                            LinearGradient(
+                                colors: [Color.sweeplyAccent.opacity(0.22), Color.sweeplyAccent.opacity(0.02)],
+                                startPoint: .top, endPoint: .bottom
+                            )
+                        )
+                        .interpolationMethod(.catmullRom)
+
+                        LineMark(
+                            x: .value("Month", bar.month),
+                            y: .value("Collected", bar.collected),
+                            series: .value("S", "collected")
+                        )
+                        .foregroundStyle(Color.sweeplyAccent)
+                        .lineStyle(StrokeStyle(lineWidth: 2.5))
+                        .interpolationMethod(.catmullRom)
+
+                        PointMark(
+                            x: .value("Month", bar.month),
+                            y: .value("Collected", bar.collected)
+                        )
+                        .foregroundStyle(Color.sweeplyAccent)
+                        .symbolSize(selectedOverviewMonth == bar.month ? 64 : 28)
+
+                        LineMark(
+                            x: .value("Month", bar.month),
+                            y: .value("Outstanding", bar.scheduled),
+                            series: .value("S", "outstanding")
+                        )
+                        .foregroundStyle(Color.sweeplyNavy.opacity(0.3))
+                        .lineStyle(StrokeStyle(lineWidth: 1.5, dash: [5, 3]))
+                        .interpolationMethod(.catmullRom)
+                    }
+                }
+                .chartXAxis {
+                    AxisMarks(values: .automatic) {
+                        AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5))
+                            .foregroundStyle(Color.sweeplyBorder.opacity(0.7))
+                        AxisValueLabel()
+                            .font(.system(size: 10, weight: .medium))
+                            .foregroundStyle(Color.sweeplyTextSub)
+                    }
+                }
+                .chartYAxis {
+                    AxisMarks(values: .automatic(desiredCount: 4)) { value in
+                        AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5))
+                            .foregroundStyle(Color.sweeplyBorder.opacity(0.5))
+                        AxisValueLabel {
+                            if let d = value.as(Double.self) {
+                                Text(d.shortCurrency)
+                                    .font(.system(size: 9, weight: .medium))
+                                    .foregroundStyle(Color.sweeplyTextSub)
+                            }
+                        }
+                    }
+                }
+                .chartXSelection(value: $selectedOverviewMonth)
+                .frame(height: 160)
+                .animation(.easeInOut(duration: 0.3), value: overviewPeriodRaw)
+
+                // Selected month callout
+                if let month = selectedOverviewMonth,
+                   let bar = overviewBarData.first(where: { $0.month == month }) {
+                    HStack(spacing: 0) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(bar.month)
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundStyle(Color.sweeplyTextSub)
+                            Text(bar.total.currency)
+                                .font(.system(size: 14, weight: .bold, design: .monospaced))
+                                .foregroundStyle(Color.sweeplyNavy)
+                        }
+                        Spacer()
+                        VStack(alignment: .trailing, spacing: 4) {
+                            HStack(spacing: 6) {
+                                Circle().fill(Color.sweeplyAccent).frame(width: 6, height: 6)
+                                Text(bar.collected.currency)
+                                    .font(.system(size: 12, weight: .medium, design: .monospaced))
+                                    .foregroundStyle(Color.sweeplyNavy)
+                            }
+                            HStack(spacing: 6) {
+                                Circle().fill(Color.sweeplyNavy.opacity(0.3)).frame(width: 6, height: 6)
+                                Text(bar.scheduled.currency)
+                                    .font(.system(size: 12, weight: .medium, design: .monospaced))
+                                    .foregroundStyle(Color.sweeplyNavy)
+                            }
+                        }
+                    }
+                    .padding(12)
+                    .background(Color.sweeplySurface)
+                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).stroke(Color.sweeplyBorder, lineWidth: 1))
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+                }
+
+                // Legend
+                HStack(spacing: 16) {
+                    legendItem(color: Color.sweeplyAccent, label: "Collected")
+                    legendItem(color: Color.sweeplyNavy.opacity(0.3), label: "Outstanding")
                 }
             }
         }
     }
 
-    private var headerRow: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("6-Month Overview".translated())
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(Color.sweeplyNavy)
-                    Text("Revenue performance".translated())
-                        .font(.system(size: 11))
-                        .foregroundStyle(Color.sweeplyTextSub)
-                }
-                Spacer()
-                summaryStats
-            }
-            HStack(spacing: 16) {
-                legendItem(color: Color.sweeplyAccent, label: "Collected")
-                legendItem(color: Color.sweeplyNavy.opacity(0.28), label: "Outstanding")
-                Spacer()
-                if let trend = monthOverMonthTrend {
-                    trendBadge(trend: trend)
-                }
-            }
-        }
-    }
-
-    private var summaryStats: some View {
-        let total = sixMonthBarData.reduce(0) { $0 + $1.collected }
-        let avg = sixMonthBarData.isEmpty ? 0 : total / Double(sixMonthBarData.count)
-        return VStack(alignment: .trailing, spacing: 2) {
-            Text(total.currency)
-                .font(.system(size: 16, weight: .bold, design: .monospaced))
-                .foregroundStyle(Color.sweeplyNavy)
-            Text("avg \(avg.currency)")
-                .font(.system(size: 10))
-                .foregroundStyle(Color.sweeplyTextSub)
-        }
-    }
-
-    private var monthOverMonthTrend: Double? {
-        guard sixMonthBarData.count >= 2 else { return nil }
-        let last = sixMonthBarData[sixMonthBarData.count - 1].collected
-        let prev = sixMonthBarData[sixMonthBarData.count - 2].collected
-        guard prev > 0 else { return nil }
-        return (last - prev) / prev
-    }
-
-    private func trendBadge(trend: Double) -> some View {
+    private func overviewTrendBadge(trend: Double) -> some View {
         let isUp = trend >= 0
         let color: Color = isUp ? Color.sweeplySuccess : Color.sweeplyDestructive
         let icon = isUp ? "arrow.up.right" : "arrow.down.right"
         return HStack(spacing: 3) {
-            Image(systemName: icon)
-                .font(.system(size: 9, weight: .bold))
-            Text(String(format: "%.0f%%", abs(trend * 100)))
-                .font(.system(size: 10, weight: .semibold))
+            Image(systemName: icon).font(.system(size: 9, weight: .bold))
+            Text(String(format: "%.0f%%", abs(trend * 100))).font(.system(size: 10, weight: .semibold))
         }
         .foregroundStyle(color)
-        .padding(.horizontal, 6)
-        .padding(.vertical, 3)
+        .padding(.horizontal, 6).padding(.vertical, 3)
         .background(color.opacity(0.12))
         .clipShape(Capsule())
     }
 
-    private var chartArea: some View {
-        SixMonthBarChart(
-            data: sixMonthBarData,
-            selectedMonth: $selectedBarMonth
-        )
-        .frame(height: 160)
-        .animation(.easeOut(duration: 0.4), value: appeared)
-    }
-
-    private func selectedMonthDetail(bar: MonthlyBar) -> some View {
-        let total = bar.collected + bar.scheduled
-        let monthTotal = sixMonthBarData.reduce(0) { $0 + $1.collected + $1.scheduled }
-        let share = monthTotal > 0 ? bar.total / monthTotal : 0
-
-        return HStack(spacing: 0) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(bar.month)
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(Color.sweeplyTextSub)
-                Text("Total: \(bar.total.currency)")
-                    .font(.system(size: 13, weight: .semibold, design: .monospaced))
-                    .foregroundStyle(Color.sweeplyNavy)
-            }
-            Spacer()
-            VStack(alignment: .trailing, spacing: 4) {
-                detailRow(label: "Collected", value: bar.collected.currency, color: Color.sweeplyAccent)
-                detailRow(label: "Outstanding", value: bar.scheduled.currency, color: Color.sweeplyNavy.opacity(0.28))
-                if share > 0 {
-                    Text(String(format: "%.0f%% of 6-month total", share * 100))
-                        .font(.system(size: 10))
-                        .foregroundStyle(Color.sweeplyTextSub)
-                }
-            }
-        }
-        .padding(14)
-        .background(Color.sweeplySurface)
-        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .stroke(Color.sweeplyBorder, lineWidth: 1)
-        )
-    }
-
-    private func detailRow(label: String, value: String, color: Color) -> some View {
-        HStack(spacing: 6) {
-            Circle()
-                .fill(color)
-                .frame(width: 6, height: 6)
-            Text(label)
-                .font(.system(size: 11))
-                .foregroundStyle(Color.sweeplyTextSub)
-            Spacer()
-            Text(value)
-                .font(.system(size: 11, weight: .medium, design: .monospaced))
-                .foregroundStyle(Color.sweeplyNavy)
-        }
-    }
-
     private func legendItem(color: Color, label: String) -> some View {
         HStack(spacing: 5) {
-            RoundedRectangle(cornerRadius: 2, style: .continuous)
-                .fill(color)
-                .frame(width: 10, height: 10)
-            Text(label)
-                .font(.system(size: 10, weight: .medium))
-                .foregroundStyle(Color.sweeplyTextSub)
+            RoundedRectangle(cornerRadius: 2, style: .continuous).fill(color).frame(width: 10, height: 10)
+            Text(label).font(.system(size: 10, weight: .medium)).foregroundStyle(Color.sweeplyTextSub)
         }
     }
 
@@ -1245,134 +1352,6 @@ private struct MonthlyBar: Identifiable {
     }
   }
   
-  // MARK: - Interactive grouped bar chart (6-month)
-  
-  private struct SixMonthBarChart: View {
-    let data: [MonthlyBar]
-    @Binding var selectedMonth: String?
-
-    private let collectedColor = Color.sweeplyAccent
-    private let outstandingColor = Color.sweeplyNavy.opacity(0.28)
-    private let gridColor = Color.sweeplyBorder.opacity(0.6)
-    private let labelColor = Color.sweeplyTextSub
-
-    var body: some View {
-        GeometryReader { geo in
-            let availableHeight = geo.size.height - 28
-            let maxValue = data.map { $0.total }.max() ?? 1
-            let yLabels = buildYAxisLabels(maxValue: maxValue, height: availableHeight)
-
-            ZStack(alignment: .bottom) {
-                gridLines(height: availableHeight, labels: yLabels)
-                bars(maxValue: maxValue, availableHeight: availableHeight)
-                xLabels(height: availableHeight)
-            }
-        }
-    }
-
-    @ViewBuilder
-    private func gridLines(height: CGFloat, labels: [(value: Double, y: CGFloat)]) -> some View {
-        ForEach(labels, id: \.value) { label in
-            HStack(spacing: 6) {
-                Text(formatCompact(value: label.value))
-                    .font(.system(size: 8, weight: .medium, design: .monospaced))
-                    .foregroundStyle(labelColor)
-                    .frame(width: 36, alignment: .trailing)
-                Rectangle()
-                    .fill(gridColor)
-                    .frame(height: 1)
-                Spacer()
-            }
-            .frame(height: 1, alignment: .bottom)
-            .offset(y: label.y)
-        }
-    }
-
-    @ViewBuilder
-    private func bars(maxValue: Double, availableHeight: CGFloat) -> some View {
-        let barSpacing: CGFloat = 12
-        let pairWidth: CGFloat = 22
-
-        HStack(alignment: .bottom, spacing: barSpacing) {
-            ForEach(data) { bar in
-                let isSelected = selectedMonth == bar.month
-                let collectedH = maxValue > 0 ? max(3, CGFloat(bar.collected / maxValue) * availableHeight) : 3
-                let outstandingH = maxValue > 0 ? max(3, CGFloat(bar.scheduled / maxValue) * availableHeight) : 3
-                let pairTotal = collectedH + outstandingH
-
-                VStack(spacing: 2) {
-                    Spacer()
-                    Button {
-                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                        withAnimation(.easeInOut(duration: 0.15)) {
-                            selectedMonth = isSelected ? nil : bar.month
-                        }
-                    } label: {
-                        VStack(alignment: .trailing, spacing: 2) {
-                            if isSelected, bar.total > 0 {
-                                Text(formatCompact(value: bar.total))
-                                    .font(.system(size: 8, weight: .semibold, design: .monospaced))
-                                    .foregroundStyle(collectedColor)
-                                    .offset(y: -3)
-                            }
-                            HStack(alignment: .bottom, spacing: 3) {
-                                VStack(spacing: 1) {
-                                    RoundedRectangle(cornerRadius: 3, style: .continuous)
-                                        .fill(collectedColor)
-                                        .frame(width: 10, height: collectedH)
-                                        .opacity(isSelected ? 1 : 0.85)
-                                    RoundedRectangle(cornerRadius: 3, style: .continuous)
-                                        .fill(outstandingColor)
-                                        .frame(width: 10, height: outstandingH)
-                                        .opacity(isSelected ? 1 : 0.85)
-                                }
-                            }
-                        }
-                    }
-                    .buttonStyle(.plain)
-                }
-                .frame(maxHeight: .infinity, alignment: .bottom)
-            }
-        }
-        .padding(.leading, 44)
-    }
-
-    @ViewBuilder
-    private func xLabels(height: CGFloat) -> some View {
-        let barSpacing: CGFloat = 12
-        let pairWidth: CGFloat = 22
-
-        HStack(alignment: .top, spacing: barSpacing) {
-            ForEach(data) { bar in
-                let isSelected = selectedMonth == bar.month
-                Text(bar.month)
-                    .font(.system(size: 10, weight: isSelected ? .semibold : .regular))
-                    .foregroundStyle(isSelected ? Color.sweeplyNavy : labelColor)
-                    .frame(width: 22, alignment: .center)
-            }
-        }
-        .padding(.leading, 44 + pairWidth / 2)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .offset(y: height + 4)
-    }
-
-    private func buildYAxisLabels(maxValue: Double, height: CGFloat) -> [(value: Double, y: CGFloat)] {
-        guard maxValue > 0 else { return [] }
-        let steps = 4
-        return (0...steps).map { i in
-            let value = maxValue * Double(i) / Double(steps)
-            let y = height - (CGFloat(value) / CGFloat(maxValue) * height)
-            return (value: value, y: y)
-        }
-    }
-
-    private func formatCompact(value: Double) -> String {
-        if value >= 1000 {
-            return "$\(String(format: "%.0f", value / 1000))k"
-        }
-        return "$\(String(format: "%.0f", value))"
-    }
-}
 
 // MARK: - Invoice row
 
