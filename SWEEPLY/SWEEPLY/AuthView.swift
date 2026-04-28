@@ -54,13 +54,18 @@ struct AuthView: View {
                             .offset(y: 40)
                             .brightness(-0.25)
 
-                        Text(isSignUp ? "Create your account and simplify your workday" : "Welcome back! Sign in to continue")
-                            .font(.system(size: 16, weight: .medium))
-                            .foregroundStyle(.white)
-                            .multilineTextAlignment(.leading)
-                            .padding(.horizontal, 28)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .offset(y: 160)
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(isSignUp ? "Create your account" : "Welcome back!")
+                                .font(.system(size: 22, weight: .bold, design: .rounded))
+                                .foregroundStyle(.white)
+                            Text(isSignUp ? "and simplify your workday" : "Sign in to continue")
+                                .font(.system(size: 16, weight: .medium))
+                                .foregroundStyle(.white.opacity(0.85))
+                        }
+                        .multilineTextAlignment(.leading)
+                        .padding(.horizontal, 28)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .offset(y: 160)
                     }
                     .frame(height: 120)
 
