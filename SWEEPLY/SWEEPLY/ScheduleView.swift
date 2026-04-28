@@ -381,7 +381,7 @@ struct ScheduleView: View {
 
     // MARK: - Day View (Timeline)
 
-    private let timelineHourHeight: CGFloat = 56
+    private let timelineHourHeight: CGFloat = 44
     private let timelineStartHour: Int = 6
     private let timelineEndHour: Int = 21
 
