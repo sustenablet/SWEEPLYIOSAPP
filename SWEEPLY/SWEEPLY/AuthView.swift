@@ -35,7 +35,7 @@ struct AuthView: View {
         GeometryReader { geo in
             ZStack(alignment: .top) {
                 // White background fills everything
-                Color.white
+                Color(red: 253/255, green: 253/255, blue: 255/255)
                     .ignoresSafeArea()
 
                 // Blue color above the image only
@@ -236,7 +236,7 @@ struct AuthView: View {
                 .padding(.bottom, 40)
         }
         .background(
-            Color.white
+            Color(red: 253/255, green: 253/255, blue: 255/255)
                 .shadow(color: .black.opacity(0.08), radius: 20, x: 0, y: -6)
         )
     }
