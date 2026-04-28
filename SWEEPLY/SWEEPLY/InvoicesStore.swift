@@ -72,6 +72,12 @@ final class InvoicesStore {
             let finalInvoice = inserted.toInvoice()
             invoices.insert(finalInvoice, at: 0)
             NotificationManager.shared.scheduleInvoiceReminder(for: finalInvoice)
+            await NotificationHelper.insert(
+                userId: userId,
+                title: "Invoice Created",
+                message: "\(finalInvoice.invoiceNumber) for \(finalInvoice.clientName) — \(finalInvoice.subtotal.currency) due \(finalInvoice.dueDate.formatted(.dateTime.month(.abbreviated).day()))",
+                kind: "billing"
+            )
             return true
         } catch {
             lastError = error.localizedDescription
@@ -150,6 +156,11 @@ final class InvoicesStore {
                 let paid = refreshed.toInvoice()
                 invoices[idx] = paid
                 NotificationManager.shared.cancelInvoiceReminders(for: id)
+                await NotificationHelper.insert(
+                    title: "Invoice Paid",
+                    message: "\(paid.invoiceNumber) for \(paid.clientName) — \(amount.currency) received",
+                    kind: "billing"
+                )
             }
             return true
         } catch {
