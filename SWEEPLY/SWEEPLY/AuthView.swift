@@ -14,6 +14,8 @@ struct AuthView: View {
     @State private var resetError: String? = nil
     @State private var appeared = false
     @State private var keyboardHeight: CGFloat = 0
+    @State private var showPassword = false
+    @State private var hasStartedTypingPassword = false
 
     private var canSubmit: Bool {
         isValidEmail(email) && password.count >= 6 && !isSubmitting
@@ -259,7 +261,7 @@ struct AuthView: View {
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 15)
-            .background(Color(white: 0.96))
+            .background(Color(red: 235/255, green: 237/255, blue: 238/255))
             .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: 12, style: .continuous)
@@ -283,21 +285,48 @@ struct AuthView: View {
                     .foregroundStyle(Color.sweeplyTextSub)
                     .frame(width: 20)
 
-                SecureField("••••••••", text: $password)
-                    .textContentType(isSignUp ? .newPassword : .password)
-                    .font(.system(size: 15))
-                    .foregroundStyle(Color.primary)
+                if showPassword {
+                    TextField("••••••••", text: $password)
+                        .textContentType(isSignUp ? .newPassword : .password)
+                        .font(.system(size: 15))
+                        .foregroundStyle(Color.primary)
+                        .autocapitalization(.none)
+                        .autocorrectionDisabled()
+                        .onChange(of: password) { _, newValue in
+                            if !hasStartedTypingPassword && !newValue.isEmpty {
+                                hasStartedTypingPassword = true
+                            }
+                        }
+                } else {
+                    SecureField("••••••••", text: $password)
+                        .textContentType(isSignUp ? .newPassword : .password)
+                        .font(.system(size: 15))
+                        .foregroundStyle(Color.primary)
+                        .onChange(of: password) { _, newValue in
+                            if !hasStartedTypingPassword && !newValue.isEmpty {
+                                hasStartedTypingPassword = true
+                            }
+                        }
+                }
+
+                Button {
+                    showPassword.toggle()
+                } label: {
+                    Image(systemName: showPassword ? "eye.slash" : "eye")
+                        .font(.system(size: 15))
+                        .foregroundStyle(Color.sweeplyTextSub)
+                }
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 15)
-            .background(Color(white: 0.96))
+            .background(Color(red: 235/255, green: 237/255, blue: 238/255))
             .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: 12, style: .continuous)
                     .stroke(password.count > 0 && password.count < 6 ? Color.sweeplyDestructive : Color.clear, lineWidth: 1)
             )
 
-            if isSignUp {
+            if isSignUp && hasStartedTypingPassword {
                 passwordStrengthIndicator
             }
         }

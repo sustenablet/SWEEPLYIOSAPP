@@ -54,7 +54,7 @@ struct GetStartedView: View {
             .padding(.bottom, 80)
         }
         .onAppear {
-            withAnimation(.easeOut(duration: 0.55).delay(0.1)) {
+            withAnimation(.easeOut(duration: 0.3).delay(0.05)) {
                 appeared = true
             }
             startTypewriter()
@@ -62,7 +62,7 @@ struct GetStartedView: View {
     }
 
     private func startTypewriter() {
-        Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { timer in
+        Timer.scheduledTimer(withTimeInterval: 0.03, repeats: true) { timer in
             if charIndex <= fullText.count {
                 let index = fullText.index(fullText.startIndex, offsetBy: charIndex)
                 displayedText = String(fullText[..<index])
