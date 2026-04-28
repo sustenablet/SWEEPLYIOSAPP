@@ -382,8 +382,25 @@ struct ScheduleView: View {
     // MARK: - Day View (Timeline)
 
     private let timelineHourHeight: CGFloat = 56
-    private let timelineStartHour: Int = 6
-    private let timelineEndHour: Int = 21
+    private var timelineStartHour: Int {
+        let jobs = filteredJobsForDate(selectedDay)
+        guard !jobs.isEmpty else { return 6 }
+        let earliestHour = Calendar.current.component(.hour, from: jobs.map { $0.date }.min()!)
+        return max(0, earliestHour - 1)  // 1 hour buffer before earliest job
+    }
+    private var timelineEndHour: Int {
+        let jobs = filteredJobsForDate(selectedDay)
+        guard !jobs.isEmpty else { return 21 }
+        // Calculate end hour based on latest job + its duration
+        let latestJob = jobs.max { job1, job2 in
+            let end1 = job1.date.addingTimeInterval(job1.duration * 3600)
+            let end2 = job2.date.addingTimeInterval(job2.duration * 3600)
+            return end1 < end2
+        }!
+        let endTime = latestJob.date.addingTimeInterval(latestJob.duration * 3600)
+        let latestHour = Calendar.current.component(.hour, from: endTime)
+        return min(24, latestHour + 1)  // 1 hour buffer after latest job
+    }
 
     private var dayView: some View {
         let jobs = filteredJobsForDate(selectedDay)
@@ -475,7 +492,7 @@ struct ScheduleView: View {
                                         let now = Date()
                                         let nowHour   = Calendar.current.component(.hour, from: now)
                                         let nowMinute = Calendar.current.component(.minute, from: now)
-                                        let yNow = CGFloat(nowHour - timelineStartHour) * timelineHourHeight
+                                        let yNow = CGFloat(nowHour - self.timelineStartHour) * timelineHourHeight
                                                  + CGFloat(nowMinute) / 60.0 * timelineHourHeight
                                         HStack(spacing: 0) {
                                             Circle().fill(Color.red).frame(width: 8, height: 8)
@@ -605,37 +622,20 @@ struct ScheduleView: View {
                     .padding(.vertical, 60)
                 } else {
                     LazyVStack(alignment: .leading, spacing: 0, pinnedViews: [.sectionHeaders]) {
-                        // Jobs section
-                        if hasJobs {
-                            Section {
-                                VStack(spacing: 8) {
-                                    ForEach(listJobsForSelectedDay) { job in
-                                        ScheduleJobRow(job: job)
-                                    }
-                                }
-                                .padding(.horizontal, 20)
-                                .padding(.bottom, 16)
-                            } header: {
-                                HStack(spacing: 8) {
-                                    Text(agendaDateLabel(selectedDay))
-                                        .font(.system(size: 13, weight: .bold))
-                                        .foregroundStyle(Color.sweeplyAccent)
-                                    Text("·".translated())
-                                        .foregroundStyle(Color.sweeplyBorder)
-                                    Text(listJobsForSelectedDay.reduce(0) { $0 + $1.price }.currency)
-                                        .font(.system(size: 12, weight: .semibold, design: .monospaced))
-                                        .foregroundStyle(Color.sweeplyTextSub)
-                                    Spacer()
-                                    Text("\(listJobsForSelectedDay.count) job\(listJobsForSelectedDay.count == 1 ? "" : "s")")
-                                        .font(.system(size: 11, weight: .medium))
-                                        .foregroundStyle(Color.sweeplyTextSub.opacity(0.7))
-                                }
-                                .padding(.horizontal, 20)
-                                .padding(.vertical, 10)
-                                .background(Color.sweeplyBackground)
-                                .overlay(Rectangle().frame(height: 1).foregroundStyle(Color.sweeplyBorder.opacity(0.5)), alignment: .bottom)
-                            }
+            // Jobs section
+            if hasJobs {
+                Section {
+                    VStack(spacing: 8) {
+                        ForEach(listJobsForSelectedDay) { job in
+                            ScheduleJobRow(job: job)
                         }
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 16)
+                } header: {
+                    Text("")
+                }
+            }
 
                         // Invoices section
                         if hasInvoices {
