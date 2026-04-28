@@ -1495,7 +1495,7 @@ struct MapPinView: View {
         VStack(spacing: 0) {
             ZStack {
                 Circle()
-                    .fill(isSelected ? Color.sweeplyNavy : statusColor)
+                    .fill(isSelected ? selectedColor : statusColor)
                     .frame(width: isSelected ? 44 : 36, height: isSelected ? 44 : 36)
                     .shadow(color: .black.opacity(0.15), radius: 4, x: 0, y: 2)
                 
@@ -1513,11 +1513,20 @@ struct MapPinView: View {
                 .aspectRatio(contentMode: .fit)
                 .frame(width: 10, height: 10)
                 .rotationEffect(.degrees(180))
-                .foregroundStyle(isSelected ? Color.sweeplyNavy : statusColor)
+                .foregroundStyle(isSelected ? selectedColor : statusColor)
                 .offset(y: -4)
         }
         .scaleEffect(isSelected ? 1.2 : 1.0)
         .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isSelected)
+    }
+    
+    private var selectedColor: Color {
+        switch status {
+        case .completed: return Color.sweeplyAccent
+        case .inProgress: return inProgressColor
+        case .scheduled: return Color.sweeplyNavy
+        case .cancelled: return Color.sweeplyDestructive
+        }
     }
     
     private var statusColor: Color {
