@@ -95,6 +95,12 @@ final class JobsStore {
             NotificationManager.shared.refreshDailyDigests(jobs: jobs)
             Task.detached { await CalendarSyncManager.shared.addEvent(for: mapped) }
             SpotlightIndexer.shared.indexJobs([mapped])
+            await NotificationHelper.insert(
+                userId: userId,
+                title: "Job Scheduled",
+                message: "\(mapped.serviceType.rawValue) for \(mapped.clientName) on \(mapped.date.formatted(.dateTime.weekday(.wide).month().day()))",
+                kind: "schedule"
+            )
             return true
         } catch {
             lastError = error.localizedDescription
@@ -175,7 +181,14 @@ final class JobsStore {
                 NotificationManager.shared.cancelJobReminders(for: id)
             }
             NotificationManager.shared.refreshDailyDigests(jobs: jobs)
-            if status == .completed { requestReviewIfAppropriate() }
+            if status == .completed {
+                requestReviewIfAppropriate()
+                await NotificationHelper.insert(
+                    title: "Job Completed",
+                    message: "\(mapped.serviceType.rawValue) for \(mapped.clientName) — marked complete",
+                    kind: "jobs"
+                )
+            }
             return true
         } catch {
             lastError = error.localizedDescription
