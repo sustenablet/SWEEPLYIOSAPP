@@ -260,6 +260,9 @@ private var healthCards: [DashboardHealthCardModel] {
         }
         .sheet(isPresented: $showNotifications) {
             NotificationsView()
+                .environment(jobsStore)
+                .environment(invoicesStore)
+                .environment(clientsStore)
         }
         .fullScreenCover(isPresented: $showSettings) {
             SettingsView()

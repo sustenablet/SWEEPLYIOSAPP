@@ -44,6 +44,7 @@ final class JobsStore {
                 .value
             jobs = rows.map { $0.toJob() }
             SpotlightIndexer.shared.indexJobs(jobs)
+            NotificationManager.shared.refreshDailyDigests(jobs: jobs)
         } catch {
             lastError = error.localizedDescription
             // Only clear jobs if this was an initial load (not a refresh)
@@ -60,6 +61,7 @@ final class JobsStore {
         guard let client = SupabaseManager.shared else {
             jobs.append(job)
             jobs.sort { $0.date > $1.date }
+            NotificationManager.shared.refreshDailyDigests(jobs: jobs)
             return true
         }
         lastError = nil
@@ -183,7 +185,9 @@ final class JobsStore {
 
     func delete(id: UUID) async -> Bool {
         guard let client = SupabaseManager.shared else {
+            NotificationManager.shared.cancelJobReminders(for: id)
             jobs.removeAll { $0.id == id }
+            NotificationManager.shared.refreshDailyDigests(jobs: jobs)
             return true
         }
         lastError = nil

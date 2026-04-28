@@ -218,6 +218,7 @@ struct CleanerDashboardView: View {
             }
             .sheet(isPresented: $showNotifications) {
                 NotificationsView()
+                    .environment(jobsStore)
             }
             .sheet(isPresented: $showProfileMenu) {
                 CleanerProfileMenuView(membership: membership, showSettings: $showMemberSettings)
