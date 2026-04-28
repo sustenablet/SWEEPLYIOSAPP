@@ -975,6 +975,7 @@ struct FinancesView: View {
                     member: member,
                     amount: $paymentAmount,
                     notes: $paymentNotes,
+                    jobs: completedJobsThisMonth(for: member),
                     onPay: { Task {
                         let ok = await processPayment(member: member)
                         if ok {
@@ -1789,9 +1790,14 @@ private struct PaymentSheet: View {
     let member: TeamMember
     @Binding var amount: String
     @Binding var notes: String
+    let jobs: [Job]
     let onPay: () -> Void
 
     @State private var isPaying = false
+
+    private var initials: String {
+        String(member.name.split(separator: " ").compactMap { $0.first }.map { String($0) }.joined().prefix(2)).uppercased()
+    }
 
     private var parsedAmount: Double? {
         let cleaned = amount.replacingOccurrences(of: ",", with: ".")
@@ -1802,68 +1808,192 @@ private struct PaymentSheet: View {
         (parsedAmount ?? 0) > 0
     }
 
+    private var periodTitle: String {
+        switch member.payRateType {
+        case .perDay:          return "Today's Performance".translated()
+        case .perWeek:         return "This Week's Performance".translated()
+        case .perJob, .custom: return "This Month's Performance".translated()
+        }
+    }
+
+    private var periodJobs: [Job] {
+        let cal = Calendar.current
+        let today = Date()
+        switch member.payRateType {
+        case .perDay:
+            return jobs.filter { cal.isDateInToday($0.date) }
+        case .perWeek:
+            return jobs.filter { cal.isDate($0.date, equalTo: today, toGranularity: .weekOfYear) }
+        case .perJob, .custom:
+            return jobs
+        }
+    }
+
+    private var serviceBreakdownString: String {
+        let grouped = Dictionary(grouping: periodJobs) { $0.serviceType.rawValue }
+        return grouped
+            .sorted { $0.value.count > $1.value.count }
+            .map { "\($0.key) × \($0.value.count)" }
+            .joined(separator: " · ")
+    }
+
+    private var suggestedPay: Double {
+        guard member.payRateEnabled && member.payRateAmount > 0 else {
+            return periodJobs.reduce(0.0) { $0 + $1.price }
+        }
+        let cal = Calendar.current
+        switch member.payRateType {
+        case .perJob:
+            return Double(periodJobs.count) * member.payRateAmount
+        case .perDay:
+            let days = Set(periodJobs.map { cal.startOfDay(for: $0.date) }).count
+            return Double(days) * member.payRateAmount
+        case .perWeek, .custom:
+            return member.payRateAmount
+        }
+    }
+
     var body: some View {
         NavigationStack {
             ZStack {
                 Color.sweeplyBackground.ignoresSafeArea()
 
-                VStack(spacing: 20) {
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("Payment Amount".translated())
-                            .font(.system(size: 12, weight: .medium))
-                            .foregroundStyle(Color.sweeplyTextSub)
-                        
-                        HStack {
-                            Text("$".translated())
-                                .font(.system(size: 24, weight: .bold))
-                                .foregroundStyle(Color.sweeplyNavy)
-                            
-                            TextField("0", text: $amount)
-                                .font(.system(size: 32, weight: .bold, design: .monospaced))
-                                .keyboardType(.decimalPad)
+                ScrollView(showsIndicators: false) {
+                    VStack(spacing: 16) {
+
+                        // Member header
+                        VStack(spacing: 12) {
+                            ZStack {
+                                Circle()
+                                    .fill(Color.sweeplyNavy)
+                                    .frame(width: 56, height: 56)
+                                Text(initials.isEmpty ? "?" : initials)
+                                    .font(.system(size: 20, weight: .bold))
+                                    .foregroundStyle(.white)
+                            }
+                            VStack(spacing: 4) {
+                                Text(member.name)
+                                    .font(.system(size: 17, weight: .bold))
+                                    .foregroundStyle(Color.sweeplyNavy)
+                                if member.payRateEnabled && member.payRateAmount > 0 {
+                                    Text(member.payRateDescription)
+                                        .font(.system(size: 12, weight: .semibold))
+                                        .foregroundStyle(Color.sweeplyAccent)
+                                        .padding(.horizontal, 10)
+                                        .padding(.vertical, 4)
+                                        .background(Color.sweeplyAccent.opacity(0.1), in: Capsule())
+                                }
+                            }
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 20)
+                        .background(Color.sweeplySurface)
+                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(Color.sweeplyBorder, lineWidth: 1))
+
+                        // Performance summary
+                        VStack(alignment: .leading, spacing: 12) {
+                            HStack {
+                                Text(periodTitle)
+                                    .font(.system(size: 13, weight: .semibold))
+                                    .foregroundStyle(Color.sweeplyNavy)
+                                Spacer()
+                                Text("\(periodJobs.count) job\(periodJobs.count == 1 ? "" : "s")")
+                                    .font(.system(size: 12, weight: .medium))
+                                    .foregroundStyle(Color.sweeplyTextSub)
+                            }
+
+                            if periodJobs.isEmpty {
+                                Text("No completed jobs for this period.")
+                                    .font(.system(size: 13))
+                                    .foregroundStyle(Color.sweeplyTextSub)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                            } else {
+                                VStack(alignment: .leading, spacing: 8) {
+                                    Text(serviceBreakdownString)
+                                        .font(.system(size: 13))
+                                        .foregroundStyle(Color.sweeplyTextSub)
+                                        .lineLimit(2)
+                                        .fixedSize(horizontal: false, vertical: true)
+
+                                    Divider()
+
+                                    HStack {
+                                        Text("Suggested pay".translated())
+                                            .font(.system(size: 12, weight: .medium))
+                                            .foregroundStyle(Color.sweeplyTextSub)
+                                        Spacer()
+                                        Text(suggestedPay.currency)
+                                            .font(.system(size: 14, weight: .bold, design: .monospaced))
+                                            .foregroundStyle(Color.sweeplyNavy)
+                                    }
+                                }
+                            }
                         }
                         .padding(16)
                         .background(Color.sweeplySurface)
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
-                    }
+                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(Color.sweeplyBorder, lineWidth: 1))
 
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("Notes (optional)".translated())
-                            .font(.system(size: 12, weight: .medium))
-                            .foregroundStyle(Color.sweeplyTextSub)
-                        
-                        TextField("Payment for this week...", text: $notes, axis: .vertical)
-                            .font(.system(size: 15))
-                            .lineLimit(3)
-                            .padding(12)
-                            .background(Color.sweeplySurface)
-                            .clipShape(RoundedRectangle(cornerRadius: 12))
-                    }
+                        // Payment amount
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("Payment Amount".translated())
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundStyle(Color.sweeplyTextSub)
 
-                    Spacer()
-
-                    Button {
-                        isPaying = true
-                        onPay()
-                    } label: {
-                        HStack {
-                            if isPaying {
-                                ProgressView()
-                                    .tint(.white)
-                            } else {
-                                Text("Record Payment".translated())
-                                    .font(.system(size: 16, weight: .semibold))
+                            HStack(alignment: .firstTextBaseline, spacing: 4) {
+                                Text("$")
+                                    .font(.system(size: 24, weight: .bold))
+                                    .foregroundStyle(Color.sweeplyNavy)
+                                TextField("0", text: $amount)
+                                    .font(.system(size: 32, weight: .bold, design: .monospaced))
+                                    .keyboardType(.decimalPad)
                             }
+                            .padding(16)
+                            .background(Color.sweeplySurface)
+                            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                            .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(Color.sweeplyBorder, lineWidth: 1))
                         }
-                        .foregroundStyle(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 16)
-                        .background(canPay ? Color.sweeplyNavy : Color.sweeplyNavy.opacity(0.5))
-                        .clipShape(RoundedRectangle(cornerRadius: 14))
+
+                        // Notes
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("Notes (optional)".translated())
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundStyle(Color.sweeplyTextSub)
+
+                            TextField("Payment for this week...", text: $notes, axis: .vertical)
+                                .font(.system(size: 15))
+                                .lineLimit(3)
+                                .padding(12)
+                                .background(Color.sweeplySurface)
+                                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                                .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(Color.sweeplyBorder, lineWidth: 1))
+                        }
+
+                        Spacer(minLength: 16)
+
+                        Button {
+                            isPaying = true
+                            onPay()
+                        } label: {
+                            HStack {
+                                if isPaying {
+                                    ProgressView().tint(.white)
+                                } else {
+                                    Text("Record Payment".translated())
+                                        .font(.system(size: 16, weight: .semibold))
+                                }
+                            }
+                            .foregroundStyle(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 16)
+                            .background(canPay ? Color.sweeplyNavy : Color.sweeplyNavy.opacity(0.5))
+                            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        }
+                        .disabled(!canPay || isPaying)
                     }
-                    .disabled(!canPay || isPaying)
+                    .padding(20)
                 }
-                .padding(20)
             }
             .navigationTitle("Pay \(member.name)")
             .navigationBarTitleDisplayMode(.inline)
