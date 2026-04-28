@@ -60,7 +60,7 @@ struct ScheduleView: View {
     @State private var showMonthPicker = false
     @State private var selectedJobId: UUID? = nil
     @State private var showJobDetail: Bool = false
-    @State private var mapCameraPosition: MapCameraPosition = .userLocation(fallback: .automatic)
+    @State private var mapCameraPosition: MapCameraPosition = .automatic
     @State private var locationManager = LocationManager.shared
     @Namespace private var mapSelectionNamespace
     
@@ -305,10 +305,8 @@ struct ScheduleView: View {
             // Selected Job Card
             if let selectedJobId = selectedJobId,
                let job = dayJobs.first(where: { $0.id == selectedJobId }) {
-                let client = clientsStore.clients.first(where: { $0.id == job.clientId })
                 MapJobCard(
                     job: job,
-                    client: client,
                     onDirections: { openDirections(for: job) },
                     onDetails: {
                         self.showJobDetail = true
@@ -383,9 +381,26 @@ struct ScheduleView: View {
 
     // MARK: - Day View (Timeline)
 
-    private let timelineHourHeight: CGFloat = 44
-    private let timelineStartHour: Int = 6
-    private let timelineEndHour: Int = 21
+    private let timelineHourHeight: CGFloat = 56
+    private var timelineStartHour: Int {
+        let jobs = filteredJobsForDate(selectedDay)
+        guard !jobs.isEmpty else { return 6 }
+        let earliestHour = Calendar.current.component(.hour, from: jobs.map { $0.date }.min()!)
+        return max(0, earliestHour - 1)  // 1 hour buffer before earliest job
+    }
+    private var timelineEndHour: Int {
+        let jobs = filteredJobsForDate(selectedDay)
+        guard !jobs.isEmpty else { return 21 }
+        // Calculate end hour based on latest job + its duration
+        let latestJob = jobs.max { job1, job2 in
+            let end1 = job1.date.addingTimeInterval(job1.duration * 3600)
+            let end2 = job2.date.addingTimeInterval(job2.duration * 3600)
+            return end1 < end2
+        }!
+        let endTime = latestJob.date.addingTimeInterval(latestJob.duration * 3600)
+        let latestHour = Calendar.current.component(.hour, from: endTime)
+        return min(24, latestHour + 1)  // 1 hour buffer after latest job
+    }
 
     private var dayView: some View {
         let jobs = filteredJobsForDate(selectedDay)
@@ -477,7 +492,7 @@ struct ScheduleView: View {
                                         let now = Date()
                                         let nowHour   = Calendar.current.component(.hour, from: now)
                                         let nowMinute = Calendar.current.component(.minute, from: now)
-                                        let yNow = CGFloat(nowHour - timelineStartHour) * timelineHourHeight
+                                        let yNow = CGFloat(nowHour - self.timelineStartHour) * timelineHourHeight
                                                  + CGFloat(nowMinute) / 60.0 * timelineHourHeight
                                         HStack(spacing: 0) {
                                             Circle().fill(Color.red).frame(width: 8, height: 8)
@@ -607,37 +622,20 @@ struct ScheduleView: View {
                     .padding(.vertical, 60)
                 } else {
                     LazyVStack(alignment: .leading, spacing: 0, pinnedViews: [.sectionHeaders]) {
-                        // Jobs section
-                        if hasJobs {
-                            Section {
-                                VStack(spacing: 8) {
-                                    ForEach(listJobsForSelectedDay) { job in
-                                        ScheduleJobRow(job: job)
-                                    }
-                                }
-                                .padding(.horizontal, 20)
-                                .padding(.bottom, 16)
-                            } header: {
-                                HStack(spacing: 8) {
-                                    Text(agendaDateLabel(selectedDay))
-                                        .font(.system(size: 13, weight: .bold))
-                                        .foregroundStyle(Color.sweeplyAccent)
-                                    Text("·".translated())
-                                        .foregroundStyle(Color.sweeplyBorder)
-                                    Text(listJobsForSelectedDay.reduce(0) { $0 + $1.price }.currency)
-                                        .font(.system(size: 12, weight: .semibold, design: .monospaced))
-                                        .foregroundStyle(Color.sweeplyTextSub)
-                                    Spacer()
-                                    Text("\(listJobsForSelectedDay.count) job\(listJobsForSelectedDay.count == 1 ? "" : "s")")
-                                        .font(.system(size: 11, weight: .medium))
-                                        .foregroundStyle(Color.sweeplyTextSub.opacity(0.7))
-                                }
-                                .padding(.horizontal, 20)
-                                .padding(.vertical, 10)
-                                .background(Color.sweeplyBackground)
-                                .overlay(Rectangle().frame(height: 1).foregroundStyle(Color.sweeplyBorder.opacity(0.5)), alignment: .bottom)
-                            }
+            // Jobs section
+            if hasJobs {
+                Section {
+                    VStack(spacing: 8) {
+                        ForEach(listJobsForSelectedDay) { job in
+                            ScheduleJobRow(job: job)
                         }
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 16)
+                } header: {
+                    Text("")
+                }
+            }
 
                         // Invoices section
                         if hasInvoices {
@@ -980,78 +978,66 @@ private extension ScheduleView {
 private struct TimelineJobBlock: View {
     let job: Job
 
-    private var statusColor: Color {
-        switch job.status {
-        case .scheduled:  return Color.sweeplyWordmarkBlue
-        case .inProgress: return Color.sweeplyAccent
-        case .completed:  return Color.sweeplySuccess
-        case .cancelled:  return Color.gray
+    private var accentColor: Color {
+        switch job.serviceType {
+        case .standard:         return Color.sweeplyAccent
+        case .deep:             return Color.sweeplyNavy
+        case .moveInOut:        return Color.sweeplyWarning
+        case .postConstruction: return Color.gray
+        case .office:           return Color.sweeplyNavy
+        case .custom:           return Color.sweeplyAccent
         }
     }
 
-    private var timeRange: String {
-        let fmt = DateFormatter()
-        fmt.timeStyle = .short
-        fmt.dateStyle = .none
-        let start = fmt.string(from: job.date)
-        let end   = fmt.string(from: job.date.addingTimeInterval(job.duration * 3600))
-        return "\(start) – \(end)"
+    private func timeString(from date: Date) -> String {
+        let f = DateFormatter()
+        f.timeStyle = .short
+        f.dateStyle = .none
+        return f.string(from: date)
     }
 
     var body: some View {
         NavigationLink(destination: JobDetailView(jobId: job.id)) {
-            HStack(spacing: 0) {
-                statusColor
-                    .frame(width: 4)
-                    .clipShape(
-                        UnevenRoundedRectangle(
-                            topLeadingRadius: 10, bottomLeadingRadius: 10,
-                            bottomTrailingRadius: 0, topTrailingRadius: 0,
-                            style: .continuous
-                        )
+            ZStack(alignment: .leading) {
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill(accentColor.opacity(0.08))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .stroke(accentColor.opacity(0.25), lineWidth: 1)
                     )
-                VStack(alignment: .leading, spacing: 0) {
-                    HStack(alignment: .top, spacing: 4) {
+                HStack(spacing: 0) {
+                    RoundedRectangle(cornerRadius: 3, style: .continuous)
+                        .fill(accentColor)
+                        .frame(width: 4)
+                        .padding(.vertical, 8)
+                        .padding(.leading, 6)
+                    VStack(alignment: .leading, spacing: 3) {
                         Text(job.clientName)
                             .font(.system(size: 13, weight: .bold))
                             .foregroundStyle(Color.sweeplyNavy)
                             .lineLimit(1)
-                        Spacer(minLength: 2)
-                        Circle()
-                            .fill(statusColor)
-                            .frame(width: 6, height: 6)
-                            .padding(.top, 4)
-                    }
-                    Text(job.serviceType.rawValue.translated())
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(statusColor.opacity(0.85))
-                        .lineLimit(1)
-                        .padding(.top, 2)
-                    Spacer(minLength: 0)
-                    HStack(spacing: 0) {
-                        Text(timeRange)
-                            .font(.system(size: 10, weight: .medium, design: .monospaced))
-                            .foregroundStyle(Color.sweeplyTextSub)
+                        Text(job.serviceType.rawValue.translated())
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundStyle(accentColor)
                             .lineLimit(1)
-                        Spacer(minLength: 2)
-                        Text(job.price.currency)
-                            .font(.system(size: 11, weight: .bold, design: .monospaced))
-                            .foregroundStyle(Color.sweeplyNavy)
+                        HStack(spacing: 4) {
+                            Text(timeString(from: job.date))
+                                .font(.system(size: 10, design: .monospaced))
+                                .foregroundStyle(Color.sweeplyTextSub)
+                            Text("·".translated())
+                                .foregroundStyle(Color.sweeplyTextSub.opacity(0.4))
+                            Text(job.price.currency)
+                                .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                                .foregroundStyle(Color.sweeplyNavy)
+                        }
                     }
+                    .padding(.leading, 8)
+                    .padding(.vertical, 8)
+                    Spacer()
+                    StatusBadge(status: job.status)
+                        .padding(.trailing, 10)
                 }
-                .padding(.horizontal, 9)
-                .padding(.vertical, 8)
             }
-            .background(
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .fill(statusColor.opacity(0.05))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .stroke(statusColor.opacity(0.2), lineWidth: 1)
-            )
-            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-            .shadow(color: .black.opacity(0.06), radius: 4, x: 0, y: 2)
         }
         .buttonStyle(.plain)
     }
@@ -1497,7 +1483,7 @@ struct MapPinView: View {
         VStack(spacing: 0) {
             ZStack {
                 Circle()
-                    .fill(isSelected ? selectedColor : statusColor)
+                    .fill(isSelected ? Color.sweeplyNavy : statusColor)
                     .frame(width: isSelected ? 44 : 36, height: isSelected ? 44 : 36)
                     .shadow(color: .black.opacity(0.15), radius: 4, x: 0, y: 2)
                 
@@ -1515,20 +1501,11 @@ struct MapPinView: View {
                 .aspectRatio(contentMode: .fit)
                 .frame(width: 10, height: 10)
                 .rotationEffect(.degrees(180))
-                .foregroundStyle(isSelected ? selectedColor : statusColor)
+                .foregroundStyle(isSelected ? Color.sweeplyNavy : statusColor)
                 .offset(y: -4)
         }
         .scaleEffect(isSelected ? 1.2 : 1.0)
         .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isSelected)
-    }
-    
-    private var selectedColor: Color {
-        switch status {
-        case .completed: return Color.sweeplyAccent
-        case .inProgress: return inProgressColor
-        case .scheduled: return Color.sweeplyNavy
-        case .cancelled: return Color.sweeplyDestructive
-        }
     }
     
     private var statusColor: Color {
@@ -1541,7 +1518,14 @@ struct MapPinView: View {
     }
     
     private var serviceIcon: String {
-        return "house.fill"
+        switch serviceType {
+        case .standard: return "house.fill"
+        case .deep: return "sparkles"
+        case .moveInOut: return "shippingbox.fill"
+        case .postConstruction: return "hammer.fill"
+        case .office: return "building.2.fill"
+        case .custom: return "star.fill"
+        }
     }
 }
 
