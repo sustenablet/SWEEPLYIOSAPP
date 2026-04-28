@@ -397,10 +397,11 @@ struct TeamView: View {
 // MARK: - MemberDetailView
 
 struct MemberDetailView: View {
-    @Environment(TeamStore.self)    private var teamStore
-    @Environment(JobsStore.self)    private var jobsStore
-    @Environment(ProfileStore.self) private var profileStore
-    @Environment(AppSession.self)   private var session
+    @Environment(TeamStore.self)     private var teamStore
+    @Environment(JobsStore.self)     private var jobsStore
+    @Environment(ClientsStore.self)  private var clientsStore
+    @Environment(ProfileStore.self)  private var profileStore
+    @Environment(AppSession.self)    private var session
     @Environment(\.dismiss)          private var dismiss
 
     let member: TeamMember
@@ -434,6 +435,14 @@ struct MemberDetailView: View {
     @State private var payments: [TeamMemberPayment] = []
     @State private var isLoadingPayments = false
     @State private var showRecordPayment = false
+
+    // Full history sheet
+    @State private var showFullHistory = false
+    @State private var fullHistoryInitialTab: HistoryTab = .jobs
+
+    // Job detail from history tap
+    @State private var selectedJobForDetail: UUID? = nil
+    @State private var showJobFromHistory = false
 
     init(member: TeamMember) {
         self.member = member
@@ -572,6 +581,26 @@ struct MemberDetailView: View {
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
             }
+            .sheet(isPresented: $showJobFromHistory) {
+                if let jobId = selectedJobForDetail {
+                    NavigationStack {
+                        JobDetailView(jobId: jobId)
+                    }
+                    .environment(jobsStore)
+                    .environment(clientsStore)
+                    .environment(teamStore)
+                }
+            }
+            .sheet(isPresented: $showFullHistory) {
+                MemberFullHistoryView(
+                    member: member,
+                    payments: payments,
+                    initialTab: fullHistoryInitialTab
+                )
+                .environment(jobsStore)
+                .environment(clientsStore)
+                .environment(teamStore)
+            }
         }
         .onAppear {
             localPayMethod = loadPayMethod()
@@ -663,25 +692,17 @@ struct MemberDetailView: View {
 
             Divider().padding(.leading, 52)
 
-            HStack(spacing: 14) {
-                Image(systemName: "briefcase")
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundStyle(Color.sweeplyAccent)
-                    .frame(width: 24)
-                Text("Role".translated())
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundStyle(Color.sweeplyTextSub)
-                    .frame(width: 52, alignment: .leading)
-                Spacer()
-                Text("Cleaner".translated())
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 4)
-                    .background(Color.sweeplyAccent, in: Capsule())
+            contactRow(label: "Role".translated(), value: "", systemImage: "briefcase") {
+                HStack {
+                    Spacer(minLength: 0)
+                    Text("Cleaner".translated())
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 4)
+                        .background(Color.sweeplyAccent, in: Capsule())
+                }
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 14)
 
             if isEditing && hasContactChanges {
                 Divider()
@@ -727,6 +748,7 @@ struct MemberDetailView: View {
                 .foregroundStyle(Color.sweeplyTextSub)
                 .frame(width: 52, alignment: .leading)
             content()
+                .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 14)
@@ -1094,12 +1116,41 @@ struct MemberDetailView: View {
             .frame(maxWidth: .infinity)
             .padding(.vertical, 28)
         } else {
+            let displayJobs = Array(memberJobHistory.prefix(10))
+            let hasMore = memberJobHistory.count > 10
             VStack(spacing: 0) {
-                ForEach(Array(memberJobHistory.enumerated()), id: \.element.id) { idx, job in
+                ForEach(Array(displayJobs.enumerated()), id: \.element.id) { idx, job in
                     jobHistoryRow(job)
-                    if idx < memberJobHistory.count - 1 {
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                            selectedJobForDetail = job.id
+                            showJobFromHistory = true
+                        }
+                    if idx < displayJobs.count - 1 {
                         Divider().padding(.leading, 16)
                     }
+                }
+                if hasMore {
+                    Divider()
+                    Button {
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        fullHistoryInitialTab = .jobs
+                        showFullHistory = true
+                    } label: {
+                        HStack {
+                            Text("View All \(memberJobHistory.count) Jobs")
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundStyle(Color.sweeplyNavy)
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundStyle(Color.sweeplyTextSub)
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 14)
+                    }
+                    .buttonStyle(.plain)
                 }
             }
         }
@@ -1128,13 +1179,36 @@ struct MemberDetailView: View {
             .frame(maxWidth: .infinity)
             .padding(.vertical, 28)
         } else {
+            let displayPayments = Array(payments.prefix(10))
+            let hasMorePayments = payments.count > 10
             VStack(spacing: 0) {
-                ForEach(Array(payments.enumerated()), id: \.element.id) { idx, payment in
+                ForEach(Array(displayPayments.enumerated()), id: \.element.id) { idx, payment in
                     paymentRow(payment)
-                    if idx < payments.count - 1 {
+                    if idx < displayPayments.count - 1 {
                         Divider().padding(.leading, 16)
                     }
                 }
+            }
+            if hasMorePayments {
+                Divider()
+                Button {
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    fullHistoryInitialTab = .payments
+                    showFullHistory = true
+                } label: {
+                    HStack {
+                        Text("View All \(payments.count) Payments")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(Color.sweeplyNavy)
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(Color.sweeplyTextSub)
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 14)
+                }
+                .buttonStyle(.plain)
             }
             Divider()
             Button {
@@ -1888,6 +1962,238 @@ struct InviteMemberSheet: View {
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 14)
+    }
+}
+
+// MARK: - Member Full History View
+
+struct MemberFullHistoryView: View {
+    @Environment(\.dismiss)          private var dismiss
+    @Environment(JobsStore.self)     private var jobsStore
+    @Environment(ClientsStore.self)  private var clientsStore
+    @Environment(TeamStore.self)     private var teamStore
+
+    let member: TeamMember
+    let payments: [TeamMemberPayment]
+    let initialTab: MemberDetailView.HistoryTab
+
+    @State private var selectedTab: MemberDetailView.HistoryTab
+    @State private var selectedJobId: UUID? = nil
+    @State private var showJobDetail = false
+
+    init(member: TeamMember, payments: [TeamMemberPayment], initialTab: MemberDetailView.HistoryTab) {
+        self.member = member
+        self.payments = payments
+        self.initialTab = initialTab
+        _selectedTab = State(initialValue: initialTab)
+    }
+
+    private var memberJobHistory: [Job] {
+        jobsStore.jobs
+            .filter { $0.assignedMemberId == member.id && $0.status != .cancelled }
+            .sorted { $0.date > $1.date }
+    }
+
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 0) {
+                // Tab switcher
+                HStack(spacing: 0) {
+                    tabPill("Jobs (\(memberJobHistory.count))", isActive: selectedTab == .jobs) {
+                        withAnimation(.easeInOut(duration: 0.18)) { selectedTab = .jobs }
+                    }
+                    tabPill("Payments (\(payments.count))", isActive: selectedTab == .payments) {
+                        withAnimation(.easeInOut(duration: 0.18)) { selectedTab = .payments }
+                    }
+                }
+                .padding(3)
+                .background(Color.sweeplyBackground)
+                .clipShape(Capsule())
+                .padding(.horizontal, 20)
+                .padding(.vertical, 12)
+
+                Divider()
+
+                ScrollView(showsIndicators: false) {
+                    if selectedTab == .jobs {
+                        jobsContent
+                    } else {
+                        paymentsContent
+                    }
+                }
+            }
+            .background(Color.sweeplyBackground.ignoresSafeArea())
+            .navigationTitle(member.name)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Done") { dismiss() }
+                        .foregroundStyle(Color.sweeplyNavy)
+                }
+            }
+        }
+        .sheet(isPresented: $showJobDetail) {
+            if let jobId = selectedJobId {
+                NavigationStack {
+                    JobDetailView(jobId: jobId)
+                }
+                .environment(jobsStore)
+                .environment(clientsStore)
+                .environment(teamStore)
+            }
+        }
+    }
+
+    // MARK: Jobs content
+
+    @ViewBuilder
+    private var jobsContent: some View {
+        if memberJobHistory.isEmpty {
+            VStack(spacing: 8) {
+                Image(systemName: "briefcase")
+                    .font(.system(size: 32))
+                    .foregroundStyle(Color.sweeplyTextSub.opacity(0.3))
+                Text("No jobs assigned yet")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(Color.sweeplyTextSub)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 60)
+        } else {
+            LazyVStack(spacing: 0, pinnedViews: []) {
+                ForEach(Array(memberJobHistory.enumerated()), id: \.element.id) { idx, job in
+                    Button {
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        selectedJobId = job.id
+                        showJobDetail = true
+                    } label: {
+                        fullJobRow(job)
+                    }
+                    .buttonStyle(.plain)
+
+                    if idx < memberJobHistory.count - 1 {
+                        Divider()
+                            .padding(.leading, 72)
+                    }
+                }
+            }
+            .background(Color.sweeplySurface)
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(Color.sweeplyBorder, lineWidth: 1))
+            .padding(.horizontal, 20)
+            .padding(.top, 16)
+            .padding(.bottom, 40)
+        }
+    }
+
+    // MARK: Payments content
+
+    @ViewBuilder
+    private var paymentsContent: some View {
+        if payments.isEmpty {
+            VStack(spacing: 8) {
+                Image(systemName: "dollarsign.circle")
+                    .font(.system(size: 32))
+                    .foregroundStyle(Color.sweeplyTextSub.opacity(0.3))
+                Text("No payments recorded yet")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(Color.sweeplyTextSub)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 60)
+        } else {
+            LazyVStack(spacing: 0) {
+                ForEach(Array(payments.enumerated()), id: \.element.id) { idx, payment in
+                    fullPaymentRow(payment)
+                    if idx < payments.count - 1 {
+                        Divider().padding(.leading, 16)
+                    }
+                }
+            }
+            .background(Color.sweeplySurface)
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(Color.sweeplyBorder, lineWidth: 1))
+            .padding(.horizontal, 20)
+            .padding(.top, 16)
+            .padding(.bottom, 40)
+        }
+    }
+
+    // MARK: Row views
+
+    private func fullJobRow(_ job: Job) -> some View {
+        HStack(spacing: 12) {
+            // Date block
+            VStack(alignment: .center, spacing: 2) {
+                Text(job.date.formatted(.dateTime.day()))
+                    .font(.system(size: 16, weight: .bold, design: .rounded))
+                    .foregroundStyle(Color.sweeplyNavy)
+                Text(job.date.formatted(.dateTime.month(.abbreviated)))
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(Color.sweeplyTextSub)
+            }
+            .frame(width: 36)
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(job.clientName)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(Color.sweeplyNavy)
+                    .lineLimit(1)
+                Text(job.serviceType.rawValue)
+                    .font(.system(size: 12))
+                    .foregroundStyle(Color.sweeplyTextSub)
+            }
+
+            Spacer()
+
+            VStack(alignment: .trailing, spacing: 4) {
+                Text(job.price.currency)
+                    .font(.system(size: 14, weight: .semibold, design: .monospaced))
+                    .foregroundStyle(Color.sweeplyNavy)
+                StatusBadge(status: job.status)
+            }
+
+            Image(systemName: "chevron.right")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(Color.sweeplyTextSub.opacity(0.4))
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+    }
+
+    private func fullPaymentRow(_ payment: TeamMemberPayment) -> some View {
+        HStack(spacing: 14) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(payment.amount.currency)
+                    .font(.system(size: 16, weight: .bold, design: .monospaced))
+                    .foregroundStyle(Color.sweeplyNavy)
+                Text(payment.paidAt.formatted(date: .abbreviated, time: .omitted))
+                    .font(.system(size: 12))
+                    .foregroundStyle(Color.sweeplyTextSub)
+                if !payment.notes.isEmpty {
+                    Text(payment.notes)
+                        .font(.system(size: 12))
+                        .foregroundStyle(Color.sweeplyTextSub)
+                        .lineLimit(1)
+                }
+            }
+            Spacer()
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+    }
+
+    private func tabPill(_ title: String, isActive: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(title)
+                .font(.system(size: 13, weight: isActive ? .semibold : .medium))
+                .foregroundStyle(isActive ? .white : Color.sweeplyTextSub)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 6)
+                .background(isActive ? Color.sweeplyNavy : Color.clear)
+                .clipShape(Capsule())
+        }
+        .buttonStyle(.plain)
     }
 }
 
