@@ -57,8 +57,10 @@ struct AuthView: View {
                         Text(isSignUp ? "Create your account and simplify your workday" : "Welcome back! Sign in to continue")
                             .font(.system(size: 16, weight: .medium))
                             .foregroundStyle(.white)
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal, 40)
+                            .multilineTextAlignment(.leading)
+                            .padding(.horizontal, 28)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .offset(y: 160)
                     }
                     .frame(height: 120)
 

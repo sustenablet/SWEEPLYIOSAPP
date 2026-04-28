@@ -26,6 +26,8 @@ struct RootView: View {
     @State private var minimumSplashElapsed = false
     @State private var showIntroOnboarding = false
     @State private var getStartedDismissed = false
+    @State private var notificationRefreshTrigger = 0
+    @State private var lastNotificationRefresh = Date.distantPast
 
     @AppStorage("hasSeenProductTutorial") private var hasSeenProductTutorial = false
     @AppStorage("hasSeenIntroOnboarding") private var hasSeenIntroOnboarding = false
@@ -99,12 +101,17 @@ struct RootView: View {
                     handlePendingActions()
                 }
                 if session.isAuthenticated {
-                    Task {
-                        await notificationsStore.load(
-                            isAuthenticated: session.isAuthenticated,
-                            userId: session.userId
-                        )
-                    }
+                    Task { await refreshNotificationsWithDebounce() }
+                }
+            }
+        }
+        .onChange(of: notificationRefreshTrigger) { _, _ in
+            if session.isAuthenticated {
+                Task {
+                    await notificationsStore.load(
+                        isAuthenticated: session.isAuthenticated,
+                        userId: session.userId
+                    )
                 }
             }
         }
@@ -156,6 +163,15 @@ struct RootView: View {
             selectedTab = .schedule
         default:
             break
+        }
+    }
+
+    private func refreshNotificationsWithDebounce() async {
+        let now = Date()
+        let elapsed = now.timeIntervalSince(lastNotificationRefresh)
+        if elapsed >= 5 {
+            lastNotificationRefresh = now
+            notificationRefreshTrigger += 1
         }
     }
 
