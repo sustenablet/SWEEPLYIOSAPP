@@ -34,6 +34,7 @@ struct OnboardingView: View {
 
     // Step 3 state
     @State private var notifStatus: UNAuthorizationStatus = .notDetermined
+    @State private var notifDismissed = false
     @State private var checkmarkAppeared = false
     @State private var saveError = false
 
@@ -539,7 +540,7 @@ struct OnboardingView: View {
                     }
                 }
 
-                if notifStatus == .notDetermined {
+                if notifStatus == .notDetermined && !notifDismissed {
                     notificationCard
                 }
             }
@@ -594,6 +595,7 @@ struct OnboardingView: View {
         .onAppear {
             checkmarkAppeared = false
             saveError = false
+            notifDismissed = false
             withAnimation(.spring(response: 0.5, dampingFraction: 0.65).delay(0.15)) {
                 checkmarkAppeared = true
             }
@@ -650,6 +652,17 @@ struct OnboardingView: View {
                     .padding(.vertical, 7)
                     .background(Color.sweeplyAccent)
                     .clipShape(Capsule())
+            }
+            .buttonStyle(.plain)
+
+            Button {
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                withAnimation { notifDismissed = true }
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(Color.sweeplyTextSub)
+                    .frame(width: 24, height: 24)
             }
             .buttonStyle(.plain)
         }

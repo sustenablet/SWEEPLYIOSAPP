@@ -49,6 +49,9 @@ final class NotificationsStore {
             for n in newUnread {
                 NotificationManager.shared.fireInstantBanner(title: n.title, body: n.message)
             }
+            if !newUnread.isEmpty {
+                NotificationCenter.default.post(name: NSNotification.Name("NewNotificationsArrived"), object: nil)
+            }
 
             // If the table is empty (e.g. new user), pre-populate locally with a welcome message
             if notifications.isEmpty {

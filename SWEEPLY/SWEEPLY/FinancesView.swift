@@ -650,13 +650,17 @@ struct FinancesView: View {
         .frame(maxWidth: .infinity)
     }
 
-    // MARK: - 6-Month Grouped Bar Chart
+    // MARK: - 6-Month Overview Redesigned
 
     private var sixMonthChartSection: some View {
         SectionCard {
-            VStack(alignment: .leading, spacing: 20) {
+            VStack(alignment: .leading, spacing: 24) {
                 headerRow
+                
+                metricsRow
+                
                 chartArea
+                
                 if let month = selectedBarMonth,
                    let bar = sixMonthBarData.first(where: { $0.month == month }) {
                     selectedMonthDetail(bar: bar)
@@ -666,27 +670,80 @@ struct FinancesView: View {
         }
     }
 
-    private var headerRow: some View {
+    private var metricsRow: some View {
+        HStack(spacing: 12) {
+            metricCard(
+                title: "Total Revenue",
+                value: sixMonthTotalRevenue.currency,
+                icon: "banknote",
+                color: Color.sweeplySuccess
+            )
+            metricCard(
+                title: "Collected",
+                value: sixMonthTotalCollected.currency,
+                icon: "checkmark.circle",
+                color: Color.sweeplyAccent
+            )
+            metricCard(
+                title: "Outstanding",
+                value: sixMonthTotalOutstanding.currency,
+                icon: "clock",
+                color: Color.sweeplyWarning
+            )
+        }
+    }
+
+    private func metricCard(title: String, value: String, icon: String, color: Color) -> some View {
         VStack(alignment: .leading, spacing: 8) {
-            HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("6-Month Overview".translated())
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(Color.sweeplyNavy)
-                    Text("Revenue performance".translated())
-                        .font(.system(size: 11))
-                        .foregroundStyle(Color.sweeplyTextSub)
-                }
-                Spacer()
-                summaryStats
+            HStack(spacing: 6) {
+                Image(systemName: icon)
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(color)
+                Text(title)
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundStyle(Color.sweeplyTextSub)
             }
-            HStack(spacing: 16) {
-                legendItem(color: Color.sweeplyAccent, label: "Collected")
-                legendItem(color: Color.sweeplyNavy.opacity(0.28), label: "Outstanding")
-                Spacer()
-                if let trend = monthOverMonthTrend {
-                    trendBadge(trend: trend)
-                }
+            Text(value)
+                .font(.system(size: 14, weight: .bold, design: .rounded))
+                .foregroundStyle(Color.sweeplyNavy)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(12)
+        .background(Color.sweeplySurface)
+        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .stroke(Color.sweeplyBorder.opacity(0.5), lineWidth: 1)
+        )
+    }
+
+    private var sixMonthTotalRevenue: Double {
+        sixMonthBarData.reduce(0) { $0 + $1.collected + $1.scheduled }
+    }
+
+    private var sixMonthTotalCollected: Double {
+        sixMonthBarData.reduce(0) { $0 + $1.collected }
+    }
+
+    private var sixMonthTotalOutstanding: Double {
+        sixMonthBarData.reduce(0) { $0 + $1.scheduled }
+    }
+
+    private var headerRow: some View {
+        HStack(alignment: .top) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("6-Month Overview".translated())
+                    .font(.system(size: 17, weight: .bold, design: .rounded))
+                    .foregroundStyle(Color.sweeplyNavy)
+                Text("Revenue performance".translated())
+                    .font(.system(size: 12))
+                    .foregroundStyle(Color.sweeplyTextSub)
+            }
+            Spacer()
+            if let trend = monthOverMonthTrend {
+                trendBadge(trend: trend)
             }
         }
     }

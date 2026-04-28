@@ -115,6 +115,9 @@ struct RootView: View {
                 }
             }
         }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("NewNotificationsArrived"))) { _ in
+            notificationRefreshTrigger += 1
+        }
     }
 
     private func handleSpotlightLink() {
