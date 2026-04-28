@@ -3,9 +3,15 @@ import MapKit
 
 struct MapJobCard: View {
     let job: Job
+    let client: Client?
     let onDirections: () -> Void
     let onDetails: () -> Void
     let onDismiss: () -> Void
+    
+    private var displayAddress: String {
+        guard let client = client else { return job.address }
+        return "\(client.address), \(client.city)"
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -23,8 +29,8 @@ struct MapJobCard: View {
                         }
                     }
                     
-                    if !job.address.isEmpty {
-                        Text(job.address)
+                    if !displayAddress.isEmpty {
+                        Text(displayAddress)
                             .font(.system(size: 14))
                             .foregroundStyle(Color.sweeplyTextSub)
                             .lineLimit(1)

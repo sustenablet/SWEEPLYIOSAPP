@@ -400,8 +400,10 @@ struct CleanerUpcomingView: View {
             // Selected job card
             if let jobId = mapSelectedJobId,
                let job = dayJobs.first(where: { $0.id == jobId }) {
+                let client = clientsStore.clients.first(where: { $0.id == job.clientId })
                 MapJobCard(
                     job: job,
+                    client: client,
                     onDirections: { openDirections(for: job) },
                     onDetails: { showMapJobDetail = true },
                     onDismiss: {

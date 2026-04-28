@@ -305,8 +305,10 @@ struct ScheduleView: View {
             // Selected Job Card
             if let selectedJobId = selectedJobId,
                let job = dayJobs.first(where: { $0.id == selectedJobId }) {
+                let client = clientsStore.clients.first(where: { $0.id == job.clientId })
                 MapJobCard(
                     job: job,
+                    client: client,
                     onDirections: { openDirections(for: job) },
                     onDetails: {
                         self.showJobDetail = true
