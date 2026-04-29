@@ -13,7 +13,9 @@ enum SupabaseManager {
               !urlString.isEmpty,
               !anon.isEmpty
         else {
-            assertionFailure("SupabaseConfig.plist missing or invalid. Add SUPABASE_URL and SUPABASE_ANON_KEY.")
+            #if DEBUG
+            print("[SupabaseManager] SupabaseConfig.plist missing or invalid - running in offline mode")
+            #endif
             return nil
         }
         return (url, anon)
