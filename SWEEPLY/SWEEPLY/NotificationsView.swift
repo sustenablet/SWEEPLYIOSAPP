@@ -8,6 +8,7 @@ struct NotificationsView: View {
     @Environment(ClientsStore.self) private var clientsStore
     @Environment(AppSession.self) private var session
 
+    @AppStorage("hasSeededNotifications") private var hasSeededNotifications = false
     @State private var selectedTab: NotificationTab = .all
     @State private var selectedJobId: UUID? = nil
     @State private var selectedInvoiceId: UUID? = nil
@@ -93,6 +94,14 @@ struct NotificationsView: View {
             .onAppear {
                 Task {
                     await notificationsStore.load(isAuthenticated: session.isAuthenticated, userId: session.userId)
+                    if !hasSeededNotifications, let userId = session.userId {
+                        await notificationsStore.seedIfNeeded(
+                            jobs: jobsStore.jobs,
+                            invoices: invoicesStore.invoices,
+                            userId: userId
+                        )
+                        hasSeededNotifications = true
+                    }
                 }
             }
             .refreshable {

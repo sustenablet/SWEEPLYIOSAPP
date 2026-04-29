@@ -127,6 +127,60 @@ final class NotificationsStore {
         }
     }
 
+    /// Backfills notifications from existing jobs/invoices on first launch.
+    /// Only runs when the table is empty; inserts up to 10 completed jobs,
+    /// 5 paid invoices, and any overdue invoices, then reloads from Supabase.
+    func seedIfNeeded(jobs: [Job], invoices: [Invoice], userId: UUID) async {
+        let isEmptyOrWelcome = notifications.isEmpty ||
+            (notifications.count == 1 && notifications[0].title == "Welcome to Sweeply")
+        guard isEmptyOrWelcome else { return }
+
+        var seeded = false
+
+        let recentCompleted = jobs
+            .filter { $0.status == .completed }
+            .sorted { $0.date > $1.date }
+            .prefix(10)
+        for job in recentCompleted {
+            await NotificationHelper.insert(
+                userId: userId,
+                title: "Job Completed",
+                message: "\(job.serviceType.rawValue) for \(job.clientName) — marked complete",
+                kind: "jobs"
+            )
+            seeded = true
+        }
+
+        let recentPaid = invoices
+            .filter { $0.status == .paid }
+            .sorted { $0.createdAt > $1.createdAt }
+            .prefix(5)
+        for invoice in recentPaid {
+            await NotificationHelper.insert(
+                userId: userId,
+                title: "Invoice Paid",
+                message: "\(invoice.invoiceNumber) for \(invoice.clientName) — \(invoice.total.currency) received",
+                kind: "billing"
+            )
+            seeded = true
+        }
+
+        let overdue = invoices.filter { $0.status == .overdue }.prefix(3)
+        for invoice in overdue {
+            await NotificationHelper.insert(
+                userId: userId,
+                title: "Invoice Overdue",
+                message: "\(invoice.invoiceNumber) for \(invoice.clientName) — \(invoice.total.currency) overdue",
+                kind: "billing"
+            )
+            seeded = true
+        }
+
+        if seeded {
+            await load(isAuthenticated: true, userId: userId)
+        }
+    }
+
     func delete(id: UUID) async {
         notifications.removeAll(where: { $0.id == id })
         guard let client = SupabaseManager.shared else { return }
