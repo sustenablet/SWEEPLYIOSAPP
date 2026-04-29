@@ -339,13 +339,14 @@ struct ScheduleView: View {
                                         }
                                     }
                                 )
-                                // ~40pt of the next card peeks from the trailing edge
-                                .frame(width: UIScreen.main.bounds.width - 72)
+                                // Card is close to full-width; peek comes from the small leading offset
+                                .frame(width: UIScreen.main.bounds.width - 52)
                                 .id(job.id)
                             }
                         }
                         .scrollTargetLayout()
-                        .padding(.horizontal, 20)
+                        .padding(.leading, 10)
+                        .padding(.trailing, 20)
                     }
                     .scrollPosition(id: $selectedJobId)
                     .scrollTargetBehavior(.viewAligned)
