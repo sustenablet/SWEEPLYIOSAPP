@@ -61,6 +61,7 @@ struct ScheduleView: View {
     @State private var selectedJobId: UUID? = nil
     @State private var showJobDetail: Bool = false
     @State private var mapCameraPosition: MapCameraPosition = .automatic
+    @State private var mapCenteredOnUser = false
     @State private var locationManager = LocationManager.shared
     @Namespace private var mapSelectionNamespace
     
@@ -108,6 +109,7 @@ struct ScheduleView: View {
             }
             .onChange(of: viewMode) { _, newMode in
                 guard newMode == .map else { return }
+                mapCenteredOnUser = false
                 updateMapCamera(for: selectedDay)
             }
             .onChange(of: selectedDay) { _, newDay in
@@ -252,7 +254,8 @@ struct ScheduleView: View {
             }
             .ignoresSafeArea(edges: .bottom)
             .onChange(of: locationManager.location) { _, newLocation in
-                guard viewMode == .map, let newLocation else { return }
+                guard viewMode == .map, let newLocation, !mapCenteredOnUser else { return }
+                mapCenteredOnUser = true
                 withAnimation(.easeInOut(duration: 0.5)) {
                     mapCameraPosition = .region(MKCoordinateRegion(
                         center: newLocation.coordinate,
@@ -343,16 +346,20 @@ struct ScheduleView: View {
                     }
                     .scrollPosition(id: $selectedJobId)
                     .scrollTargetBehavior(.viewAligned)
-                    .padding(.bottom, 90)
+                    .padding(.bottom, 12)
                     .onChange(of: selectedJobId) { _, newId in
                         guard let newId,
                               let job = carouselJobs.first(where: { $0.id == newId }),
                               let client = clientsStore.clients.first(where: { $0.id == job.clientId }),
                               let lat = client.latitude, let lon = client.longitude else { return }
+                        let span = MKCoordinateSpan(latitudeDelta: 0.02, longitudeDelta: 0.02)
+                        // Shift center south so the pin sits in the upper half of the screen,
+                        // above the card that appears at the bottom.
+                        let offsetLat = lat - (span.latitudeDelta * 0.28)
                         withAnimation(.easeInOut(duration: 0.4)) {
                             mapCameraPosition = .region(MKCoordinateRegion(
-                                center: CLLocationCoordinate2D(latitude: lat, longitude: lon),
-                                span: MKCoordinateSpan(latitudeDelta: 0.02, longitudeDelta: 0.02)
+                                center: CLLocationCoordinate2D(latitude: offsetLat, longitude: lon),
+                                span: span
                             ))
                         }
                     }
@@ -364,14 +371,17 @@ struct ScheduleView: View {
     }
     
     private func updateMapCamera(for day: Date) {
-        let center = locationManager.location?.coordinate
-            ?? CLLocationCoordinate2D(latitude: 37.3346, longitude: -122.0090)
-        withAnimation(.easeInOut(duration: 0.4)) {
-            mapCameraPosition = .region(MKCoordinateRegion(
-                center: center,
-                span: MKCoordinateSpan(latitudeDelta: 0.10, longitudeDelta: 0.10)
-            ))
+        if let loc = locationManager.location {
+            mapCenteredOnUser = true
+            withAnimation(.easeInOut(duration: 0.4)) {
+                mapCameraPosition = .region(MKCoordinateRegion(
+                    center: loc.coordinate,
+                    span: MKCoordinateSpan(latitudeDelta: 0.10, longitudeDelta: 0.10)
+                ))
+            }
         }
+        // If location not yet available, mapCenteredOnUser stays false so
+        // the onChange fires once when the GPS fix arrives.
     }
 
     private func openDirections(for job: Job) {
