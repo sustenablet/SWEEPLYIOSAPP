@@ -49,30 +49,30 @@ struct CleanerJobsHistoryView: View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 16) {
+                    headerView
                     statsHeader
                     filterPicker
                     jobsList
                 }
                 .padding(.horizontal, 20)
-                .padding(.top, 16)
                 .padding(.bottom, 100)
             }
             .background(Color.sweeplyBackground.ignoresSafeArea())
-            .toolbar {
-                ToolbarItem(placement: .principal) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Jobs".translated())
-                            .font(.system(size: 28, weight: .semibold))
-                            .foregroundStyle(Color.sweeplyNavy)
-                    }
-                    .frame(minHeight: 76, alignment: .center)
-                    .padding(.top, 16)
-                }
-            }
             .navigationDestination(item: $selectedJobId) { jobId in
                 CleanerJobDetailView(jobId: jobId, ownerId: membership.ownerId)
             }
         }
+    }
+
+    private var headerView: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text("Jobs".translated())
+                .font(.system(size: 28, weight: .semibold))
+                .foregroundStyle(Color.sweeplyNavy)
+        }
+        .frame(minHeight: 76, alignment: .center)
+        .padding(.top, 16)
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
     
     private var statsHeader: some View {
