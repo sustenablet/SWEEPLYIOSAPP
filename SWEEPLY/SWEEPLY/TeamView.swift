@@ -611,7 +611,7 @@ struct MemberDetailView: View {
     // MARK: - Profile Header
 
     private var profileHeader: some View {
-        VStack(spacing: 10) {
+        VStack(spacing: 8) {
             ZStack {
                 Circle()
                     .fill(Color.sweeplyAccent.gradient)
@@ -641,6 +641,7 @@ struct MemberDetailView: View {
             }
         }
         .frame(maxWidth: .infinity)
+        .frame(minHeight: 110)
         .padding(.vertical, 20)
         .background(Color.sweeplySurface)
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
