@@ -3,11 +3,18 @@ import Charts
 
 struct CleanerFinanceView: View {
     @Environment(JobsStore.self) private var jobsStore
+    @Environment(TeamStore.self) private var teamStore
+    @Environment(ClientsStore.self) private var clientsStore
+    @Environment(AppSession.self) private var session
 
     let membership: TeamMembership
 
     @AppStorage("cleanerFinancePeriod") private var selectedPeriodRaw: String = "This Month"
     @State private var appeared = false
+    @State private var payments: [TeamMemberPayment] = []
+    @State private var isLoadingPayments = false
+    @State private var selectedJobId: UUID? = nil
+    @State private var showJobDetail = false
 
     private var selectedPeriod: Period { Period(rawValue: selectedPeriodRaw) ?? .month }
 
@@ -32,10 +39,31 @@ struct CleanerFinanceView: View {
         }
     }
 
+    private var previousPeriodStart: Date? {
+        let cal = Calendar.current
+        switch selectedPeriod {
+        case .week:  return cal.date(byAdding: .weekOfYear, value: -1, to: periodStart ?? Date())
+        case .month: return cal.date(byAdding: .month, value: -1, to: periodStart ?? Date())
+        case .all:   return nil
+        }
+    }
+
     private var completedJobs: [Job] {
         allMyJobs
             .filter { $0.status == .completed && (periodStart == nil || $0.date >= periodStart!) }
             .sorted { $0.date > $1.date }
+    }
+
+    private var previousPeriodEarnings: Double {
+        guard let prevStart = previousPeriodStart, let currStart = periodStart else { return 0 }
+        return allMyJobs
+            .filter { $0.status == .completed && $0.date >= prevStart && $0.date < currStart }
+            .reduce(0) { $0 + $1.price }
+    }
+
+    private var periodChange: Double {
+        guard previousPeriodEarnings > 0, totalEarned > 0 else { return 0 }
+        return ((totalEarned - previousPeriodEarnings) / previousPeriodEarnings) * 100
     }
 
     private var upcomingEarningsJobs: [Job] {
@@ -45,8 +73,15 @@ struct CleanerFinanceView: View {
     }
 
     private var totalEarned: Double { completedJobs.reduce(0) { $0 + $1.price } }
-    private var avgPerJob: Double   { completedJobs.isEmpty ? 0 : totalEarned / Double(completedJobs.count) }
+    private var avgPerJob: Double    { completedJobs.isEmpty ? 0 : totalEarned / Double(completedJobs.count) }
     private var scheduledTotal: Double { upcomingEarningsJobs.reduce(0) { $0 + $1.price } }
+
+    private var payRateDisplay: String {
+        guard membership.payRateEnabled && membership.payRateAmount > 0 else {
+            return "Rate not set"
+        }
+        return "\(Int(membership.payRateAmount))/\(membership.payRateType == .perDay ? "day" : membership.payRateType == .perJob ? "job" : "week")"
+    }
 
     private var weeklyEarningsData: [(week: Date, amount: Double)] {
         let cal = Calendar.current; let today = Date()
@@ -78,9 +113,15 @@ struct CleanerFinanceView: View {
                         .padding(.vertical, 16)
                         .padding(.bottom, 8)
 
+                    // Pay Rate Banner
+                    payRateBanner
+                        .padding(.horizontal, 20)
+                        .padding(.bottom, 8)
+
                     VStack(spacing: 12) {
                         completedSection
                         if !upcomingEarningsJobs.isEmpty { scheduledSection }
+                        if !payments.isEmpty { paymentsSection }
                     }
                     .padding(.horizontal, 20)
                     .padding(.top, 4)
@@ -91,7 +132,28 @@ struct CleanerFinanceView: View {
                 .onAppear { withAnimation(.easeOut(duration: 0.3)) { appeared = true } }
             }
             .background(Color.sweeplyBackground.ignoresSafeArea())
+            .task {
+                await loadPayments()
+            }
+            .sheet(isPresented: $showJobDetail) {
+                if let jobId = selectedJobId {
+                    NavigationStack {
+                        JobDetailView(jobId: jobId)
+                    }
+                    .environment(jobsStore)
+                    .environment(clientsStore)
+                }
+            }
         }
+    }
+
+    // MARK: - Load Payments
+
+    private func loadPayments() async {
+        guard let ownerId = session.userId else { return }
+        isLoadingPayments = true
+        payments = await teamStore.loadPayments(memberId: membership.id, ownerId: ownerId)
+        isLoadingPayments = false
     }
 
     // MARK: - Header
@@ -131,7 +193,7 @@ struct CleanerFinanceView: View {
     private var heroStrip: some View {
         VStack(spacing: 0) {
             HStack(spacing: 0) {
-                statCell(value: totalEarned.currency, label: "Gross Earned")
+                statCell(value: totalEarned.currency, label: "Gross Earned", change: periodChange)
                 stripDivider
                 statCell(value: "\(completedJobs.count)", label: "Jobs Done")
                 stripDivider
@@ -171,9 +233,9 @@ struct CleanerFinanceView: View {
         .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(Color.sweeplyBorder, lineWidth: 1))
     }
 
-    // MARK: - Rate Info Banner
+    // MARK: - Pay Rate Banner
 
-    private var rateInfoBanner: some View {
+    private var payRateBanner: some View {
         HStack(spacing: 12) {
             Image(systemName: "dollarsign.circle.fill")
                 .font(.system(size: 20))
@@ -183,30 +245,37 @@ struct CleanerFinanceView: View {
                 Text("Your Pay Rate".translated())
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(Color.sweeplyTextSub)
-                Text("Contact your manager to set up your pay rate".translated())
+                Text(membership.payRateEnabled ? payRateDisplay : "Contact manager to set up")
                     .font(.system(size: 13, weight: .medium))
-                    .foregroundStyle(Color.sweeplyNavy)
+                    .foregroundStyle(membership.payRateEnabled ? Color.sweeplyNavy : Color.sweeplyTextSub)
             }
 
             Spacer()
         }
         .padding(14)
-        .background(Color.sweeplyAccent.opacity(0.08))
+        .background(membership.payRateEnabled ? Color.sweeplyAccent.opacity(0.08) : Color.sweeplySurface)
         .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 
-    private func statCell(value: String, label: String) -> some View {
+    private func statCell(value: String, label: String, change: Double = 0) -> some View {
         VStack(spacing: 4) {
             Text(value)
                 .font(.system(size: 20, weight: .bold, design: .monospaced))
                 .foregroundStyle(Color.sweeplyNavy)
                 .minimumScaleFactor(0.7)
                 .lineLimit(1)
-            Text(label)
-                .font(.system(size: 10, weight: .semibold))
-                .foregroundStyle(Color.sweeplyTextSub)
-                .textCase(.uppercase)
-                .tracking(0.3)
+            HStack(spacing: 4) {
+                Text(label)
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(Color.sweeplyTextSub)
+                    .textCase(.uppercase)
+                    .tracking(0.3)
+                if change != 0 && label == "Gross Earned" {
+                    Text(change >= 0 ? "+\(Int(change))%" : "\(Int(change))%")
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundStyle(change >= 0 ? .green : .red)
+                }
+            }
         }
         .frame(maxWidth: .infinity)
     }
@@ -229,7 +298,7 @@ struct CleanerFinanceView: View {
                 } else {
                     VStack(alignment: .leading, spacing: 0) {
                         ForEach(Array(completedJobs.enumerated()), id: \.element.id) { index, job in
-                            financeJobRow(job: job, showPrice: true)
+                            financeJobRow(job: job)
                             if index < completedJobs.count - 1 {
                                 Divider().padding(.leading, 56)
                             }
@@ -275,7 +344,7 @@ struct CleanerFinanceView: View {
 
                 VStack(alignment: .leading, spacing: 0) {
                     ForEach(Array(upcomingEarningsJobs.prefix(5).enumerated()), id: \.element.id) { index, job in
-                        financeJobRow(job: job, showPrice: true)
+                        financeJobRow(job: job)
                         if index < min(upcomingEarningsJobs.count, 5) - 1 {
                             Divider().padding(.leading, 56)
                         }
@@ -299,16 +368,48 @@ struct CleanerFinanceView: View {
         }
     }
 
-    // MARK: - Row
+    // MARK: - Payments Section
 
-    private func financeJobRow(job: Job, showPrice: Bool) -> some View {
+    private var paymentsSection: some View {
+        SectionCard {
+            VStack(alignment: .leading, spacing: 14) {
+                CardHeader(title: "Payment History".translated(), subtitle: "Received payments".translated(), action: nil)
+
+                if isLoadingPayments {
+                    skeletonRows
+                } else if payments.isEmpty {
+                    VStack(spacing: 8) {
+                        Image(systemName: "banknote")
+                            .font(.system(size: 32))
+                            .foregroundStyle(Color.sweeplyAccent.opacity(0.4))
+                        Text("No payments received yet")
+                            .font(.system(size: 14))
+                            .foregroundStyle(Color.sweeplyTextSub)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 24)
+                } else {
+                    VStack(alignment: .leading, spacing: 0) {
+                        ForEach(Array(payments.enumerated()), id: \.element.id) { index, payment in
+                            paymentRow(payment: payment)
+                            if index < payments.count - 1 {
+                                Divider().padding(.leading, 56)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private func paymentRow(payment: TeamMemberPayment) -> some View {
         HStack(spacing: 0) {
             VStack(spacing: 2) {
-                Text(job.date.formatted(.dateTime.month(.abbreviated).day()))
+                Text(payment.paidAt.formatted(.dateTime.month(.abbreviated).day()))
                     .font(.system(size: 11, weight: .bold, design: .monospaced))
-                    .foregroundStyle(job.status == .completed ? .green : Color.sweeplyAccent)
+                    .foregroundStyle(.green)
                 Rectangle()
-                    .fill((job.status == .completed ? Color.green : Color.sweeplyAccent).opacity(0.2))
+                    .fill(Color.green.opacity(0.2))
                     .frame(width: 2)
                     .frame(maxHeight: .infinity)
             }
@@ -316,10 +417,10 @@ struct CleanerFinanceView: View {
             .padding(.vertical, 10)
 
             VStack(alignment: .leading, spacing: 3) {
-                Text(job.clientName)
+                Text(payment.notes.isEmpty ? "Payment received" : payment.notes)
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(Color.primary)
-                Text(job.serviceType.rawValue.translated())
+                Text("Paid \(payment.paidAt.formatted(.dateTime.month(.abbreviated).day()))")
                     .font(.system(size: 12))
                     .foregroundStyle(Color.sweeplyTextSub)
             }
@@ -327,13 +428,54 @@ struct CleanerFinanceView: View {
 
             Spacer()
 
-            VStack(alignment: .trailing, spacing: 3) {
-                Text(job.price.currency)
-                    .font(.system(size: 14, weight: .bold, design: .monospaced))
-                    .foregroundStyle(job.status == .completed ? Color.sweeplyNavy : Color.sweeplyAccent)
-                statusPill(job.status)
+            Text(payment.amount.currency)
+                .font(.system(size: 14, weight: .bold, design: .monospaced))
+                .foregroundStyle(.green)
+        }
+    }
+
+    // MARK: - Job Row
+
+    private func financeJobRow(job: Job) -> some View {
+        Button {
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            selectedJobId = job.id
+            showJobDetail = true
+        } label: {
+            HStack(spacing: 0) {
+                VStack(spacing: 2) {
+                    Text(job.date.formatted(.dateTime.month(.abbreviated).day()))
+                        .font(.system(size: 11, weight: .bold, design: .monospaced))
+                        .foregroundStyle(job.status == .completed ? .green : Color.sweeplyAccent)
+                    Rectangle()
+                        .fill((job.status == .completed ? Color.green : Color.sweeplyAccent).opacity(0.2))
+                        .frame(width: 2)
+                        .frame(maxHeight: .infinity)
+                }
+                .frame(width: 52)
+                .padding(.vertical, 10)
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(job.clientName)
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(Color.primary)
+                    Text(job.serviceType.rawValue.translated())
+                        .font(.system(size: 12))
+                        .foregroundStyle(Color.sweeplyTextSub)
+                }
+                .padding(.vertical, 10)
+
+                Spacer()
+
+                VStack(alignment: .trailing, spacing: 3) {
+                    Text(job.price.currency)
+                        .font(.system(size: 14, weight: .bold, design: .monospaced))
+                        .foregroundStyle(job.status == .completed ? Color.sweeplyNavy : Color.sweeplyAccent)
+                    statusPill(job.status)
+                }
             }
         }
+        .buttonStyle(.plain)
     }
 
     private func statusPill(_ status: JobStatus) -> some View {
