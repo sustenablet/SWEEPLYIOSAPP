@@ -5,7 +5,13 @@ sessionDefaultsProfiles:
   ios:
     projectPath: /Users/joaoleite/Desktop/SWEEPLYIOSAPP/SWEEPLY/SWEEPLY.xcodeproj
     scheme: SWEEPLY
-    simulatorId: 935F8B93-4ECB-4077-A820-2CC24A75868D
     simulatorName: iPhone 17
+    simulatorId: 935F8B93-4ECB-4077-A820-2CC24A75868D
     simulatorPlatform: iOS Simulator
-activeSessionDefaultsProfile: ios
+  sweepltest:
+    projectPath: /Users/joaoleite/Desktop/SWEEPLYIOSAPP/SWEEPLY/SWEEPLY.xcodeproj
+    scheme: SWEEPLY
+    simulatorName: iPhone 17
+    simulatorId: 935F8B93-4ECB-4077-A820-2CC24A75868D
+    simulatorPlatform: iOS Simulator
+activeSessionDefaultsProfile: sweepltest
