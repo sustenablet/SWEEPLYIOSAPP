@@ -460,12 +460,32 @@ struct CleanerUpcomingView: View {
     // MARK: - Day View (Timeline)
 
     private var dayView: some View {
-        VStack(spacing: 0) {
-            statsBar(jobs: filteredJobsForDay)
+        let jobs = filteredJobsForDay
+        let isPayDay = isMemberPayDay(for: selectedDay)
+        return VStack(spacing: 0) {
+            // Stats bar
+            HStack(spacing: 0) {
+                HStack(spacing: 4) {
+                    Text("\(jobs.count)")
+                        .font(.system(size: 13, weight: .bold, design: .monospaced))
+                        .foregroundStyle(Color.sweeplyAccent)
+                    Text(jobs.count == 1 ? "job" : "jobs")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(Color.sweeplyTextSub)
+                }
+                Spacer()
+                Text(jobs.reduce(0) { $0 + $1.price }.currency)
+                    .font(.system(size: 13, weight: .bold, design: .monospaced))
+                    .foregroundStyle(Color.sweeplyNavy)
+            }
+            .padding(.horizontal, 24)
+            .padding(.vertical, 10)
+            .background(Color.sweeplySurface)
+            .overlay(Rectangle().frame(height: 1).foregroundStyle(Color.sweeplyBorder), alignment: .bottom)
 
             ScrollView {
                 // Pay day banner — shown at the top when it's the member's pay day
-                if isMemberPayDay(for: selectedDay) {
+                if isPayDay {
                     memberPaycheckCard
                         .padding(.horizontal, 20)
                         .padding(.top, 14)
@@ -474,63 +494,88 @@ struct CleanerUpcomingView: View {
 
                 if jobsStore.isLoading && jobsStore.jobs.isEmpty {
                     SkeletonList(count: 4).padding(.top, 16).padding(.horizontal, 20)
-                } else if allJobsDoneForDay {
-                    allDoneState
-                } else if filteredJobsForDay.isEmpty {
+                } else if jobs.isEmpty && !isPayDay {
                     emptyState
-                } else {
+                } else if !jobs.isEmpty {
                     let hours = Array(timelineStartHour...timelineEndHour)
                     let totalHeight = CGFloat(hours.count) * timelineHourHeight
+                    let assignments = cleanerComputeColumns(jobs)
+                    let maxCols = assignments.map(\.totalColumns).max() ?? 1
 
-                    ZStack(alignment: .topLeading) {
-                        VStack(spacing: 0) {
-                            ForEach(hours, id: \.self) { hour in
-                                HStack(alignment: .top, spacing: 0) {
+                    GeometryReader { geo in
+                        let labelW: CGFloat = 38
+                        let colWidth = geo.size.width - labelW
+                        let colGap: CGFloat = 6
+                        let scrollW = maxCols > 1
+                            ? CGFloat(maxCols) * colWidth + CGFloat(maxCols - 1) * colGap
+                            : colWidth
+
+                        HStack(alignment: .top, spacing: 0) {
+                            // Pinned hour labels
+                            VStack(spacing: 0) {
+                                ForEach(hours, id: \.self) { hour in
                                     Text(timelineHourLabel(hour))
                                         .font(.system(size: 10, weight: .medium, design: .monospaced))
                                         .foregroundStyle(Color.sweeplyTextSub.opacity(0.55))
-                                        .frame(width: 44, alignment: .trailing)
+                                        .frame(width: labelW, alignment: .trailing)
                                         .padding(.top, -5)
-                                    Rectangle()
-                                        .fill(Color.sweeplyBorder.opacity(0.45))
-                                        .frame(height: 0.5)
-                                        .padding(.leading, 10)
-                                        .padding(.top, 1)
+                                        .frame(height: timelineHourHeight, alignment: .top)
                                 }
-                                .frame(height: timelineHourHeight, alignment: .top)
                             }
-                        }
+                            .frame(width: labelW)
 
-                        if calendar.isDateInToday(selectedDay) {
-                            let now = Date()
-                            let nowHour = Calendar.current.component(.hour, from: now)
-                            let nowMinute = Calendar.current.component(.minute, from: now)
-                            let yNow = CGFloat(nowHour - timelineStartHour) * timelineHourHeight
-                                     + CGFloat(nowMinute) / 60.0 * timelineHourHeight
-                            HStack(spacing: 0) {
-                                Circle().fill(Color.red).frame(width: 8, height: 8).padding(.leading, 40)
-                                Rectangle().fill(Color.red.opacity(0.7)).frame(height: 1.5)
-                            }
-                            .offset(y: max(0, yNow) + timelineHourHeight * 0.5)
-                        }
+                            // Scrollable job area
+                            ScrollView(.horizontal, showsIndicators: false) {
+                                ZStack(alignment: .topLeading) {
+                                    // Horizontal grid lines
+                                    VStack(spacing: 0) {
+                                        ForEach(hours, id: \.self) { _ in
+                                            Rectangle()
+                                                .fill(Color.sweeplyBorder.opacity(0.45))
+                                                .frame(height: 0.5)
+                                                .padding(.top, 1)
+                                                .frame(height: timelineHourHeight, alignment: .top)
+                                        }
+                                    }
 
-                        ForEach(filteredJobsForDay) { job in
-                            let jobHour = Calendar.current.component(.hour, from: job.date)
-                            let jobMinute = Calendar.current.component(.minute, from: job.date)
-                            let yOffset = CGFloat(jobHour - timelineStartHour) * timelineHourHeight
-                                        + CGFloat(jobMinute) / 60.0 * timelineHourHeight
-                            let blockHeight = max(CGFloat(job.duration) * timelineHourHeight, 56)
-                            CleanerTimelineJobBlock(job: job) {
-                                UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                                selectedJobId = job.id
+                                    // "Now" indicator
+                                    if calendar.isDateInToday(selectedDay) {
+                                        let now = Date()
+                                        let nowHour = Calendar.current.component(.hour, from: now)
+                                        let nowMinute = Calendar.current.component(.minute, from: now)
+                                        let yNow = CGFloat(nowHour - timelineStartHour) * timelineHourHeight
+                                                 + CGFloat(nowMinute) / 60.0 * timelineHourHeight
+                                        HStack(spacing: 0) {
+                                            Circle().fill(Color.red).frame(width: 8, height: 8)
+                                            Rectangle().fill(Color.red.opacity(0.7)).frame(height: 1.5)
+                                        }
+                                        .offset(y: max(0, yNow) + timelineHourHeight * 0.5)
+                                    }
+
+                                    // Job blocks — side by side when overlapping
+                                    ForEach(assignments, id: \.job.id) { item in
+                                        let jobHour = Calendar.current.component(.hour, from: item.job.date)
+                                        let jobMinute = Calendar.current.component(.minute, from: item.job.date)
+                                        let yOffset = CGFloat(jobHour - timelineStartHour) * timelineHourHeight
+                                                    + CGFloat(jobMinute) / 60.0 * timelineHourHeight
+                                        let blockHeight = max(CGFloat(item.job.duration) * timelineHourHeight, 44)
+                                        let xOffset = CGFloat(item.column) * (colWidth + colGap)
+                                        CleanerTimelineJobBlock(job: item.job) {
+                                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                            selectedJobId = item.job.id
+                                        }
+                                            .frame(width: colWidth - 4, height: blockHeight)
+                                            .offset(x: xOffset + 2, y: max(0, yOffset))
+                                    }
+                                }
+                                .frame(width: scrollW, height: totalHeight)
                             }
-                            .frame(height: blockHeight)
-                            .padding(.leading, 58)
-                            .offset(y: max(0, yOffset))
+                            .scrollDisabled(maxCols <= 1)
                         }
                     }
                     .frame(height: totalHeight)
-                    .padding(.horizontal, 20)
+                    .padding(.leading, 8)
+                    .padding(.trailing, 16)
                     .padding(.vertical, 16)
                     .padding(.bottom, 100)
                 }
@@ -539,9 +584,40 @@ struct CleanerUpcomingView: View {
         }
     }
 
+    // MARK: - Cleaner Column Layout
+
+    private func cleanerComputeColumns(_ jobs: [Job]) -> [JobColumnAssignment] {
+        var assignments: [JobColumnAssignment] = []
+        var columnsByStartMinute: [Int: Int] = [:]
+
+        for job in jobs.sorted(by: { $0.date < $1.date }) {
+            let startMinute = Calendar.current.component(.hour, from: job.date) * 60 + Calendar.current.component(.minute, from: job.date)
+            let endMinute = startMinute + Int(job.duration * 60)
+
+            var column = 0
+            while columnsByStartMinute[column] ?? 0 > startMinute {
+                column += 1
+            }
+
+            assignments.append(JobColumnAssignment(job: job, column: column, totalColumns: column + 1))
+
+            columnsByStartMinute[column] = endMinute
+        }
+
+        return assignments
+    }
+
+    private struct JobColumnAssignment: Identifiable {
+        let job: Job
+        let column: Int
+        let totalColumns: Int
+        var id: UUID { job.id }
+    }
+
     private func timelineHourLabel(_ hour: Int) -> String {
         let h = hour % 12 == 0 ? 12 : hour % 12
-        return "\(h)\(hour < 12 ? "am" : "pm")"
+        let suffix = hour < 12 ? "am" : "pm"
+        return "\(h)\(suffix)"
     }
 
     // MARK: - List View (Agenda)
