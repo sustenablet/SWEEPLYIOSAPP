@@ -136,6 +136,7 @@ struct NextJobEntryView: View {
                             .font(.system(size: 10, weight: .semibold))
                             .foregroundStyle(Color.charcoal.opacity(0.5))
                         Text(" at ")
+                            .font(.system(size: 10, weight: .semibold))
                             .foregroundStyle(Color.charcoal.opacity(0.25))
                         Text(timeString(from: job.date))
                             .font(.system(size: 10, weight: .semibold, design: .monospaced))
