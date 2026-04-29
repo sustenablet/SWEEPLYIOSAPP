@@ -58,8 +58,17 @@ struct CleanerJobsHistoryView: View {
                 .padding(.bottom, 100)
             }
             .background(Color.sweeplyBackground.ignoresSafeArea())
-            .navigationTitle("Jobs".translated())
-            .navigationBarTitleDisplayMode(.large)
+            .toolbar {
+                ToolbarItem(placement: .principal) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Jobs".translated())
+                            .font(.system(size: 28, weight: .semibold))
+                            .foregroundStyle(Color.sweeplyNavy)
+                    }
+                    .frame(minHeight: 76, alignment: .center)
+                    .padding(.top, 16)
+                }
+            }
             .navigationDestination(item: $selectedJobId) { jobId in
                 CleanerJobDetailView(jobId: jobId, ownerId: membership.ownerId)
             }
