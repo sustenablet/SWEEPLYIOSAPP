@@ -32,6 +32,28 @@ struct TeamView: View {
 
                         statsStrip
 
+                        if !session.activeMemberships.isEmpty {
+                            ForEach(session.activeMemberships) { (membership: TeamMembership) in
+                                Button {
+                                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                    session.switchToMembership(membership)
+                                } label: {
+                                    let viewAsText = "View as \(membership.businessName)"
+                                    HStack(spacing: 6) {
+                                        Image(systemName: "person.crop.circle.badge.arrow.forward")
+                                            .font(.system(size: 12))
+                                            .foregroundStyle(Color.sweeplyAccent)
+                                        Text(viewAsText)
+                                            .font(.system(size: 13, weight: .medium))
+                                            .foregroundStyle(Color.sweeplyAccent)
+                                    }
+                                    .padding(.horizontal, 20)
+                                    .padding(.vertical, 8)
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+
                         if let err = teamStore.lastError, !err.isEmpty {
                             Text(err)
                                 .font(.system(size: 12, weight: .medium))

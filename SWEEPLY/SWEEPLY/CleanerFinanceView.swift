@@ -289,7 +289,7 @@ struct CleanerFinanceView: View {
                 if change != 0 && label == "Gross Earned" {
                     Text(change >= 0 ? "+\(Int(change))%" : "\(Int(change))%")
                         .font(.system(size: 9, weight: .bold))
-                        .foregroundStyle(change >= 0 ? .green : .red)
+                        .foregroundStyle(change >= 0 ? Color.sweeplySuccess : .red)
                 }
             }
         }
@@ -433,9 +433,9 @@ struct CleanerFinanceView: View {
             VStack(spacing: 2) {
                 Text(payment.paidAt.formatted(.dateTime.month(.abbreviated).day()))
                     .font(.system(size: 11, weight: .bold, design: .monospaced))
-                    .foregroundStyle(.green)
+.foregroundStyle(Color.sweeplySuccess)
                 Rectangle()
-                    .fill(Color.green.opacity(0.2))
+                    .fill(Color.sweeplySuccess.opacity(0.2))
                     .frame(width: 2)
                     .frame(maxHeight: .infinity)
             }
@@ -456,7 +456,7 @@ struct CleanerFinanceView: View {
 
             Text(payment.amount.currency)
                 .font(.system(size: 14, weight: .bold, design: .monospaced))
-                .foregroundStyle(.green)
+                .foregroundStyle(Color.sweeplySuccess)
         }
     }
 
@@ -472,9 +472,9 @@ struct CleanerFinanceView: View {
                 VStack(spacing: 2) {
                     Text(job.date.formatted(.dateTime.month(.abbreviated).day()))
                         .font(.system(size: 11, weight: .bold, design: .monospaced))
-                        .foregroundStyle(job.status == .completed ? .green : Color.sweeplyAccent)
+                        .foregroundStyle(job.status == .completed ? Color.sweeplySuccess : Color.sweeplyAccent)
                     Rectangle()
-                        .fill((job.status == .completed ? Color.green : Color.sweeplyAccent).opacity(0.2))
+                        .fill((job.status == .completed ? Color.sweeplySuccess : Color.sweeplyAccent).opacity(0.2))
                         .frame(width: 2)
                         .frame(maxHeight: .infinity)
                 }
@@ -505,7 +505,7 @@ struct CleanerFinanceView: View {
     }
 
     private func statusPill(_ status: JobStatus) -> some View {
-        let color: Color = status == .completed ? .green : status == .inProgress ? .orange : Color.sweeplyAccent
+        let color: Color = status == .completed ? Color.sweeplySuccess : status == .inProgress ? .orange : Color.sweeplyAccent
         return Text(status.rawValue.translated())
             .font(.system(size: 10, weight: .semibold))
             .padding(.horizontal, 7)
@@ -535,35 +535,167 @@ struct CompletedJobsListView: View {
     @Environment(ClientsStore.self) private var clientsStore
     @Environment(JobsStore.self) private var jobsStore
     @Environment(\.dismiss) private var dismiss
+    @State private var selectedJobId: UUID?
+    @State private var showJobDetail = false
+    @State private var searchText = ""
+    @State private var refreshTrigger = false
+    @State private var groupByPeriod: GroupByPeriod = .day
+    
+    private enum GroupByPeriod: String, CaseIterable {
+        case day = "Day"
+        case week = "Week"
+        case month = "Month"
+    }
+    
+    private var filteredJobs: [Job] {
+        if searchText.isEmpty { return jobs }
+        let query = searchText.lowercased()
+        return jobs.filter { job in
+            let client = clientsStore.clients.first { $0.id == job.clientId }
+            let clientName = client?.name.lowercased() ?? ""
+            let clientAddress = client?.address.lowercased() ?? ""
+            let serviceName = job.serviceType.rawValue.lowercased()
+            return clientName.contains(query) || clientAddress.contains(query) || serviceName.contains(query)
+        }
+    }
     
     private var totalEarnings: Double {
         jobs.reduce(0) { $0 + $1.price }
     }
     
     private var groupedJobs: [(date: Date, jobs: [Job])] {
-        let grouped = Dictionary(grouping: jobs) { Calendar.current.startOfDay(for: $0.date) }
-        return grouped
-            .map { (date: $0.key, jobs: $0.value.sorted { $0.date > $1.date }) }
-            .sorted { $0.date > $1.date }
+        let filtered = filteredJobs
+        switch groupByPeriod {
+        case .day:
+            let grouped = Dictionary(grouping: filtered) { Calendar.current.startOfDay(for: $0.date) }
+            return grouped
+                .map { (date: $0.key, jobs: $0.value.sorted { $0.date > $1.date }) }
+                .sorted { $0.date > $1.date }
+        case .week:
+            let grouped = Dictionary(grouping: filtered) { job in
+                let cal = Calendar.current
+                let components = cal.dateComponents([.yearForWeekOfYear, .weekOfYear], from: job.date)
+                return cal.date(from: components) ?? job.date
+            }
+            return grouped
+                .map { (date: $0.key, jobs: $0.value.sorted { $0.date > $1.date }) }
+                .sorted { $0.date > $1.date }
+        case .month:
+            let grouped = Dictionary(grouping: filtered) { job in
+                let cal = Calendar.current
+                let components = cal.dateComponents([.year, .month], from: job.date)
+                return cal.date(from: components) ?? job.date
+            }
+            return grouped
+                .map { (date: $0.key, jobs: $0.value.sorted { $0.date > $1.date }) }
+                .sorted { $0.date > $1.date }
+        }
     }
     
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
                 headerSection
+                filterBar
                 statsSummary
-                jobsListSection
+                if filteredJobs.isEmpty {
+                    emptyState
+                } else {
+                    jobsListSection
+                }
             }
             .padding(.horizontal, 20)
             .padding(.bottom, 100)
         }
         .background(Color.sweeplyBackground.ignoresSafeArea())
         .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                Button {
+                    dismiss()
+                } label: {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(Color.sweeplyNavy)
+                }
+            }
             ToolbarItem(placement: .topBarTrailing) {
                 Button("Done") { dismiss() }
                     .font(.system(size: 16, weight: .medium))
             }
         }
+        .sheet(isPresented: $showJobDetail) {
+            if let jobId = selectedJobId {
+                NavigationStack {
+                    JobDetailView(jobId: jobId)
+                }
+                .environment(jobsStore)
+                .environment(clientsStore)
+            }
+        }
+    }
+    
+    private var filterBar: some View {
+        VStack(spacing: 12) {
+            HStack(spacing: 8) {
+                Image(systemName: "magnifyingglass")
+                    .font(.system(size: 14))
+                    .foregroundStyle(Color.sweeplyTextSub)
+                TextField("Search clients or services...", text: $searchText)
+                    .font(.system(size: 15))
+                    .autocorrectionDisabled()
+                if !searchText.isEmpty {
+                    Button {
+                        searchText = ""
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.system(size: 14))
+                            .foregroundStyle(Color.sweeplyTextSub)
+                    }
+                }
+            }
+            .padding(12)
+            .background(Color.sweeplySurface)
+            .clipShape(RoundedRectangle(cornerRadius: 10))
+            .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.sweeplyBorder, lineWidth: 1))
+            
+            HStack(spacing: 6) {
+                ForEach(GroupByPeriod.allCases, id: \.self) { period in
+                    Button {
+                        withAnimation(.spring(duration: 0.2)) { groupByPeriod = period }
+                    } label: {
+                        Text(period.rawValue)
+                            .font(.system(size: 12, weight: groupByPeriod == period ? .bold : .medium))
+                            .foregroundStyle(groupByPeriod == period ? .white : Color.sweeplyTextSub)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .background(groupByPeriod == period ? Color.sweeplyNavy : Color.clear)
+                            .clipShape(Capsule())
+                    }
+                    .buttonStyle(.plain)
+                }
+                Spacer()
+            }
+        }
+    }
+    
+    private var emptyState: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "checkmark.circle")
+                .font(.system(size: 48))
+                .foregroundStyle(Color.sweeplyAccent.opacity(0.4))
+            Text(searchText.isEmpty ? "No completed jobs yet".translated() : "No jobs match your search".translated())
+                .font(.system(size: 16, weight: .medium))
+                .foregroundStyle(Color.sweeplyTextSub)
+            if !searchText.isEmpty {
+                Button("Clear Search") {
+                    searchText = ""
+                }
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(Color.sweeplyAccent)
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 48)
     }
     
     private var headerSection: some View {
@@ -898,7 +1030,7 @@ struct UpcomingJobsListView: View {
         switch status {
         case .scheduled: return Color.sweeplyAccent
         case .inProgress: return .orange
-        case .completed: return .green
+        case .completed: return Color.sweeplySuccess
         case .cancelled: return .red
         }
     }

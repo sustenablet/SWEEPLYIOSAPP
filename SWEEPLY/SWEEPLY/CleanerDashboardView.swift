@@ -654,7 +654,7 @@ struct CleanerDashJobRow: View {
         switch status {
         case .scheduled:  return Color.sweeplyAccent
         case .inProgress: return .orange
-        case .completed:  return .green
+        case .completed:  return Color.sweeplySuccess
         case .cancelled:  return Color.sweeplyTextSub
         }
     }

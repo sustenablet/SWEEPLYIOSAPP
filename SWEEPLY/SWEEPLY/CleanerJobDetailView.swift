@@ -155,7 +155,7 @@ struct CleanerJobDetailView: View {
                 actionButton(
                     label: "Mark Complete",
                     icon: "checkmark.circle.fill",
-                    color: .green,
+                    color: Color.sweeplySuccess,
                     secondary: job.status == .scheduled
                 ) {
                     completeJob(job)
@@ -166,14 +166,14 @@ struct CleanerJobDetailView: View {
             if job.status == .completed {
                 HStack(spacing: 8) {
                     Image(systemName: "checkmark.circle.fill")
-                        .foregroundStyle(.green)
+                        .foregroundStyle(Color.sweeplySuccess)
                     Text("Job Completed".translated())
                         .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(.green)
+                        .foregroundStyle(Color.sweeplySuccess)
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 14)
-                .background(Color.green.opacity(0.08))
+                .background(Color.sweeplySuccess.opacity(0.08))
                 .clipShape(RoundedRectangle(cornerRadius: 12))
             }
         }
@@ -222,7 +222,7 @@ struct CleanerJobDetailView: View {
         switch status {
         case .scheduled:  return Color.sweeplyAccent
         case .inProgress: return .orange
-        case .completed:  return .green
+        case .completed:  return Color.sweeplySuccess
         case .cancelled:  return Color.sweeplyTextSub
         }
     }

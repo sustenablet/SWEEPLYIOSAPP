@@ -4,6 +4,7 @@ struct CleanerSettingsView: View {
     @Environment(\.dismiss)         private var dismiss
     @Environment(ProfileStore.self) private var profileStore
     @Environment(AppSession.self)   private var session
+    @Environment(NotificationManager.self) private var notificationManager
 
     let membership: TeamMembership
 
@@ -13,6 +14,7 @@ struct CleanerSettingsView: View {
     @State private var feedbackMessage: String?
     @State private var feedbackStyle: CleanerSettingsFeedbackStyle = .info
     @State private var showSignOutAlert = false
+    @State private var currentTestNotificationIndex = 0
 
     private var hasUnsavedChanges: Bool {
         localProfile.fullName != baselineProfile.fullName ||
@@ -56,6 +58,11 @@ struct CleanerSettingsView: View {
                     menuGroup {
                         NavigationLink(destination: profilePage) {
                             menuRowLabel(icon: "person.circle", title: "Profile".translated())
+                        }
+                        .buttonStyle(.plain)
+                        rowDivider()
+                        NavigationLink(destination: preferencesPage) {
+                            menuRowLabel(icon: "slider.horizontal.3", title: "Preferences".translated())
                         }
                         .buttonStyle(.plain)
                     }
@@ -327,6 +334,108 @@ struct CleanerSettingsView: View {
         .navigationBarTitleDisplayMode(.inline)
     }
 
+    @ViewBuilder
+    private var preferencesPage: some View {
+        ScrollView {
+            preferencesSection
+                .padding(.horizontal, 20)
+                .padding(.top, 20)
+                .padding(.bottom, 48)
+        }
+        .background(Color.sweeplyBackground.ignoresSafeArea())
+        .navigationTitle("Preferences".translated())
+        .navigationBarTitleDisplayMode(.inline)
+    }
+
+    private var preferencesSection: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            sectionLabel("NOTIFICATIONS".translated())
+            settingsGroup {
+                HStack(spacing: 14) {
+                    settingsIcon("bell.badge.fill", color: Color(red: 0.95, green: 0.45, blue: 0.2))
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Push Notifications".translated()).font(.system(size: 15)).foregroundStyle(Color.primary)
+                        Text(notificationManager.isAuthorized ? "Enabled — job reminders & alerts".translated() : "Tap to enable job reminders".translated())
+                            .font(.system(size: 12)).foregroundStyle(Color.sweeplyTextSub)
+                    }
+                    Spacer()
+                    Toggle("", isOn: Binding(
+                        get: { notificationManager.isAuthorized },
+                        set: { newValue in if newValue { notificationManager.requestAuthorization() } }
+                    )).labelsHidden().tint(Color.sweeplyAccent)
+                }
+                .padding(.horizontal, 16).padding(.vertical, 14)
+
+                if notificationManager.isAuthorized {
+                    Divider().padding(.leading, 58)
+                    Button {
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        let types = ["Job Reminder".translated(), "Invoice Due".translated(), "Test".translated()]
+                        switch types[currentTestNotificationIndex] {
+                        case "Job Reminder".translated():
+                            notificationManager.fireInstantBanner(title: "Job in 1 Hour".translated(), body: "Standard Clean at Sarah M. — 123 Main St".translated())
+                        case "Invoice Due".translated():
+                            notificationManager.fireInstantBanner(title: "Invoice Due Soon".translated(), body: "INV-0042 for Sarah M. is due in 3 days — $320.00".translated())
+                        default:
+                            notificationManager.sendTestNotification()
+                        }
+                        currentTestNotificationIndex = (currentTestNotificationIndex + 1) % types.count
+                    } label: {
+                        HStack(spacing: 14) {
+                            settingsIcon("paperplane.fill", color: Color.sweeplyAccent)
+                            Text("Test Notification".translated()).font(.system(size: 15)).foregroundStyle(Color.primary)
+                            Spacer()
+                            let types = ["Job Reminder".translated(), "Invoice Due".translated(), "Test".translated()]
+                            Text(types[currentTestNotificationIndex]).font(.system(size: 12, design: .monospaced)).foregroundStyle(Color.sweeplyTextSub)
+                            Image(systemName: "chevron.right").font(.system(size: 11, weight: .semibold)).foregroundStyle(Color.sweeplyBorder)
+                        }
+                        .padding(.horizontal, 16).padding(.vertical, 14)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+
+            sectionLabel("LANGUAGE".translated()).padding(.top, 16)
+            settingsGroup {
+                HStack(spacing: 14) {
+                    settingsIcon("globe", color: Color(red: 0.2, green: 0.5, blue: 0.9))
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("App Language".translated()).font(.system(size: 15)).foregroundStyle(Color.primary)
+                        Text("English · Português (Brasil)".translated()).font(.system(size: 12)).foregroundStyle(Color.sweeplyTextSub)
+                    }
+                    Spacer()
+                    LanguagePicker()
+                }
+                .padding(.horizontal, 16).padding(.vertical, 12)
+            }
+
+            sectionLabel("SECURITY & SYNC".translated()).padding(.top, 16)
+            settingsGroup {
+                HStack(spacing: 14) {
+                    settingsIcon("faceid", color: Color.sweeplyNavy)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Face ID Lock".translated()).font(.system(size: 15)).foregroundStyle(Color.primary)
+                        Text("Require Face ID when returning to app".translated()).font(.system(size: 12)).foregroundStyle(Color.sweeplyTextSub)
+                    }
+                    Spacer()
+                    BiometricToggle()
+                }
+                .padding(.horizontal, 16).padding(.vertical, 14)
+                Divider().padding(.leading, 58)
+                HStack(spacing: 14) {
+                    settingsIcon("calendar.badge.plus", color: Color(red: 0.2, green: 0.5, blue: 0.9))
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Sync to Calendar".translated()).font(.system(size: 15)).foregroundStyle(Color.primary)
+                        Text("Adds scheduled jobs to your Calendar app".translated()).font(.system(size: 12)).foregroundStyle(Color.sweeplyTextSub)
+                    }
+                    Spacer()
+                    CalendarToggle()
+                }
+                .padding(.horizontal, 16).padding(.vertical, 14)
+            }
+        }
+    }
+
     // MARK: - Reusable Sub-components
 
     @ViewBuilder
@@ -421,4 +530,23 @@ private enum CleanerSettingsFeedbackStyle {
     }
 
     var backgroundColor: Color { accentColor.opacity(0.10) }
+}
+
+// MARK: - Toggle Wrappers
+
+private struct BiometricToggle: View {
+    @AppStorage("biometricLockEnabled") private var enabled: Bool = false
+    var body: some View {
+        Toggle("", isOn: $enabled).labelsHidden().tint(Color.sweeplyAccent)
+    }
+}
+
+private struct CalendarToggle: View {
+    @AppStorage("calendarSyncEnabled") private var enabled: Bool = false
+    var body: some View {
+        Toggle("", isOn: $enabled).labelsHidden().tint(Color.sweeplyAccent)
+            .onChange(of: enabled) { _, on in
+                if on { Task { _ = await CalendarSyncManager.shared.requestAccessIfNeeded() } }
+            }
+    }
 }
