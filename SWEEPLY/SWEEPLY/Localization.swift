@@ -508,8 +508,6 @@ enum Localization {
     "Test": ["pt-BR": "Teste"],
     "Standard Clean at Sarah M. — 123 Main St": ["pt-BR": "Limpeza Padrão na Sarah M. — Rua Principal 123"],
     "INV-0042 for Sarah M. is due in 3 days — $320.00": ["pt-BR": "INV-0042 para Sarah M. vence em 3 dias — R$ 320,00"],
-    "Jobs will appear here once %@ is assigned work": ["pt-BR": "Os jobs aparecerão aqui depois que %@ for atribuído a um trabalho"],
-    "Tap Record to log a payment to %@": ["pt-BR": "Toque em Registrar para registrar um pagamento para %@"],
     "Member since": ["pt-BR": "Membro desde"],
 
     // MARK: - Finances
@@ -529,7 +527,6 @@ enum Localization {
     // MARK: - Cleaner Finance
     "No completed jobs yet": ["pt-BR": "Nenhum job concluído ainda"],
     "this period": ["pt-BR": "neste período"],
-    "No payments received yet": ["pt-BR": "Nenhum pagamento recebido ainda"],
     "Your Pay Rate": ["pt-BR": "Sua Taxa de Pagamento"],
     "Potential": ["pt-BR": "Potencial"],
     "Paid": ["pt-BR": "Pago"],
