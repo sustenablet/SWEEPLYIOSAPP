@@ -204,6 +204,8 @@
 			name = SWEEPLY;
 			packageProductDependencies = (
 				E9D078C22F7E357400E31AC7 /* Supabase */,
+				AA0001RC2F7E000000E00001 /* RevenueCat */,
+				AA0002RC2F7E000000E00002 /* RevenueCatUI */,
 			);
 			productName = SWEEPLY;
 			productReference = E9D0783D2F7E357300E31AC7 /* SWEEPLY.app */;
@@ -265,6 +267,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				E9D078C12F7E357400E31AC7 /* XCRemoteSwiftPackageReference "supabase-swift" */,
+				AA0000RC2F7E000000E00000 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = E9D0783E2F7E357300E31AC7 /* Products */;
@@ -725,6 +728,14 @@
 				minimumVersion = 2.0.0;
 			};
 		};
+		AA0000RC2F7E000000E00000 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/RevenueCat/purchases-ios-spm.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 5.0.0;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -732,6 +743,16 @@
 			isa = XCSwiftPackageProductDependency;
 			package = E9D078C12F7E357400E31AC7 /* XCRemoteSwiftPackageReference "supabase-swift" */;
 			productName = Supabase;
+		};
+		AA0001RC2F7E000000E00001 /* RevenueCat */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = AA0000RC2F7E000000E00000 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */;
+			productName = RevenueCat;
+		};
+		AA0002RC2F7E000000E00002 /* RevenueCatUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = AA0000RC2F7E000000E00000 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */;
+			productName = RevenueCatUI;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

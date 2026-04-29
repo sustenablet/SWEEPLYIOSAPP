@@ -440,3 +440,13 @@ extension Client: Hashable {
     static func == (lhs: Client, rhs: Client) -> Bool { lhs.id == rhs.id }
     func hash(into hasher: inout Hasher) { hasher.combine(id) }
 }
+
+extension Client {
+    var initials: String {
+        name.split(separator: " ")
+            .compactMap { $0.first }
+            .prefix(2)
+            .map { String($0).uppercased() }
+            .joined()
+    }
+}

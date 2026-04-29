@@ -38,6 +38,7 @@ struct GetStartedView: View {
 
             VStack(spacing: 0) {
                 Spacer()
+                    .frame(height: 40)
 
                 textSection
                     .opacity(appeared ? 1 : 0)
@@ -77,10 +78,10 @@ struct GetStartedView: View {
     private var textSection: some View {
         VStack(spacing: 10) {
             Text(displayedText)
-                .font(.system(size: 34, weight: .bold, design: .rounded))
+                .font(.system(size: 42, weight: .black, design: .rounded))
                 .foregroundStyle(.white)
                 .multilineTextAlignment(.center)
-                .tracking(-0.5)
+                .tracking(-0.6)
                 .shadow(color: .black.opacity(0.25), radius: 4, y: 2)
 
             Text("Run your cleaning business with ease. Track jobs, manage clients, and grow your business.".translated())

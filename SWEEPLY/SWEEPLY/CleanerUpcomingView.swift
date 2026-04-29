@@ -59,8 +59,24 @@ struct CleanerUpcomingView: View {
     }()
 
     private let timelineHourHeight: CGFloat = 68
-    private let timelineStartHour: Int = 6
-    private let timelineEndHour: Int = 21
+    private var timelineStartHour: Int {
+        let jobs = filteredJobsForDay
+        guard !jobs.isEmpty else { return 6 }
+        let earliestHour = Calendar.current.component(.hour, from: jobs.map { $0.date }.min()!)
+        return min(max(0, earliestHour - 1), 6)
+    }
+    private var timelineEndHour: Int {
+        let jobs = filteredJobsForDay
+        guard !jobs.isEmpty else { return 21 }
+        let latestJob = jobs.max { job1, job2 in
+            let end1 = job1.date.addingTimeInterval(job1.duration * 3600)
+            let end2 = job2.date.addingTimeInterval(job2.duration * 3600)
+            return end1 < end2
+        }!
+        let endTime = latestJob.date.addingTimeInterval(latestJob.duration * 3600)
+        let latestHour = Calendar.current.component(.hour, from: endTime)
+        return max(latestHour + 1, 21)
+    }
 
     private var hasActiveFilters: Bool {
         statusFilter != nil || typeFilter != "All"

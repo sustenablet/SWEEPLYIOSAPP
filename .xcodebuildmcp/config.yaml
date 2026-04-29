@@ -12,6 +12,7 @@ sessionDefaultsProfiles:
     projectPath: /Users/joaoleite/Desktop/SWEEPLYIOSAPP/SWEEPLY/SWEEPLY.xcodeproj
     scheme: SWEEPLY
     simulatorName: iPhone 17
-    simulatorId: 935F8B93-4ECB-4077-A820-2CC24A75868D
     simulatorPlatform: iOS Simulator
+    bundleId: com.sweeply.app
+    simulatorId: 935F8B93-4ECB-4077-A820-2CC24A75868D
 activeSessionDefaultsProfile: sweepltest

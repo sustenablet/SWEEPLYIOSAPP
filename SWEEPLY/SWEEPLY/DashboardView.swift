@@ -142,7 +142,7 @@ struct DashboardView: View {
 private var healthCards: [DashboardHealthCardModel] {
         [
             DashboardHealthCardModel(
-                title: "Avg Job Value",
+                title: "Avg Job Value".translated(),
                 subtitle: "Average revenue per completed job".translated(),
                 value: avgJobValue > 0 ? avgJobValue.currency : "—",
                 trend: avgJobValue > 0 ? "\(ownJobs.filter { $0.status == .completed }.count) jobs done" : "No data yet",
@@ -153,7 +153,7 @@ private var healthCards: [DashboardHealthCardModel] {
                 showTrendBadge: false
             ),
             DashboardHealthCardModel(
-                title: "Weekly Jobs",
+                title: "Weekly Jobs".translated(),
                 subtitle: "Jobs scheduled and completed this week".translated(),
                 value: "\(healthStats?.job_count ?? currentWeekJobs.count)",
                 trend: healthStats?.job_trend ?? "+5%",
@@ -420,10 +420,10 @@ private var healthCards: [DashboardHealthCardModel] {
 
     private var statsGrid: some View {
         LazyVGrid(columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)], spacing: 8) {
-            DashStatBox(value: "\(clientsStore.clients.count)", label: "Clients")
-            DashStatBox(value: "\(jobsStore.jobs.filter { $0.status == .scheduled }.count)", label: "Scheduled")
-            DashStatBox(value: "\(todayJobs.filter { $0.status == .scheduled || $0.status == .inProgress}.count)", label: "Left")
-            DashStatBox(value: outstandingTotal.currency, label: "Due")
+            DashStatBox(value: "\(clientsStore.clients.count)", label: "Clients".translated())
+            DashStatBox(value: "\(jobsStore.jobs.filter { $0.status == .scheduled }.count)", label: "Scheduled".translated())
+            DashStatBox(value: "\(todayJobs.filter { $0.status == .scheduled || $0.status == .inProgress}.count)", label: "Left".translated())
+            DashStatBox(value: outstandingTotal.currency, label: "Due".translated())
         }
     }
 

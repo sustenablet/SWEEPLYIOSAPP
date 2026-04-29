@@ -50,8 +50,7 @@ enum Localization {
     "Avg Job Value": ["pt-BR": "Valor Médio do Job"],
     "Weekly Jobs": ["pt-BR": "Jobs da Semana"],
     "Outstanding Balance": ["pt-BR": "Saldo Pendente"],
-    "Active Clients": ["pt-BR": "Clientes Ativos"],
-Removing duplicate: Clients
+"Active Clients": ["pt-BR": "Clientes Ativos"],
     "Scheduled": ["pt-BR": "Agendado"],
     "Left": ["pt-BR": "Restantes"],
     "Due": ["pt-BR": "Vence"],
@@ -245,8 +244,7 @@ Removing duplicate: Clients
     "Team": ["pt-BR": "Equipe"],
     "Invite Member": ["pt-BR": "Convidar Membro"],
     "Owner": ["pt-BR": "Proprietário"],
-    "Cleaner": ["pt-BR": "Faxineiro"],
-Removing duplicate: My Team
+"Cleaner": ["pt-BR": "Faxineiro"],
     "Invite": ["pt-BR": "Convidar"],
     "Invite Cleaner": ["pt-BR": "Convidar Faxineiro"],
     "Add & Share Invite": ["pt-BR": "Adicionar e Compartilhar Convite"],
@@ -350,7 +348,6 @@ Removing duplicate: My Team
     "SECURITY & SYNC": ["pt-BR": "SEGURANÇA E SINCRONIZAÇÃO"],
     "PERSONAL INFO": ["pt-BR": "INFORMAÇÕES PESSOAIS"],
     "BUSINESS": ["pt-BR": "NEGÓCIO"],
-Removing duplicate: SERVICES
     "NOTIFICATIONS": ["pt-BR": "NOTIFICAÇÕES"],
     "PREFERENCES": ["pt-BR": "PREFERÊNCIAS"],
     "DANGER ZONE": ["pt-BR": "ZONA DE PERIGO"],
@@ -520,19 +517,16 @@ Removing duplicate: SERVICES
     "Earned This Month": ["pt-BR": "Ganho Este Mês"],
     "Collected All-Time": ["pt-BR": "Coletado no Total"],
     "Active This Month": ["pt-BR": "Ativo Este Mês"],
-    "Scheduled Revenue": ["pt-BR": "Receita Agendada"],
-Removing duplicate: No upcoming jobs
+"Scheduled Revenue": ["pt-BR": "Receita Agendada"],
     "When new visits are scheduled, the next one will appear here.": ["pt-BR": "Quando novas visitas forem agendadas, a próxima aparecerá aqui."],
     "No service mix yet": ["pt-BR": "Sem mix de serviços ainda"],
     "Once jobs are scheduled this month, the service split will show here.": ["pt-BR": "Quando os jobs forem agendados este mês, a divisão de serviços aparecerá aqui."],
     "No client activity yet": ["pt-BR": "Sem atividade de clientes ainda"],
     "Client rankings will update as jobs are completed.": ["pt-BR": "O ranking de clientes será atualizado conforme os jobs forem concluídos."],
-    "Schedule jobs to see\nservice breakdown": ["pt-BR": "Agende jobs para ver\na divisão de serviços"],
-Removing duplicate: Active Clients
+"Schedule jobs to see\nservice breakdown": ["pt-BR": "Agende jobs para ver\na divisão de serviços"],
     "Jobs This Month": ["pt-BR": "Jobs Este Mês"],
-    "Collected": ["pt-BR": "Coletado"],
+"Collected": ["pt-BR": "Coletado"],
     "Avg Ticket": ["pt-BR": "Ticket Médio"],
-Removing duplicate: Duration
 
     // MARK: - Schedule extended
     "Day": ["pt-BR": "Dia"],
@@ -624,9 +618,7 @@ Removing duplicate: Duration
     "Your Pay Rate": ["pt-BR": "Sua Taxa de Pagamento"],
     "Net Profit": ["pt-BR": "Lucro Líquido"],
     "Avg. invoice": ["pt-BR": "Fatura média"],
-    "Collection": ["pt-BR": "Cobrança"],
-Removing duplicate: Outstanding
-Removing duplicate: Overdue
+"Collection": ["pt-BR": "Cobrança"],
     "Upcoming jobs value": ["pt-BR": "Valor dos jobs futuros"],
     "No expenses in": ["pt-BR": "Sem despesas em"],
 
@@ -641,9 +633,8 @@ Removing duplicate: Overdue
     "PAY": ["pt-BR": "PAGAMENTO"],
     "hour": ["pt-BR": "hora"],
     "hours": ["pt-BR": "horas"],
-    "Job not found": ["pt-BR": "Job não encontrado"],
+"Job not found": ["pt-BR": "Job não encontrado"],
     "Today's Earnings": ["pt-BR": "Ganhos de Hoje"],
-Removing duplicate: Today
     "Done Wk": ["pt-BR": "Feito Sem"],
     "In Prog.": ["pt-BR": "Em And."],
     "Upcoming": ["pt-BR": "Próximos"],
@@ -653,8 +644,7 @@ Removing duplicate: Today
     "First Name *": ["pt-BR": "Nome *"],
     "Last Name": ["pt-BR": "Sobrenome"],
     "Street Address": ["pt-BR": "Logradouro"],
-    "Street": ["pt-BR": "Rua"],
-Removing duplicate: ZIP
+"Street": ["pt-BR": "Rua"],
 
     // MARK: - Conversations
     "New Message": ["pt-BR": "Nova Mensagem"],
@@ -670,17 +660,10 @@ Removing duplicate: ZIP
 
     // MARK: - Widgets
     "NEXT JOB": ["pt-BR": "PRÓXIMO JOB"],
-Removing duplicate: SCHEDULE
-Removing duplicate: All caught up
-Removing duplicate: No upcoming jobs
     "TODAY'S SCHEDULE": ["pt-BR": "AGENDA DE HOJE"],
     "All clear today": ["pt-BR": "Livre hoje"],
     "7-day revenue": ["pt-BR": "receita 7 dias"],
     "SWEEPLY": ["pt-BR": "SWEEPLY"],
-Removing duplicate: No jobs today
-Removing duplicate: done today
-Removing duplicate: next job
-Removing duplicate: updated
     "THIS WK": ["pt-BR": "ESTA SEM"],
     "WEEK REVENUE": ["pt-BR": "FATURAMENTO SEMANAL"],
     "7-day earnings": ["pt-BR": "ganhos 7 dias"],
@@ -692,23 +675,12 @@ Removing duplicate: updated
     "None completed yet": ["pt-BR": "Nenhum concluído ainda"],
 
     // MARK: - Schedule
-Removing duplicate: Schedule
-Removing duplicate: Jobs for
-Removing duplicate: No jobs this day
-Removing duplicate: Tap + to schedule a job.
     "Choose Date": ["pt-BR": "Escolher Data"],
-Removing duplicate: Are you sure you want to delete this job?
-Removing duplicate: Generate an invoice for
-Removing duplicate: No jobs yet
 
     // MARK: - Quick Actions
-Removing duplicate: Sign Out
-Removing duplicate: Settings
     "Go Back": ["pt-BR": "Voltar"],
-    "Job Files": ["pt-BR": "Arquivos do Job"],
-Removing duplicate: Create Invoice
-Removing duplicate: Mark Complete
-Removing duplicate: Start Job
+"Job Files": ["pt-BR": "Arquivos do Job"],
+    "Job Description": ["pt-BR": "Descrição do Job"],
     ]
 
     static func translate(_ key: String) -> String {

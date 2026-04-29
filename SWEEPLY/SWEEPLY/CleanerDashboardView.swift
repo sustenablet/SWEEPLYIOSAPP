@@ -4,6 +4,7 @@ import Charts
 struct CleanerDashboardView: View {
     @Environment(AppSession.self)         private var session
     @Environment(JobsStore.self)          private var jobsStore
+    @Environment(ClientsStore.self)       private var clientsStore
     @Environment(NotificationsStore.self) private var notificationsStore
     @Environment(ProfileStore.self)       private var profileStore
 
@@ -52,6 +53,10 @@ struct CleanerDashboardView: View {
 
     private var todayJobs: [Job] {
         myJobs.filter { Calendar.current.isDateInToday($0.date) }.sorted { $0.date < $1.date }
+    }
+
+    private func cityForJob(_ job: Job) -> String {
+        clientsStore.clients.first { $0.id == job.clientId }?.city ?? ""
     }
 
     private var weekCompleted: Int {
@@ -385,7 +390,7 @@ struct CleanerDashboardView: View {
                 } else {
                     VStack(alignment: .leading, spacing: 0) {
                         ForEach(Array(todayJobs.enumerated()), id: \.element.id) { index, job in
-                            CleanerDashJobRow(job: job)
+                            CleanerDashJobRow(job: job, city: cityForJob(job))
                                 .onTapGesture {
                                     UIImpactFeedbackGenerator(style: .light).impactOccurred()
                                     selectedJobId = job.id
@@ -568,6 +573,7 @@ private struct CleanerStatBox: View {
 
 struct CleanerDashJobRow: View {
     let job: Job
+    let city: String
 
     var body: some View {
         HStack(spacing: 0) {
@@ -602,8 +608,8 @@ struct CleanerDashJobRow: View {
                     .font(.system(size: 12))
                     .foregroundStyle(Color.sweeplyTextSub)
                     .lineLimit(1)
-                if !job.address.isEmpty {
-                    Label(job.address, systemImage: "mappin")
+                if !city.isEmpty {
+                    Label(city, systemImage: "mappin")
                         .font(.system(size: 11))
                         .foregroundStyle(Color.sweeplyTextSub)
                         .lineLimit(1)

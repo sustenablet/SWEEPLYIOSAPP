@@ -6,6 +6,7 @@ struct SettingsView: View {
     @Environment(ProfileStore.self)        private var profileStore
     @Environment(AppSession.self)          private var session
     @Environment(NotificationManager.self) private var notificationManager
+    @Environment(SubscriptionManager.self) private var subscriptionManager
 
     @State private var isSaving = false
     @State private var localProfile: UserProfile = MockData.profile
@@ -17,8 +18,10 @@ struct SettingsView: View {
     @State private var showOnboarding = false
     @State private var showIntroOnboarding = false
     @State private var showLogoutConfirmation = false
+    @State private var showPaywall = false
+    @State private var showCustomerCenter = false
     @State private var currentTestNotificationIndex = 0
-    @AppStorage("hasSeenIntroOnboarding") private var hasSeenIntroOnboarding = false
+    @AppStorage("hasSeenIntroOnboarding") private var hasSeenIntroOnboarding = true
 
     private var canSave: Bool { !isSaving && validationMessage == nil && hasUnsavedChanges }
 
@@ -61,7 +64,18 @@ struct SettingsView: View {
                     menuGroup {
                         menuRow(icon: "questionmark.message", title: "Support".translated()) { }
                         rowDivider()
-                        menuRow(icon: "creditcard", title: "Subscription".translated()) { }
+                        menuRow(
+                            icon: subscriptionManager.isPro ? "checkmark.seal.fill" : "creditcard",
+                            title: subscriptionManager.isPro ? "Manage Subscription".translated() : "Subscription".translated(),
+                            color: subscriptionManager.isPro ? Color.sweeplyAccent : Color.sweeplyNavy
+                        ) {
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                            if subscriptionManager.isPro {
+                                showCustomerCenter = true
+                            } else {
+                                showPaywall = true
+                            }
+                        }
                         rowDivider()
                         menuRow(icon: "sparkles", title: "Product updates".translated()) {
                             showIntroOnboarding = true
@@ -145,6 +159,13 @@ struct SettingsView: View {
                     hasSeenIntroOnboarding = true
                     showIntroOnboarding = false
                 }
+            }
+            .sheet(isPresented: $showPaywall) {
+                SubscriptionPaywallView()
+                    .environment(subscriptionManager)
+            }
+            .sheet(isPresented: $showCustomerCenter) {
+                SubscriptionCustomerCenterView()
             }
             .sheet(isPresented: $showServiceCatalog) { ServiceCatalogView() }
             .sheet(isPresented: $showJobExtras)      { ServiceCatalogView(addonsOnly: true) }

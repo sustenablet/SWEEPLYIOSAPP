@@ -1,5 +1,6 @@
 import BackgroundTasks
 import CoreSpotlight
+import RevenueCat
 import SwiftUI
 import Supabase
 import UIKit
@@ -11,6 +12,9 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
         _ application: UIApplication,
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
     ) -> Bool {
+        // Configure RevenueCat before anything else
+        SubscriptionManager.configure()
+
         BGTaskScheduler.shared.register(
             forTaskWithIdentifier: "com.sweeply.refresh",
             using: nil
@@ -68,6 +72,7 @@ struct SWEEPLYApp: App {
     @State private var teamStore     = TeamStore()
     @State private var expenseStore  = ExpenseStore()
     @State private var messagesStore = MessagesStore()
+    @State private var subscriptionManager = SubscriptionManager()
 
     @AppStorage("pendingShortcut") private var pendingShortcut: String = ""
 
@@ -84,14 +89,20 @@ struct SWEEPLYApp: App {
                 .environment(teamStore)
                 .environment(expenseStore)
                 .environment(messagesStore)
+                .environment(subscriptionManager)
                 .onAppear {
                     notificationManager.checkAuthorizationStatus()
                     registerQuickActions()
                     AppDelegate.scheduleBackgroundRefresh()
                     LocationManager.shared.requestPermission()
+                    // Start RevenueCat customer info listener and load initial state
+                    subscriptionManager.startListening()
                     Task {
+                        await subscriptionManager.loadCustomerInfo()
                         if appSession.isAuthenticated, let uid = appSession.userId {
                             await teamStore.load(ownerId: uid)
+                            // Identify user in RevenueCat so purchases are tied to their account
+                            await subscriptionManager.identify(userId: uid.uuidString)
                         }
                     }
                 }

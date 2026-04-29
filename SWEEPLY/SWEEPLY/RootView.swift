@@ -30,7 +30,7 @@ struct RootView: View {
     @State private var lastNotificationRefresh = Date.distantPast
 
     @AppStorage("hasSeenProductTutorial") private var hasSeenProductTutorial = false
-    @AppStorage("hasSeenIntroOnboarding") private var hasSeenIntroOnboarding = false
+    @AppStorage("hasSeenIntroOnboarding") private var hasSeenIntroOnboarding = true
     // Observing appLanguage forces the entire view hierarchy to re-render on language change,
     // so all .translated() calls pick up the new language immediately.
     @AppStorage("appLanguage") private var appLanguage: String = "en"
@@ -92,9 +92,6 @@ struct RootView: View {
                 isLocked = true
             } else if phase == .active {
                 applyTabBarAppearance()
-                if !hasSeenIntroOnboarding {
-                    showIntroOnboarding = true
-                }
                 if isLocked {
                     authenticate()
                 } else {
