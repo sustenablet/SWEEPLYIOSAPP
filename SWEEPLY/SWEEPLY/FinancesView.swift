@@ -1514,7 +1514,40 @@ struct InvoicesListView: View {
                     .padding(.horizontal, -20)
 
                     // Sort filter
-                    HStack(spacing: 8) {
+                    HStack(spacing: 12) {
+                        Menu {
+                            ForEach(InvoiceSortOrder.allCases, id: \.self) { order in
+                                Button {
+                                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                    withAnimation { sortOrder = order }
+                                } label: {
+                                    HStack {
+                                        Image(systemName: order.icon)
+                                            .font(.system(size: 12))
+                                        Text(order.rawValue)
+                                        if sortOrder == order {
+                                            Image(systemName: "checkmark")
+                                        }
+                                    }
+                                }
+                            }
+                        } label: {
+                            HStack(spacing: 4) {
+                                Image(systemName: sortOrder.icon)
+                                    .font(.system(size: 11, weight: .semibold))
+                                Text(sortOrder.rawValue)
+                                    .font(.system(size: 12, weight: .medium))
+                                Image(systemName: "chevron.down")
+                                    .font(.system(size: 9, weight: .semibold))
+                            }
+                            .foregroundStyle(Color.sweeplyNavy)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 6)
+                            .background(Color.sweeplySurface)
+                            .clipShape(Capsule())
+                            .overlay(Capsule().stroke(Color.sweeplyBorder, lineWidth: 1))
+                        }
+
                         Spacer()
 
                         // Clear filters
@@ -1573,36 +1606,14 @@ struct InvoicesListView: View {
                         .foregroundStyle(Color.sweeplyTextSub)
                 }
                 ToolbarItem(placement: .topBarTrailing) {
-                    HStack(spacing: 16) {
-                        Menu {
-                            ForEach(InvoiceSortOrder.allCases, id: \.self) { order in
-                                Button {
-                                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                                    withAnimation { sortOrder = order }
-                                } label: {
-                                    HStack {
-                                        Text(order.rawValue)
-                                        if sortOrder == order {
-                                            Image(systemName: "checkmark")
-                                        }
-                                    }
-                                }
-                            }
-                        } label: {
-                            Image(systemName: sortOrder.icon)
-                                .font(.system(size: 14, weight: .semibold))
-                                .foregroundStyle(hasActiveFilters ? Color.sweeplyAccent : Color.sweeplyTextSub)
-                        }
-
-                        Button {
-                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                            showNewInvoice = true
-                        } label: {
-                            Image(systemName: "plus")
-                                .font(.system(size: 16, weight: .semibold))
-                        }
-                        .foregroundStyle(Color.sweeplyNavy)
+                    Button {
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        showNewInvoice = true
+                    } label: {
+                        Image(systemName: "plus")
+                            .font(.system(size: 16, weight: .semibold))
                     }
+                    .foregroundStyle(Color.sweeplyNavy)
                 }
             }
             .sheet(isPresented: $showNewInvoice) {
