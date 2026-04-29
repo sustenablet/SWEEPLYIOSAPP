@@ -149,6 +149,18 @@ final class TeamStore {
             if let idx = members.firstIndex(where: { $0.id == id }) {
                 members[idx].status = status
             }
+            if status == .active {
+                let name = members.first(where: { $0.id == id })?.name ?? "A team member"
+                await NotificationHelper.insert(
+                    title: "Team Member Joined",
+                    message: "\(name) accepted your invitation and joined the team",
+                    kind: "team"
+                )
+                NotificationManager.shared.fireInstantBanner(
+                    title: "Team Member Joined",
+                    body: "\(name) is now on your team!"
+                )
+            }
             return true
         } catch {
             lastError = error.localizedDescription

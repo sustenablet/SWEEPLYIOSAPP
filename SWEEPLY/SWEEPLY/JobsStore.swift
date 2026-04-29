@@ -184,9 +184,10 @@ final class JobsStore {
             switch status {
             case .completed:
                 requestReviewIfAppropriate()
+                let completedBy = mapped.assignedMemberName.map { " by \($0)" } ?? ""
                 await NotificationHelper.insert(
                     title: "Job Completed",
-                    message: "\(mapped.serviceType.rawValue) for \(mapped.clientName) — marked complete",
+                    message: "\(mapped.serviceType.rawValue) for \(mapped.clientName) completed\(completedBy)",
                     kind: "jobs"
                 )
             case .inProgress:

@@ -37,6 +37,15 @@ final class InvoicesStore {
                 .execute()
                 .value
             invoices = rows.map { $0.toInvoice() }
+            // Refresh Monday summary push with real last-week revenue
+            let cal = Calendar.current
+            if let lastWeek = cal.dateInterval(of: .weekOfYear, for: Date().addingTimeInterval(-7*24*3600)) {
+                let lastWeekRevenue = invoices
+                    .filter { $0.status == .paid }
+                    .filter { inv in lastWeek.contains(inv.paidAt ?? inv.createdAt) }
+                    .reduce(0) { $0 + $1.total }
+                NotificationManager.shared.refreshWeeklyEarningsSummary(weeklyRevenue: lastWeekRevenue)
+            }
         } catch {
             lastError = error.localizedDescription
             invoices = []
@@ -161,6 +170,27 @@ final class InvoicesStore {
                     message: "\(paid.invoiceNumber) for \(paid.clientName) — \(amount.currency) received",
                     kind: "billing"
                 )
+                // Revenue milestone check
+                let totalNow = invoices.filter { $0.status == .paid }.reduce(0) { $0 + $1.total }
+                let totalBefore = totalNow - amount
+                let milestones: [Double] = [1_000, 5_000, 10_000, 25_000, 50_000, 100_000]
+                for milestone in milestones {
+                    if totalBefore < milestone && totalNow >= milestone {
+                        let label = milestone >= 1_000
+                            ? "$\(String(format: "%.0f", milestone / 1_000))k"
+                            : milestone.currency
+                        await NotificationHelper.insert(
+                            title: "Revenue Milestone Reached 🎉",
+                            message: "You've collected \(label) in total revenue. Keep it up!",
+                            kind: "system"
+                        )
+                        NotificationManager.shared.fireInstantBanner(
+                            title: "Revenue Milestone 🎉",
+                            body: "You've collected \(label) in total revenue!"
+                        )
+                        break
+                    }
+                }
             }
             return true
         } catch {

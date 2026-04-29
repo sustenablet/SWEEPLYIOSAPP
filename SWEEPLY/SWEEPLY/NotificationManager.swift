@@ -177,7 +177,38 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
                 self.scheduleMorningDigest(for: day, jobs: sorted)
                 self.scheduleEveningPreview(for: day, jobs: sorted)
             }
+
+            // Slow week warning: if no jobs at all this week, push on Monday 9am
+            self.refreshSlowWeekWarning(upcomingThisWeek: upcoming)
         }
+    }
+
+    private func refreshSlowWeekWarning(upcomingThisWeek: [Job]) {
+        let identifier = "slow-week-warning"
+        UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: [identifier])
+        guard upcomingThisWeek.isEmpty else { return }
+        guard isAuthorized else { return }
+
+        let calendar = Calendar.current
+        let now = Date()
+        // Find next Monday at 9am
+        var comp = DateComponents()
+        comp.weekday = 2; comp.hour = 9; comp.minute = 0
+        guard let nextMonday9am = calendar.nextDate(after: now, matching: comp, matchingPolicy: .nextTime),
+              nextMonday9am > now else { return }
+
+        let content = UNMutableNotificationContent()
+        content.title = "Quiet Week Ahead"
+        content.body = "No jobs scheduled this week. A great time to reach out to clients!"
+        content.sound = .default
+
+        let trigger = UNTimeIntervalNotificationTrigger(
+            timeInterval: nextMonday9am.timeIntervalSinceNow, repeats: false
+        )
+        UNUserNotificationCenter.current().add(
+            UNNotificationRequest(identifier: identifier, content: content, trigger: trigger),
+            withCompletionHandler: nil
+        )
     }
 
     // MARK: - Morning Digest (7am day-of)
@@ -252,14 +283,16 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
 
     // MARK: - Weekly Earnings Digest (every Monday 9am)
 
-    /// Call once after authorization is granted. Schedules a recurring Monday morning digest.
-    func scheduleWeeklyEarningsSummary() {
+    /// Call after loading invoices. Rebuilds the Monday 9am summary with actual last-week revenue.
+    func refreshWeeklyEarningsSummary(weeklyRevenue: Double) {
         UNUserNotificationCenter.current().removePendingNotificationRequests(
             withIdentifiers: ["weekly-earnings-summary"]
         )
         let content = UNMutableNotificationContent()
         content.title = "Weekly Earnings Summary"
-        content.body = "Open Finance to see what you earned last week and what's coming up."
+        content.body = weeklyRevenue > 0
+            ? "You earned \(weeklyRevenue.currency) last week. Open Finance for your full breakdown."
+            : "No earnings recorded last week. Open Finance to review your invoices."
         content.sound = .default
 
         var comp = DateComponents()
@@ -267,12 +300,15 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
         comp.hour = 9
         comp.minute = 0
         let trigger = UNCalendarNotificationTrigger(dateMatching: comp, repeats: true)
-        let request = UNNotificationRequest(
-            identifier: "weekly-earnings-summary",
-            content: content,
-            trigger: trigger
+        UNUserNotificationCenter.current().add(
+            UNNotificationRequest(identifier: "weekly-earnings-summary", content: content, trigger: trigger),
+            withCompletionHandler: nil
         )
-        UNUserNotificationCenter.current().add(request, withCompletionHandler: nil)
+    }
+
+    /// Legacy one-time call after authorization — schedules with generic body until revenue data loads.
+    func scheduleWeeklyEarningsSummary() {
+        refreshWeeklyEarningsSummary(weeklyRevenue: 0)
     }
 
     // MARK: - Pay Day Reminders (owner)
@@ -427,7 +463,7 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
             }
         }
 
-        // 1 day overdue at 9am — escalation
+        // 1 day overdue at 9am — first escalation
         if let dayAfterDue = Calendar.current.date(byAdding: .day, value: 1, to: invoice.dueDate),
            dayAfterDue > Date() {
             let content = UNMutableNotificationContent()
@@ -451,10 +487,35 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
                 )
             }
         }
+
+        // 7 days overdue at 9am — second escalation
+        if let sevenDaysAfterDue = Calendar.current.date(byAdding: .day, value: 7, to: invoice.dueDate),
+           sevenDaysAfterDue > Date() {
+            let content = UNMutableNotificationContent()
+            content.title = "Invoice Seriously Overdue"
+            content.body = "\(invoice.invoiceNumber) for \(invoice.clientName) is 7 days past due — \(invoice.subtotal.currency) outstanding"
+            content.sound = .defaultCritical
+            content.userInfo = ["invoiceId": invoice.id.uuidString]
+            content.categoryIdentifier = "INVOICE_REMINDER"
+
+            var comp = Calendar.current.dateComponents([.year, .month, .day], from: sevenDaysAfterDue)
+            comp.hour = 9; comp.minute = 0
+            let trigger = UNCalendarNotificationTrigger(dateMatching: comp, repeats: false)
+            let req = UNNotificationRequest(identifier: "\(invoice.id)-overdue7day", content: content, trigger: trigger)
+            UNUserNotificationCenter.current().add(req, withCompletionHandler: nil)
+
+            Task {
+                await NotificationHelper.insert(
+                    title: "Invoice Seriously Overdue",
+                    message: "\(invoice.invoiceNumber) for \(invoice.clientName) — \(invoice.subtotal.currency) — 7 days past due",
+                    kind: "billing"
+                )
+            }
+        }
     }
 
     func cancelInvoiceReminders(for invoiceId: UUID) {
-        let ids = ["\(invoiceId)-due3day", "\(invoiceId)-dueToday", "\(invoiceId)-overdue"]
+        let ids = ["\(invoiceId)-due3day", "\(invoiceId)-dueToday", "\(invoiceId)-overdue", "\(invoiceId)-overdue7day"]
         UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: ids)
     }
 
