@@ -370,7 +370,7 @@ struct CleanerUpcomingView: View {
                         MapActionButton(icon: "location.fill") {
                             withAnimation { mapCameraPosition = .userLocation(fallback: .automatic) }
                         }
-                        MapActionButton(icon: "scope") {
+                        MapActionButton(icon: "building.2.fill") {
                             let coords = dayJobs.compactMap { job -> CLLocationCoordinate2D? in
                                 guard let c = clientsStore.clients.first(where: { $0.id == job.clientId }),
                                       let lat = c.latitude, let lon = c.longitude else { return nil }

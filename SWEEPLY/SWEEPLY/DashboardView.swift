@@ -565,11 +565,13 @@ struct DashJobRow: View {
         clientsStore.clients.first(where: { $0.id == job.clientId })?.city ?? job.address
     }
     
+    private var isCancelled: Bool { job.status == .cancelled }
+    
     var body: some View {
         HStack(spacing: 12) {
             Text(timeStr)
                 .font(.system(size: 13, weight: .semibold, design: .monospaced))
-                .foregroundStyle(Color.sweeplyNavy)
+                .foregroundStyle(isCancelled ? Color.sweeplyDestructive : Color.sweeplyNavy)
                 .frame(width: 50, alignment: .trailing)
             Circle().fill(statusColor).frame(width: 7, height: 7)
             VStack(alignment: .leading, spacing: 2) {
@@ -577,6 +579,7 @@ struct DashJobRow: View {
                     Text(job.clientName).font(.system(size: 14, weight: .semibold))
                     Spacer()
                     Text(job.price.currency).font(.system(size: 13, weight: .semibold, design: .monospaced))
+                        .foregroundStyle(isCancelled ? Color.sweeplyDestructive : Color.primary)
                     Menu {
                         Button("Start Job", systemImage: "play.fill") { Task { await jobsStore.updateStatus(id: job.id, status: .inProgress) } }
                         Button("Mark Complete", systemImage: "checkmark") { Task { await jobsStore.updateStatus(id: job.id, status: .completed) } }
@@ -586,6 +589,7 @@ struct DashJobRow: View {
                 Text("\(job.serviceType.rawValue) · \(durationStr) · \(clientCity)").font(.system(size: 12)).foregroundStyle(Color.sweeplyTextSub).lineLimit(1)
             }
         }.padding(.vertical, 10)
+        .opacity(isCancelled ? 0.7 : 1.0)
     }
     private var timeStr: String { let f = DateFormatter(); f.dateFormat = "h:mm"; return f.string(from: job.date) }
     private var amPm: String { let f = DateFormatter(); f.dateFormat = "a"; return f.string(from: job.date).uppercased() }

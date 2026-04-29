@@ -256,10 +256,12 @@ struct ScheduleView: View {
             .onChange(of: locationManager.location) { _, newLocation in
                 guard viewMode == .map, let newLocation, !mapCenteredOnUser else { return }
                 mapCenteredOnUser = true
+                let hasJobs = !dayJobs.isEmpty
+                let zoomSpan = hasJobs ? 0.35 : 0.15
                 withAnimation(.easeInOut(duration: 0.5)) {
                     mapCameraPosition = .region(MKCoordinateRegion(
                         center: newLocation.coordinate,
-                        span: MKCoordinateSpan(latitudeDelta: 0.10, longitudeDelta: 0.10)
+                        span: MKCoordinateSpan(latitudeDelta: zoomSpan, longitudeDelta: zoomSpan)
                     ))
                 }
             }
@@ -285,7 +287,7 @@ struct ScheduleView: View {
                                 mapCameraPosition = .userLocation(fallback: .automatic)
                             }
                         }
-                        MapActionButton(icon: "scope") {
+                        MapActionButton(icon: "building.2.fill") {
                             let coords = dayJobs.compactMap { job -> CLLocationCoordinate2D? in
                                 guard let c = clientsStore.clients.first(where: { $0.id == job.clientId }),
                                       let lat = c.latitude, let lon = c.longitude else { return nil }
