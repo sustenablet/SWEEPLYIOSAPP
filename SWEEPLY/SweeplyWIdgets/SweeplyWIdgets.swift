@@ -80,6 +80,14 @@ private func formattedCurrency(_ amount: Double) -> String {
     return f.string(from: NSNumber(value: amount)) ?? "$0"
 }
 
+private func shortenedClientName(_ name: String) -> String {
+    let components = name.split(separator: " ")
+    guard components.count >= 2 else { return name }
+    let firstName = components[0]
+    let lastInitial = components[1].prefix(1).uppercased()
+    return "\(firstName) \(lastInitial)."
+}
+
 // MARK: - Next Job Widget (systemSmall)
 
 struct NextJobEntryView: View {
@@ -111,7 +119,7 @@ struct NextJobEntryView: View {
 
                     Spacer(minLength: 8)
 
-                    Text(job.clientName)
+                    Text(shortenedClientName(job.clientName))
                         .font(.system(size: 19, weight: .bold))
                         .foregroundStyle(Color.charcoal)
                         .lineLimit(1)
@@ -132,16 +140,16 @@ struct NextJobEntryView: View {
                     Spacer(minLength: 6)
 
                     HStack(spacing: 0) {
-                        Text(relativeDay(for: job.date))
-                            .font(.system(size: 10, weight: .semibold))
-                            .foregroundStyle(Color.charcoal.opacity(0.5))
-                        Text(" at ")
-                            .font(.system(size: 10, weight: .semibold))
-                            .foregroundStyle(Color.charcoal.opacity(0.25))
-                        Text(timeString(from: job.date))
-                            .font(.system(size: 10, weight: .semibold, design: .monospaced))
-                            .foregroundStyle(Color.charcoal)
-                        Spacer()
+Text(relativeDay(for: job.date))
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(Color.charcoal.opacity(0.5))
+                    Text(" at ")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(Color.charcoal.opacity(0.5))
+                    Text(timeString(from: job.date))
+                        .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                        .foregroundStyle(Color.charcoal.opacity(0.5))
+                    Spacer()
                     }
                 }
                 .padding(14)
@@ -271,7 +279,7 @@ private struct TodayJobRow: View {
                 .foregroundStyle(Color.mutedText)
                 .frame(width: 52, alignment: .leading)
 
-            Text(job.clientName)
+            Text(shortenedClientName(job.clientName))
                 .font(.system(size: 12, weight: .semibold))
                 .foregroundStyle(Color(red: 0.15, green: 0.15, blue: 0.18))
                 .lineLimit(1)
@@ -437,7 +445,7 @@ private struct LargeJobRow: View {
                 .frame(width: 54, alignment: .leading)
 
             VStack(alignment: .leading, spacing: 1) {
-                Text(job.clientName)
+                Text(shortenedClientName(job.clientName))
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundStyle(Color(red: 0.15, green: 0.15, blue: 0.18))
                     .lineLimit(1)
