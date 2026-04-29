@@ -155,7 +155,7 @@ Text(relativeDay(for: job.date))
                 .padding(14)
             } else {
                 VStack(alignment: .leading, spacing: 0) {
-                    Text("SCHEDULE")
+                    Text("TODAY'S SCHEDULE")
                         .font(.system(size: 8, weight: .bold))
                         .foregroundStyle(Color.charcoal.opacity(0.45))
                         .tracking(1.4)
@@ -168,10 +168,10 @@ Text(relativeDay(for: job.date))
                         .padding(.bottom, 6)
 
                     Text("All caught up")
-                        .font(.system(size: 15, weight: .bold))
+                        .font(.system(size: 13, weight: .bold))
                         .foregroundStyle(Color.charcoal)
 
-                    Text("No upcoming jobs")
+                    Text("No jobs")
                         .font(.system(size: 11, weight: .medium))
                         .foregroundStyle(Color.charcoal.opacity(0.5))
                         .padding(.top, 2)
