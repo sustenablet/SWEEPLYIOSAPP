@@ -8,7 +8,7 @@ struct NotificationsView: View {
     @Environment(ClientsStore.self) private var clientsStore
     @Environment(AppSession.self) private var session
 
-    @AppStorage("hasSeededNotifications") private var hasSeededNotifications = false
+    @AppStorage("hasSeededNotificationsV2") private var hasSeededNotifications = false
     @State private var selectedTab: NotificationTab = .all
     @State private var selectedJobId: UUID? = nil
     @State private var selectedInvoiceId: UUID? = nil

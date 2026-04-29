@@ -137,6 +137,7 @@ final class NotificationsStore {
 
         var seeded = false
 
+        // Seed as already-read so they appear in history but never fire push banners
         let recentCompleted = jobs
             .filter { $0.status == .completed }
             .sorted { $0.date > $1.date }
@@ -146,7 +147,8 @@ final class NotificationsStore {
                 userId: userId,
                 title: "Job Completed",
                 message: "\(job.serviceType.rawValue) for \(job.clientName) — marked complete",
-                kind: "jobs"
+                kind: "jobs",
+                isRead: true
             )
             seeded = true
         }
@@ -160,7 +162,8 @@ final class NotificationsStore {
                 userId: userId,
                 title: "Invoice Paid",
                 message: "\(invoice.invoiceNumber) for \(invoice.clientName) — \(invoice.total.currency) received",
-                kind: "billing"
+                kind: "billing",
+                isRead: true
             )
             seeded = true
         }
@@ -171,7 +174,8 @@ final class NotificationsStore {
                 userId: userId,
                 title: "Invoice Overdue",
                 message: "\(invoice.invoiceNumber) for \(invoice.clientName) — \(invoice.total.currency) overdue",
-                kind: "billing"
+                kind: "billing",
+                isRead: true
             )
             seeded = true
         }
