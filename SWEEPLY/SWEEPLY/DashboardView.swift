@@ -981,21 +981,7 @@ struct ProfileMenuView: View {
             Divider()
 
             // Sign out
-            Button {
-                Task { await session.signOut(); dismiss() }
-            } label: {
-                HStack(spacing: 12) {
-                    Image(systemName: "rectangle.portrait.and.arrow.right")
-                        .font(.system(size: 14, weight: .medium))
-                    Text("Sign Out".translated())
-                        .font(.system(size: 15, weight: .semibold))
-                    Spacer()
-                }
-                .foregroundStyle(Color.sweeplyDestructive)
-                .padding(.horizontal, 20)
-                .padding(.vertical, 16)
-            }
-            .buttonStyle(.plain)
+            // Removed - available in Settings page
         }
         .background(Color.sweeplyBackground)
     }
