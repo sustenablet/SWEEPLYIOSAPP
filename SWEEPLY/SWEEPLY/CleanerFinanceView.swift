@@ -540,74 +540,24 @@ struct CompletedJobsListView: View {
         jobs.reduce(0) { $0 + $1.price }
     }
     
+    private var groupedJobs: [(date: Date, jobs: [Job])] {
+        let grouped = Dictionary(grouping: jobs) { Calendar.current.startOfDay(for: $0.date) }
+        return grouped
+            .map { (date: $0.key, jobs: $0.value.sorted { $0.date > $1.date }) }
+            .sorted { $0.date > $1.date }
+    }
+    
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
-                HStack {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("\(jobs.count) jobs")
-                            .font(.system(size: 12, weight: .medium))
-                            .foregroundStyle(Color.sweeplyTextSub)
-                        Text(totalEarnings.currency)
-                            .font(.system(size: 24, weight: .bold, design: .monospaced))
-                            .foregroundStyle(Color.sweeplyNavy)
-                    }
-                    Spacer()
-                }
-                .padding(.horizontal, 20)
-                .padding(.top, 16)
-                
-                LazyVStack(spacing: 0) {
-                    ForEach(Array(jobs.enumerated()), id: \.element.id) { index, job in
-                        if let client = clientsStore.clients.first(where: { $0.id == job.clientId }) {
-                            VStack(spacing: 0) {
-                                HStack(spacing: 12) {
-                                    financeAvatarCircle(client.initials)
-                                    
-                                    VStack(alignment: .leading, spacing: 4) {
-                                        Text(client.name)
-                                            .font(.system(size: 14, weight: .semibold))
-                                            .foregroundStyle(Color.sweeplyNavy)
-                                        
-                                        HStack(spacing: 4) {
-                                            Text(shortDateFormatter.string(from: job.date))
-                                                .font(.system(size: 12))
-                                                .foregroundStyle(Color.sweeplyTextSub)
-                                            Text("at")
-                                                .font(.system(size: 12))
-                                                .foregroundStyle(Color.sweeplyTextSub.opacity(0.5))
-                                            Text(financeTimeString(from: job.date))
-                                                .font(.system(size: 12, weight: .medium, design: .monospaced))
-                                                .foregroundStyle(Color.sweeplyTextSub)
-                                        }
-                                    }
-                                    
-                                    Spacer()
-                                    
-                                    Text(job.price.currency)
-                                        .font(.system(size: 15, weight: .bold, design: .monospaced))
-                                        .foregroundStyle(Color.sweeplyNavy)
-                                }
-                                .padding(.vertical, 12)
-                                .padding(.horizontal, 16)
-                                
-                                if index < jobs.count - 1 {
-                                    Divider().padding(.leading, 68)
-                                }
-                            }
-                        }
-                    }
-                }
-                .background(Color.sweeplySurface)
-                .clipShape(RoundedRectangle(cornerRadius: 14))
-                .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.sweeplyBorder, lineWidth: 1))
-                .padding(.horizontal, 20)
+            VStack(alignment: .leading, spacing: 20) {
+                headerSection
+                statsSummary
+                jobsListSection
             }
+            .padding(.horizontal, 20)
             .padding(.bottom, 100)
         }
         .background(Color.sweeplyBackground.ignoresSafeArea())
-        .navigationTitle("Completed Jobs")
-        .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button("Done") { dismiss() }
@@ -616,9 +566,129 @@ struct CompletedJobsListView: View {
         }
     }
     
+    private var headerSection: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text("Completed Jobs")
+                .font(.system(size: 28, weight: .semibold))
+                .foregroundStyle(Color.sweeplyNavy)
+            Text(totalEarnings.currency)
+                .font(.system(size: 32, weight: .bold, design: .monospaced))
+                .foregroundStyle(Color.sweeplyNavy)
+        }
+        .frame(minHeight: 76, alignment: .center)
+        .padding(.top, 16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+    
+    private var statsSummary: some View {
+        HStack(spacing: 16) {
+            statBox(title: "Jobs", value: "\(jobs.count)", icon: "briefcase.fill", color: Color.sweeplyNavy)
+            statBox(title: "Avg/Job", value: (jobs.isEmpty ? 0 : totalEarnings / Double(jobs.count)).currency, icon: "chart.bar.fill", color: Color.sweeplyAccent)
+        }
+        .padding(.vertical, 4)
+    }
+    
+    private func statBox(title: String, value: String, icon: String, color: Color) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: icon)
+                .font(.system(size: 14))
+                .foregroundStyle(color)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(value)
+                    .font(.system(size: 16, weight: .bold, design: .monospaced))
+                    .foregroundStyle(Color.sweeplyNavy)
+                Text(title)
+                    .font(.system(size: 11))
+                    .foregroundStyle(Color.sweeplyTextSub)
+            }
+            Spacer()
+        }
+        .padding(12)
+        .background(Color.sweeplySurface)
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.sweeplyBorder, lineWidth: 1))
+    }
+    
+    private var jobsListSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            ForEach(Array(groupedJobs.enumerated()), id: \.offset) { _, group in
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(dateHeaderFormatter.string(from: group.date))
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(Color.sweeplyTextSub)
+                        .padding(.horizontal, 4)
+                    
+                    VStack(spacing: 0) {
+                        ForEach(Array(group.jobs.enumerated()), id: \.element.id) { index, job in
+                            completedJobRow(job: job, client: clientsStore.clients.first { $0.id == job.clientId })
+                            if index < group.jobs.count - 1 {
+                                Divider().padding(.leading, 56)
+                            }
+                        }
+                    }
+                    .background(Color.sweeplySurface)
+                    .clipShape(RoundedRectangle(cornerRadius: 14))
+                    .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.sweeplyBorder, lineWidth: 1))
+                }
+            }
+        }
+    }
+    
+    private func completedJobRow(job: Job, client: Client?) -> some View {
+        HStack(spacing: 12) {
+            financeAvatarCircle(client?.initials ?? "?")
+            
+            VStack(alignment: .leading, spacing: 4) {
+                Text(client?.name ?? "Unknown")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(Color.sweeplyNavy)
+                
+                HStack(spacing: 4) {
+                    Text(job.serviceType.rawValue)
+                        .font(.system(size: 11))
+                        .foregroundStyle(Color.sweeplyTextSub)
+                    if let city = client?.city, !city.isEmpty {
+                        Text("·")
+                            .font(.system(size: 11))
+                            .foregroundStyle(Color.sweeplyTextSub.opacity(0.5))
+                        Text(city)
+                            .font(.system(size: 11))
+                            .foregroundStyle(Color.sweeplyTextSub)
+                    }
+                }
+                
+                HStack(spacing: 4) {
+                    Text(shortDateFormatter.string(from: job.date))
+                        .font(.system(size: 11))
+                        .foregroundStyle(Color.sweeplyTextSub.opacity(0.7))
+                    Text("at")
+                        .font(.system(size: 11))
+                        .foregroundStyle(Color.sweeplyTextSub.opacity(0.5))
+                    Text(financeTimeString(from: job.date))
+                        .font(.system(size: 11, weight: .medium, design: .monospaced))
+                        .foregroundStyle(Color.sweeplyTextSub.opacity(0.7))
+                }
+            }
+            
+            Spacer()
+            
+            Text(job.price.currency)
+                .font(.system(size: 15, weight: .bold, design: .monospaced))
+                .foregroundStyle(Color.sweeplyNavy)
+        }
+        .padding(.vertical, 12)
+        .padding(.horizontal, 16)
+    }
+    
     private var shortDateFormatter: DateFormatter {
         let f = DateFormatter()
         f.dateFormat = "MMM d"
+        return f
+    }
+    
+    private var dateHeaderFormatter: DateFormatter {
+        let f = DateFormatter()
+        f.dateFormat = "EEEE, MMM d"
         return f
     }
 }
@@ -637,83 +707,32 @@ struct UpcomingJobsListView: View {
         jobs.reduce(0) { $0 + $1.price }
     }
     
+    private var scheduledCount: Int {
+        jobs.filter { $0.status == .scheduled }.count
+    }
+    
+    private var inProgressCount: Int {
+        jobs.filter { $0.status == .inProgress }.count
+    }
+    
+    private var groupedJobs: [(date: Date, jobs: [Job])] {
+        let grouped = Dictionary(grouping: jobs) { Calendar.current.startOfDay(for: $0.date) }
+        return grouped
+            .map { (date: $0.key, jobs: $0.value.sorted { $0.date < $1.date }) }
+            .sorted { $0.date < $1.date }
+    }
+    
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
-                HStack {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("\(jobs.count) upcoming")
-                            .font(.system(size: 12, weight: .medium))
-                            .foregroundStyle(Color.sweeplyTextSub)
-                        Text(totalPotential.currency)
-                            .font(.system(size: 24, weight: .bold, design: .monospaced))
-                            .foregroundStyle(Color.sweeplyAccent)
-                    }
-                    Spacer()
-                }
-                .padding(.horizontal, 20)
-                .padding(.top, 16)
-                
-                LazyVStack(spacing: 0) {
-                    ForEach(Array(jobs.enumerated()), id: \.element.id) { index, job in
-                        if let client = clientsStore.clients.first(where: { $0.id == job.clientId }) {
-                            VStack(spacing: 0) {
-                                HStack(spacing: 12) {
-                                    financeAvatarCircle(client.initials)
-                                    
-                                    VStack(alignment: .leading, spacing: 4) {
-                                        Text(client.name)
-                                            .font(.system(size: 14, weight: .semibold))
-                                            .foregroundStyle(Color.sweeplyNavy)
-                                        
-                                        HStack(spacing: 4) {
-                                            Text(shortDateFormatter.string(from: job.date))
-                                                .font(.system(size: 12))
-                                                .foregroundStyle(Color.sweeplyTextSub)
-                                            Text("at")
-                                                .font(.system(size: 12))
-                                                .foregroundStyle(Color.sweeplyTextSub.opacity(0.5))
-                                            Text(financeTimeString(from: job.date))
-                                                .font(.system(size: 12, weight: .medium, design: .monospaced))
-                                                .foregroundStyle(Color.sweeplyTextSub)
-                                        }
-                                    }
-                                    
-                                    Spacer()
-                                    
-                                    VStack(alignment: .trailing, spacing: 3) {
-                                        Text(job.price.currency)
-                                            .font(.system(size: 15, weight: .bold, design: .monospaced))
-                                            .foregroundStyle(Color.sweeplyAccent)
-                                        Text(job.status.rawValue.translated())
-                                            .font(.system(size: 10, weight: .semibold))
-                                            .padding(.horizontal, 7)
-                                            .padding(.vertical, 3)
-                                            .background(statusColor(job.status).opacity(0.1))
-                                            .foregroundStyle(statusColor(job.status))
-                                            .clipShape(Capsule())
-                                    }
-                                }
-                                .padding(.vertical, 12)
-                                .padding(.horizontal, 16)
-                                
-                                if index < jobs.count - 1 {
-                                    Divider().padding(.leading, 68)
-                                }
-                            }
-                        }
-                    }
-                }
-                .background(Color.sweeplySurface)
-                .clipShape(RoundedRectangle(cornerRadius: 14))
-                .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.sweeplyBorder, lineWidth: 1))
-                .padding(.horizontal, 20)
+            VStack(alignment: .leading, spacing: 20) {
+                headerSection
+                statsSummary
+                jobsListSection
             }
+            .padding(.horizontal, 20)
             .padding(.bottom, 100)
         }
         .background(Color.sweeplyBackground.ignoresSafeArea())
-        .navigationTitle("Upcoming Earnings")
-        .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button("Done") { dismiss() }
@@ -721,6 +740,153 @@ struct UpcomingJobsListView: View {
             }
         }
     }
+    
+    private var headerSection: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text("Upcoming Earnings")
+                .font(.system(size: 28, weight: .semibold))
+                .foregroundStyle(Color.sweeplyNavy)
+            Text(totalPotential.currency)
+                .font(.system(size: 32, weight: .bold, design: .monospaced))
+                .foregroundStyle(Color.sweeplyAccent)
+        }
+        .frame(minHeight: 76, alignment: .center)
+        .padding(.top, 16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+    
+    private var statsSummary: some View {
+        HStack(spacing: 16) {
+            statBox(title: "Jobs", value: "\(jobs.count)", icon: "calendar.badge.clock", color: Color.sweeplyNavy)
+            statBox(title: "Scheduled", value: "\(scheduledCount)", icon: "clock.fill", color: Color.sweeplyAccent)
+            statBox(title: "In Progress", value: "\(inProgressCount)", icon: "play.circle.fill", color: .orange)
+        }
+        .padding(.vertical, 4)
+    }
+    
+    private func statBox(title: String, value: String, icon: String, color: Color) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: icon)
+                .font(.system(size: 14))
+                .foregroundStyle(color)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(value)
+                    .font(.system(size: 16, weight: .bold, design: .monospaced))
+                    .foregroundStyle(Color.sweeplyNavy)
+                Text(title)
+                    .font(.system(size: 11))
+                    .foregroundStyle(Color.sweeplyTextSub)
+            }
+            Spacer()
+        }
+        .padding(12)
+        .background(Color.sweeplySurface)
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.sweeplyBorder, lineWidth: 1))
+    }
+    
+    private var jobsListSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            ForEach(Array(groupedJobs.enumerated()), id: \.offset) { _, group in
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        Text(dateHeaderFormatter.string(from: group.date))
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(Color.sweeplyTextSub)
+                        Spacer()
+                        Text(group.jobs.reduce(0) { $0 + $1.price }.currency)
+                            .font(.system(size: 12, weight: .semibold, design: .monospaced))
+                            .foregroundStyle(Color.sweeplyAccent)
+                    }
+                    .padding(.horizontal, 4)
+                    
+                    VStack(spacing: 0) {
+                        ForEach(Array(group.jobs.enumerated()), id: \.element.id) { index, job in
+                            upcomingJobRow(job: job, client: clientsStore.clients.first { $0.id == job.clientId })
+                            if index < group.jobs.count - 1 {
+                                Divider().padding(.leading, 56)
+                            }
+                        }
+                    }
+                    .background(Color.sweeplySurface)
+                    .clipShape(RoundedRectangle(cornerRadius: 14))
+                    .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.sweeplyBorder, lineWidth: 1))
+                }
+            }
+        }
+    }
+    
+    private func upcomingJobRow(job: Job, client: Client?) -> some View {
+        HStack(spacing: 12) {
+            financeAvatarCircle(client?.initials ?? "?")
+            
+            VStack(alignment: .leading, spacing: 4) {
+                Text(client?.name ?? "Unknown")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(Color.sweeplyNavy)
+                
+                HStack(spacing: 4) {
+                    Text(job.serviceType.rawValue)
+                        .font(.system(size: 11))
+                        .foregroundStyle(Color.sweeplyTextSub)
+                    if let city = client?.city, !city.isEmpty {
+                        Text("·")
+                            .font(.system(size: 11))
+                            .foregroundStyle(Color.sweeplyTextSub.opacity(0.5))
+                        Text(city)
+                            .font(.system(size: 11))
+                            .foregroundStyle(Color.sweeplyTextSub)
+                    }
+                }
+                
+                HStack(spacing: 4) {
+                    Text(shortDateFormatter.string(from: job.date))
+                        .font(.system(size: 11))
+                        .foregroundStyle(Color.sweeplyTextSub.opacity(0.7))
+                    Text("at")
+                        .font(.system(size: 11))
+                        .foregroundStyle(Color.sweeplyTextSub.opacity(0.5))
+                    Text(financeTimeString(from: job.date))
+                        .font(.system(size: 11, weight: .medium, design: .monospaced))
+                        .foregroundStyle(Color.sweeplyTextSub.opacity(0.7))
+                }
+            }
+            
+            Spacer()
+            
+            VStack(alignment: .trailing, spacing: 3) {
+                Text(job.price.currency)
+                    .font(.system(size: 15, weight: .bold, design: .monospaced))
+                    .foregroundStyle(Color.sweeplyAccent)
+                statusPill(job.status)
+            }
+        }
+        .padding(.vertical, 12)
+        .padding(.horizontal, 16)
+    }
+    
+    private func statusPill(_ status: JobStatus) -> some View {
+        Text(status.rawValue.translated())
+            .font(.system(size: 10, weight: .semibold))
+            .padding(.horizontal, 7)
+            .padding(.vertical, 3)
+            .background(statusColor(status).opacity(0.1))
+            .foregroundStyle(statusColor(status))
+            .clipShape(Capsule())
+    }
+    
+    private var shortDateFormatter: DateFormatter {
+        let f = DateFormatter()
+        f.dateFormat = "MMM d"
+        return f
+    }
+    
+    private var dateHeaderFormatter: DateFormatter {
+        let f = DateFormatter()
+        f.dateFormat = "EEEE, MMM d"
+        return f
+    }
+}
     
     private var shortDateFormatter: DateFormatter {
         let f = DateFormatter()
@@ -736,9 +902,8 @@ struct UpcomingJobsListView: View {
         case .cancelled: return .red
         }
     }
-}
 
-// MARK: - Helper Functions
+    // MARK: - Helper Functions
 
 fileprivate func financeAvatarCircle(_ initials: String) -> some View {
     ZStack {
