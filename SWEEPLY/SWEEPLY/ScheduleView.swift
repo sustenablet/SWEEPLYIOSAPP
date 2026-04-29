@@ -337,12 +337,13 @@ struct ScheduleView: View {
                                         }
                                     }
                                 )
-                                .frame(width: UIScreen.main.bounds.width - 48)
+                                // ~40pt of the next card peeks from the trailing edge
+                                .frame(width: UIScreen.main.bounds.width - 72)
                                 .id(job.id)
                             }
                         }
                         .scrollTargetLayout()
-                        .padding(.horizontal, 24)
+                        .padding(.horizontal, 20)
                     }
                     .scrollPosition(id: $selectedJobId)
                     .scrollTargetBehavior(.viewAligned)
