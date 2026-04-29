@@ -181,13 +181,28 @@ final class JobsStore {
                 NotificationManager.shared.cancelJobReminders(for: id)
             }
             NotificationManager.shared.refreshDailyDigests(jobs: jobs)
-            if status == .completed {
+            switch status {
+            case .completed:
                 requestReviewIfAppropriate()
                 await NotificationHelper.insert(
                     title: "Job Completed",
                     message: "\(mapped.serviceType.rawValue) for \(mapped.clientName) — marked complete",
                     kind: "jobs"
                 )
+            case .inProgress:
+                await NotificationHelper.insert(
+                    title: "Job Started",
+                    message: "\(mapped.serviceType.rawValue) for \(mapped.clientName) is now in progress",
+                    kind: "jobs"
+                )
+            case .cancelled:
+                await NotificationHelper.insert(
+                    title: "Job Cancelled",
+                    message: "\(mapped.serviceType.rawValue) for \(mapped.clientName) was cancelled",
+                    kind: "jobs"
+                )
+            default:
+                break
             }
             return true
         } catch {

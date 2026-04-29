@@ -134,6 +134,14 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
         let trigger = UNTimeIntervalNotificationTrigger(timeInterval: fireDate.timeIntervalSinceNow, repeats: false)
         let request = UNNotificationRequest(identifier: "\(job.id)-hour", content: content, trigger: trigger)
         UNUserNotificationCenter.current().add(request, withCompletionHandler: nil)
+
+        Task {
+            await NotificationHelper.insert(
+                title: "Job Reminder",
+                message: "\(job.serviceType.rawValue) for \(job.clientName) starts at \(shortTime(job.date))",
+                kind: "schedule"
+            )
+        }
     }
 
     func cancelJobReminders(for jobId: UUID) {
@@ -385,6 +393,14 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
             let trigger = UNCalendarNotificationTrigger(dateMatching: comp, repeats: false)
             let req = UNNotificationRequest(identifier: "\(invoice.id)-due3day", content: content, trigger: trigger)
             UNUserNotificationCenter.current().add(req, withCompletionHandler: nil)
+
+            Task {
+                await NotificationHelper.insert(
+                    title: "Invoice Due in 3 Days",
+                    message: "\(invoice.invoiceNumber) for \(invoice.clientName) — \(invoice.subtotal.currency) due \(shortDate(invoice.dueDate))",
+                    kind: "billing"
+                )
+            }
         }
 
         // Day of due at 9am
@@ -401,6 +417,14 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
             let trigger = UNCalendarNotificationTrigger(dateMatching: comp, repeats: false)
             let req = UNNotificationRequest(identifier: "\(invoice.id)-dueToday", content: content, trigger: trigger)
             UNUserNotificationCenter.current().add(req, withCompletionHandler: nil)
+
+            Task {
+                await NotificationHelper.insert(
+                    title: "Invoice Due Today",
+                    message: "\(invoice.invoiceNumber) for \(invoice.clientName) — \(invoice.subtotal.currency) is due today",
+                    kind: "billing"
+                )
+            }
         }
 
         // 1 day overdue at 9am — escalation
@@ -418,6 +442,14 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
             let trigger = UNCalendarNotificationTrigger(dateMatching: comp, repeats: false)
             let req = UNNotificationRequest(identifier: "\(invoice.id)-overdue", content: content, trigger: trigger)
             UNUserNotificationCenter.current().add(req, withCompletionHandler: nil)
+
+            Task {
+                await NotificationHelper.insert(
+                    title: "Invoice Overdue",
+                    message: "\(invoice.invoiceNumber) for \(invoice.clientName) — \(invoice.subtotal.currency) still unpaid",
+                    kind: "billing"
+                )
+            }
         }
     }
 
