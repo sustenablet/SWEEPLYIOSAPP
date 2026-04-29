@@ -638,7 +638,7 @@ struct ScheduleView: View {
                         Image(systemName: "calendar.badge.clock")
                             .font(.system(size: 44))
                             .foregroundStyle(Color.sweeplyTextSub.opacity(0.3))
-                        Text("Nothing on \(agendaDateLabel(selectedDay))")
+                        Text("\("Nothing on".translated()) \(agendaDateLabel(selectedDay))")
                             .font(.system(size: 16, weight: .semibold))
                             .foregroundStyle(Color.sweeplyTextSub)
                         Text("Tap the date to choose another day.".translated())
@@ -1289,10 +1289,10 @@ private struct ScheduleJobRow: View {
             Text("Are you sure you want to delete this job?".translated())
         }
         .alert("Create Invoice?", isPresented: $showInvoicePrompt) {
-            Button("Not Now", role: .cancel) {}
+            Button("Not Now".translated(), role: .cancel) {}
             Button("Create Invoice".translated()) { showInvoiceSheet = true }
         } message: {
-            Text("Generate an invoice for \(job.clientName) — \(job.price.currency)?")
+            Text("\("Generate an invoice for".translated()) \(job.clientName) — \(job.price.currency)?")
         }
         .sheet(isPresented: $showInvoiceSheet) {
             NewInvoiceView(prefill: job)

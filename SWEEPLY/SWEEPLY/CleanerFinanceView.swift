@@ -15,6 +15,8 @@ struct CleanerFinanceView: View {
     @State private var isLoadingPayments = false
     @State private var selectedJobId: UUID? = nil
     @State private var showJobDetail = false
+    @State private var showAllCompleted = false
+    @State private var showAllUpcoming = false
 
     private var selectedPeriod: Period { Period(rawValue: selectedPeriodRaw) ?? .month }
 
@@ -142,6 +144,20 @@ struct CleanerFinanceView: View {
                     }
                     .environment(jobsStore)
                     .environment(clientsStore)
+                }
+            }
+            .sheet(isPresented: $showAllCompleted) {
+                NavigationStack {
+                    CompletedJobsListView(jobs: completedJobs, membership: membership)
+                        .environment(jobsStore)
+                        .environment(clientsStore)
+                }
+            }
+            .sheet(isPresented: $showAllUpcoming) {
+                NavigationStack {
+                    UpcomingJobsListView(jobs: upcomingEarningsJobs, membership: membership)
+                        .environment(jobsStore)
+                        .environment(clientsStore)
                 }
             }
         }
@@ -289,7 +305,12 @@ struct CleanerFinanceView: View {
     private var completedSection: some View {
         SectionCard {
             VStack(alignment: .leading, spacing: 14) {
-                CardHeader(title: "Completed Jobs".translated(), subtitle: selectedPeriod.rawValue, action: nil)
+                CardHeader(
+                    title: "Completed Jobs".translated(),
+                    subtitle: selectedPeriod.rawValue,
+                    badge: completedJobs.isEmpty ? nil : "\(completedJobs.count)",
+                    action: completedJobs.isEmpty ? nil : { showAllCompleted = true }
+                )
 
                 if jobsStore.isLoading {
                     skeletonRows
@@ -327,7 +348,7 @@ struct CleanerFinanceView: View {
             Image(systemName: "dollarsign.circle")
                 .font(.system(size: 32))
                 .foregroundStyle(Color.sweeplyAccent.opacity(0.4))
-            Text("No completed jobs \(selectedPeriod == .all ? "yet" : "this period")")
+            Text(selectedPeriod == .all ? "No completed jobs yet".translated() : "No completed jobs this period".translated())
                 .font(.system(size: 14))
                 .foregroundStyle(Color.sweeplyTextSub)
         }
@@ -340,7 +361,12 @@ struct CleanerFinanceView: View {
     private var scheduledSection: some View {
         SectionCard {
             VStack(alignment: .leading, spacing: 14) {
-                CardHeader(title: "Upcoming Earnings".translated(), subtitle: "Scheduled jobs".translated(), action: nil)
+                CardHeader(
+                    title: "Upcoming Earnings".translated(),
+                    subtitle: "Scheduled jobs".translated(),
+                    badge: upcomingEarningsJobs.isEmpty ? nil : "\(upcomingEarningsJobs.count)",
+                    action: upcomingEarningsJobs.isEmpty ? nil : { showAllUpcoming = true }
+                )
 
                 VStack(alignment: .leading, spacing: 0) {
                     ForEach(Array(upcomingEarningsJobs.prefix(5).enumerated()), id: \.element.id) { index, job in
@@ -382,7 +408,7 @@ struct CleanerFinanceView: View {
                         Image(systemName: "banknote")
                             .font(.system(size: 32))
                             .foregroundStyle(Color.sweeplyAccent.opacity(0.4))
-                        Text("No payments received yet")
+                        Text("No payments received yet".translated())
                             .font(.system(size: 14))
                             .foregroundStyle(Color.sweeplyTextSub)
                     }
@@ -498,4 +524,236 @@ struct CleanerFinanceView: View {
             }
         }
     }
+}
+
+// MARK: - Completed Jobs List View
+
+struct CompletedJobsListView: View {
+    let jobs: [Job]
+    let membership: TeamMembership
+    
+    @Environment(ClientsStore.self) private var clientsStore
+    @Environment(JobsStore.self) private var jobsStore
+    @Environment(\.dismiss) private var dismiss
+    
+    private var totalEarnings: Double {
+        jobs.reduce(0) { $0 + $1.price }
+    }
+    
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                HStack {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("\(jobs.count) jobs")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundStyle(Color.sweeplyTextSub)
+                        Text(totalEarnings.currency)
+                            .font(.system(size: 24, weight: .bold, design: .monospaced))
+                            .foregroundStyle(Color.sweeplyNavy)
+                    }
+                    Spacer()
+                }
+                .padding(.horizontal, 20)
+                .padding(.top, 16)
+                
+                LazyVStack(spacing: 0) {
+                    ForEach(Array(jobs.enumerated()), id: \.element.id) { index, job in
+                        if let client = clientsStore.clients.first(where: { $0.id == job.clientId }) {
+                            VStack(spacing: 0) {
+                                HStack(spacing: 12) {
+                                    financeAvatarCircle(client.initials)
+                                    
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text(client.name)
+                                            .font(.system(size: 14, weight: .semibold))
+                                            .foregroundStyle(Color.sweeplyNavy)
+                                        
+                                        HStack(spacing: 4) {
+                                            Text(shortDateFormatter.string(from: job.date))
+                                                .font(.system(size: 12))
+                                                .foregroundStyle(Color.sweeplyTextSub)
+                                            Text("at")
+                                                .font(.system(size: 12))
+                                                .foregroundStyle(Color.sweeplyTextSub.opacity(0.5))
+                                            Text(financeTimeString(from: job.date))
+                                                .font(.system(size: 12, weight: .medium, design: .monospaced))
+                                                .foregroundStyle(Color.sweeplyTextSub)
+                                        }
+                                    }
+                                    
+                                    Spacer()
+                                    
+                                    Text(job.price.currency)
+                                        .font(.system(size: 15, weight: .bold, design: .monospaced))
+                                        .foregroundStyle(Color.sweeplyNavy)
+                                }
+                                .padding(.vertical, 12)
+                                .padding(.horizontal, 16)
+                                
+                                if index < jobs.count - 1 {
+                                    Divider().padding(.leading, 68)
+                                }
+                            }
+                        }
+                    }
+                }
+                .background(Color.sweeplySurface)
+                .clipShape(RoundedRectangle(cornerRadius: 14))
+                .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.sweeplyBorder, lineWidth: 1))
+                .padding(.horizontal, 20)
+            }
+            .padding(.bottom, 100)
+        }
+        .background(Color.sweeplyBackground.ignoresSafeArea())
+        .navigationTitle("Completed Jobs")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button("Done") { dismiss() }
+                    .font(.system(size: 16, weight: .medium))
+            }
+        }
+    }
+    
+    private var shortDateFormatter: DateFormatter {
+        let f = DateFormatter()
+        f.dateFormat = "MMM d"
+        return f
+    }
+}
+
+// MARK: - Upcoming Jobs List View
+
+struct UpcomingJobsListView: View {
+    let jobs: [Job]
+    let membership: TeamMembership
+    
+    @Environment(ClientsStore.self) private var clientsStore
+    @Environment(JobsStore.self) private var jobsStore
+    @Environment(\.dismiss) private var dismiss
+    
+    private var totalPotential: Double {
+        jobs.reduce(0) { $0 + $1.price }
+    }
+    
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                HStack {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("\(jobs.count) upcoming")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundStyle(Color.sweeplyTextSub)
+                        Text(totalPotential.currency)
+                            .font(.system(size: 24, weight: .bold, design: .monospaced))
+                            .foregroundStyle(Color.sweeplyAccent)
+                    }
+                    Spacer()
+                }
+                .padding(.horizontal, 20)
+                .padding(.top, 16)
+                
+                LazyVStack(spacing: 0) {
+                    ForEach(Array(jobs.enumerated()), id: \.element.id) { index, job in
+                        if let client = clientsStore.clients.first(where: { $0.id == job.clientId }) {
+                            VStack(spacing: 0) {
+                                HStack(spacing: 12) {
+                                    financeAvatarCircle(client.initials)
+                                    
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text(client.name)
+                                            .font(.system(size: 14, weight: .semibold))
+                                            .foregroundStyle(Color.sweeplyNavy)
+                                        
+                                        HStack(spacing: 4) {
+                                            Text(shortDateFormatter.string(from: job.date))
+                                                .font(.system(size: 12))
+                                                .foregroundStyle(Color.sweeplyTextSub)
+                                            Text("at")
+                                                .font(.system(size: 12))
+                                                .foregroundStyle(Color.sweeplyTextSub.opacity(0.5))
+                                            Text(financeTimeString(from: job.date))
+                                                .font(.system(size: 12, weight: .medium, design: .monospaced))
+                                                .foregroundStyle(Color.sweeplyTextSub)
+                                        }
+                                    }
+                                    
+                                    Spacer()
+                                    
+                                    VStack(alignment: .trailing, spacing: 3) {
+                                        Text(job.price.currency)
+                                            .font(.system(size: 15, weight: .bold, design: .monospaced))
+                                            .foregroundStyle(Color.sweeplyAccent)
+                                        Text(job.status.rawValue.translated())
+                                            .font(.system(size: 10, weight: .semibold))
+                                            .padding(.horizontal, 7)
+                                            .padding(.vertical, 3)
+                                            .background(statusColor(job.status).opacity(0.1))
+                                            .foregroundStyle(statusColor(job.status))
+                                            .clipShape(Capsule())
+                                    }
+                                }
+                                .padding(.vertical, 12)
+                                .padding(.horizontal, 16)
+                                
+                                if index < jobs.count - 1 {
+                                    Divider().padding(.leading, 68)
+                                }
+                            }
+                        }
+                    }
+                }
+                .background(Color.sweeplySurface)
+                .clipShape(RoundedRectangle(cornerRadius: 14))
+                .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.sweeplyBorder, lineWidth: 1))
+                .padding(.horizontal, 20)
+            }
+            .padding(.bottom, 100)
+        }
+        .background(Color.sweeplyBackground.ignoresSafeArea())
+        .navigationTitle("Upcoming Earnings")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button("Done") { dismiss() }
+                    .font(.system(size: 16, weight: .medium))
+            }
+        }
+    }
+    
+    private var shortDateFormatter: DateFormatter {
+        let f = DateFormatter()
+        f.dateFormat = "MMM d"
+        return f
+    }
+    
+    private func statusColor(_ status: JobStatus) -> Color {
+        switch status {
+        case .scheduled: return Color.sweeplyAccent
+        case .inProgress: return .orange
+        case .completed: return .green
+        case .cancelled: return .red
+        }
+    }
+}
+
+// MARK: - Helper Functions
+
+fileprivate func financeAvatarCircle(_ initials: String) -> some View {
+    ZStack {
+        Circle()
+            .fill(Color.sweeplyAccent.gradient)
+            .frame(width: 44, height: 44)
+        Text(initials)
+            .font(.system(size: 14, weight: .bold))
+            .foregroundStyle(.white)
+    }
+}
+
+fileprivate func financeTimeString(from date: Date) -> String {
+    let f = DateFormatter()
+    f.timeStyle = .short
+    f.dateStyle = .none
+    return f.string(from: date)
 }

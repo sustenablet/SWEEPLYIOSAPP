@@ -1110,7 +1110,7 @@ struct MemberDetailView: View {
                 Image(systemName: "briefcase")
                     .font(.system(size: 28))
                     .foregroundStyle(Color.sweeplyTextSub.opacity(0.35))
-                Text("No jobs assigned yet")
+                Text("No jobs assigned yet".translated())
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(Color.sweeplyTextSub)
             }
@@ -1140,7 +1140,7 @@ struct MemberDetailView: View {
                         showFullHistory = true
                     } label: {
                         HStack {
-                            Text("View All \(memberJobHistory.count) Jobs")
+                            Text(String(format: "View All %d Jobs".translated(), memberJobHistory.count))
                                 .font(.system(size: 14, weight: .semibold))
                                 .foregroundStyle(Color.sweeplyNavy)
                             Spacer()
@@ -1170,10 +1170,10 @@ struct MemberDetailView: View {
                 Image(systemName: "dollarsign.circle")
                     .font(.system(size: 28))
                     .foregroundStyle(Color.sweeplyTextSub.opacity(0.35))
-                Text("No payments recorded yet")
+                Text("No payments recorded yet".translated())
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(Color.sweeplyTextSub)
-                Text("Tap Record to log a payment")
+                Text("Tap Record to log a payment".translated())
                     .font(.system(size: 12))
                     .foregroundStyle(Color.sweeplyTextSub.opacity(0.6))
             }
@@ -1198,7 +1198,7 @@ struct MemberDetailView: View {
                     showFullHistory = true
                 } label: {
                     HStack {
-                        Text("View All \(payments.count) Payments")
+                        Text(String(format: "View All %d Payments".translated(), payments.count))
                             .font(.system(size: 14, weight: .semibold))
                             .foregroundStyle(Color.sweeplyNavy)
                         Spacer()
@@ -1219,7 +1219,7 @@ struct MemberDetailView: View {
                 HStack(spacing: 6) {
                     Image(systemName: "plus.circle.fill")
                         .font(.system(size: 14))
-                    Text("Record Payment")
+                    Text("Record Payment".translated())
                         .font(.system(size: 14, weight: .semibold))
                 }
                 .foregroundStyle(Color.sweeplyNavy)
@@ -1388,7 +1388,7 @@ struct MemberDetailView: View {
                     Text("No payments recorded yet".translated())
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundStyle(Color.sweeplyTextSub)
-                    Text("Tap Record to log a payment to \(member.name.components(separatedBy: " ").first ?? member.name)")
+                    Text(String(format: "Tap Record to log a payment to %@".translated(), member.name.components(separatedBy: " ").first ?? member.name))
                         .font(.system(size: 12))
                         .foregroundStyle(Color.sweeplyTextSub.opacity(0.6))
                         .multilineTextAlignment(.center)
@@ -1705,7 +1705,7 @@ struct RecordPaymentSheet: View {
                 Text("Record Payment".translated())
                     .font(.system(size: 20, weight: .bold))
                     .foregroundStyle(Color.sweeplyNavy)
-                Text("To \(member.name)")
+                Text("To \(member.name)".translated())
                     .font(.system(size: 14))
                     .foregroundStyle(Color.sweeplyTextSub)
             }
@@ -1799,7 +1799,7 @@ struct RecordPaymentSheet: View {
                     if isRecording {
                         ProgressView().tint(.white).scaleEffect(0.85)
                     } else {
-                        Text("Record \(amount > 0 ? amount.currency : "Payment")")
+                        Text(amount > 0 ? "Record \(amount.currency)".translated() : "Record Payment".translated())
                             .font(.system(size: 16, weight: .bold))
                     }
                 }
@@ -2054,7 +2054,7 @@ struct MemberFullHistoryView: View {
                 Image(systemName: "briefcase")
                     .font(.system(size: 32))
                     .foregroundStyle(Color.sweeplyTextSub.opacity(0.3))
-                Text("No jobs assigned yet")
+                Text("No jobs assigned yet".translated())
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundStyle(Color.sweeplyTextSub)
             }
@@ -2096,7 +2096,7 @@ struct MemberFullHistoryView: View {
                 Image(systemName: "dollarsign.circle")
                     .font(.system(size: 32))
                     .foregroundStyle(Color.sweeplyTextSub.opacity(0.3))
-                Text("No payments recorded yet")
+                Text("No payments recorded yet".translated())
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundStyle(Color.sweeplyTextSub)
             }

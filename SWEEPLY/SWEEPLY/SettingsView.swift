@@ -59,15 +59,15 @@ struct SettingsView: View {
 
                     // ── Group 1: App / Support ─────────────────────────
                     menuGroup {
-                        menuRow(icon: "questionmark.message", title: "Support") { }
+                        menuRow(icon: "questionmark.message", title: "Support".translated()) { }
                         rowDivider()
-                        menuRow(icon: "creditcard", title: "Subscription") { }
+                        menuRow(icon: "creditcard", title: "Subscription".translated()) { }
                         rowDivider()
-                        menuRow(icon: "sparkles", title: "Product updates") {
+                        menuRow(icon: "sparkles", title: "Product updates".translated()) {
                             showIntroOnboarding = true
                         }
                         rowDivider()
-                        menuRow(icon: "gift", title: "Refer a friend") {
+                        menuRow(icon: "gift", title: "Refer a friend".translated()) {
                             let text = "Check out Sweeply — the easiest way to run a cleaning business!"
                             let av = UIActivityViewController(activityItems: [text], applicationActivities: nil)
                             UIApplication.shared.connectedScenes
@@ -77,7 +77,7 @@ struct SettingsView: View {
                         }
                         rowDivider()
                         NavigationLink(destination: aboutPage) {
-                            menuRowLabel(icon: "info.circle", title: "About")
+                            menuRowLabel(icon: "info.circle", title: "About".translated())
                         }
                         .buttonStyle(.plain)
                     }
@@ -87,22 +87,22 @@ struct SettingsView: View {
                     // ── Group 2: Account ───────────────────────────────
                     menuGroup {
                         NavigationLink(destination: profilePage) {
-                            menuRowLabel(icon: "person.circle", title: "Profile")
+                            menuRowLabel(icon: "person.circle", title: "Profile".translated())
                         }
                         .buttonStyle(.plain)
                         rowDivider()
                         NavigationLink(destination: companyPage) {
-                            menuRowLabel(icon: "building.2", title: "Company details")
+                            menuRowLabel(icon: "building.2", title: "Company details".translated())
                         }
                         .buttonStyle(.plain)
                         rowDivider()
                         NavigationLink(destination: preferencesPage) {
-                            menuRowLabel(icon: "slider.horizontal.3", title: "Preferences")
+                            menuRowLabel(icon: "slider.horizontal.3", title: "Preferences".translated())
                         }
                         .buttonStyle(.plain)
                         rowDivider()
                         NavigationLink(destination: accountPage) {
-                            menuRowLabel(icon: "gearshape", title: "Account")
+                            menuRowLabel(icon: "gearshape", title: "Account".translated())
                         }
                         .buttonStyle(.plain)
                     }
@@ -112,7 +112,7 @@ struct SettingsView: View {
                     // ── Logout ─────────────────────────────────────────
                     menuGroup {
                         menuRow(icon: "rectangle.portrait.and.arrow.right",
-                                title: "Logout",
+                                title: "Logout".translated(),
                                 color: Color.sweeplyDestructive) {
                             UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                             showLogoutConfirmation = true
@@ -134,7 +134,7 @@ struct SettingsView: View {
             }
             .onAppear { hydrateLocalProfile() }
             .confirmationDialog("Log out of Sweeply?".translated(), isPresented: $showLogoutConfirmation) {
-                Button("Log out", role: .destructive) {
+                Button("Log out".translated(), role: .destructive) {
                     Task { await session.signOut() }
                 }
             } message: {
@@ -409,7 +409,7 @@ struct SettingsView: View {
                     SettingsField(label: "Phone Number", text: $localProfile.phone, keyboard: .phonePad)
                 }
             }
-            sectionLabel("BUSINESS").padding(.top, 16)
+            sectionLabel("BUSINESS".translated()).padding(.top, 16)
             SectionCard {
                 SettingsField(label: "Business Name", text: $localProfile.businessName)
             }
@@ -468,9 +468,9 @@ struct SettingsView: View {
 
             sectionLabel("SERVICE CATALOG".translated()).padding(.top, 16)
             settingsNavRow(icon: "list.bullet.clipboard", iconBg: Color.sweeplyAccent,
-                           title: "Manage Services", subtitle: catalogServiceCountLabel) { showServiceCatalog = true }
+                           title: "Manage Services".translated(), subtitle: catalogServiceCountLabel) { showServiceCatalog = true }
             settingsNavRow(icon: "sparkles", iconBg: Color.sweeplyWarning,
-                           title: "Job Extras", subtitle: extrasCountLabel) { showJobExtras = true }
+                           title: "Job Extras".translated(), subtitle: extrasCountLabel) { showJobExtras = true }
         }
     }
 
@@ -486,15 +486,15 @@ struct SettingsView: View {
         return count == 0 ? "No extras yet" : "\(count) extra\(count == 1 ? "" : "s") configured"
     }
 
-    private var preferencesSection: some View {
+private var preferencesSection: some View {
         VStack(alignment: .leading, spacing: 6) {
-            sectionLabel("NOTIFICATIONS")
+            sectionLabel("NOTIFICATIONS".translated())
             settingsGroup {
                 HStack(spacing: 14) {
                     settingsIcon("bell.badge.fill", color: Color(red: 0.95, green: 0.45, blue: 0.2))
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Push Notifications".translated()).font(.system(size: 15)).foregroundStyle(Color.primary)
-                        Text(notificationManager.isAuthorized ? "Enabled — job reminders & alerts" : "Tap to enable job reminders")
+                        Text(notificationManager.isAuthorized ? "Enabled — job reminders & alerts".translated() : "Tap to enable job reminders".translated())
                             .font(.system(size: 12)).foregroundStyle(Color.sweeplyTextSub)
                     }
                     Spacer()
@@ -509,12 +509,12 @@ struct SettingsView: View {
                     Divider().padding(.leading, 58)
                     Button {
                         UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                        let types = ["Job Reminder", "Invoice Due", "Test"]
+                        let types = ["Job Reminder".translated(), "Invoice Due".translated(), "Test".translated()]
                         switch types[currentTestNotificationIndex] {
-                        case "Job Reminder":
-                            notificationManager.fireInstantBanner(title: "Job in 1 Hour", body: "Standard Clean at Sarah M. — 123 Main St")
-                        case "Invoice Due":
-                            notificationManager.fireInstantBanner(title: "Invoice Due Soon", body: "INV-0042 for Sarah M. is due in 3 days — $320.00")
+                        case "Job Reminder".translated():
+                            notificationManager.fireInstantBanner(title: "Job in 1 Hour".translated(), body: "Standard Clean at Sarah M. — 123 Main St".translated())
+                        case "Invoice Due".translated():
+                            notificationManager.fireInstantBanner(title: "Invoice Due Soon".translated(), body: "INV-0042 for Sarah M. is due in 3 days — $320.00".translated())
                         default:
                             notificationManager.sendTestNotification()
                         }
@@ -524,7 +524,7 @@ struct SettingsView: View {
                             settingsIcon("paperplane.fill", color: Color.sweeplyAccent)
                             Text("Test Notification".translated()).font(.system(size: 15)).foregroundStyle(Color.primary)
                             Spacer()
-                            let types = ["Job Reminder", "Invoice Due", "Test"]
+                            let types = ["Job Reminder".translated(), "Invoice Due".translated(), "Test".translated()]
                             Text(types[currentTestNotificationIndex]).font(.system(size: 12, design: .monospaced)).foregroundStyle(Color.sweeplyTextSub)
                             Image(systemName: "chevron.right").font(.system(size: 11, weight: .semibold)).foregroundStyle(Color.sweeplyBorder)
                         }
@@ -605,7 +605,7 @@ struct SettingsView: View {
                 .padding(.bottom, 10)
             }
 
-            sectionLabel("ACCOUNT")
+            sectionLabel("ACCOUNT".translated())
             settingsGroup {
                 Button {
                     UIImpactFeedbackGenerator(style: .medium).impactOccurred()

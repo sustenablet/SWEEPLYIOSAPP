@@ -599,7 +599,7 @@ struct FinancesView: View {
                             } label: {
                                 HStack {
                                     Spacer()
-                                    Text("View All \(monthExpenses.count) Expenses")
+                                    Text(String(format: "View All %d Expenses".translated(), monthExpenses.count))
                                         .font(.system(size: 12, weight: .medium))
                                         .foregroundStyle(Color.sweeplyAccent)
                                     Image(systemName: "chevron.right")
@@ -960,7 +960,7 @@ struct FinancesView: View {
                             } label: {
                                 HStack {
                                     Spacer()
-                                    Text("View All \(filteredInvoices.count) Invoices")
+                                    Text(String(format: "View All %d Invoices".translated(), filteredInvoices.count))
                                         .font(.system(size: 13, weight: .medium))
                                         .foregroundStyle(Color.sweeplyAccent)
                                     Image(systemName: "chevron.right")
@@ -1556,7 +1556,7 @@ struct InvoicesListView: View {
                                 UIImpactFeedbackGenerator(style: .light).impactOccurred()
                                 withAnimation { sortOrder = .newestFirst }
                             } label: {
-                                Text("Clear")
+                                Text("Clear".translated())
                                     .font(.system(size: 12, weight: .medium))
                                     .foregroundStyle(Color.sweeplyTextSub)
                             }

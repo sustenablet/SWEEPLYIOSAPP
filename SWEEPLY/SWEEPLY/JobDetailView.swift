@@ -383,7 +383,7 @@ struct JobDetailView: View {
             }
 
             if photoFilenames.isEmpty {
-                Text("No photos yet. Tap \"Add Photo\" to attach images.")
+                Text("No photos yet. Tap \"Add Photo\" to attach images.".translated())
                     .font(.system(size: 13))
                     .foregroundStyle(Color.sweeplyTextSub)
                     .frame(maxWidth: .infinity, alignment: .leading)
