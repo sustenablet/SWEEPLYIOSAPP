@@ -38,7 +38,6 @@ struct GetStartedView: View {
 
             VStack(spacing: 0) {
                 Spacer()
-                    .frame(height: 40)
 
                 textSection
                     .opacity(appeared ? 1 : 0)
@@ -52,7 +51,7 @@ struct GetStartedView: View {
                     .offset(y: appeared ? 0 : 12)
             }
             .padding(.horizontal, 24)
-            .padding(.bottom, 80)
+            .padding(.bottom, 40)
         }
         .onAppear {
             withAnimation(.easeOut(duration: 0.3).delay(0.05)) {
