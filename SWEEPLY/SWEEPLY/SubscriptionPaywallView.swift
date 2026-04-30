@@ -56,14 +56,14 @@ struct SubscriptionPaywallView: View {
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: 0) {
                         header
-                            .padding(.top, 12)
-                            .padding(.bottom, 24)
+                            .padding(.top, 8)
+                            .padding(.bottom, 20)
 
                         planToggle
-                            .padding(.bottom, 12)
+                            .padding(.bottom, 10)
 
                         billingToggle
-                            .padding(.bottom, 24)
+                            .padding(.bottom, 20)
 
                         if let error = purchaseError {
                             errorBanner(error)
@@ -103,6 +103,9 @@ struct SubscriptionPaywallView: View {
                 }
                 .background(Color.clear)
                 .toolbar {
+                    ToolbarItem(placement: .topBarLeading) {
+                        logoButton
+                    }
                     ToolbarItem(placement: .topBarTrailing) {
                         closeButton
                     }
@@ -153,25 +156,25 @@ struct SubscriptionPaywallView: View {
         }
     }
 
+    // MARK: - Logo Button
+
+    private var logoButton: some View {
+        HStack(spacing: 8) {
+            Image("MascotSweeply")
+                .resizable()
+                .scaledToFit()
+                .frame(width: 32, height: 32)
+            
+            Text("Sweeply")
+                .font(Font.sweeplyDisplay(20, weight: .bold))
+                .foregroundStyle(Color.sweeplyNavy)
+        }
+    }
+
     // MARK: - Header
 
     private var header: some View {
-        VStack(spacing: 10) {
-            // Mascot + Brand in top left
-            HStack {
-                Image("MascotSweeply")
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 44, height: 44)
-                
-                Text("Sweeply")
-                    .font(Font.sweeplyDisplay(28, weight: .bold))
-                    .foregroundStyle(Color.sweeplyNavy)
-                
-                Spacer()
-            }
-            .padding(.horizontal, 4)
-
+        VStack(spacing: 8) {
             Text("Run your cleaning business like a pro.")
                 .font(.system(size: 15))
                 .foregroundStyle(Color.sweeplyNavy.opacity(0.55))
@@ -201,7 +204,7 @@ struct SubscriptionPaywallView: View {
         .clipShape(Capsule())
     }
 
-    // MARK: - Billing Toggle
+    // MARK: - Billing Toggle (smaller)
 
     private var billingToggle: some View {
         HStack(spacing: 0) {
@@ -210,45 +213,39 @@ struct SubscriptionPaywallView: View {
                     UIImpactFeedbackGenerator(style: .light).impactOccurred()
                     withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) { billing = period }
                 } label: {
-                    HStack(spacing: 6) {
+                    HStack(spacing: 4) {
                         Text(period.rawValue)
-                            .font(.system(size: 14, weight: billing == period ? .semibold : .regular))
+                            .font(.system(size: 12, weight: billing == period ? .semibold : .regular))
                             .foregroundStyle(billing == period ? Color.sweeplyNavy : Color.sweeplyNavy.opacity(0.5))
                         if period == .yearly {
                             Text("26% off")
-                                .font(.system(size: 10, weight: .bold))
+                                .font(.system(size: 9, weight: .bold))
                                 .foregroundStyle(billing == .yearly ? Color.sweeplyAccent : Color.sweeplyNavy.opacity(0.4))
-                                .padding(.horizontal, 7)
-                                .padding(.vertical, 3)
-                                .background(billing == .yearly ? Color.sweeplyAccent.opacity(0.15) : Color.clear)
-                                .overlay(
-                                    Capsule().stroke(
-                                        billing == .yearly ? Color.sweeplyAccent.opacity(0.5) : Color.sweeplyNavy.opacity(0.15),
-                                        lineWidth: 1
-                                    )
-                                )
+                                .padding(.horizontal, 5)
+                                .padding(.vertical, 2)
+                                .background(billing == .yearly ? Color.sweeplyAccent.opacity(0.12) : Color.clear)
                                 .clipShape(Capsule())
                         }
                     }
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 10)
+                    .padding(.vertical, 7)
                     .background(
                         billing == period
                             ? Color.white
                             : Color.clear
                     )
-                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
                 }
                 .buttonStyle(.plain)
             }
         }
-        .padding(4)
-        .background(Color.sweeplyNavy.opacity(0.06))
+        .padding(3)
+        .background(Color.sweeplyNavy.opacity(0.05))
         .overlay(
-            RoundedRectangle(cornerRadius: 13, style: .continuous)
-                .stroke(Color.sweeplyNavy.opacity(0.1), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .stroke(Color.sweeplyNavy.opacity(0.08), lineWidth: 1)
         )
-        .clipShape(RoundedRectangle(cornerRadius: 13, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
         .padding(.horizontal, 20)
     }
 
@@ -349,12 +346,12 @@ struct SubscriptionPaywallView: View {
             // Features
             VStack(alignment: .leading, spacing: 12) {
                 proFeatureRow("Everything in Standard", icon: "checkmark.circle.fill", highlight: true)
-                proFeatureRow("Unlimited team members", icon: "person.3.fill")
-                proFeatureRow("Advanced finance dashboard", icon: "chart.bar.xaxis")
-                proFeatureRow("Profit & loss reports", icon: "doc.text.fill")
-                proFeatureRow("Cash-flow forecasting", icon: "waveform.path.ecg")
-                proFeatureRow("Priority support", icon: "bolt.fill")
-                proFeatureRow("All future Pro features", icon: "star.fill")
+                proFeatureRow("Unlimited cleaners & teams", icon: "person.3.fill")
+                proFeatureRow("Revenue analytics dashboard", icon: "chart.bar.xaxis")
+                proFeatureRow("Profit & loss breakdown", icon: "doc.text.fill")
+                proFeatureRow("Predictive cash flow", icon: "waveform.path.ecg")
+                proFeatureRow("Priority in-app support", icon: "bolt.fill")
+                proFeatureRow("Early access to new features", icon: "star.fill")
             }
             .padding(.horizontal, 20)
             .padding(.vertical, 18)
@@ -467,11 +464,11 @@ struct SubscriptionPaywallView: View {
                 .padding(.horizontal, 20)
 
             VStack(alignment: .leading, spacing: 12) {
-                proFeatureRow("Unlimited clients", icon: "person.fill")
+                proFeatureRow("Unlimited client profiles", icon: "person.fill")
                 proFeatureRow("Unlimited jobs & invoices", icon: "briefcase.fill")
-                proFeatureRow("Team members", icon: "person.2.fill")
-                proFeatureRow("Calendar + recurring jobs", icon: "calendar")
-                proFeatureRow("Expense tracking + reports", icon: "chart.pie.fill")
+                proFeatureRow("Add up to 3 team members", icon: "person.2.fill")
+                proFeatureRow("Smart calendar & recurring jobs", icon: "calendar")
+                proFeatureRow("Expense categorization", icon: "chart.pie.fill")
                 proFeatureRow("Home-screen widgets", icon: "square.grid.2x2.fill")
             }
             .padding(.horizontal, 20)
