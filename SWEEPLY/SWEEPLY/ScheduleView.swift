@@ -1005,14 +1005,12 @@ private extension ScheduleView {
 private struct TimelineJobBlock: View {
     let job: Job
 
-    private var accentColor: Color {
-        switch job.serviceType {
-        case .standard:         return Color.sweeplyAccent
-        case .deep:             return Color.sweeplyNavy
-        case .moveInOut:        return Color.sweeplyWarning
-        case .postConstruction: return Color.gray
-        case .office:           return Color.sweeplyNavy
-        case .custom:           return Color.sweeplyAccent
+    private var statusAccentColor: Color {
+        switch job.status {
+        case .completed:  return Color.sweeplyAccent
+        case .inProgress: return inProgressColor
+        case .scheduled:  return Color.sweeplyNavy.opacity(0.5)
+        case .cancelled:  return Color.sweeplyDestructive
         }
     }
 
@@ -1027,14 +1025,14 @@ private struct TimelineJobBlock: View {
         NavigationLink(destination: JobDetailView(jobId: job.id)) {
             ZStack(alignment: .leading) {
                 RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .fill(accentColor.opacity(0.08))
+                    .fill(statusAccentColor.opacity(0.08))
                     .overlay(
                         RoundedRectangle(cornerRadius: 10, style: .continuous)
-                            .stroke(accentColor.opacity(0.25), lineWidth: 1)
+                            .stroke(job.status == .cancelled ? Color.sweeplyDestructive.opacity(0.3) : statusAccentColor.opacity(0.25), lineWidth: 1)
                     )
                 HStack(spacing: 0) {
                     RoundedRectangle(cornerRadius: 3, style: .continuous)
-                        .fill(accentColor)
+                        .fill(statusAccentColor)
                         .frame(width: 4)
                         .padding(.vertical, 8)
                         .padding(.leading, 6)
@@ -1045,7 +1043,7 @@ private struct TimelineJobBlock: View {
                             .lineLimit(1)
                         Text(job.serviceType.rawValue.translated())
                             .font(.system(size: 11, weight: .medium))
-                            .foregroundStyle(accentColor)
+                            .foregroundStyle(statusAccentColor)
                             .lineLimit(1)
                         HStack(spacing: 4) {
                             Text(timeString(from: job.date))

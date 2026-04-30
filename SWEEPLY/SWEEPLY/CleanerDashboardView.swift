@@ -1,6 +1,8 @@
 import SwiftUI
 import Charts
 
+private let inProgressColor = Color(red: 0.4, green: 0.45, blue: 0.95)
+
 struct CleanerDashboardView: View {
     @Environment(AppSession.self)         private var session
     @Environment(JobsStore.self)          private var jobsStore
@@ -536,8 +538,8 @@ struct CleanerDashboardView: View {
     private func statusColor(_ status: JobStatus) -> Color {
         switch status {
         case .completed:  return Color.sweeplyAccent
-        case .inProgress: return .orange
-        case .scheduled:  return Color.sweeplyNavy
+        case .inProgress: return inProgressColor
+        case .scheduled:  return Color.sweeplyNavy.opacity(0.5)
         case .cancelled:  return Color.sweeplyDestructive
         }
     }
