@@ -9,6 +9,7 @@ struct FinancesView: View {
     @Environment(AppSession.self) private var session
     @Environment(ExpenseStore.self) private var expenseStore
     @Environment(TeamStore.self)    private var teamStore
+    @Environment(SubscriptionManager.self) private var subscriptionManager
 
     @AppStorage("financesChartPeriod")    private var selectedPeriodRaw: String = ChartPeriod.week.rawValue
     @AppStorage("financesInvoiceFilter")  private var selectedFilterRaw: String = InvoiceFilter.all.rawValue
@@ -32,6 +33,10 @@ struct FinancesView: View {
     // Interactive chart state
     @State private var selectedCashflowBar: String? = nil
     @State private var selectedCashflowValue: Double = 0
+
+    // Forecast state
+    @AppStorage("cashflowForecastWeeks") private var forecastWeekCount: Int = 8
+    @State private var selectedForecastWeek: ForecastWeek? = nil
 
     // Remove the old showFinanceAI state
 
@@ -274,10 +279,17 @@ struct FinancesView: View {
                 summaryBlock
                 chartSection
                 secondaryMetrics
-                expenseSummarySection
-                sixMonthChartSection
+                if subscriptionManager.hasProAccess {
+                    expenseSummarySection
+                    sixMonthChartSection
+                    cashflowForecastSection
+                } else {
+                    proFinanceBanner
+                }
                 invoicesBlock
-                teamPayrollSection
+                if subscriptionManager.hasProAccess {
+                    teamPayrollSection
+                }
             }
             .padding(.horizontal, 20)
             .padding(.bottom, 80)
@@ -512,6 +524,65 @@ struct FinancesView: View {
     }
 
     private var netProfit: Double { monthCollected - monthExpenseTotal }
+
+    // MARK: - Forecast Data
+
+    private var cashflowForecast: [ForecastWeek] {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+        let upcomingJobs = jobsStore.jobs.filter { $0.status == .scheduled && $0.date >= today }
+        let unpaidInvoices = invoicesStore.invoices.filter { $0.status == .unpaid && $0.dueDate >= today }
+
+        return (0..<forecastWeekCount).map { offset in
+            let weekStart = calendar.date(byAdding: .weekOfYear, value: offset, to: today) ?? today
+            let weekEnd   = calendar.date(byAdding: .day, value: 7, to: weekStart) ?? weekStart
+            let interval  = DateInterval(start: weekStart, end: weekEnd)
+
+            let weekJobs     = upcomingJobs.filter { interval.contains($0.date) }
+            let weekInvoices = unpaidInvoices.filter { interval.contains($0.dueDate) }
+
+            let fmt = DateFormatter()
+            fmt.dateFormat = "MMM d"
+
+            return ForecastWeek(
+                weekStart: weekStart,
+                weekLabel: fmt.string(from: weekStart),
+                jobsAmount: weekJobs.reduce(0) { $0 + $1.price },
+                invoicesAmount: weekInvoices.reduce(0) { $0 + $1.amount },
+                jobCount: weekJobs.count,
+                invoiceCount: weekInvoices.count
+            )
+        }
+    }
+
+    private var forecastTotal: Double { cashflowForecast.reduce(0) { $0 + $1.total } }
+    private var forecastAvgWeekly: Double {
+        cashflowForecast.isEmpty ? 0 : forecastTotal / Double(cashflowForecast.count)
+    }
+    private var forecastMax: Double {
+        max(cashflowForecast.map { $0.total }.max() ?? 1, 1)
+    }
+
+    private var proFinanceBanner: some View {
+        SectionCard {
+            HStack(spacing: 16) {
+                Image(systemName: "chart.bar.xaxis")
+                    .font(.system(size: 28, weight: .light))
+                    .foregroundStyle(Color.sweeplyAccent)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Advanced Finance")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(Color.primary)
+                    Text("P&L reports, cash-flow forecasting, and team payroll are available on Pro.")
+                        .font(.system(size: 13))
+                        .foregroundStyle(Color.sweeplyTextSub)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Spacer()
+            }
+            .padding(16)
+        }
+    }
 
     private var expenseSummarySection: some View {
         SectionCard {
@@ -1025,6 +1096,169 @@ struct FinancesView: View {
     // Track payments per member
     @State private var memberPayments: [UUID: [TeamPayment]] = [:]
     
+    // MARK: - Cash-Flow Forecast
+
+    private var cashflowForecastSection: some View {
+        SectionCard {
+            VStack(alignment: .leading, spacing: 16) {
+
+                // Header
+                HStack(alignment: .top) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Cash-Flow Forecast")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundStyle(Color.sweeplyNavy)
+                        Text("Based on scheduled jobs & invoices")
+                            .font(.system(size: 11))
+                            .foregroundStyle(Color.sweeplyTextSub)
+                    }
+                    Spacer()
+                    // 8W / 12W toggle
+                    HStack(spacing: 0) {
+                        ForEach([8, 12], id: \.self) { weeks in
+                            Button {
+                                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                withAnimation(.easeInOut(duration: 0.2)) {
+                                    forecastWeekCount = weeks
+                                    selectedForecastWeek = nil
+                                }
+                            } label: {
+                                Text("\(weeks)W")
+                                    .font(.system(size: 12, weight: .semibold))
+                                    .foregroundStyle(forecastWeekCount == weeks ? .white : Color.sweeplyTextSub)
+                                    .padding(.horizontal, 14)
+                                    .padding(.vertical, 6)
+                                    .background {
+                                        if forecastWeekCount == weeks {
+                                            RoundedRectangle(cornerRadius: 7, style: .continuous)
+                                                .fill(Color.sweeplyNavy)
+                                        }
+                                    }
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                    .padding(3)
+                    .background(Color.sweeplyBorder.opacity(0.5))
+                    .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
+                }
+
+                // Summary strip
+                HStack(alignment: .bottom) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(forecastTotal.currency)
+                            .font(.system(size: 22, weight: .bold, design: .rounded))
+                            .foregroundStyle(Color.sweeplyNavy)
+                            .monospacedDigit()
+                            .contentTransition(.numericText())
+                            .animation(.easeInOut(duration: 0.2), value: forecastWeekCount)
+                        Text("projected over \(forecastWeekCount) weeks · avg \(forecastAvgWeekly.currency)/wk")
+                            .font(.system(size: 11))
+                            .foregroundStyle(Color.sweeplyTextSub)
+                    }
+                    Spacer()
+                    if let sel = selectedForecastWeek {
+                        VStack(alignment: .trailing, spacing: 2) {
+                            Text(sel.total.currency)
+                                .font(.system(size: 15, weight: .bold, design: .monospaced))
+                                .foregroundStyle(Color.sweeplyAccent)
+                            Text("week of \(sel.weekLabel)")
+                                .font(.system(size: 11))
+                                .foregroundStyle(Color.sweeplyTextSub)
+                        }
+                        .transition(.opacity)
+                    }
+                }
+
+                // Stacked bar chart
+                Chart(cashflowForecast) { week in
+                    BarMark(
+                        x: .value("Week", week.weekLabel),
+                        y: .value("Jobs", week.jobsAmount),
+                        stacking: .standard
+                    )
+                    .foregroundStyle(Color.sweeplyNavy.opacity(0.75))
+                    .cornerRadius(4)
+
+                    BarMark(
+                        x: .value("Week", week.weekLabel),
+                        y: .value("Invoices", week.invoicesAmount),
+                        stacking: .standard
+                    )
+                    .foregroundStyle(Color.sweeplyAccent.opacity(0.65))
+                    .cornerRadius(4)
+                }
+                .chartOverlay { proxy in
+                    GeometryReader { geo in
+                        Rectangle().fill(.clear).contentShape(Rectangle())
+                            .gesture(
+                                DragGesture(minimumDistance: 0)
+                                    .onChanged { val in
+                                        let x = val.location.x - geo[proxy.plotFrame!].origin.x
+                                        if let label: String = proxy.value(atX: x) {
+                                            if let week = cashflowForecast.first(where: { $0.weekLabel == label }) {
+                                                withAnimation(.easeInOut(duration: 0.12)) {
+                                                    selectedForecastWeek = week
+                                                }
+                                            }
+                                        }
+                                    }
+                                    .onEnded { _ in
+                                        withAnimation(.easeOut(duration: 0.3).delay(1.5)) {
+                                            selectedForecastWeek = nil
+                                        }
+                                    }
+                            )
+                    }
+                }
+                .chartXAxis {
+                    AxisMarks(values: .automatic(desiredCount: forecastWeekCount == 8 ? 8 : 6)) {
+                        AxisValueLabel()
+                            .font(.system(size: 9))
+                            .foregroundStyle(Color.sweeplyTextSub)
+                    }
+                }
+                .chartYAxis {
+                    AxisMarks(values: .automatic(desiredCount: 3)) {
+                        AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5))
+                            .foregroundStyle(Color.sweeplyBorder.opacity(0.7))
+                        AxisValueLabel()
+                            .font(.system(size: 9))
+                            .foregroundStyle(Color.sweeplyTextSub)
+                    }
+                }
+                .frame(height: 160)
+
+                // Legend
+                HStack(spacing: 16) {
+                    legendDot(color: Color.sweeplyNavy.opacity(0.75), label: "Scheduled jobs")
+                    legendDot(color: Color.sweeplyAccent.opacity(0.65), label: "Outstanding invoices")
+                }
+
+                // Empty state
+                if forecastTotal == 0 {
+                    HStack(spacing: 10) {
+                        Image(systemName: "calendar.badge.plus")
+                            .foregroundStyle(Color.sweeplyTextSub.opacity(0.5))
+                        Text("Schedule jobs or send invoices to see your forecast.")
+                            .font(.system(size: 13))
+                            .foregroundStyle(Color.sweeplyTextSub)
+                    }
+                    .padding(.top, 4)
+                }
+            }
+        }
+    }
+
+    private func legendDot(color: Color, label: String) -> some View {
+        HStack(spacing: 5) {
+            Circle().fill(color).frame(width: 8, height: 8)
+            Text(label)
+                .font(.system(size: 11))
+                .foregroundStyle(Color.sweeplyTextSub)
+        }
+    }
+
     private var teamPayrollSection: some View {
         SectionCard {
             VStack(alignment: .leading, spacing: 16) {
@@ -1806,6 +2040,19 @@ private struct PaymentSheet: View {
             }
         }
     }
+}
+
+// MARK: - Forecast Model
+
+struct ForecastWeek: Identifiable {
+    let id = UUID()
+    let weekStart: Date
+    let weekLabel: String
+    let jobsAmount: Double
+    let invoicesAmount: Double
+    let jobCount: Int
+    let invoiceCount: Int
+    var total: Double { jobsAmount + invoicesAmount }
 }
 
 #Preview {

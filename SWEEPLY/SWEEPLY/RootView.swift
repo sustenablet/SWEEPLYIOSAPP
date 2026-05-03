@@ -2,16 +2,17 @@ import SwiftUI
 import LocalAuthentication
 
 struct RootView: View {
-    @Environment(AppSession.self)          private var session
-    @Environment(ClientsStore.self)        private var clientsStore
-    @Environment(JobsStore.self)           private var jobsStore
-    @Environment(InvoicesStore.self)       private var invoicesStore
-    @Environment(ProfileStore.self)        private var profileStore
+    @Environment(AppSession.self)           private var session
+    @Environment(ClientsStore.self)         private var clientsStore
+    @Environment(JobsStore.self)            private var jobsStore
+    @Environment(InvoicesStore.self)        private var invoicesStore
+    @Environment(ProfileStore.self)         private var profileStore
     @Environment(NotificationManager.self)  private var notificationManager
-    @Environment(NotificationsStore.self)  private var notificationsStore
-    @Environment(TeamStore.self)           private var teamStore
-    @Environment(ExpenseStore.self)        private var expenseStore
-    @Environment(MessagesStore.self)       private var messagesStore
+    @Environment(NotificationsStore.self)   private var notificationsStore
+    @Environment(TeamStore.self)            private var teamStore
+    @Environment(ExpenseStore.self)         private var expenseStore
+    @Environment(MessagesStore.self)        private var messagesStore
+    @Environment(SubscriptionManager.self)  private var subscriptionManager
 
     @State private var selectedTab: Tab = .dashboard
     @State private var deepLinkedJobId: UUID? = nil
@@ -81,6 +82,17 @@ struct RootView: View {
                     if isLocked {
                         biometricLockOverlay
                     }
+                }
+                .sheet(isPresented: Binding(
+                    get: {
+                        if case .expired = subscriptionManager.accessLevel,
+                           !subscriptionManager.isLoading { return true }
+                        return false
+                    },
+                    set: { _ in }
+                )) {
+                    SubscriptionPaywallView()
+                        .interactiveDismissDisabled()
                 }
             } else {
                 AuthView()

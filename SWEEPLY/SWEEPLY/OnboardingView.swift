@@ -14,6 +14,11 @@ struct OnboardingView: View {
     @State private var phone = ""
     @FocusState private var focusedField: IdentityField?
 
+    // Step 3: Team
+    @State private var teamInviteEmail = ""
+    @State private var teamInviteEmails: [String] = []
+    @FocusState private var teamEmailFocused: Bool
+
     // Step 2 fields
     @State private var selectedServices: Set<String> = []
     @State private var customServices: [BusinessService] = []
@@ -70,8 +75,8 @@ struct OnboardingView: View {
             Color.sweeplyBackground.ignoresSafeArea()
 
             VStack(spacing: 0) {
-                // Header with progress dots — only on data-collection steps
-                if step == 1 || step == 2 {
+                // Header — shown on all data-collection steps
+                if step >= 1 && step <= 3 {
                     headerBar
                         .transition(.opacity)
                 }
@@ -81,7 +86,8 @@ struct OnboardingView: View {
                     case 0: stepWelcome.transition(stepTransition).id(0)
                     case 1: stepIdentity.transition(stepTransition).id(1)
                     case 2: stepServices.transition(stepTransition).id(2)
-                    case 3: stepAllSet.transition(stepTransition).id(3)
+                    case 3: stepTeam.transition(stepTransition).id(3)
+                    case 4: stepAllSet.transition(stepTransition).id(4)
                     default: EmptyView()
                     }
                 }
@@ -116,50 +122,42 @@ struct OnboardingView: View {
     // MARK: - Header Bar
 
     private var headerBar: some View {
-        HStack {
-            // Back — only on step 2
-            if step == 2 {
+        HStack(spacing: 12) {
+            // Previous — shown on steps 2 and 3
+            if step >= 2 {
                 Button {
                     UIImpactFeedbackGenerator(style: .light).impactOccurred()
                     goBack()
                 } label: {
                     HStack(spacing: 4) {
                         Image(systemName: "chevron.left")
-                            .font(.system(size: 14, weight: .semibold))
-                        Text("Back".translated())
+                            .font(.system(size: 13, weight: .semibold))
+                        Text("Previous")
                             .font(.system(size: 14, weight: .medium))
                     }
                     .foregroundStyle(Color.sweeplyNavy)
                 }
                 .buttonStyle(.plain)
-            } else if step == 1 {
-                // Dismiss keyboard button on identity step
-                Button {
-                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                    focusedField = nil
-                } label: {
-                    Image(systemName: "keyboard.chevron.compact.down")
-                        .font(.system(size: 16, weight: .medium))
-                        .foregroundStyle(Color.sweeplyTextSub)
-                }
-                .buttonStyle(.plain)
+                .frame(width: 80, alignment: .leading)
+            } else {
+                Color.clear.frame(width: 80, height: 1)
             }
 
-            Spacer()
-
-            // Step dots (2 dots: 1 filled on step 1, both filled on step 2)
-            HStack(spacing: 8) {
-                ForEach(0..<2) { i in
-                    Circle()
-                        .fill(step - 1 >= i ? Color.sweeplyAccent : Color.sweeplyBorder)
-                        .frame(width: 8, height: 8)
-                        .animation(.easeInOut(duration: 0.2), value: step)
+            // Progress bar — 3 steps
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    Capsule()
+                        .fill(Color.sweeplyBorder)
+                        .frame(height: 4)
+                    Capsule()
+                        .fill(Color.sweeplyAccent)
+                        .frame(width: geo.size.width * (CGFloat(step) / 3.0), height: 4)
+                        .animation(.spring(response: 0.4, dampingFraction: 0.8), value: step)
                 }
             }
+            .frame(height: 4)
 
-            Spacer()
-
-            // Skip — only on step 2
+            // Skip — only on step 2 (services), else balance spacer
             if step == 2 {
                 Button {
                     UIImpactFeedbackGenerator(style: .light).impactOccurred()
@@ -170,75 +168,73 @@ struct OnboardingView: View {
                         .foregroundStyle(Color.sweeplyTextSub)
                 }
                 .buttonStyle(.plain)
+                .frame(width: 80, alignment: .trailing)
+            } else {
+                Color.clear.frame(width: 80, height: 1)
             }
         }
         .padding(.horizontal, 24)
-        .padding(.vertical, 12)
+        .padding(.vertical, 14)
     }
 
     // MARK: - Step 0: Welcome
 
     private var stepWelcome: some View {
-        VStack(spacing: 0) {
-            Spacer()
-
+        GeometryReader { geo in
             VStack(spacing: 0) {
-                VStack(spacing: 14) {
-                    Image("SweeplyLogo")
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 80, height: 80)
 
-                    VStack(spacing: 6) {
-                        HStack(spacing: 0) {
-                            Text("Sweep".translated())
-                                .foregroundStyle(Color.sweeplyNavy)
-                            Text("ly".translated())
-                                .foregroundStyle(Color.sweeplyWordmarkBlue)
-                        }
-                        .font(.system(size: 40, weight: .bold, design: .rounded))
-                        .tracking(-1.0)
+                // ── Top: hero image ──────────────────────────────────
+                Image("SignupImage")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: geo.size.width)
+                    .padding(.top, 40)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(Color(red: 0.757, green: 0.875, blue: 0.992))
 
-                        Text("Run your cleaning business.".translated())
+                // ── Bottom: content card flush with image ─────────────
+                VStack(spacing: 0) {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("Let's get you set up")
+                            .font(.system(size: 28, weight: .bold, design: .rounded))
+                            .foregroundStyle(Color.sweeplyNavy)
+                            .tracking(-0.4)
+
+                        Text("Get your workspace ready and start managing jobs with ease.")
                             .font(.system(size: 15))
                             .foregroundStyle(Color.sweeplyTextSub)
+                            .lineSpacing(3)
                     }
-                }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.top, 28)
+                    .padding(.bottom, 32)
 
-                Spacer().frame(height: 36)
-
-                VStack(spacing: 10) {
-                    OnboardingFeaturePill(icon: "calendar", text: "Scheduling & job tracking")
-                    OnboardingFeaturePill(icon: "doc.plaintext", text: "Invoicing & payments")
-                    OnboardingFeaturePill(icon: "sparkles", text: "Built for cleaners")
+                    Button {
+                        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                        advance()
+                    } label: {
+                        Text("Get started".translated())
+                            .font(.system(size: 17, weight: .bold))
+                            .foregroundStyle(.white)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 54)
+                            .background(Color.sweeplyNavy)
+                            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                            .shadow(color: Color.sweeplyNavy.opacity(0.2), radius: 8, x: 0, y: 4)
+                    }
+                    .padding(.bottom, geo.safeAreaInsets.bottom > 0 ? geo.safeAreaInsets.bottom + 8 : 28)
                 }
                 .padding(.horizontal, 28)
+                .frame(maxWidth: .infinity)
+                .background(Color.sweeplyBackground)
+                .opacity(welcomeAppeared ? 1 : 0)
+                .offset(y: welcomeAppeared ? 0 : 32)
             }
-            .opacity(welcomeAppeared ? 1 : 0)
-            .offset(y: welcomeAppeared ? 0 : 16)
-
-            Spacer()
-
-            Button {
-                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-                advance()
-            } label: {
-                Text("Get started".translated())
-                    .font(.system(size: 17, weight: .bold))
-                    .foregroundStyle(.white)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 54)
-                    .background(Color.sweeplyNavy)
-                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                    .shadow(color: Color.sweeplyNavy.opacity(0.2), radius: 8, x: 0, y: 4)
-            }
-            .padding(.horizontal, 24)
-            .padding(.bottom, 48)
-            .opacity(welcomeAppeared ? 1 : 0)
+            .ignoresSafeArea()
         }
         .onAppear {
             welcomeAppeared = false
-            withAnimation(.easeOut(duration: 0.45).delay(0.1)) {
+            withAnimation(.spring(response: 0.55, dampingFraction: 0.82).delay(0.1)) {
                 welcomeAppeared = true
             }
         }
@@ -247,91 +243,79 @@ struct OnboardingView: View {
     // MARK: - Step 1: Identity
 
     private var stepIdentity: some View {
-        ScrollView(showsIndicators: false) {
-            VStack(alignment: .leading, spacing: 0) {
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("Let's set up\nyour business")
-                        .font(.system(size: 34, weight: .bold))
-                        .foregroundStyle(Color.sweeplyNavy)
-                        .lineSpacing(2)
-                        .tracking(-0.6)
+        VStack(spacing: 0) {
+            ScrollView(showsIndicators: false) {
+                VStack(alignment: .leading, spacing: 0) {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("Let's set up\nyour business")
+                            .font(.system(size: 34, weight: .bold))
+                            .foregroundStyle(Color.sweeplyNavy)
+                            .lineSpacing(2)
+                            .tracking(-0.6)
 
-                    Text("This appears on your invoices and client messages.".translated())
-                        .font(.system(size: 15))
-                        .foregroundStyle(Color.sweeplyTextSub)
-                }
-                .padding(.horizontal, 24)
-                .padding(.top, 8)
+                        Text("This appears on your invoices and client messages.".translated())
+                            .font(.system(size: 15))
+                            .foregroundStyle(Color.sweeplyTextSub)
+                    }
+                    .padding(.horizontal, 24)
+                    .padding(.top, 8)
 
-                Spacer().frame(height: 32)
+                    Spacer().frame(height: 32)
 
-                VStack(spacing: 12) {
-                    OnboardingField(
-                        placeholder: "Your name",
-                        text: $fullName,
-                        icon: "person",
-                        keyboardType: .default,
-                        submitLabel: .next,
-                        onSubmit: { focusedField = .business },
-                        onDismissKeyboard: { focusedField = nil }
-                    )
+                    VStack(spacing: 12) {
+                        OnboardingField(
+                            placeholder: "Your name",
+                            text: $fullName,
+                            icon: "person",
+                            keyboardType: .default,
+                            submitLabel: .next,
+                            onSubmit: { focusedField = .business }
+                        )
                         .focused($focusedField, equals: .name)
 
-                    OnboardingField(
-                        placeholder: "Business name (e.g. Sunrise Cleaning)",
-                        text: $businessName,
-                        icon: "building.2",
-                        keyboardType: .default,
-                        submitLabel: .next,
-                        onSubmit: { focusedField = .phone },
-                        onDismissKeyboard: { focusedField = nil }
-                    )
+                        OnboardingField(
+                            placeholder: "Business name (e.g. Sunrise Cleaning)",
+                            text: $businessName,
+                            icon: "building.2",
+                            keyboardType: .default,
+                            submitLabel: .next,
+                            onSubmit: { focusedField = .phone }
+                        )
                         .focused($focusedField, equals: .business)
 
-                    OnboardingField(
-                        placeholder: "Phone (optional)",
-                        text: $phone,
-                        icon: "phone",
-                        keyboardType: .phonePad,
-                        submitLabel: .done,
-                        onSubmit: { focusedField = nil },
-                        onDismissKeyboard: { focusedField = nil }
-                    )
+                        OnboardingField(
+                            placeholder: "Phone (optional)",
+                            text: $phone,
+                            icon: "phone",
+                            keyboardType: .phonePad,
+                            submitLabel: .done,
+                            onSubmit: { focusedField = nil }
+                        )
                         .focused($focusedField, equals: .phone)
+                    }
+                    .padding(.horizontal, 24)
+                    .padding(.bottom, 24)
                 }
-                .padding(.horizontal, 24)
+            }
+            .scrollDismissesKeyboard(.interactively)
 
-                Spacer().frame(height: 40)
-            }
-        }
-        .gesture(
-            DragGesture(minimumDistance: 50)
-                .onEnded { value in
-                    if value.translation.height > 50 {
-                        focusedField = nil
-                    }
+            Divider().opacity(0.5)
+            primaryButton(
+                label: "Continue",
+                isEnabled: identityStepValid,
+                action: {
+                    UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                    focusedField = nil
+                    advance()
                 }
-        )
-        .safeAreaInset(edge: .bottom, spacing: 0) {
-            VStack(spacing: 0) {
-                Divider().opacity(0.5)
-                primaryButton(
-                    label: "Continue",
-                    isEnabled: identityStepValid,
-                    action: {
-                        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-                        focusedField = nil
-                        advance()
-                    }
-                )
-                .padding(.top, 16)
-                .padding(.bottom, 32)
-            }
+            )
+            .padding(.horizontal, 24)
+            .padding(.top, 16)
+            .padding(.bottom, 32)
             .background(Color.sweeplyBackground)
         }
-        .onAppear {
-            focusedField = nil
-        }
+        .ignoresSafeArea(.keyboard, edges: .bottom)
+        .onAppear { focusedField = nil }
     }
 
     private var identityStepValid: Bool {
@@ -501,7 +485,187 @@ struct OnboardingView: View {
         allMainServices.contains { selectedServices.contains($0.name) }
     }
 
-    // MARK: - Step 3: All Set
+    // MARK: - Step 3: Team
+
+    private var stepTeam: some View {
+        VStack(spacing: 0) {
+            ScrollView(showsIndicators: false) {
+                VStack(alignment: .leading, spacing: 0) {
+
+                    // Header
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("Build your team")
+                            .font(.system(size: 34, weight: .bold))
+                            .foregroundStyle(Color.sweeplyNavy)
+                            .tracking(-0.6)
+
+                        Text("Invite team members who'll complete jobs with you. You can always add more later.")
+                            .font(.system(size: 15))
+                            .foregroundStyle(Color.sweeplyTextSub)
+                            .lineSpacing(3)
+                    }
+                    .padding(.horizontal, 24)
+                    .padding(.top, 8)
+
+                    Spacer().frame(height: 32)
+
+                    // Email input row
+                    HStack(spacing: 10) {
+                        HStack(spacing: 12) {
+                            Image(systemName: "envelope")
+                                .font(.system(size: 16, weight: .medium))
+                                .foregroundStyle(Color.sweeplyTextSub)
+                                .frame(width: 24)
+
+                            TextField("Team member email", text: $teamInviteEmail)
+                                .font(.system(size: 16))
+                                .foregroundStyle(Color.sweeplyNavy)
+                                .keyboardType(.emailAddress)
+                                .textInputAutocapitalization(.never)
+                                .autocorrectionDisabled()
+                                .submitLabel(.done)
+                                .onSubmit { addTeamEmail() }
+                                .focused($teamEmailFocused)
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 16)
+                        .background(Color.sweeplySurface)
+                        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                .stroke(teamEmailFocused ? Color.sweeplyAccent : Color.sweeplyBorder, lineWidth: 1)
+                        )
+
+                        Button {
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                            addTeamEmail()
+                        } label: {
+                            Image(systemName: "plus")
+                                .font(.system(size: 16, weight: .bold))
+                                .foregroundStyle(.white)
+                                .frame(width: 52, height: 52)
+                                .background(teamInviteEmailValid ? Color.sweeplyNavy : Color.sweeplyBorder)
+                                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(!teamInviteEmailValid)
+                        .animation(.easeInOut(duration: 0.15), value: teamInviteEmailValid)
+                    }
+                    .padding(.horizontal, 24)
+
+                    // Added emails
+                    if !teamInviteEmails.isEmpty {
+                        VStack(alignment: .leading, spacing: 0) {
+                            Text("PENDING INVITES")
+                                .font(.system(size: 10, weight: .bold))
+                                .foregroundStyle(Color.sweeplyTextSub)
+                                .tracking(0.8)
+                                .padding(.horizontal, 24)
+                                .padding(.top, 24)
+                                .padding(.bottom, 12)
+
+                            VStack(spacing: 0) {
+                                ForEach(Array(teamInviteEmails.enumerated()), id: \.element) { idx, email in
+                                    HStack(spacing: 12) {
+                                        ZStack {
+                                            Circle()
+                                                .fill(Color.sweeplyNavy.opacity(0.08))
+                                                .frame(width: 36, height: 36)
+                                            Image(systemName: "person.fill")
+                                                .font(.system(size: 14))
+                                                .foregroundStyle(Color.sweeplyNavy)
+                                        }
+
+                                        Text(email)
+                                            .font(.system(size: 14, weight: .medium))
+                                            .foregroundStyle(Color.primary)
+                                            .lineLimit(1)
+
+                                        Spacer()
+
+                                        Button {
+                                            let i = idx
+                                            withAnimation(.easeInOut(duration: 0.2)) {
+                                                teamInviteEmails.remove(at: i)
+                                            }
+                                        } label: {
+                                            Image(systemName: "xmark")
+                                                .font(.system(size: 12, weight: .semibold))
+                                                .foregroundStyle(Color.sweeplyTextSub)
+                                                .frame(width: 28, height: 28)
+                                                .background(Color.sweeplyBorder.opacity(0.5))
+                                                .clipShape(Circle())
+                                        }
+                                        .buttonStyle(.plain)
+                                    }
+                                    .padding(.horizontal, 24)
+                                    .padding(.vertical, 12)
+
+                                    if idx < teamInviteEmails.count - 1 {
+                                        Divider().padding(.leading, 72)
+                                    }
+                                }
+                            }
+                            .background(Color.sweeplySurface)
+                            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                    .stroke(Color.sweeplyBorder, lineWidth: 1)
+                            )
+                            .padding(.horizontal, 24)
+                        }
+                    } else {
+                        // Empty state hint
+                        HStack(spacing: 10) {
+                            Image(systemName: "info.circle")
+                                .font(.system(size: 14))
+                                .foregroundStyle(Color.sweeplyAccent)
+                            Text("Add emails above to invite your team.")
+                                .font(.system(size: 13))
+                                .foregroundStyle(Color.sweeplyTextSub)
+                        }
+                        .padding(.horizontal, 24)
+                        .padding(.top, 16)
+                    }
+
+                    Spacer().frame(height: 24)
+                }
+            }
+            .scrollDismissesKeyboard(.interactively)
+
+            Divider().opacity(0.5)
+            primaryButton(
+                label: teamInviteEmails.isEmpty ? "Skip for now" : "Continue",
+                isEnabled: true,
+                action: {
+                    UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                    teamEmailFocused = false
+                    advance()
+                }
+            )
+            .padding(.horizontal, 24)
+            .padding(.top, 16)
+            .padding(.bottom, 32)
+            .background(Color.sweeplyBackground)
+        }
+        .ignoresSafeArea(.keyboard, edges: .bottom)
+    }
+
+    private var teamInviteEmailValid: Bool {
+        let t = teamInviteEmail.trimmingCharacters(in: .whitespaces)
+        return t.contains("@") && t.contains(".") && !teamInviteEmails.contains(t)
+    }
+
+    private func addTeamEmail() {
+        let email = teamInviteEmail.trimmingCharacters(in: .whitespaces)
+        guard teamInviteEmailValid else { return }
+        withAnimation(.easeInOut(duration: 0.2)) {
+            teamInviteEmails.append(email)
+            teamInviteEmail = ""
+        }
+    }
+
+    // MARK: - Step 4: All Set
 
     private var stepAllSet: some View {
         VStack(spacing: 0) {
@@ -522,7 +686,7 @@ struct OnboardingView: View {
 
                 VStack(spacing: 14) {
                     Text("Welcome to Sweeply,\n\(firstName)!")
-                        .font(.system(size: 30, weight: .bold))
+                        .font(.system(size: 26, weight: .bold))
                         .foregroundStyle(Color.sweeplyNavy)
                         .multilineTextAlignment(.center)
                         .lineSpacing(2)
@@ -835,7 +999,6 @@ private struct OnboardingField: View {
     var keyboardType: UIKeyboardType = .default
     var submitLabel: SubmitLabel = .next
     var onSubmit: (() -> Void)? = nil
-    var onDismissKeyboard: (() -> Void)? = nil
 
     var body: some View {
         HStack(spacing: 12) {
@@ -851,14 +1014,6 @@ private struct OnboardingField: View {
                 .submitLabel(submitLabel)
                 .autocorrectionDisabled()
                 .onSubmit { onSubmit?() }
-                .toolbar {
-                    ToolbarItemGroup(placement: .keyboard) {
-                        Spacer()
-                        Button("Done") {
-                            onDismissKeyboard?()
-                        }
-                    }
-                }
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 16)

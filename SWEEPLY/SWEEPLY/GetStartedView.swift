@@ -79,6 +79,8 @@ struct GetStartedView: View {
             Text(displayedText)
                 .font(.system(size: 42, weight: .black, design: .rounded))
                 .foregroundStyle(.white)
+                .lineLimit(1)
+                .minimumScaleFactor(0.6)
                 .multilineTextAlignment(.center)
                 .tracking(-0.6)
                 .shadow(color: .black.opacity(0.25), radius: 4, y: 2)

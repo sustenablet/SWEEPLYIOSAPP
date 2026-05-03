@@ -611,7 +611,14 @@ struct ReassignCleanerSheet: View {
         updated.assignedMemberId   = selectedId
         updated.assignedMemberName = name
         let ok = await jobsStore.update(updated)
-        if ok { dismiss() }
+        if ok {
+            if let cleanerUserId = activeCleaners.first(where: { $0.id == selectedId })?.cleanerUserId {
+                let dateStr = updated.date.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day().hour().minute())
+                let body = "\(updated.serviceType.rawValue) at \(updated.clientName) — \(dateStr)"
+                NotificationManager.shared.fireInstantBanner(title: "New Job Assigned", body: body)
+            }
+            dismiss()
+        }
     }
 }
 

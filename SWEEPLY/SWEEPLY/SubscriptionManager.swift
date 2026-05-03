@@ -2,6 +2,15 @@ import Foundation
 import Observation
 import RevenueCat
 
+// MARK: - Access Level
+
+enum AccessLevel {
+    case trial(daysRemaining: Int)
+    case standard
+    case pro
+    case expired
+}
+
 // MARK: - SubscriptionManager
 
 @Observable
@@ -9,10 +18,13 @@ final class SubscriptionManager {
 
     // MARK: Constants
 
-    static let apiKey          = "test_DHssIPjCgrwchzppmUiQjfJooNy"
-    static let entitlementID   = "sweeply Pro"
+    static let apiKey                = "appl_hoKbHHnURrLVPDKpGKktXmrSsLJ"
+    static let proEntitlementID      = "pro"
+    static let standardEntitlementID = "standard"
+    static let trialDurationDays     = 30
+    private static let trialStartKey = "sweeply_trial_start"
 
-    // MARK: Published state
+    // MARK: State
 
     private(set) var customerInfo: CustomerInfo?
     private(set) var offerings: Offerings?
@@ -21,20 +33,57 @@ final class SubscriptionManager {
     private(set) var isRestoring = false
     private(set) var lastError: String?
 
-    // MARK: Derived
+    // MARK: - Trial
+
+    var trialStartDate: Date {
+        if let stored = UserDefaults.standard.object(forKey: Self.trialStartKey) as? Date {
+            return stored
+        }
+        let now = Date()
+        UserDefaults.standard.set(now, forKey: Self.trialStartKey)
+        return now
+    }
+
+    var trialDaysRemaining: Int {
+        let elapsed = Calendar.current.dateComponents([.day], from: trialStartDate, to: Date()).day ?? 0
+        return max(0, Self.trialDurationDays - elapsed)
+    }
+
+    var isInTrial: Bool {
+        trialDaysRemaining > 0 && !isStandard && !isPro
+    }
+
+    // MARK: - Entitlements
 
     var isPro: Bool {
-        customerInfo?.entitlements[Self.entitlementID]?.isActive == true
+        customerInfo?.entitlements[Self.proEntitlementID]?.isActive == true
+    }
+
+    var isStandard: Bool {
+        customerInfo?.entitlements[Self.standardEntitlementID]?.isActive == true
+    }
+
+    // Any active access (trial, standard, or pro)
+    var isSubscribed: Bool { isStandard || isPro || isInTrial }
+
+    // Pro-level access: subscribed to Pro OR in free trial
+    var hasProAccess: Bool { isPro || isInTrial }
+
+    var accessLevel: AccessLevel {
+        if isPro        { return .pro }
+        if isInTrial    { return .trial(daysRemaining: trialDaysRemaining) }
+        if isStandard   { return .standard }
+        return .expired
+    }
+
+    var expirationDate: Date? {
+        customerInfo?.entitlements[Self.proEntitlementID]?.expirationDate
+            ?? customerInfo?.entitlements[Self.standardEntitlementID]?.expirationDate
     }
 
     var activeProductID: String? {
-        customerInfo?.entitlements[Self.entitlementID]?.productIdentifier
-    }
-
-    var isLifetime: Bool { activeProductID == "lifetime" }
-
-    var expirationDate: Date? {
-        customerInfo?.entitlements[Self.entitlementID]?.expirationDate
+        customerInfo?.entitlements[Self.proEntitlementID]?.productIdentifier
+            ?? customerInfo?.entitlements[Self.standardEntitlementID]?.productIdentifier
     }
 
     // MARK: - Configuration
@@ -95,7 +144,7 @@ final class SubscriptionManager {
         return info
     }
 
-    // MARK: - Identify user (call after Supabase sign-in)
+    // MARK: - Identity
 
     func identify(userId: String) async {
         do {
@@ -105,8 +154,6 @@ final class SubscriptionManager {
             await MainActor.run { lastError = error.localizedDescription }
         }
     }
-
-    // MARK: - Sign out (call after Supabase sign-out)
 
     func reset() async {
         do {

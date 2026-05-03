@@ -62,7 +62,12 @@ struct SettingsView: View {
 
                     // ── Group 1: App / Support ─────────────────────────
                     menuGroup {
-                        menuRow(icon: "questionmark.message", title: "Support".translated()) { }
+                        menuRow(icon: "questionmark.message", title: "Support".translated()) {
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                            if let url = URL(string: "https://sweeplyapp.online/support") {
+                                UIApplication.shared.open(url)
+                            }
+                        }
                         rowDivider()
                         menuRow(
                             icon: subscriptionManager.isPro ? "checkmark.seal.fill" : "creditcard",
@@ -76,24 +81,6 @@ struct SettingsView: View {
                                 showPaywall = true
                             }
                         }
-                        rowDivider()
-                        menuRow(icon: "sparkles", title: "Product updates".translated()) {
-                            showIntroOnboarding = true
-                        }
-                        rowDivider()
-                        menuRow(icon: "gift", title: "Refer a friend".translated()) {
-                            let text = "Check out Sweeply — the easiest way to run a cleaning business!"
-                            let av = UIActivityViewController(activityItems: [text], applicationActivities: nil)
-                            UIApplication.shared.connectedScenes
-                                .compactMap { $0 as? UIWindowScene }
-                                .first?.windows.first?.rootViewController?
-                                .present(av, animated: true)
-                        }
-                        rowDivider()
-                        NavigationLink(destination: aboutPage) {
-                            menuRowLabel(icon: "info.circle", title: "About".translated())
-                        }
-                        .buttonStyle(.plain)
                     }
 
                     groupDivider()

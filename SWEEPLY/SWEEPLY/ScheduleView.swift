@@ -477,12 +477,14 @@ struct ScheduleView: View {
                     let maxCols = assignments.map(\.totalColumns).max() ?? 1
 
                     GeometryReader { geo in
-                        let labelW: CGFloat = 38         // width of the pinned hour labels column
-                        let colWidth = geo.size.width - labelW
+                        let labelW: CGFloat = 38
+                        let totalW  = geo.size.width - labelW
                         let colGap: CGFloat = 6
+                        // When overlapping jobs exist, shrink each column so the next one peeks ~44pt
+                        let colWidth = maxCols > 1 ? totalW - 44 : totalW
                         let scrollW = maxCols > 1
                             ? CGFloat(maxCols) * colWidth + CGFloat(maxCols - 1) * colGap
-                            : colWidth
+                            : totalW
 
                         HStack(alignment: .top, spacing: 0) {
 

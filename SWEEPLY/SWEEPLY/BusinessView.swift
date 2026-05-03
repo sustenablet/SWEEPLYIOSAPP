@@ -260,41 +260,23 @@ struct BusinessView: View {
                 if !session.activeMemberships.isEmpty {
                     ForEach(session.activeMemberships) { membership in
                         Button {
-                            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
                             session.switchToMembership(membership)
                         } label: {
-                            HStack(spacing: 12) {
-                                ZStack {
-                                    Circle()
-                                        .fill(Color.sweeplyAccent.opacity(0.12))
-                                        .frame(width: 36, height: 36)
-                                    Image(systemName: "person.2.fill")
-                                        .font(.system(size: 14))
-                                        .foregroundStyle(Color.sweeplyAccent)
-                                }
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text("You're on a team".translated())
-                                        .font(.system(size: 12, weight: .medium))
-                                        .foregroundStyle(Color.sweeplyTextSub)
-                                    Text(membership.businessName)
-                                        .font(.system(size: 14, weight: .semibold))
-                                        .foregroundStyle(Color.primary)
-                                }
-                                Spacer()
-                                Text("Switch →".translated())
-                                    .font(.system(size: 13, weight: .semibold))
+                            HStack(spacing: 6) {
+                                Image(systemName: "person.2.fill")
+                                    .font(.system(size: 12))
+                                    .foregroundStyle(Color.sweeplyAccent)
+                                Text("View as \(membership.businessName)")
+                                    .font(.system(size: 13, weight: .medium))
                                     .foregroundStyle(Color.sweeplyAccent)
                             }
-                            .padding(14)
-                            .background(Color.sweeplyAccent.opacity(0.06))
-                            .clipShape(RoundedRectangle(cornerRadius: 12))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 12)
-                                    .stroke(Color.sweeplyAccent.opacity(0.2), lineWidth: 1)
-                            )
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 8)
                         }
                         .buttonStyle(.plain)
                     }
+                    .padding(.horizontal, 20)
                 }
 
                 // 1. Performance KPIs
