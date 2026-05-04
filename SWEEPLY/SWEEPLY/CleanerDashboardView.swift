@@ -120,10 +120,10 @@ struct CleanerDashboardView: View {
         
         return [
             DashboardHealthCardModel(
-                title: "Today's Earnings",
+                title: "Today's Earnings".translated(),
                 subtitle: "From completed jobs today".translated(),
                 value: todayEarnings.currency,
-                trend: todayJobs.count > 0 ? "\(todayJobs.count) scheduled" : "No jobs today",
+                trend: todayJobs.count > 0 ? "\(todayJobs.count) scheduled" : "No jobs today".translated(),
                 isPositive: todayEarnings > 0,
                 icon: "sun.max",
                 iconColor: .sweeplyAccent,
@@ -131,7 +131,7 @@ struct CleanerDashboardView: View {
                 showTrendBadge: false
             ),
             DashboardHealthCardModel(
-                title: "This Month",
+                title: "This Month".translated(),
                 subtitle: "Earnings from completed jobs this month".translated(),
                 value: monthEarned.currency,
                 trend: "\(monthJobCount) completed",
@@ -144,7 +144,7 @@ struct CleanerDashboardView: View {
                 title: "Jobs Done",
                 subtitle: "Total jobs you've completed".translated(),
                 value: "\(totalCompleted)",
-                trend: totalCompleted > 0 ? "Great work!" : "No jobs yet",
+                trend: totalCompleted > 0 ? "Great work!" : "No jobs yet".translated(),
                 isPositive: totalCompleted > 0,
                 icon: "checkmark.circle.fill",
                 iconColor: .sweeplyAccent,
@@ -347,10 +347,10 @@ struct CleanerDashboardView: View {
             columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)],
             spacing: 8
         ) {
-            CleanerStatBox(value: "\(todayJobs.count)", label: "Today")
-            CleanerStatBox(value: "\(weekCompleted)", label: "Done Wk")
-            CleanerStatBox(value: "\(upcomingCount)", label: "Upcoming")
-            CleanerStatBox(value: "\(inProgressCount)", label: "In Prog.")
+            CleanerStatBox(value: "\(todayJobs.count)", label: "Today".translated())
+            CleanerStatBox(value: "\(weekCompleted)", label: "Done Wk".translated())
+            CleanerStatBox(value: "\(upcomingCount)", label: "Upcoming".translated())
+            CleanerStatBox(value: "\(inProgressCount)", label: "In Prog.".translated())
         }
     }
 

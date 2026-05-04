@@ -1,4 +1,5 @@
 import SwiftUI
+import Supabase
 
 struct CleanerSettingsView: View {
     @Environment(\.dismiss)         private var dismiss
@@ -15,6 +16,10 @@ struct CleanerSettingsView: View {
     @State private var feedbackStyle: CleanerSettingsFeedbackStyle = .info
     @State private var showSignOutAlert = false
     @State private var currentTestNotificationIndex = 0
+    @State private var leaveHoldProgress: CGFloat = 0
+    @State private var leaveHoldTask: Task<Void, Never>? = nil
+    @State private var isLeavingTeam = false
+    @State private var leaveError = false
 
     private var hasUnsavedChanges: Bool {
         localProfile.fullName != baselineProfile.fullName ||
@@ -71,7 +76,12 @@ struct CleanerSettingsView: View {
 
                     // ── Group 2: App / Support ─────────────────────────
                     menuGroup {
-                        menuRow(icon: "questionmark.message", title: "Support".translated()) { }
+                        menuRow(icon: "questionmark.message", title: "Support".translated()) {
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                            if let url = URL(string: "https://sweeplyapp.online/support") {
+                                UIApplication.shared.open(url)
+                            }
+                        }
                         rowDivider()
                         NavigationLink(destination: aboutPage) {
                             menuRowLabel(icon: "info.circle", title: "About".translated())
@@ -97,6 +107,9 @@ struct CleanerSettingsView: View {
                             showSignOutAlert = true
                         }
                     }
+
+                    // ── Leave Team ────────────────────────────────────
+                    leaveTeamButton
 
                     Spacer().frame(height: 48)
                 }
@@ -474,6 +487,135 @@ struct CleanerSettingsView: View {
         .background(style.backgroundColor)
         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(style.accentColor.opacity(0.18), lineWidth: 1))
+    }
+
+    // MARK: - Leave Team
+
+    private var leaveTeamButton: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("DANGER ZONE")
+                .font(.system(size: 10, weight: .bold))
+                .foregroundStyle(Color.sweeplyDestructive.opacity(0.7))
+                .tracking(0.8)
+                .padding(.horizontal, 4)
+
+            ZStack(alignment: .leading) {
+                GeometryReader { geo in
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .fill(Color.sweeplyDestructive.opacity(0.15))
+                        .frame(width: geo.size.width * leaveHoldProgress)
+                }
+
+                HStack(spacing: 12) {
+                    if isLeavingTeam {
+                        ProgressView()
+                            .tint(Color.sweeplyDestructive)
+                            .scaleEffect(0.85)
+                            .frame(width: 20, height: 20)
+                    } else {
+                        Image(systemName: "figure.walk.departure")
+                            .font(.system(size: 15, weight: .medium))
+                            .foregroundStyle(Color.sweeplyDestructive)
+                            .frame(width: 20)
+                    }
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(isLeavingTeam ? "Leaving team…" : "Leave Team")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundStyle(Color.sweeplyDestructive)
+                        if leaveError {
+                            Text("Something went wrong — try again.")
+                                .font(.system(size: 11))
+                                .foregroundStyle(Color.sweeplyDestructive.opacity(0.8))
+                        } else {
+                            Text(leaveHoldProgress > 0
+                                 ? "Keep holding…"
+                                 : "Hold to leave this team")
+                                .font(.system(size: 11))
+                                .foregroundStyle(Color.sweeplyDestructive.opacity(0.65))
+                        }
+                    }
+
+                    Spacer()
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 14)
+            }
+            .frame(height: 56)
+            .background(Color.sweeplyDestructive.opacity(0.06))
+            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .stroke(Color.sweeplyDestructive.opacity(leaveError ? 0.5 : 0.2), lineWidth: 1)
+            )
+            .gesture(
+                DragGesture(minimumDistance: 0)
+                    .onChanged { _ in
+                        guard !isLeavingTeam, leaveHoldTask == nil else { return }
+                        leaveError = false
+                        leaveHoldTask = Task { @MainActor in
+                            let holdDuration: TimeInterval = 2.5
+                            let start = Date()
+                            while !Task.isCancelled {
+                                let elapsed = Date().timeIntervalSince(start)
+                                let progress = min(elapsed / holdDuration, 1.0)
+                                leaveHoldProgress = progress
+                                if progress >= 1.0 {
+                                    UINotificationFeedbackGenerator().notificationOccurred(.warning)
+                                    await performLeaveTeam()
+                                    return
+                                }
+                                if Int(elapsed * 4) != Int((elapsed - 0.016) * 4) {
+                                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                }
+                                try? await Task.sleep(nanoseconds: 16_000_000)
+                            }
+                        }
+                    }
+                    .onEnded { _ in
+                        guard !isLeavingTeam else { return }
+                        leaveHoldTask?.cancel()
+                        leaveHoldTask = nil
+                        withAnimation(.easeOut(duration: 0.25)) { leaveHoldProgress = 0 }
+                    }
+            )
+            .disabled(isLeavingTeam)
+            .animation(.linear(duration: 0.1), value: leaveHoldProgress)
+        }
+        .padding(.horizontal, 4)
+    }
+
+    @MainActor
+    private func performLeaveTeam() async {
+        guard let client = SupabaseManager.shared,
+              let uid = session.userId else { return }
+        leaveHoldTask = nil
+        isLeavingTeam = true
+        do {
+            // Hard-delete the row so the owner's member list is clean
+            try await client
+                .from("team_members")
+                .delete()
+                .eq("id", value: membership.id.uuidString)
+                .eq("cleaner_user_id", value: uid.uuidString)
+                .execute()
+
+            // Notify the owner
+            let memberName = profileStore.profile?.fullName.trimmingCharacters(in: .whitespaces) ?? "A team member"
+            await NotificationHelper.insert(
+                userId: membership.ownerId,
+                title: "Team Update",
+                message: "\(memberName) left your team and no longer has access to \(membership.businessName).",
+                kind: "team"
+            )
+
+            session.switchToOwnBusiness()
+            dismiss()
+        } catch {
+            isLeavingTeam = false
+            leaveHoldProgress = 0
+            withAnimation { leaveError = true }
+        }
     }
 
     // MARK: - Save

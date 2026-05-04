@@ -77,9 +77,34 @@ final class TeamStore {
                 .single()
                 .execute()
                 .value
-            members.append(row.toMember())
-            // Link immediately if the invited email already has an account
+            let addedMember = row.toMember()
+            members.append(addedMember)
+
+            // Try to link immediately if the invited email already has an account
             try? await client.rpc("link_existing_cleaner", params: ["invite_id": row.id.uuidString])
+
+            // Re-fetch the row to get cleanerUserId after linking
+            if let linked: TeamMemberDTO = try? await client
+                .from("team_members")
+                .select()
+                .eq("id", value: row.id.uuidString)
+                .single()
+                .execute()
+                .value,
+               let cleanerUserId = linked.cleanerUserId {
+                // Send in-app notification to the invited user
+                await NotificationHelper.insert(
+                    userId: cleanerUserId,
+                    title: "Team Invitation",
+                    message: "You've been invited to join a team on Sweeply. Open the Team tab to accept.",
+                    kind: "team"
+                )
+                // Update local member with linked cleaner ID
+                if let idx = members.firstIndex(where: { $0.id == row.id }) {
+                    members[idx] = linked.toMember()
+                }
+            }
+
             return true
         } catch {
             lastError = error.localizedDescription

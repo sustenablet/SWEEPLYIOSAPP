@@ -25,8 +25,9 @@ struct DashboardView: View {
     @State private var showTeam = false
     @State private var showInvoicesList = false
     @State private var invoicesPreselectedFilter: String = "overdue"
-    /// User hid the checklist after completing all steps (persisted).
-    @AppStorage("dashboardPlaybookPermanentlyHidden") private var playbookPermanentlyHidden = false
+    /// Playbook hidden — backed by a user-scoped UserDefaults key so each account
+    /// has independent state. Dismissing on one account never affects another.
+    @State private var playbookPermanentlyHidden = false
     @State private var healthStats: HealthStats? = nil
     @State private var selectedHealthSlide = 0
 
@@ -216,7 +217,15 @@ private var healthCards: [DashboardHealthCardModel] {
                     if !playbookPermanentlyHidden {
                         DashboardPlaybook(
                             playbookDone: playbookDone,
-                            permanentlyHidden: $playbookPermanentlyHidden
+                            permanentlyHidden: Binding(
+                                get: { playbookPermanentlyHidden },
+                                set: { newValue in
+                                    playbookPermanentlyHidden = newValue
+                                    if let uid = session.userId {
+                                        UserDefaults.standard.set(newValue, forKey: "dashboardPlaybookHidden_\(uid.uuidString)")
+                                    }
+                                }
+                            )
                         )
                     }
 
@@ -237,6 +246,11 @@ private var healthCards: [DashboardHealthCardModel] {
             .offset(y: appeared ? 0 : 8)
             .onAppear {
                 withAnimation(.easeOut(duration: 0.3)) { appeared = true }
+                // Load user-scoped playbook state so each account manages its own dismissal
+                if let uid = session.userId {
+                    playbookPermanentlyHidden = UserDefaults.standard
+                        .bool(forKey: "dashboardPlaybookHidden_\(uid.uuidString)")
+                }
                 Task {
                     await notificationsStore.load(isAuthenticated: session.isAuthenticated, userId: session.userId)
                     if let uid = session.userId {

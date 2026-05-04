@@ -102,6 +102,8 @@ struct SubscriptionPaywallView: View {
                     }
                 }
                 .background(Color.clear)
+                .toolbarBackground(.clear, for: .navigationBar)
+                .toolbarColorScheme(.dark, for: .navigationBar)
                 .toolbar {
                     ToolbarItem(placement: .topBarLeading) {
                         logoButton

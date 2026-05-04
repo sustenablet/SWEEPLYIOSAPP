@@ -293,7 +293,18 @@ final class AppSession {
         userId = session.user.id
         isAuthenticated = true
         lastAuthError = nil
+        // Link any pending invites that were sent to this user's email
+        // before they had an account (or before the RPC ran)
+        await selfLinkInvites(userId: session.user.id, email: session.user.email ?? "")
         await resolveTeamMemberships(userId: session.user.id)
+    }
+
+    private func selfLinkInvites(userId: UUID, email: String) async {
+        guard let client = SupabaseManager.shared,
+              !email.trimmingCharacters(in: .whitespaces).isEmpty else { return }
+        // Use a SECURITY DEFINER RPC so RLS doesn't block the update —
+        // a direct UPDATE is rejected because the row is owned by the inviting business.
+        try? await client.rpc("link_invites_by_email").execute()
     }
 
     private func resetTeamState() {

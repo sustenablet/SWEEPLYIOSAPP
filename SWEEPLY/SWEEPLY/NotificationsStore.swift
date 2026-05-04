@@ -18,11 +18,12 @@ final class NotificationsStore {
         let previousIds = Set(notifications.map(\.id))
 
         do {
-            let fetched: [RemoteNotification] = try await client.database
+            let fetched: [RemoteNotification] = try await client
                 .from("notifications")
                 .select()
                 .eq("user_id", value: userId)
                 .order("created_at", ascending: false)
+                .limit(100)
                 .execute()
                 .value
 
@@ -38,33 +39,46 @@ final class NotificationsStore {
                     invoiceId: remote.invoiceId
                 )
             }
-            .filter { notif in
-                !(notif.kind == .billing && notif.title == "Invoice Sent")
-            }
+            .filter { _ in true }
             self.isLoaded = true
             self.lastError = nil
 
-            // Fire a local banner for any genuinely new unread notification
-            let newUnread = self.notifications.filter { !$0.isRead && !previousIds.contains($0.id) }
-            for n in newUnread {
-                NotificationManager.shared.fireInstantBanner(title: n.title, body: n.message)
+            // Fire at most ONE banner per load — for the single most recent truly new notification
+            // (created within the last 60 seconds to avoid re-firing historical unread items)
+            let cutoff = Date().addingTimeInterval(-60)
+            let newUnread = self.notifications.filter {
+                !$0.isRead && !previousIds.contains($0.id) && $0.timestamp > cutoff
             }
-            if !newUnread.isEmpty {
+            if let latest = newUnread.max(by: { $0.timestamp < $1.timestamp }) {
+                NotificationManager.shared.fireInstantBanner(title: latest.title, body: latest.message)
                 NotificationCenter.default.post(name: NSNotification.Name("NewNotificationsArrived"), object: nil)
             }
 
-            // If the table is empty (e.g. new user), pre-populate locally with a welcome message
+            // If the table is empty (new user), insert a persisted welcome notification
             if notifications.isEmpty {
-                notifications = [
+                await NotificationHelper.insert(
+                    userId: userId,
+                    title: "Welcome to Sweeply",
+                    message: "You're all set — job reminders and schedule updates will appear here.",
+                    kind: "system"
+                )
+                // Reload to show the persisted welcome notification
+                let welcomed: [RemoteNotification] = (try? await client
+                    .from("notifications")
+                    .select()
+                    .eq("user_id", value: userId)
+                    .order("created_at", ascending: false)
+                    .limit(100)
+                    .execute()
+                    .value) ?? []
+                self.notifications = welcomed.map { remote in
                     AppNotification(
-                        id: UUID(),
-                        title: "Welcome to Sweeply",
-                        message: "You're all set — job reminders and schedule updates will appear here.",
-                        kind: .system,
-                        timestamp: Date(),
-                        isRead: false
+                        id: remote.id, title: remote.title, message: remote.message,
+                        kind: AppNotification.Kind(rawValue: remote.kind) ?? .system,
+                        timestamp: remote.createdAt, isRead: remote.isRead,
+                        jobId: remote.jobId, invoiceId: remote.invoiceId
                     )
-                ]
+                }
             }
         } catch {
             print("Failed to fetch notifications: \(error)")
@@ -117,7 +131,7 @@ final class NotificationsStore {
         }
         guard let userId = userId, let client = SupabaseManager.shared else { return }
         do {
-            try await client.database
+            try await client
                 .from("notifications")
                 .update(["is_read": true])
                 .eq("user_id", value: userId)

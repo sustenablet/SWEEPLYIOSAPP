@@ -22,7 +22,6 @@ struct RootView: View {
     @State private var showNewInvoice = false
     @State private var showQuickAdd = false
     @State private var showOnboarding = false
-    @State private var showProductTutorial = false
     @State private var isLocked = false
     @State private var minimumSplashElapsed = false
     @State private var showIntroOnboarding = false
@@ -30,7 +29,6 @@ struct RootView: View {
     @State private var notificationRefreshTrigger = 0
     @State private var lastNotificationRefresh = Date.distantPast
 
-    @AppStorage("hasSeenProductTutorial") private var hasSeenProductTutorial = false
     @AppStorage("hasSeenIntroOnboarding") private var hasSeenIntroOnboarding = true
     // Observing appLanguage forces the entire view hierarchy to re-render on language change,
     // so all .translated() calls pick up the new language immediately.
@@ -304,19 +302,7 @@ struct RootView: View {
         .fullScreenCover(isPresented: $showOnboarding) {
             OnboardingView()
         }
-        .fullScreenCover(isPresented: $showProductTutorial) {
-            ProductTutorialView {
-                hasSeenProductTutorial = true
-                showProductTutorial = false
-            }
-            .preferredColorScheme(.dark)
-            .interactiveDismissDisabled(true)
-        }
-        .onChange(of: showOnboarding) { _, isShowing in
-            if !isShowing {
-                scheduleProductTutorialIfNeeded()
-            }
-        }
+        .onChange(of: showOnboarding) { _, _ in }
         .onChange(of: profileStore.profile?.businessName ?? "") { _, businessName in
             guard session.isAuthenticated else { return }
             if businessName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
@@ -335,6 +321,7 @@ struct RootView: View {
                 await profileStore.load(userId: uid)
                 await teamStore.load(ownerId: uid)
                 await expenseStore.load(userId: uid)
+                await notificationsStore.load(isAuthenticated: true, userId: uid)
                 
                 // Trigger business onboarding for new users who haven't set up their profile
                 let businessName = profileStore.profile?.businessName ?? ""
@@ -346,7 +333,6 @@ struct RootView: View {
             }
             await clientsStore.load(isAuthenticated: session.isAuthenticated)
             WidgetDataWriter.write(jobs: jobsStore.jobs, invoices: invoicesStore.invoices)
-            scheduleProductTutorialIfNeeded()
             // Safety net for existing users who skipped onboarding or installed a prior
             // build — request notification permission if we haven't asked yet.
             if session.isAuthenticated && notificationManager.notificationStatus == .notDetermined {
@@ -425,41 +411,56 @@ struct RootView: View {
     }
 
     private func applyTabBarAppearance() {
-        let appearance = UITabBarAppearance()
-        appearance.configureWithOpaqueBackground()
-        appearance.backgroundColor = UIColor(Color.sweeplyNavy)
+        // ── Tab bar ──────────────────────────────────────────────────────────
+        let tabAppearance = UITabBarAppearance()
+        tabAppearance.configureWithOpaqueBackground()
+        tabAppearance.backgroundColor = UIColor(Color.sweeplyNavy)
 
-        appearance.stackedLayoutAppearance.normal.iconColor = UIColor(white: 1, alpha: 0.35)
-        appearance.stackedLayoutAppearance.normal.titleTextAttributes = [
+        tabAppearance.stackedLayoutAppearance.normal.iconColor = UIColor(white: 1, alpha: 0.35)
+        tabAppearance.stackedLayoutAppearance.normal.titleTextAttributes = [
             .foregroundColor: UIColor(white: 1, alpha: 0.35),
             .font: UIFont.systemFont(ofSize: 10, weight: .medium)
         ]
 
         let accentUIColor = UIColor(Color.sweeplyAccent)
-        appearance.stackedLayoutAppearance.selected.iconColor = accentUIColor
-        appearance.stackedLayoutAppearance.selected.titleTextAttributes = [
+        tabAppearance.stackedLayoutAppearance.selected.iconColor = accentUIColor
+        tabAppearance.stackedLayoutAppearance.selected.titleTextAttributes = [
             .foregroundColor: accentUIColor,
             .font: UIFont.systemFont(ofSize: 10, weight: .semibold)
         ]
 
-        UITabBar.appearance().standardAppearance   = appearance
-        UITabBar.appearance().scrollEdgeAppearance = appearance
+        UITabBar.appearance().standardAppearance   = tabAppearance
+        UITabBar.appearance().scrollEdgeAppearance = tabAppearance
+
+        // ── Navigation bar (global) ──────────────────────────────────────────
+        // Always use hardcoded light-mode values — the app is light-only but
+        // sheets/covers don't inherit preferredColorScheme(.light) from RootView.
+        // Using adaptive UIColor(Color.sweeplyNavy) would resolve to near-black
+        // in dark mode, making icons invisible against the dark nav bar.
+        let navBg    = UIColor(red: 0.965, green: 0.961, blue: 0.945, alpha: 1.0) // sweeplyBackground light
+        let navTitle = UIColor(red: 0.15,  green: 0.15,  blue: 0.18,  alpha: 1.0) // sweeplyNavy light
+        let navBorder = UIColor(red: 0.88, green: 0.87,  blue: 0.85,  alpha: 0.6) // sweeplyBorder light
+
+        let navAppearance = UINavigationBarAppearance()
+        navAppearance.configureWithOpaqueBackground()
+        navAppearance.backgroundColor = navBg
+        navAppearance.shadowColor = navBorder
+        navAppearance.titleTextAttributes = [
+            .foregroundColor: navTitle,
+            .font: UIFont.systemFont(ofSize: 17, weight: .semibold)
+        ]
+        navAppearance.largeTitleTextAttributes = [
+            .foregroundColor: navTitle,
+            .font: UIFont.systemFont(ofSize: 34, weight: .bold)
+        ]
+        UINavigationBar.appearance().standardAppearance   = navAppearance
+        UINavigationBar.appearance().scrollEdgeAppearance = navAppearance
+        UINavigationBar.appearance().compactAppearance    = navAppearance
+        // tintColor drives Image(systemName:) icon color in toolbar items
+        UINavigationBar.appearance().tintColor = navTitle
     }
 
     /// Notion-style 5-page product tour once per install, after auth (and after profile onboarding if shown).
-    private func scheduleProductTutorialIfNeeded() {
-        guard session.isAuthenticated else { return }
-        guard !hasSeenProductTutorial else { return }
-        guard !showOnboarding else { return }
-        guard !showProductTutorial else { return }
-
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) {
-            guard session.isAuthenticated else { return }
-            guard !hasSeenProductTutorial else { return }
-            guard !showOnboarding else { return }
-            showProductTutorial = true
-        }
-    }
 }
 
 #Preview {

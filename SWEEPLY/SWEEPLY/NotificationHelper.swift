@@ -5,7 +5,15 @@ import Supabase
 /// Call with `await` — fires and forgets on failure.
 /// Pass `userId` explicitly when available; omit to auto-resolve from the active Supabase auth session.
 enum NotificationHelper {
-    static func insert(userId: UUID? = nil, title: String, message: String, kind: String, isRead: Bool = false) async {
+    static func insert(
+        userId: UUID? = nil,
+        title: String,
+        message: String,
+        kind: String,
+        jobId: UUID? = nil,
+        invoiceId: UUID? = nil,
+        isRead: Bool = false
+    ) async {
         guard let client = SupabaseManager.shared else { return }
         let resolvedId = userId ?? client.auth.currentUser?.id
         guard let uid = resolvedId else { return }
@@ -15,10 +23,20 @@ enum NotificationHelper {
                 let title: String
                 let message: String
                 let kind: String
+                let job_id: UUID?
+                let invoice_id: UUID?
                 let is_read: Bool
             }
-            let payload = Payload(user_id: uid, title: title, message: message, kind: kind, is_read: isRead)
-            try await client.database
+            let payload = Payload(
+                user_id: uid,
+                title: title,
+                message: message,
+                kind: kind,
+                job_id: jobId,
+                invoice_id: invoiceId,
+                is_read: isRead
+            )
+            try await client
                 .from("notifications")
                 .insert(payload)
                 .execute()

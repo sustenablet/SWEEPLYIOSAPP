@@ -34,7 +34,8 @@ struct NewClientForm: View {
 
     private var serviceCatalog: [BusinessService] {
         let settings = profileStore.profile?.settings ?? fallbackSettings
-        return settings.hydratedServiceCatalog.filter { !$0.isAddon }
+        let allServices = settings.hydratedServiceCatalog
+        return allServices.filter { !$0.isAddon }
     }
 
     private var isEmailValid: Bool {
@@ -131,8 +132,10 @@ struct NewClientForm: View {
                             Menu {
                                 Button("None".translated()) { preferredService = nil }
                                 ForEach(serviceCatalog) { service in
-                                    Button("\(service.name) · \(service.price.currency)") {
-                                        preferredService = ServiceType(rawValue: service.name)
+                                    if !service.isAddon {
+                                        Button("\(service.name) · \(service.price.currency)") {
+                                            preferredService = ServiceType(rawValue: service.name)
+                                        }
                                     }
                                 }
                             } label: {

@@ -153,7 +153,7 @@ final class MessagesStore {
         conversations.removeAll { $0.id == id }
         messagesByConversation.removeValue(forKey: id)
         guard let client = SupabaseManager.shared else { return }
-        try? await client.database.from("conversations").delete().eq("id", value: id).execute()
+        try? await client.from("conversations").delete().eq("id", value: id).execute()
     }
 
     func unreadCount(conversationId: UUID) -> Int {

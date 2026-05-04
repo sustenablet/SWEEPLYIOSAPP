@@ -95,12 +95,6 @@ final class JobsStore {
             NotificationManager.shared.refreshDailyDigests(jobs: jobs)
             Task.detached { await CalendarSyncManager.shared.addEvent(for: mapped) }
             SpotlightIndexer.shared.indexJobs([mapped])
-            await NotificationHelper.insert(
-                userId: userId,
-                title: "Job Scheduled",
-                message: "\(mapped.serviceType.rawValue) for \(mapped.clientName) on \(mapped.date.formatted(.dateTime.weekday(.wide).month().day()))",
-                kind: "schedule"
-            )
             return true
         } catch {
             lastError = error.localizedDescription
@@ -188,19 +182,22 @@ final class JobsStore {
                 await NotificationHelper.insert(
                     title: "Job Completed",
                     message: "\(mapped.serviceType.rawValue) for \(mapped.clientName) completed\(completedBy)",
-                    kind: "jobs"
+                    kind: "jobs",
+                    jobId: mapped.id
                 )
             case .inProgress:
                 await NotificationHelper.insert(
                     title: "Job Started",
                     message: "\(mapped.serviceType.rawValue) for \(mapped.clientName) is now in progress",
-                    kind: "jobs"
+                    kind: "jobs",
+                    jobId: mapped.id
                 )
             case .cancelled:
                 await NotificationHelper.insert(
                     title: "Job Cancelled",
                     message: "\(mapped.serviceType.rawValue) for \(mapped.clientName) was cancelled",
-                    kind: "jobs"
+                    kind: "jobs",
+                    jobId: mapped.id
                 )
             default:
                 break

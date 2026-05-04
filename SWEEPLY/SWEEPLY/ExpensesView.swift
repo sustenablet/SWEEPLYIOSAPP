@@ -21,6 +21,29 @@ struct ExpensesView: View {
         case calendar
         case week
     }
+    
+    @State private var weekOffset: Int = 0
+    
+    private var weekStartDate: Date {
+        let cal = Calendar.current
+        let today = cal.startOfDay(for: Date())
+        let weekday = cal.component(.weekday, from: today)
+        let daysFromSunday = weekday - 1
+        
+        guard let sunday = cal.date(byAdding: .day, value: -daysFromSunday, to: today) else {
+            return today
+        }
+        
+        return cal.date(byAdding: .weekOfYear, value: weekOffset, to: sunday) ?? sunday
+    }
+    
+    private var weekLabel: String {
+        let f = DateFormatter()
+        f.dateFormat = "MMM d"
+        let start = weekStartDate
+        let end = Calendar.current.date(byAdding: .day, value: 6, to: start) ?? start
+        return "\(f.string(from: start)) - \(f.string(from: end))"
+    }
 
     private var monthLabel: String {
         let f = DateFormatter()
@@ -396,34 +419,87 @@ struct ExpensesView: View {
     // MARK: - Week carousel
 
     private var weekCarousel: some View {
-        let weekDates = getWeekDates()
-
-        return HStack(spacing: 8) {
-            ForEach(weekDates, id: \.self) { date in
-                weekDayCell(date)
+        VStack(spacing: 12) {
+            // Week navigation
+            HStack {
+                Button {
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    withAnimation(.easeInOut(duration: 0.25)) {
+                        weekOffset -= 1
+                    }
+                } label: {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(Color.sweeplyNavy)
+                        .frame(width: 32, height: 32)
+                        .background(Color.sweeplySurface)
+                        .clipShape(Circle())
+                        .overlay(Circle().stroke(Color.sweeplyBorder, lineWidth: 1))
+                }
+                
+                Spacer()
+                
+                Text(weekLabel)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(Color.sweeplyNavy)
+                
+                Spacer()
+                
+                Button {
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    withAnimation(.easeInOut(duration: 0.25)) {
+                        weekOffset += 1
+                    }
+                } label: {
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(Color.sweeplyNavy)
+                        .frame(width: 32, height: 32)
+                        .background(Color.sweeplySurface)
+                        .clipShape(Circle())
+                        .overlay(Circle().stroke(Color.sweeplyBorder, lineWidth: 1))
+                }
+            }
+            .padding(.horizontal, 4)
+            
+            // Week days scroll view
+            ScrollViewReader { proxy in
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        ForEach(weekDatesForCarousel, id: \.self) { date in
+                            weekDayCell(date)
+                                .id(date)
+                        }
+                    }
+                    .padding(.horizontal, 4)
+                }
+                .onChange(of: weekOffset) { oldValue, newValue in
+                    let today = Calendar.current.startOfDay(for: Date())
+                    if let targetDate = weekDatesForCarousel.first(where: { currentDate in
+                        Calendar.current.isDate(currentDate, inSameDayAs: today)
+                    }) {
+                        withAnimation {
+                            proxy.scrollTo(targetDate, anchor: .center)
+                        }
+                    }
+                }
             }
         }
     }
-
-    private func getWeekDates() -> [Date] {
+    
+    private var weekDatesForCarousel: [Date] {
         let cal = Calendar.current
-        let today = cal.startOfDay(for: Date())
-        let weekday = cal.component(.weekday, from: today)
-        let daysFromSunday = weekday - 1
-
-        guard let sunday = cal.date(byAdding: .day, value: -daysFromSunday, to: today) else {
-            return []
-        }
-
+        guard let sunday = cal.date(byAdding: .day, value: -7, to: weekStartDate) else { return [] }
+        
         var dates: [Date] = []
-        for i in 0..<7 {
+        for i in 0..<21 {
             if let date = cal.date(byAdding: .day, value: i, to: sunday) {
                 dates.append(date)
             }
         }
         return dates
     }
-
+    
     private func weekDayCell(_ date: Date) -> some View {
         let cal = Calendar.current
         let today = cal.startOfDay(for: Date())

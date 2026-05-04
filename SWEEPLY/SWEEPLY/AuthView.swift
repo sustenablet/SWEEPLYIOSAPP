@@ -46,7 +46,7 @@ struct AuthView: View {
                 // Image with tint and text
                 VStack(spacing: 0) {
                     ZStack(alignment: .top) {
-                        Image("SignupImage")
+                        Image("LoginBackground")
                             .resizable()
                             .scaledToFill()
                             .frame(maxWidth: .infinity)

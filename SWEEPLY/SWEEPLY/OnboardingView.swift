@@ -2,8 +2,15 @@ import SwiftUI
 import UserNotifications
 
 struct OnboardingView: View {
+    private struct TeamInvite: Identifiable {
+        let id = UUID()
+        var name: String
+        var email: String
+    }
+
     @Environment(ProfileStore.self) private var profileStore
-    @Environment(AppSession.self) private var session
+    @Environment(AppSession.self)   private var session
+    @Environment(TeamStore.self)    private var teamStore
 
     @State private var step = 0
     @State private var goingForward = true
@@ -15,9 +22,10 @@ struct OnboardingView: View {
     @FocusState private var focusedField: IdentityField?
 
     // Step 3: Team
+    @State private var teamInviteName = ""
     @State private var teamInviteEmail = ""
-    @State private var teamInviteEmails: [String] = []
-    @FocusState private var teamEmailFocused: Bool
+    @State private var teamInviteMembers: [TeamInvite] = []
+    @FocusState private var teamField: TeamField?
 
     // Step 2 fields
     @State private var selectedServices: Set<String> = []
@@ -47,6 +55,7 @@ struct OnboardingView: View {
     @State private var welcomeAppeared = false
 
     private enum IdentityField { case name, business, phone }
+    private enum TeamField { case name, email }
 
     private let mainServices = AppSettings.defaultServiceCatalog.filter { !$0.isAddon }
     private let addonServices = AppSettings.defaultServiceCatalog.filter { $0.isAddon }
@@ -509,23 +518,22 @@ struct OnboardingView: View {
 
                     Spacer().frame(height: 32)
 
-                    // Email input row
-                    HStack(spacing: 10) {
+                    // Name + email inputs
+                    VStack(spacing: 10) {
+                        // Name field
                         HStack(spacing: 12) {
-                            Image(systemName: "envelope")
+                            Image(systemName: "person")
                                 .font(.system(size: 16, weight: .medium))
                                 .foregroundStyle(Color.sweeplyTextSub)
                                 .frame(width: 24)
-
-                            TextField("Team member email", text: $teamInviteEmail)
+                            TextField("Their name", text: $teamInviteName)
                                 .font(.system(size: 16))
                                 .foregroundStyle(Color.sweeplyNavy)
-                                .keyboardType(.emailAddress)
-                                .textInputAutocapitalization(.never)
+                                .textInputAutocapitalization(.words)
                                 .autocorrectionDisabled()
-                                .submitLabel(.done)
-                                .onSubmit { addTeamEmail() }
-                                .focused($teamEmailFocused)
+                                .submitLabel(.next)
+                                .onSubmit { teamField = .email }
+                                .focused($teamField, equals: .name)
                         }
                         .padding(.horizontal, 16)
                         .padding(.vertical, 16)
@@ -533,28 +541,57 @@ struct OnboardingView: View {
                         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
                         .overlay(
                             RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                .stroke(teamEmailFocused ? Color.sweeplyAccent : Color.sweeplyBorder, lineWidth: 1)
+                                .stroke(teamField == .name ? Color.sweeplyAccent : Color.sweeplyBorder, lineWidth: 1)
                         )
+                        .animation(.easeInOut(duration: 0.15), value: teamField == .name)
 
-                        Button {
-                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                            addTeamEmail()
-                        } label: {
-                            Image(systemName: "plus")
-                                .font(.system(size: 16, weight: .bold))
-                                .foregroundStyle(.white)
-                                .frame(width: 52, height: 52)
-                                .background(teamInviteEmailValid ? Color.sweeplyNavy : Color.sweeplyBorder)
-                                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        // Email + add button
+                        HStack(spacing: 10) {
+                            HStack(spacing: 12) {
+                                Image(systemName: "envelope")
+                                    .font(.system(size: 16, weight: .medium))
+                                    .foregroundStyle(Color.sweeplyTextSub)
+                                    .frame(width: 24)
+                                TextField("Email address", text: $teamInviteEmail)
+                                    .font(.system(size: 16))
+                                    .foregroundStyle(Color.sweeplyNavy)
+                                    .keyboardType(.emailAddress)
+                                    .textInputAutocapitalization(.never)
+                                    .autocorrectionDisabled()
+                                    .submitLabel(.done)
+                                    .onSubmit { addTeamMember() }
+                                    .focused($teamField, equals: .email)
+                            }
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 16)
+                            .background(Color.sweeplySurface)
+                            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                    .stroke(teamField == .email ? Color.sweeplyAccent : Color.sweeplyBorder, lineWidth: 1)
+                            )
+                            .animation(.easeInOut(duration: 0.15), value: teamField == .email)
+
+                            Button {
+                                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                addTeamMember()
+                            } label: {
+                                Image(systemName: "plus")
+                                    .font(.system(size: 16, weight: .bold))
+                                    .foregroundStyle(.white)
+                                    .frame(width: 52, height: 52)
+                                    .background(teamInviteValid ? Color.sweeplyNavy : Color.sweeplyBorder)
+                                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                            }
+                            .buttonStyle(.plain)
+                            .disabled(!teamInviteValid)
+                            .animation(.easeInOut(duration: 0.15), value: teamInviteValid)
                         }
-                        .buttonStyle(.plain)
-                        .disabled(!teamInviteEmailValid)
-                        .animation(.easeInOut(duration: 0.15), value: teamInviteEmailValid)
                     }
                     .padding(.horizontal, 24)
 
-                    // Added emails
-                    if !teamInviteEmails.isEmpty {
+                    // Added members
+                    if !teamInviteMembers.isEmpty {
                         VStack(alignment: .leading, spacing: 0) {
                             Text("PENDING INVITES")
                                 .font(.system(size: 10, weight: .bold))
@@ -565,28 +602,34 @@ struct OnboardingView: View {
                                 .padding(.bottom, 12)
 
                             VStack(spacing: 0) {
-                                ForEach(Array(teamInviteEmails.enumerated()), id: \.element) { idx, email in
+                                ForEach(Array(teamInviteMembers.enumerated()), id: \.element.id) { idx, member in
                                     HStack(spacing: 12) {
                                         ZStack {
                                             Circle()
                                                 .fill(Color.sweeplyNavy.opacity(0.08))
                                                 .frame(width: 36, height: 36)
-                                            Image(systemName: "person.fill")
-                                                .font(.system(size: 14))
+                                            Text(String(member.name.prefix(1)).uppercased())
+                                                .font(.system(size: 14, weight: .bold))
                                                 .foregroundStyle(Color.sweeplyNavy)
                                         }
 
-                                        Text(email)
-                                            .font(.system(size: 14, weight: .medium))
-                                            .foregroundStyle(Color.primary)
-                                            .lineLimit(1)
+                                        VStack(alignment: .leading, spacing: 2) {
+                                            Text(member.name)
+                                                .font(.system(size: 14, weight: .semibold))
+                                                .foregroundStyle(Color.primary)
+                                                .lineLimit(1)
+                                            Text(member.email)
+                                                .font(.system(size: 12))
+                                                .foregroundStyle(Color.sweeplyTextSub)
+                                                .lineLimit(1)
+                                        }
 
                                         Spacer()
 
                                         Button {
                                             let i = idx
                                             withAnimation(.easeInOut(duration: 0.2)) {
-                                                teamInviteEmails.remove(at: i)
+                                                teamInviteMembers.remove(at: i)
                                             }
                                         } label: {
                                             Image(systemName: "xmark")
@@ -601,7 +644,7 @@ struct OnboardingView: View {
                                     .padding(.horizontal, 24)
                                     .padding(.vertical, 12)
 
-                                    if idx < teamInviteEmails.count - 1 {
+                                    if idx < teamInviteMembers.count - 1 {
                                         Divider().padding(.leading, 72)
                                     }
                                 }
@@ -615,12 +658,11 @@ struct OnboardingView: View {
                             .padding(.horizontal, 24)
                         }
                     } else {
-                        // Empty state hint
                         HStack(spacing: 10) {
                             Image(systemName: "info.circle")
                                 .font(.system(size: 14))
                                 .foregroundStyle(Color.sweeplyAccent)
-                            Text("Add emails above to invite your team.")
+                            Text("Fill in name and email above to add a team member.")
                                 .font(.system(size: 13))
                                 .foregroundStyle(Color.sweeplyTextSub)
                         }
@@ -635,11 +677,11 @@ struct OnboardingView: View {
 
             Divider().opacity(0.5)
             primaryButton(
-                label: teamInviteEmails.isEmpty ? "Skip for now" : "Continue",
+                label: teamInviteMembers.isEmpty ? "Skip for now" : "Continue",
                 isEnabled: true,
                 action: {
                     UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-                    teamEmailFocused = false
+                    teamField = nil
                     advance()
                 }
             )
@@ -651,17 +693,22 @@ struct OnboardingView: View {
         .ignoresSafeArea(.keyboard, edges: .bottom)
     }
 
-    private var teamInviteEmailValid: Bool {
-        let t = teamInviteEmail.trimmingCharacters(in: .whitespaces)
-        return t.contains("@") && t.contains(".") && !teamInviteEmails.contains(t)
+    private var teamInviteValid: Bool {
+        let email = teamInviteEmail.trimmingCharacters(in: .whitespaces)
+        let name = teamInviteName.trimmingCharacters(in: .whitespaces)
+        return !name.isEmpty && email.contains("@") && email.contains(".")
+            && !teamInviteMembers.contains(where: { $0.email == email })
     }
 
-    private func addTeamEmail() {
+    private func addTeamMember() {
         let email = teamInviteEmail.trimmingCharacters(in: .whitespaces)
-        guard teamInviteEmailValid else { return }
+        let name = teamInviteName.trimmingCharacters(in: .whitespaces)
+        guard teamInviteValid else { return }
         withAnimation(.easeInOut(duration: 0.2)) {
-            teamInviteEmails.append(email)
+            teamInviteMembers.append(TeamInvite(name: name, email: email))
             teamInviteEmail = ""
+            teamInviteName = ""
+            teamField = nil
         }
     }
 
@@ -669,98 +716,156 @@ struct OnboardingView: View {
 
     private var stepAllSet: some View {
         VStack(spacing: 0) {
-            Spacer()
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: 0) {
 
-            VStack(spacing: 28) {
-                // Animated checkmark with accent circle
-                ZStack {
-                    Circle()
-                        .fill(Color.sweeplyAccent.opacity(0.1))
-                        .frame(width: 100, height: 100)
-                    Image(systemName: "checkmark.circle.fill")
-                        .font(.system(size: 56))
-                        .foregroundStyle(Color.sweeplyAccent)
-                        .scaleEffect(checkmarkAppeared ? 1.0 : 0.1)
+                    // ── Hero ──────────────────────────────────────────
+                    VStack(spacing: 0) {
+                        Spacer().frame(height: 48)
+
+                        // Animated status badge
+                        HStack(spacing: 6) {
+                            Image(systemName: "checkmark.circle.fill")
+                                .font(.system(size: 13, weight: .semibold))
+                                .foregroundStyle(Color.sweeplyAccent)
+                            Text("Setup complete")
+                                .font(.system(size: 13, weight: .semibold))
+                                .foregroundStyle(Color.sweeplyAccent)
+                        }
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 7)
+                        .background(Color.sweeplyAccent.opacity(0.09))
+                        .clipShape(Capsule())
+                        .scaleEffect(checkmarkAppeared ? 1.0 : 0.6)
                         .opacity(checkmarkAppeared ? 1.0 : 0)
+
+                        Spacer().frame(height: 22)
+
+                        // Business name — the headline
+                        let biz = businessName.trimmingCharacters(in: .whitespaces)
+                        if !biz.isEmpty {
+                            Text(biz)
+                                .font(.system(size: 36, weight: .black, design: .rounded))
+                                .foregroundStyle(Color.sweeplyNavy)
+                                .multilineTextAlignment(.center)
+                                .tracking(-1.0)
+                                .lineSpacing(2)
+                                .padding(.horizontal, 28)
+                                .opacity(checkmarkAppeared ? 1.0 : 0)
+                                .offset(y: checkmarkAppeared ? 0 : 12)
+                        }
+
+                        Spacer().frame(height: 10)
+
+                        Text("Your business is ready to run.")
+                            .font(.system(size: 16))
+                            .foregroundStyle(Color.sweeplyTextSub)
+                            .opacity(checkmarkAppeared ? 1.0 : 0)
+
+                        Spacer().frame(height: 40)
+                    }
+
+                    // ── Summary card ───────────────────────────────────
+                    VStack(alignment: .leading, spacing: 0) {
+                        Text("WHAT'S READY")
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundStyle(Color.sweeplyTextSub)
+                            .tracking(0.8)
+                            .padding(.bottom, 10)
+
+                        VStack(spacing: 0) {
+                            allSetRow(icon: "person.fill",
+                                      label: firstName,
+                                      detail: "Profile created")
+
+                            if !selectedServices.isEmpty {
+                                Divider().padding(.leading, 60)
+                                allSetRow(icon: "sparkles",
+                                          label: "\(selectedServices.count) service\(selectedServices.count == 1 ? "" : "s")",
+                                          detail: "Added to your catalog")
+                            }
+
+                            if !teamInviteMembers.isEmpty {
+                                Divider().padding(.leading, 60)
+                                allSetRow(icon: "person.2.fill",
+                                          label: "\(teamInviteMembers.count) team member\(teamInviteMembers.count == 1 ? "" : "s")",
+                                          detail: "Invite sent")
+                            }
+                        }
+                        .background(Color.sweeplySurface)
+                        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                .stroke(Color.sweeplyBorder, lineWidth: 1)
+                        )
+                    }
+                    .padding(.horizontal, 24)
+
+                    // ── Notification nudge ─────────────────────────────
+                    if notifStatus == .notDetermined && !notifDismissed {
+                        notificationCard
+                            .padding(.horizontal, 24)
+                            .padding(.top, 14)
+                    }
+
+                    Spacer().frame(height: 32)
+                }
+            }
+            .background(Color.sweeplyBackground)
+
+            // ── Sticky CTA ─────────────────────────────────────────
+            VStack(spacing: 0) {
+                Divider().opacity(0.5)
+
+                if saveError {
+                    HStack(spacing: 10) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .font(.system(size: 13))
+                        Text("Couldn't save — tap to try again.")
+                            .font(.system(size: 13, weight: .medium))
+                    }
+                    .foregroundStyle(Color.sweeplyDestructive)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 10)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Color.sweeplyDestructive.opacity(0.08))
+                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    .padding(.horizontal, 24)
+                    .padding(.top, 12)
+                    .transition(.opacity.combined(with: .move(edge: .bottom)))
                 }
 
-                VStack(spacing: 14) {
-                    Text("Welcome to Sweeply,\n\(firstName)!")
-                        .font(.system(size: 26, weight: .bold))
-                        .foregroundStyle(Color.sweeplyNavy)
-                        .multilineTextAlignment(.center)
-                        .lineSpacing(2)
-                        .tracking(-0.4)
-
-                    VStack(spacing: 8) {
-                        allSetRow(icon: "building.2.fill",
-                                  text: businessName.trimmingCharacters(in: .whitespaces))
-                        if !selectedServices.isEmpty {
-                            allSetRow(
-                                icon: "sparkles",
-                                text: "\(selectedServices.count) service\(selectedServices.count == 1 ? "" : "s") ready to go"
-                            )
+                Button {
+                    UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                    saveAndFinish()
+                } label: {
+                    Group {
+                        if isSaving {
+                            ProgressView().tint(.white)
+                        } else {
+                            Text(saveError ? "Try Again" : "Open Dashboard")
+                                .font(.system(size: 17, weight: .bold))
                         }
                     }
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 54)
+                    .background(isSaving ? Color.sweeplyNavy.opacity(0.45) : Color.sweeplyNavy)
+                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    .shadow(color: Color.sweeplyNavy.opacity(0.2), radius: 8, x: 0, y: 4)
                 }
-
-                if notifStatus == .notDetermined && !notifDismissed {
-                    notificationCard
-                }
-            }
-            .padding(.horizontal, 28)
-
-            Spacer()
-
-            // Save error banner
-            if saveError {
-                HStack(spacing: 10) {
-                    Image(systemName: "exclamationmark.triangle.fill")
-                        .font(.system(size: 13))
-                    Text("Couldn't save your info — tap to try again.".translated())
-                        .font(.system(size: 13, weight: .medium))
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                .foregroundStyle(Color.sweeplyDestructive)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 11)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Color.sweeplyDestructive.opacity(0.08))
-                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .disabled(isSaving)
                 .padding(.horizontal, 24)
-                .padding(.bottom, 10)
-                .transition(.opacity.combined(with: .move(edge: .bottom)))
+                .padding(.top, 16)
+                .padding(.bottom, 32)
             }
-
-            // Dashboard CTA
-            Button {
-                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-                saveAndFinish()
-            } label: {
-                Group {
-                    if isSaving {
-                        ProgressView().tint(.white)
-                    } else {
-                        Text(saveError ? "Try Again" : "Open Dashboard")
-                            .font(.system(size: 17, weight: .bold))
-                    }
-                }
-                .foregroundStyle(.white)
-                .frame(maxWidth: .infinity)
-                .frame(height: 54)
-                .background(Color.sweeplyNavy)
-                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                .shadow(color: Color.sweeplyNavy.opacity(0.2), radius: 8, x: 0, y: 4)
-            }
-            .disabled(isSaving)
-            .padding(.horizontal, 24)
-            .padding(.bottom, 48)
+            .background(Color.sweeplyBackground)
         }
         .onAppear {
             checkmarkAppeared = false
             saveError = false
             notifDismissed = false
-            withAnimation(.spring(response: 0.5, dampingFraction: 0.65).delay(0.15)) {
+            withAnimation(.spring(response: 0.55, dampingFraction: 0.75).delay(0.12)) {
                 checkmarkAppeared = true
             }
             UNUserNotificationCenter.current().getNotificationSettings { settings in
@@ -769,24 +874,35 @@ struct OnboardingView: View {
         }
     }
 
-    private func allSetRow(icon: String, text: String) -> some View {
-        HStack(spacing: 10) {
-            Image(systemName: icon)
-                .font(.system(size: 13))
-                .foregroundStyle(Color.sweeplyAccent)
-                .frame(width: 20)
-            Text(text)
-                .font(.system(size: 15, weight: .medium))
-                .foregroundStyle(Color.sweeplyNavy)
+    private func allSetRow(icon: String, label: String, detail: String) -> some View {
+        HStack(spacing: 14) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 9, style: .continuous)
+                    .fill(Color.sweeplyAccent.opacity(0.10))
+                    .frame(width: 36, height: 36)
+                Image(systemName: icon)
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundStyle(Color.sweeplyAccent)
+            }
+            VStack(alignment: .leading, spacing: 2) {
+                Text(label)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(Color.sweeplyNavy)
+                Text(detail)
+                    .font(.system(size: 12))
+                    .foregroundStyle(Color.sweeplyTextSub)
+            }
             Spacer()
         }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 13)
     }
 
     private var notificationCard: some View {
         HStack(spacing: 12) {
             ZStack {
                 Circle()
-                    .fill(Color.sweeplyAccent.opacity(0.1))
+                    .fill(Color.sweeplyAccent.opacity(0.10))
                     .frame(width: 38, height: 38)
                 Image(systemName: "bell.fill")
                     .font(.system(size: 16))
@@ -794,10 +910,10 @@ struct OnboardingView: View {
             }
 
             VStack(alignment: .leading, spacing: 2) {
-                Text("Stay on top of jobs & invoices".translated())
+                Text("Stay on top of jobs & invoices")
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(Color.sweeplyNavy)
-                Text("Get reminders before they're due".translated())
+                Text("Get reminders before they're due")
                     .font(.system(size: 11))
                     .foregroundStyle(Color.sweeplyTextSub)
             }
@@ -809,7 +925,7 @@ struct OnboardingView: View {
                 NotificationManager.shared.requestAuthorization()
                 withAnimation { notifStatus = .authorized }
             } label: {
-                Text("Allow".translated())
+                Text("Allow")
                     .font(.system(size: 12, weight: .bold))
                     .foregroundStyle(.white)
                     .padding(.horizontal, 12)
@@ -896,6 +1012,22 @@ struct OnboardingView: View {
             }
 
             let success = await profileStore.save(profile, userId: userId)
+
+            if success && !teamInviteMembers.isEmpty {
+                for member in teamInviteMembers {
+                    let tm = TeamMember(
+                        ownerId: userId,
+                        name: member.name,
+                        email: member.email,
+                        phone: "",
+                        role: .member,
+                        status: .invited,
+                        addedAt: Date()
+                    )
+                    _ = await teamStore.add(tm)
+                }
+            }
+
             await MainActor.run {
                 isSaving = false
                 if success {

@@ -24,6 +24,14 @@ struct CleanerFinanceView: View {
         case week  = "This Week"
         case month = "This Month"
         case all   = "All Time"
+        
+        var label: String {
+            switch self {
+            case .week: return "This Week".translated()
+            case .month: return "This Month".translated()
+            case .all: return "All Time".translated()
+            }
+        }
     }
 
     // MARK: - Derived
@@ -209,11 +217,9 @@ struct CleanerFinanceView: View {
     private var heroStrip: some View {
         VStack(spacing: 0) {
             HStack(spacing: 0) {
-                statCell(value: totalEarned.currency, label: "Gross Earned", change: periodChange)
-                stripDivider
-                statCell(value: "\(completedJobs.count)", label: "Jobs Done")
-                stripDivider
-                statCell(value: avgPerJob > 0 ? avgPerJob.currency : "—", label: "Avg / Job")
+statCell(value: totalEarned.currency, label: "Gross Earned".translated(), change: periodChange)
+                statCell(value: "\(completedJobs.count)", label: "Jobs Done".translated())
+                statCell(value: avgPerJob > 0 ? avgPerJob.currency : "—", label: "Avg / Job".translated())
             }
             .padding(.vertical, 14)
 
