@@ -443,6 +443,7 @@ struct MemberDetailView: View {
     @State private var localPayDay: Int = 6  // Calendar weekday: 1=Sun, 2=Mon…7=Sat; default Friday
     @State private var isSavingPayRate = false
     @State private var payRateSaved = false
+    @State private var paySetupExpanded = false
 
     // History tab (combines Job History + Payment History)
     enum HistoryTab { case jobs, payments }
@@ -475,6 +476,7 @@ struct MemberDetailView: View {
         _localRateType = State(initialValue: member.payRateType == .perJob ? .perDay : member.payRateType)
         _localRateAmountText = State(initialValue: member.payRateAmount > 0 ? String(format: "%.2f", member.payRateAmount) : "")
         _localPayDay = State(initialValue: member.payDayOfWeek ?? 6)
+        _paySetupExpanded = State(initialValue: !member.payRateEnabled)
     }
 
     // MARK: - Derived
@@ -1618,6 +1620,9 @@ struct MemberDetailView: View {
         if ok {
             UINotificationFeedbackGenerator().notificationOccurred(.success)
             payRateSaved = true
+            withAnimation(.easeInOut(duration: 0.25)) {
+                paySetupExpanded = false
+            }
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { payRateSaved = false }
         }
     }

@@ -397,7 +397,7 @@ struct FinancesView: View {
                                 Text("Collected".translated())
                                     .font(.system(size: 12, weight: .medium))
                                     .foregroundStyle(Color.sweeplyTextSub)
-                                Text(selectedPeriod == .week ? "This Week" : "This Month")
+                                Text(selectedPeriod == .week ? "This Week".translated() : "This Month".translated())
                                     .font(.system(size: 10, weight: .semibold))
                                     .foregroundStyle(Color.sweeplyAccent)
                                     .padding(.horizontal, 7)
@@ -418,8 +418,8 @@ struct FinancesView: View {
                     Divider()
 
                     HStack(spacing: 24) {
-                        minimalStatColumn(title: "Outstanding", value: periodOutstanding.currency)
-                        minimalStatColumn(title: "Overdue", value: periodOverdue.currency)
+                        minimalStatColumn(title: "Outstanding".translated(), value: periodOutstanding.currency)
+                        minimalStatColumn(title: "Overdue".translated(), value: periodOverdue.currency)
                     }
                     .contentTransition(.numericText())
                     .animation(.easeInOut(duration: 0.2), value: selectedPeriodRaw)
@@ -490,11 +490,9 @@ struct FinancesView: View {
     private var secondaryMetrics: some View {
         SectionCard {
             HStack(spacing: 0) {
-                compactMetric(title: "Avg. invoice", value: avgInvoiceValue.currency)
-                divider
-                compactMetric(title: "Collection", value: "\(collectionRate)%")
-                divider
-                compactMetric(title: "Invoices", value: "\(invoices.count)", isCount: true)
+compactMetric(title: "Avg. invoice".translated(), value: avgInvoiceValue.currency)
+                        compactMetric(title: "Collection".translated(), value: "\(collectionRate)%")
+                        compactMetric(title: "Invoices".translated(), value: "\(invoices.count)", isCount: true)
             }
             .padding(.vertical, 0)
             .padding(.horizontal, 0)
@@ -615,23 +613,9 @@ struct FinancesView: View {
                 Divider()
 
                 HStack(spacing: 0) {
-                    profitCell(
-                        title: "Revenue",
-                        value: monthCollected.currency,
-                        color: Color.sweeplyAccent
-                    )
-                    Rectangle().fill(Color.sweeplyBorder).frame(width: 1).padding(.vertical, 4)
-                    profitCell(
-                        title: "Expenses",
-                        value: monthExpenseTotal.currency,
-                        color: Color.sweeplyDestructive
-                    )
-                    Rectangle().fill(Color.sweeplyBorder).frame(width: 1).padding(.vertical, 4)
-                    profitCell(
-                        title: "Net Profit",
-                        value: netProfit.currency,
-                        color: netProfit >= 0 ? Color.sweeplySuccess : Color.sweeplyDestructive
-                    )
+                    profitCell(title: "Revenue".translated(), value: monthCollected.currency, color: Color.sweeplyAccent)
+                    profitCell(title: "Expenses".translated(), value: monthExpenseTotal.currency, color: Color.sweeplyNavy.opacity(0.6))
+                    profitCell(title: "Net Profit".translated(), value: netProfit.currency, color: netProfit >= 0 ? Color.sweeplySuccess : Color.sweeplyDestructive)
                 }
 
                 // Expense list with swipe-to-delete
@@ -948,8 +932,8 @@ struct FinancesView: View {
 
                 // Legend
                 HStack(spacing: 16) {
-                    legendItem(color: Color.sweeplyAccent, label: "Collected")
-                    legendItem(color: Color.sweeplyNavy.opacity(0.3), label: "Outstanding")
+                    legendItem(color: Color.sweeplyAccent, label: "Collected".translated())
+                    legendItem(color: Color.sweeplyNavy.opacity(0.3), label: "Outstanding".translated())
                 }
             }
         }
@@ -1231,8 +1215,8 @@ struct FinancesView: View {
 
                 // Legend
                 HStack(spacing: 16) {
-                    legendDot(color: Color.sweeplyNavy.opacity(0.75), label: "Scheduled jobs")
-                    legendDot(color: Color.sweeplyAccent.opacity(0.65), label: "Outstanding invoices")
+                    legendDot(color: Color.sweeplyNavy.opacity(0.75), label: "Scheduled jobs".translated())
+                    legendDot(color: Color.sweeplyAccent.opacity(0.65), label: "Outstanding invoices".translated())
                 }
 
                 // Empty state
