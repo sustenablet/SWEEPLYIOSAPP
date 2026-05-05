@@ -27,6 +27,12 @@ struct OnboardingView: View {
     @State private var teamInviteMembers: [TeamInvite] = []
     @FocusState private var teamField: TeamField?
 
+    // Step 4: Notifications
+    @State private var notificationRequested = false
+
+    // Step 5: Location
+    @State private var locationRequested = false
+
     // Step 2 fields
     @State private var selectedServices: Set<String> = []
     @State private var customServices: [BusinessService] = []
@@ -85,7 +91,7 @@ struct OnboardingView: View {
 
             VStack(spacing: 0) {
                 // Header — shown on all data-collection steps
-                if step >= 1 && step <= 3 {
+                if step >= 1 && step <= 5 {
                     headerBar
                         .transition(.opacity)
                 }
@@ -96,7 +102,9 @@ struct OnboardingView: View {
                     case 1: stepIdentity.transition(stepTransition).id(1)
                     case 2: stepServices.transition(stepTransition).id(2)
                     case 3: stepTeam.transition(stepTransition).id(3)
-                    case 4: stepAllSet.transition(stepTransition).id(4)
+                    case 4: stepNotifications.transition(stepTransition).id(4)
+                    case 5: stepLocation.transition(stepTransition).id(5)
+                    case 6: stepAllSet.transition(stepTransition).id(6)
                     default: EmptyView()
                     }
                 }
@@ -128,12 +136,12 @@ struct OnboardingView: View {
         }
     }
 
-    // MARK: - Header Bar
+    // Header Bar
 
     private var headerBar: some View {
         HStack(spacing: 12) {
-            // Previous — shown on steps 2 and 3
-            if step >= 2 {
+            // Previous — shown on steps 1-5
+            if step >= 1 {
                 Button {
                     UIImpactFeedbackGenerator(style: .light).impactOccurred()
                     goBack()
@@ -160,7 +168,7 @@ struct OnboardingView: View {
                         .frame(height: 4)
                     Capsule()
                         .fill(Color.sweeplyAccent)
-                        .frame(width: geo.size.width * (CGFloat(step) / 3.0), height: 4)
+                        .frame(width: geo.size.width * (CGFloat(step - 1) / 5.0), height: 4)
                         .animation(.spring(response: 0.4, dampingFraction: 0.8), value: step)
                 }
             }
@@ -256,7 +264,7 @@ struct OnboardingView: View {
             ScrollView(showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 0) {
                     VStack(alignment: .leading, spacing: 10) {
-                        Text("Let's set up\nyour business")
+                        Text("Tell us about\nyour business")
                             .font(.system(size: 34, weight: .bold))
                             .foregroundStyle(Color.sweeplyNavy)
                             .lineSpacing(2)
@@ -712,7 +720,142 @@ struct OnboardingView: View {
         }
     }
 
-    // MARK: - Step 4: All Set
+    // MARK: - Step 4: Notifications
+
+    private var stepNotifications: some View {
+        GeometryReader { geo in
+            VStack(spacing: 0) {
+
+                // ── Top: hero image ──────────────────────────────────
+                Image("NotificationsImage")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: geo.size.width)
+                    .padding(.top, 40)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(Color(red: 0.757, green: 0.875, blue: 0.992))
+
+                // ── Bottom: content card flush with image ─────────────
+                VStack(spacing: 0) {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("Stay in the loop")
+                            .font(.system(size: 28, weight: .bold, design: .rounded))
+                            .foregroundStyle(Color.sweeplyNavy)
+                            .tracking(-0.4)
+
+                        Text("Get notified about upcoming jobs, payments, and team updates.")
+                            .font(.system(size: 15))
+                            .foregroundStyle(Color.sweeplyTextSub)
+                            .lineSpacing(3)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.top, 28)
+                    .padding(.bottom, 32)
+
+                    Button {
+                        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                        NotificationManager.shared.requestAuthorization()
+                        notificationRequested = true
+                        advance()
+                    } label: {
+                        Text("Enable Notifications")
+                            .font(.system(size: 17, weight: .bold))
+                            .foregroundStyle(.white)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 54)
+                            .background(Color.sweeplyNavy)
+                            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                            .shadow(color: Color.sweeplyNavy.opacity(0.2), radius: 8, x: 0, y: 4)
+                    }
+
+                    Button {
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        advance()
+                    } label: {
+                        Text("Maybe later")
+                            .font(.system(size: 15, weight: .medium))
+                            .foregroundStyle(Color.sweeplyTextSub)
+                    }
+                    .padding(.top, 12)
+
+                    Spacer().frame(height: geo.safeAreaInsets.bottom > 0 ? geo.safeAreaInsets.bottom + 8 : 28)
+                }
+                .padding(.horizontal, 28)
+                .frame(maxWidth: .infinity)
+                .background(Color.sweeplyBackground)
+            }
+            .ignoresSafeArea()
+        }
+    }
+
+    // MARK: - Step 5: Location
+
+    private var stepLocation: some View {
+        GeometryReader { geo in
+            VStack(spacing: 0) {
+
+                // ── Top: hero image ──────────────────────────────────
+                Image("LocationImage")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: geo.size.width)
+                    .padding(.top, 40)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(Color(red: 0.757, green: 0.875, blue: 0.992))
+
+                // ── Bottom: content card flush with image ─────────────
+                VStack(spacing: 0) {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("Enable your location")
+                            .font(.system(size: 28, weight: .bold, design: .rounded))
+                            .foregroundStyle(Color.sweeplyNavy)
+                            .tracking(-0.4)
+
+                        Text("Quickly find nearby jobs and get directions to your clients.")
+                            .font(.system(size: 15))
+                            .foregroundStyle(Color.sweeplyTextSub)
+                            .lineSpacing(3)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.top, 28)
+                    .padding(.bottom, 32)
+
+                    Button {
+                        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                        locationRequested = true
+                        advance()
+                    } label: {
+                        Text("Enable Location")
+                            .font(.system(size: 17, weight: .bold))
+                            .foregroundStyle(.white)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 54)
+                            .background(Color.sweeplyNavy)
+                            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                            .shadow(color: Color.sweeplyNavy.opacity(0.2), radius: 8, x: 0, y: 4)
+                    }
+
+                    Button {
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        advance()
+                    } label: {
+                        Text("Maybe later")
+                            .font(.system(size: 15, weight: .medium))
+                            .foregroundStyle(Color.sweeplyTextSub)
+                    }
+                    .padding(.top, 12)
+
+                    Spacer().frame(height: geo.safeAreaInsets.bottom > 0 ? geo.safeAreaInsets.bottom + 8 : 28)
+                }
+                .padding(.horizontal, 28)
+                .frame(maxWidth: .infinity)
+                .background(Color.sweeplyBackground)
+            }
+            .ignoresSafeArea()
+        }
+    }
+
+    // MARK: - Step 6: All Set
 
     private var stepAllSet: some View {
         VStack(spacing: 0) {
