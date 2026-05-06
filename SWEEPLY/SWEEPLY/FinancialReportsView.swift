@@ -301,7 +301,13 @@ struct FinancialReportsView: View {
                 .padding(.horizontal, 20)
                 .padding(.bottom, 80)
             }
+            .scrollDisabled(showForecastPopup)
             .background(Color.sweeplyBackground.ignoresSafeArea())
+            .overlay {
+                if showForecastPopup, let week = popupWeek {
+                    forecastPopupOverlay(week: week)
+                }
+            }
             .navigationTitle("Reports")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -559,15 +565,14 @@ struct FinancialReportsView: View {
                         .cornerRadius(4)
                     }
                     .chartOverlay { proxy in
-                        GeometryReader { geo in
+                        GeometryReader { _ in
                             Rectangle()
                                 .fill(.clear)
                                 .contentShape(Rectangle())
                                 .gesture(
                                     DragGesture(minimumDistance: 0)
                                         .onEnded { value in
-                                            let x = value.location.x
-                                            if let weekLabel: String = proxy.value(atX: x) {
+                                            if let weekLabel: String = proxy.value(atX: value.location.x) {
                                                 withAnimation(.easeInOut(duration: 0.15)) {
                                                     selectedForecastWeekLabel = weekLabel
                                                 }
@@ -575,14 +580,13 @@ struct FinancialReportsView: View {
                                         }
                                 )
                                 .simultaneousGesture(
-                                    LongPressGesture(minimumDuration: 0.5)
+                                    LongPressGesture(minimumDuration: 0.4)
                                         .onEnded { _ in
-                                            let x = geo.frame(in: .local).midX
-                                            if let weekLabel: String = proxy.value(atX: x) {
-                                                if let week = cashflowForecast.first(where: { $0.weekLabel == weekLabel }) {
-                                                    popupWeek = week
-                                                    showForecastPopup = true
-                                                }
+                                            if let selectedLabel = selectedForecastWeekLabel,
+                                               let week = cashflowForecast.first(where: { $0.weekLabel == selectedLabel }) {
+                                                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                                                popupWeek = week
+                                                showForecastPopup = true
                                             }
                                         }
                                 )
@@ -628,13 +632,7 @@ struct FinancialReportsView: View {
     }
 
     private var cashflowSectionWithPopup: some View {
-        ZStack {
-            cashflowForecastSection
-
-            if showForecastPopup, let week = popupWeek {
-                forecastPopupOverlay(week: week)
-            }
-        }
+        cashflowForecastSection
     }
 
     // MARK: - Forecast Popup
@@ -643,17 +641,22 @@ struct FinancialReportsView: View {
     private func forecastPopupOverlay(week: ForecastWeek) -> some View {
         ZStack {
             // Blurred background
-            Color.sweeplyNavy.opacity(0.35)
+            Color.sweeplyNavy.opacity(0.45)
                 .ignoresSafeArea()
-                .blur(radius: 8)
+                .blur(radius: 10)
 
             // Popup card
-            VStack(spacing: 20) {
-                // Header
+            VStack(spacing: 16) {
+                // Header with date range
                 VStack(spacing: 4) {
-                    Text(week.weekLabel)
-                        .font(.system(size: 18, weight: .bold))
-                        .foregroundStyle(Color.sweeplyNavy)
+                    HStack {
+                        Image(systemName: "calendar")
+                            .font(.system(size: 14))
+                            .foregroundStyle(Color.sweeplyAccent)
+                        Text(week.weekLabel)
+                            .font(.system(size: 18, weight: .bold))
+                            .foregroundStyle(Color.sweeplyNavy)
+                    }
                     
                     Text(week.weekStart, style: .date)
                         .font(.system(size: 12))
@@ -662,84 +665,96 @@ struct FinancialReportsView: View {
 
                 Divider()
 
-                // Breakdown
-                VStack(spacing: 16) {
+                // Detailed breakdown
+                VStack(spacing: 12) {
                     // Scheduled Jobs
-                    HStack(spacing: 12) {
-                        ZStack {
-                            Circle()
-                                .fill(Color.sweeplyNavy.opacity(0.10))
-                                .frame(width: 36, height: 36)
-                            Image(systemName: "calendar.badge.clock")
-                                .font(.system(size: 14))
-                                .foregroundStyle(Color.sweeplyNavy)
-                        }
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Scheduled Jobs")
-                                .font(.system(size: 13, weight: .medium))
-                                .foregroundStyle(Color.sweeplyNavy)
-                            Text("\(week.jobCount) job\(week.jobCount == 1 ? "" : "s")")
-                                .font(.system(size: 11))
-                                .foregroundStyle(Color.sweeplyTextSub)
-                        }
-                        Spacer()
-                        Text(week.jobsAmount.currency)
-                            .font(.system(size: 15, weight: .bold, design: .monospaced))
-                            .foregroundStyle(Color.sweeplyNavy)
-                    }
+                    popupRow(
+                        icon: "calendar.badge.clock",
+                        iconColor: Color.sweeplyNavy,
+                        iconBg: Color.sweeplyNavy.opacity(0.10),
+                        title: "Scheduled Jobs",
+                        subtitle: "\(week.jobCount) job\(week.jobCount == 1 ? "" : "s")",
+                        amount: week.jobsAmount,
+                        amountColor: Color.sweeplyNavy
+                    )
 
                     // Outstanding Invoices
-                    HStack(spacing: 12) {
-                        ZStack {
-                            Circle()
-                                .fill(Color.sweeplyAccent.opacity(0.10))
-                                .frame(width: 36, height: 36)
-                            Image(systemName: "doc.text.fill")
-                                .font(.system(size: 14))
-                                .foregroundStyle(Color.sweeplyAccent)
-                        }
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Outstanding Invoices")
-                                .font(.system(size: 13, weight: .medium))
-                                .foregroundStyle(Color.sweeplyNavy)
-                            Text("\(week.invoiceCount) invoice\(week.invoiceCount == 1 ? "" : "s")")
-                                .font(.system(size: 11))
-                                .foregroundStyle(Color.sweeplyTextSub)
-                        }
-                        Spacer()
-                        Text(week.invoicesAmount.currency)
-                            .font(.system(size: 15, weight: .bold, design: .monospaced))
-                            .foregroundStyle(Color.sweeplyAccent)
-                    }
+                    popupRow(
+                        icon: "doc.text.fill",
+                        iconColor: Color.sweeplyAccent,
+                        iconBg: Color.sweeplyAccent.opacity(0.10),
+                        title: "Outstanding Invoices",
+                        subtitle: "\(week.invoiceCount) invoice\(week.invoiceCount == 1 ? "" : "s")",
+                        amount: week.invoicesAmount,
+                        amountColor: Color.sweeplyAccent
+                    )
                 }
 
                 Divider()
 
-                // Total
+                // Total & Comparison
+                VStack(spacing: 8) {
+                    HStack {
+                        Text("Total Projected")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(Color.sweeplyNavy)
+                        Spacer()
+                        Text(week.total.currency)
+                            .font(.system(size: 20, weight: .bold, design: .monospaced))
+                            .foregroundStyle(Color.sweeplySuccess)
+                    }
+                    
+                    // Comparison to average
+                    let avg = forecastAvgWeekly
+                    let diff = week.total - avg
+                    let percentChange = avg > 0 ? (diff / avg) * 100 : 0
+                    HStack {
+                        Image(systemName: diff >= 0 ? "arrow.up.right" : "arrow.down.right")
+                            .font(.system(size: 10, weight: .bold))
+                        Text("\(abs(Int(percentChange)))% vs avg")
+                            .font(.system(size: 11, weight: .medium))
+                        Text("(\(avg.currency)/wk)")
+                            .font(.system(size: 10))
+                            .foregroundStyle(Color.sweeplyTextSub)
+                    }
+                    .foregroundStyle(diff >= 0 ? Color.sweeplySuccess : Color.sweeplyDestructive)
+                }
+
+                Divider()
+
+                // Forecast period info
                 HStack {
-                    Text("Total Projected")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(Color.sweeplyNavy)
+                    Image(systemName: "chart.line.uptrend.xyaxis")
+                        .font(.system(size: 11))
+                        .foregroundStyle(Color.sweeplyTextSub)
+                    Text("\(forecastWeekCount) week forecast")
+                        .font(.system(size: 11))
+                        .foregroundStyle(Color.sweeplyTextSub)
                     Spacer()
-                    Text(week.total.currency)
-                        .font(.system(size: 18, weight: .bold, design: .monospaced))
-                        .foregroundStyle(Color.sweeplySuccess)
+                    Text("\(cashflowForecast.count) weeks shown")
+                        .font(.system(size: 10))
+                        .foregroundStyle(Color.sweeplyTextSub.opacity(0.7))
                 }
 
                 // Close button
                 Button {
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
                     withAnimation(.easeInOut(duration: 0.2)) {
                         showForecastPopup = false
                         popupWeek = nil
                     }
                 } label: {
-                    Text("Close")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 12)
-                        .background(Color.sweeplyNavy)
-                        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    HStack {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 12, weight: .bold))
+                        Text("Close")
+                    }
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(Color.sweeplyNavy)
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                 }
             }
             .padding(24)
@@ -747,7 +762,34 @@ struct FinancialReportsView: View {
             .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
             .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(Color.sweeplyBorder, lineWidth: 1))
             .shadow(color: Color.sweeplyNavy.opacity(0.15), radius: 20, x: 0, y: 10)
-            .padding(.horizontal, 32)
+            .padding(.horizontal, 24)
+        }
+    }
+
+    // MARK: - Popup Row Helper
+
+    private func popupRow(icon: String, iconColor: Color, iconBg: Color, title: String, subtitle: String, amount: Double, amountColor: Color) -> some View {
+        HStack(spacing: 12) {
+            ZStack {
+                Circle()
+                    .fill(iconBg)
+                    .frame(width: 36, height: 36)
+                Image(systemName: icon)
+                    .font(.system(size: 14))
+                    .foregroundStyle(iconColor)
+            }
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(Color.sweeplyNavy)
+                Text(subtitle)
+                    .font(.system(size: 11))
+                    .foregroundStyle(Color.sweeplyTextSub)
+            }
+            Spacer()
+            Text(amount.currency)
+                .font(.system(size: 15, weight: .bold, design: .monospaced))
+                .foregroundStyle(amountColor)
         }
     }
 
