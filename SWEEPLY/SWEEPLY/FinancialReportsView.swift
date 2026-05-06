@@ -292,6 +292,7 @@ struct FinancialReportsView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
                     ytdSummarySection
+                    revenueProgressSection
                     sixMonthChartSection
                     cashflowSectionWithPopup
                     profitAndLossSection
@@ -441,6 +442,82 @@ struct FinancialReportsView: View {
         .background(Color.sweeplySurface)
         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(Color.sweeplyBorder, lineWidth: 1))
+    }
+
+    // MARK: - Revenue Progress
+
+    private var revenueProgressSection: some View {
+        let collected = overviewBarData.map { $0.collected }.reduce(0, +)
+        let scheduled = overviewBarData.map { $0.scheduled }.reduce(0, +)
+        let total = collected + scheduled
+        let progress = total > 0 ? collected / total : 0
+
+        return VStack(spacing: 12) {
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Revenue Progress")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(Color.sweeplyNavy)
+                    HStack(spacing: 4) {
+                        Text("Collected")
+                            .font(.system(size: 11))
+                            .foregroundStyle(Color.sweeplySuccess)
+                        Text("·")
+                            .font(.system(size: 10))
+                            .foregroundStyle(Color.sweeplyTextSub)
+                        Text("Estimated")
+                            .font(.system(size: 11))
+                            .foregroundStyle(Color.sweeplyTextSub)
+                    }
+                }
+                Spacer()
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text(collected.currency)
+                        .font(.system(size: 14, weight: .bold, design: .monospaced))
+                        .foregroundStyle(Color.sweeplySuccess)
+                    Text(total.currency)
+                        .font(.system(size: 11, design: .monospaced))
+                        .foregroundStyle(Color.sweeplyTextSub)
+                }
+            }
+
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    // Background track
+                    Capsule()
+                        .fill(Color.sweeplyBorder)
+                        .frame(height: 8)
+
+                    // Progress bar
+                    Capsule()
+                        .fill(
+                            LinearGradient(
+                                colors: [Color.sweeplySuccess, Color.sweeplySuccess.opacity(0.7)],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
+                        .frame(width: geo.size.width * CGFloat(progress), height: 8)
+                }
+            }
+            .frame(height: 8)
+
+            HStack {
+                Text("\(Int(progress * 100))% collected")
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(Color.sweeplySuccess)
+                Spacer()
+                if scheduled > 0 {
+                    Text("\(scheduled.currency) estimated")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(Color.sweeplyWarning)
+                }
+            }
+        }
+        .padding(16)
+        .background(Color.sweeplySurface)
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(Color.sweeplyBorder, lineWidth: 1))
     }
 
     // MARK: - Revenue Overview (3M / 6M)
