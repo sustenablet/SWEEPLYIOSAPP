@@ -258,23 +258,44 @@ struct BusinessView: View {
 
                 // Team membership switcher
                 if !session.activeMemberships.isEmpty {
-                    ForEach(session.activeMemberships) { membership in
-                        Button {
-                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                            session.switchToMembership(membership)
-                        } label: {
-                            HStack(spacing: 6) {
-                                Image(systemName: "person.2.fill")
-                                    .font(.system(size: 12))
-                                    .foregroundStyle(Color.sweeplyAccent)
-                                Text("View as \(membership.businessName)")
-                                    .font(.system(size: 13, weight: .medium))
-                                    .foregroundStyle(Color.sweeplyAccent)
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("TEAMS")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundStyle(Color.sweeplyTextSub)
+                            .tracking(0.8)
+
+                        ForEach(session.activeMemberships) { membership in
+                            HStack(spacing: 12) {
+                                ZStack {
+                                    Circle()
+                                        .fill(Color.sweeplyAccent.opacity(0.10))
+                                        .frame(width: 36, height: 36)
+                                    Image(systemName: "building.2.fill")
+                                        .font(.system(size: 14, weight: .medium))
+                                        .foregroundStyle(Color.sweeplyAccent)
+                                }
+
+                                Text(membership.businessName)
+                                    .font(.system(size: 15, weight: .semibold))
+                                    .foregroundStyle(Color.sweeplyNavy)
+
+                                Spacer()
+
+                                Button {
+                                    UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                                    session.switchToMembership(membership)
+                                } label: {
+                                    Text("Join")
+                                        .font(.system(size: 13, weight: .bold))
+                                        .foregroundStyle(.white)
+                                        .padding(.horizontal, 16)
+                                        .padding(.vertical, 7)
+                                        .background(Color.sweeplyAccent)
+                                        .clipShape(Capsule())
+                                }
+                                .buttonStyle(.plain)
                             }
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 8)
                         }
-                        .buttonStyle(.plain)
                     }
                     .padding(.horizontal, 20)
                 }
