@@ -1369,7 +1369,6 @@ struct FinancialReportsView: View {
                 }
             }
             }
-            .padding(.top, 4)
         }
     }
 
@@ -1714,10 +1713,6 @@ struct FinancialReportsView: View {
         SectionCard {
             VStack(alignment: .leading, spacing: 16) {
                 HStack {
-                    Text("PAYMENT METHODS".translated())
-                        .font(.system(size: 11, weight: .bold))
-                        .foregroundStyle(Color.sweeplyTextSub)
-                        .tracking(0.8)
                     Spacer()
                     if !paymentMethodStats.isEmpty {
                         NavigationLink(destination: PaymentMethodsListView()) {
