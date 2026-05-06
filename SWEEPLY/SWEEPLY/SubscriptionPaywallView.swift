@@ -26,8 +26,7 @@ struct SubscriptionPaywallView: View {
     @State private var selectedPlan: PlanType = .pro
     @State private var purchaseError: String?
     @State private var appeared = false
-    @State private var proCardPressed = false
-    @State private var standardCardPressed = false
+    @State private var ctaPressed = false
 
     private var standardPackage: Package? {
         billing == .monthly
@@ -40,12 +39,22 @@ struct SubscriptionPaywallView: View {
             : subscriptionManager.offerings?.current?.package(identifier: "$rc_custom_pro_yearly")
     }
 
-    private var standardPrice: String {
-        standardPackage?.storeProduct.localizedPriceString ?? (billing == .monthly ? "$8.99" : "$79.99")
+    private var standardMonthlyPrice: String {
+        subscriptionManager.offerings?.current?.package(identifier: "$rc_monthly")?.storeProduct.localizedPriceString ?? "$8.99"
     }
-    private var proPrice: String {
-        proPackage?.storeProduct.localizedPriceString ?? (billing == .monthly ? "$19.99" : "$179.99")
+    private var standardYearlyPrice: String {
+        subscriptionManager.offerings?.current?.package(identifier: "$rc_annual")?.storeProduct.localizedPriceString ?? "$79.99"
     }
+    private var proMonthlyPrice: String {
+        subscriptionManager.offerings?.current?.package(identifier: "$rc_custom_pro_monthly")?.storeProduct.localizedPriceString ?? "$19.99"
+    }
+    private var proYearlyPrice: String {
+        subscriptionManager.offerings?.current?.package(identifier: "$rc_custom_pro_yearly")?.storeProduct.localizedPriceString ?? "$179.99"
+    }
+
+    private var currentMonthlyPrice: String { selectedPlan == .pro ? proMonthlyPrice : standardMonthlyPrice }
+    private var currentYearlyPrice: String  { selectedPlan == .pro ? proYearlyPrice  : standardYearlyPrice }
+    private var currentYearlyPerMonth: String { selectedPlan == .pro ? "~$15.00/mo" : "~$6.67/mo" }
 
     // MARK: - Body
 
@@ -60,35 +69,25 @@ struct SubscriptionPaywallView: View {
                             .padding(.bottom, 20)
 
                         planToggle
-                            .padding(.bottom, 10)
+                            .padding(.bottom, 16)
 
-                        billingToggle
-                            .padding(.bottom, 20)
+                        featureBox
+                            .padding(.horizontal, 20)
+                            .padding(.bottom, 14)
+
+                        billingCards
+                            .padding(.horizontal, 20)
+                            .padding(.bottom, 16)
 
                         if let error = purchaseError {
                             errorBanner(error)
                                 .padding(.horizontal, 20)
-                                .padding(.bottom, 16)
+                                .padding(.bottom, 12)
                         }
 
-                        Group {
-                            if selectedPlan == .pro {
-                                proCard
-                                    .transition(.asymmetric(
-                                        insertion: .opacity.combined(with: .scale(scale: 0.95)),
-                                        removal: .opacity
-                                    ))
-                            } else {
-                                standardCard
-                                    .transition(.asymmetric(
-                                        insertion: .opacity.combined(with: .scale(scale: 0.95)),
-                                        removal: .opacity
-                                    ))
-                            }
-                        }
-                        .padding(.horizontal, 20)
-                        .padding(.bottom, 14)
-                        .animation(.spring(response: 0.4, dampingFraction: 0.8), value: selectedPlan)
+                        ctaButton
+                            .padding(.horizontal, 20)
+                            .padding(.bottom, 20)
 
                         footer
                             .padding(.bottom, 40)
@@ -121,7 +120,6 @@ struct SubscriptionPaywallView: View {
 
     private var atmosphereBackground: some View {
         ZStack {
-            // Light blue gradient — soft and non-vibrant
             LinearGradient(
                 stops: [
                     .init(color: Color(red: 0.85, green: 0.92, blue: 0.98), location: 0),
@@ -131,8 +129,6 @@ struct SubscriptionPaywallView: View {
                 startPoint: .top,
                 endPoint: .bottom
             )
-
-            // Subtle accent glow — top
             Circle()
                 .fill(Color.sweeplyAccent.opacity(0.08))
                 .frame(width: 400, height: 400)
@@ -151,9 +147,7 @@ struct SubscriptionPaywallView: View {
                 .foregroundStyle(Color.sweeplyNavy.opacity(0.7))
                 .frame(width: 30, height: 30)
                 .background(Color.sweeplyNavy.opacity(0.08))
-                .overlay(
-                    Circle().stroke(Color.sweeplyNavy.opacity(0.1), lineWidth: 1)
-                )
+                .overlay(Circle().stroke(Color.sweeplyNavy.opacity(0.1), lineWidth: 1))
                 .clipShape(Circle())
         }
     }
@@ -166,7 +160,6 @@ struct SubscriptionPaywallView: View {
                 .resizable()
                 .scaledToFit()
                 .frame(width: 32, height: 32)
-            
             Text("Sweeply")
                 .font(Font.sweeplyDisplay(20, weight: .bold))
                 .foregroundStyle(Color.sweeplyNavy)
@@ -200,55 +193,8 @@ struct SubscriptionPaywallView: View {
         .padding(.horizontal, 16)
         .padding(.vertical, 8)
         .background(Color.sweeplyAccent.opacity(0.15))
-        .overlay(
-            Capsule().stroke(Color.sweeplyAccent.opacity(0.4), lineWidth: 1)
-        )
+        .overlay(Capsule().stroke(Color.sweeplyAccent.opacity(0.4), lineWidth: 1))
         .clipShape(Capsule())
-    }
-
-    // MARK: - Billing Toggle (smaller)
-
-    private var billingToggle: some View {
-        HStack(spacing: 0) {
-            ForEach(BillingPeriod.allCases, id: \.self) { period in
-                Button {
-                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                    withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) { billing = period }
-                } label: {
-                    HStack(spacing: 4) {
-                        Text(period.rawValue)
-                            .font(.system(size: 12, weight: billing == period ? .semibold : .regular))
-                            .foregroundStyle(billing == period ? Color.sweeplyNavy : Color.sweeplyNavy.opacity(0.5))
-                        if period == .yearly {
-                            Text("26% off")
-                                .font(.system(size: 9, weight: .bold))
-                                .foregroundStyle(billing == .yearly ? Color.sweeplyAccent : Color.sweeplyNavy.opacity(0.4))
-                                .padding(.horizontal, 5)
-                                .padding(.vertical, 2)
-                                .background(billing == .yearly ? Color.sweeplyAccent.opacity(0.12) : Color.clear)
-                                .clipShape(Capsule())
-                        }
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 7)
-                    .background(
-                        billing == period
-                            ? Color.white
-                            : Color.clear
-                    )
-                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-                }
-                .buttonStyle(.plain)
-            }
-        }
-        .padding(3)
-        .background(Color.sweeplyNavy.opacity(0.05))
-        .overlay(
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .stroke(Color.sweeplyNavy.opacity(0.08), lineWidth: 1)
-        )
-        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-        .padding(.horizontal, 20)
     }
 
     // MARK: - Plan Toggle
@@ -282,11 +228,7 @@ struct SubscriptionPaywallView: View {
                     }
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 10)
-                    .background(
-                        selectedPlan == plan
-                            ? Color.sweeplyNavy
-                            : Color.clear
-                    )
+                    .background(selectedPlan == plan ? Color.sweeplyNavy : Color.clear)
                     .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
                 }
                 .buttonStyle(.plain)
@@ -302,67 +244,17 @@ struct SubscriptionPaywallView: View {
         .padding(.horizontal, 20)
     }
 
-    // MARK: - Pro Card
+    // MARK: - Feature Box
 
-    private var proCard: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            // Header
-            HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 6) {
-                    HStack(spacing: 8) {
-                        Text("PRO")
-                            .font(.system(size: 11, weight: .bold, design: .monospaced))
-                            .foregroundStyle(Color.sweeplyAccent)
-                        Text("MOST POPULAR")
-                            .font(.system(size: 10, weight: .bold))
-                            .foregroundStyle(Color.sweeplyNavy.opacity(0.45))
-                            .tracking(0.5)
-                    }
-                    HStack(alignment: .lastTextBaseline, spacing: 4) {
-                        Text(proPrice)
-                            .font(Font.sweeplyDisplay(36, weight: .bold))
-                            .foregroundStyle(Color.sweeplyNavy)
-                        Text(billing == .monthly ? "/mo" : "/yr")
-                            .font(.system(size: 14))
-                            .foregroundStyle(Color.sweeplyNavy.opacity(0.45))
-                            .padding(.bottom, 4)
-                    }
-                    if billing == .yearly {
-                        Text("~$15.00/mo · billed annually")
-                            .font(.system(size: 12))
-                            .foregroundStyle(Color.sweeplyNavy.opacity(0.4))
-                    }
-                }
-                Spacer()
+    private var featureBox: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            ForEach(features(for: selectedPlan), id: \.text) { item in
+                featureRow(item.text, icon: item.icon, highlight: item.highlight)
             }
-            .padding(.horizontal, 20)
-            .padding(.top, 22)
-            .padding(.bottom, 18)
-
-            // Divider
-            Rectangle()
-                .fill(Color.sweeplyNavy.opacity(0.08))
-                .frame(height: 1)
-                .padding(.horizontal, 20)
-
-            // Features
-            VStack(alignment: .leading, spacing: 12) {
-                proFeatureRow("Everything in Standard", icon: "checkmark.circle.fill", highlight: true)
-                proFeatureRow("Unlimited cleaners & teams", icon: "person.3.fill")
-                proFeatureRow("Revenue analytics dashboard", icon: "chart.bar.xaxis")
-                proFeatureRow("Profit & loss breakdown", icon: "doc.text.fill")
-                proFeatureRow("Predictive cash flow", icon: "waveform.path.ecg")
-                proFeatureRow("Priority in-app support", icon: "bolt.fill")
-                proFeatureRow("Early access to new features", icon: "star.fill")
-            }
-            .padding(.horizontal, 20)
-            .padding(.vertical, 18)
-
-            // CTA
-            proCTAButton
-                .padding(.horizontal, 20)
-                .padding(.bottom, 22)
         }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 20)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: 22, style: .continuous)
                 .fill(Color.white)
@@ -370,160 +262,154 @@ struct SubscriptionPaywallView: View {
         .overlay(
             RoundedRectangle(cornerRadius: 22, style: .continuous)
                 .stroke(
-                    LinearGradient(
-                        colors: [
-                            Color.sweeplyAccent.opacity(0.5),
-                            Color.sweeplyAccent.opacity(0.2),
-                            Color.sweeplyNavy.opacity(0.05),
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    ),
+                    selectedPlan == .pro
+                        ? LinearGradient(
+                            colors: [Color.sweeplyAccent.opacity(0.5), Color.sweeplyAccent.opacity(0.15), Color.sweeplyNavy.opacity(0.05)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                          )
+                        : LinearGradient(
+                            colors: [Color.sweeplyNavy.opacity(0.12), Color.sweeplyNavy.opacity(0.06)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                          ),
                     lineWidth: 1.5
                 )
         )
-        .shadow(color: Color.sweeplyAccent.opacity(0.12), radius: 20, x: 0, y: 8)
-        .scaleEffect(proCardPressed ? 0.98 : 1)
-        .animation(.easeInOut(duration: 0.12), value: proCardPressed)
+        .shadow(color: selectedPlan == .pro ? Color.sweeplyAccent.opacity(0.10) : Color.sweeplyNavy.opacity(0.06), radius: 20, x: 0, y: 8)
+        .animation(.spring(response: 0.4, dampingFraction: 0.8), value: selectedPlan)
     }
 
-    private func proFeatureRow(_ text: String, icon: String, highlight: Bool = false) -> some View {
-        HStack(spacing: 10) {
+    private struct FeatureItem {
+        let text: String
+        let icon: String
+        var highlight: Bool = false
+    }
+
+    private func features(for plan: PlanType) -> [FeatureItem] {
+        switch plan {
+        case .pro:
+            return [
+                FeatureItem(text: "Everything in Standard", icon: "checkmark.circle.fill", highlight: true),
+                FeatureItem(text: "Unlimited cleaners & teams",   icon: "person.3.fill"),
+                FeatureItem(text: "Revenue analytics dashboard",  icon: "chart.bar.xaxis"),
+                FeatureItem(text: "Profit & loss breakdown",      icon: "doc.text.fill"),
+                FeatureItem(text: "Predictive cash flow",         icon: "waveform.path.ecg"),
+                FeatureItem(text: "Priority in-app support",      icon: "bolt.fill"),
+                FeatureItem(text: "Early access to new features", icon: "star.fill"),
+            ]
+        case .standard:
+            return [
+                FeatureItem(text: "Unlimited client profiles",        icon: "person.fill"),
+                FeatureItem(text: "Unlimited jobs & invoices",        icon: "briefcase.fill"),
+                FeatureItem(text: "Add up to 3 team members",        icon: "person.2.fill"),
+                FeatureItem(text: "Smart calendar & recurring jobs",  icon: "calendar"),
+                FeatureItem(text: "Expense categorization",           icon: "chart.pie.fill"),
+                FeatureItem(text: "Home-screen widgets",              icon: "square.grid.2x2.fill"),
+            ]
+        }
+    }
+
+    private func featureRow(_ text: String, icon: String, highlight: Bool = false) -> some View {
+        HStack(spacing: 12) {
             Image(systemName: icon)
-                .font(.system(size: 12, weight: .medium))
-                .foregroundStyle(highlight ? Color.sweeplyAccent : Color.sweeplyNavy.opacity(0.5))
-                .frame(width: 18)
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(highlight ? Color.sweeplyAccent : Color.sweeplyNavy.opacity(0.45))
+                .frame(width: 20)
             Text(text)
                 .font(.system(size: 14, weight: highlight ? .semibold : .regular))
                 .foregroundStyle(highlight ? Color.sweeplyNavy : Color.sweeplyNavy.opacity(0.75))
         }
     }
 
-    private var proCTAButton: some View {
+    // MARK: - Billing Cards
+
+    private var billingCards: some View {
+        HStack(spacing: 10) {
+            billingCard(period: .monthly)
+            billingCard(period: .yearly)
+        }
+    }
+
+    private func billingCard(period: BillingPeriod) -> some View {
+        let isSelected = billing == period
+        return Button {
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) { billing = period }
+        } label: {
+            VStack(alignment: .leading, spacing: 4) {
+                HStack {
+                    Text(period.rawValue)
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(isSelected ? Color.sweeplyNavy : Color.sweeplyNavy.opacity(0.5))
+                    Spacer()
+                    if period == .yearly {
+                        Text("Save 26%")
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundStyle(isSelected ? Color.sweeplyAccent : Color.sweeplyNavy.opacity(0.35))
+                            .padding(.horizontal, 7)
+                            .padding(.vertical, 3)
+                            .background(isSelected ? Color.sweeplyAccent.opacity(0.12) : Color.sweeplyNavy.opacity(0.06))
+                            .clipShape(Capsule())
+                    }
+                }
+                Text(period == .monthly ? currentMonthlyPrice : currentYearlyPrice)
+                    .font(Font.sweeplyDisplay(18, weight: .bold))
+                    .foregroundStyle(isSelected ? Color.sweeplyNavy : Color.sweeplyNavy.opacity(0.45))
+                Text(period == .monthly ? "/month" : "\(currentYearlyPerMonth) · billed yearly")
+                    .font(.system(size: 11))
+                    .foregroundStyle(isSelected ? Color.sweeplyNavy.opacity(0.5) : Color.sweeplyNavy.opacity(0.3))
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 14)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(isSelected ? Color.white : Color.sweeplyNavy.opacity(0.04))
+            .overlay(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .stroke(
+                        isSelected ? Color.sweeplyAccent : Color.sweeplyNavy.opacity(0.1),
+                        lineWidth: isSelected ? 1.5 : 1
+                    )
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .shadow(color: isSelected ? Color.sweeplyAccent.opacity(0.10) : .clear, radius: 12, x: 0, y: 4)
+        }
+        .buttonStyle(.plain)
+    }
+
+    // MARK: - CTA Button
+
+    private var ctaButton: some View {
         Button {
             UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-            proCardPressed = true
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) { proCardPressed = false }
-            Task { await purchase(proPackage) }
+            ctaPressed = true
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) { ctaPressed = false }
+            let package = selectedPlan == .pro ? proPackage : standardPackage
+            Task { await purchase(package) }
         } label: {
             HStack(spacing: 8) {
                 if subscriptionManager.isPurchasing {
-                    ProgressView().tint(Color.sweeplyNavy)
+                    ProgressView().tint(.white)
                 } else {
-                    Text("Get Pro")
+                    Text(selectedPlan == .pro ? "Get Pro" : "Get Standard")
                         .font(.system(size: 16, weight: .bold))
                         .foregroundStyle(.white)
                     if billing == .monthly {
                         Text("· 1 month free")
                             .font(.system(size: 13))
-                            .foregroundStyle(.white.opacity(0.6))
+                            .foregroundStyle(.white.opacity(0.65))
                     }
                 }
             }
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 15)
-            .background(Color.sweeplyAccent)
-            .clipShape(RoundedRectangle(cornerRadius: 13, style: .continuous))
+            .padding(.vertical, 16)
+            .background(selectedPlan == .pro ? Color.sweeplyAccent : Color.sweeplyNavy)
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         }
         .buttonStyle(.plain)
         .disabled(subscriptionManager.isPurchasing)
-    }
-
-    // MARK: - Standard Card
-
-    private var standardCard: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("STANDARD")
-                        .font(.system(size: 11, weight: .bold, design: .monospaced))
-                        .foregroundStyle(Color.sweeplyNavy.opacity(0.4))
-                        .tracking(0.5)
-                    HStack(alignment: .lastTextBaseline, spacing: 4) {
-                        Text(standardPrice)
-                            .font(Font.sweeplyDisplay(36, weight: .bold))
-                            .foregroundStyle(Color.sweeplyNavy)
-                        Text(billing == .monthly ? "/mo" : "/yr")
-                            .font(.system(size: 14))
-                            .foregroundStyle(Color.sweeplyNavy.opacity(0.4))
-                            .padding(.bottom, 4)
-                    }
-                    if billing == .yearly {
-                        Text("~$6.67/mo · billed annually")
-                            .font(.system(size: 12))
-                            .foregroundStyle(Color.sweeplyNavy.opacity(0.35))
-                    }
-                }
-                Spacer()
-            }
-            .padding(.horizontal, 20)
-            .padding(.top, 22)
-            .padding(.bottom, 18)
-
-            Rectangle()
-                .fill(Color.sweeplyNavy.opacity(0.07))
-                .frame(height: 1)
-                .padding(.horizontal, 20)
-
-            VStack(alignment: .leading, spacing: 12) {
-                proFeatureRow("Unlimited client profiles", icon: "person.fill")
-                proFeatureRow("Unlimited jobs & invoices", icon: "briefcase.fill")
-                proFeatureRow("Add up to 3 team members", icon: "person.2.fill")
-                proFeatureRow("Smart calendar & recurring jobs", icon: "calendar")
-                proFeatureRow("Expense categorization", icon: "chart.pie.fill")
-                proFeatureRow("Home-screen widgets", icon: "square.grid.2x2.fill")
-            }
-            .padding(.horizontal, 20)
-            .padding(.vertical, 18)
-
-            standardCTAButton
-                .padding(.horizontal, 20)
-                .padding(.bottom, 22)
-        }
-        .background(
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .fill(Color.white)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .stroke(Color.sweeplyNavy.opacity(0.1), lineWidth: 1)
-        )
-        .scaleEffect(standardCardPressed ? 0.98 : 1)
-        .animation(.easeInOut(duration: 0.12), value: standardCardPressed)
-    }
-
-    private var standardCTAButton: some View {
-        Button {
-            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-            standardCardPressed = true
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) { standardCardPressed = false }
-            Task { await purchase(standardPackage) }
-        } label: {
-            HStack(spacing: 8) {
-                if subscriptionManager.isPurchasing {
-                    ProgressView().tint(Color.sweeplyNavy)
-                } else {
-                    Text("Get Standard")
-                        .font(.system(size: 16, weight: .bold))
-                        .foregroundStyle(Color.sweeplyNavy)
-                    if billing == .monthly {
-                        Text("· 1 month free")
-                            .font(.system(size: 13))
-                            .foregroundStyle(Color.sweeplyNavy.opacity(0.5))
-                    }
-                }
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 15)
-            .background(Color.sweeplyNavy.opacity(0.08))
-            .overlay(
-                RoundedRectangle(cornerRadius: 13, style: .continuous)
-                    .stroke(Color.sweeplyNavy.opacity(0.2), lineWidth: 1)
-            )
-            .clipShape(RoundedRectangle(cornerRadius: 13, style: .continuous))
-        }
-        .buttonStyle(.plain)
-        .disabled(subscriptionManager.isPurchasing)
+        .scaleEffect(ctaPressed ? 0.98 : 1)
+        .animation(.easeInOut(duration: 0.12), value: ctaPressed)
     }
 
     // MARK: - Helpers
@@ -562,24 +448,47 @@ struct SubscriptionPaywallView: View {
     // MARK: - Footer
 
     private var footer: some View {
-        VStack(spacing: 14) {
-            Button {
-                Task {
-                    try? await subscriptionManager.restorePurchases()
-                    if subscriptionManager.isSubscribed { dismiss() }
+        VStack(spacing: 10) {
+            HStack(spacing: 0) {
+                footerLink("Terms of Service") {
+                    if let url = URL(string: "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/") {
+                        UIApplication.shared.open(url)
+                    }
                 }
-            } label: {
-                Text("Restore Purchases")
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundStyle(Color.sweeplyNavy.opacity(0.4))
+                footerDot
+                footerLink("Privacy Policy") {
+                    if let url = URL(string: "https://www.apple.com/legal/privacy/") {
+                        UIApplication.shared.open(url)
+                    }
+                }
+                footerDot
+                footerLink("Restore Purchases") {
+                    Task {
+                        try? await subscriptionManager.restorePurchases()
+                        if subscriptionManager.isSubscribed { dismiss() }
+                    }
+                }
             }
-            .buttonStyle(.plain)
-
             Text("Cancel anytime · Auto-renews · Prices in USD")
                 .font(.system(size: 11))
                 .foregroundStyle(Color.sweeplyNavy.opacity(0.25))
                 .multilineTextAlignment(.center)
         }
+    }
+
+    private func footerLink(_ title: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(title)
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(Color.sweeplyNavy.opacity(0.4))
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var footerDot: some View {
+        Text(" · ")
+            .font(.system(size: 12))
+            .foregroundStyle(Color.sweeplyNavy.opacity(0.2))
     }
 }
 
