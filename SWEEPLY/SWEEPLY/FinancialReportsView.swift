@@ -322,56 +322,62 @@ struct FinancialReportsView: View {
         }
     }
 
-    // MARK: - YTD Summary
+    // MARK: - Quick Stats
 
     private var ytdSummarySection: some View {
-        SectionCard {
-            VStack(alignment: .leading, spacing: 14) {
-                Text("YEAR TO DATE · \(currentYear)")
-                    .font(.system(size: 11, weight: .bold))
-                    .foregroundStyle(Color.sweeplyTextSub)
-                    .tracking(0.8)
-
-                TabView(selection: $ytdCarouselIndex) {
-                    ytdStatCell(label: "Revenue",       value: ytdRevenue.currency,           color: Color.sweeplySuccess).tag(0)
-                    ytdStatCell(label: "Expenses",      value: ytdExpenses.currency,           color: Color.sweeplyDestructive).tag(1)
-                    ytdStatCell(label: "Net Profit",    value: ytdNet.currency,                color: ytdNet >= 0 ? Color.sweeplySuccess : Color.sweeplyDestructive).tag(2)
-                    ytdStatCell(label: "Invoices Paid", value: "\(ytdInvoiceCount)",            color: Color.sweeplyAccent).tag(3)
-                }
-                .tabViewStyle(.page(indexDisplayMode: .never))
-                .frame(height: 100)
-
-                HStack(spacing: 6) {
-                    ForEach(0..<4, id: \.self) { idx in
-                        Circle()
-                            .fill(idx == ytdCarouselIndex ? Color.sweeplyNavy : Color.sweeplyBorder.opacity(0.8))
-                            .frame(width: idx == ytdCarouselIndex ? 10 : 6, height: idx == ytdCarouselIndex ? 10 : 6)
-                            .animation(.easeInOut(duration: 0.2), value: ytdCarouselIndex)
-                    }
-                    Spacer()
-                }
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 12) {
+                kpiBox(icon: "dollarsign.circle.fill", title: "Revenue", value: ytdRevenue.currency, color: Color.sweeplySuccess)
+                kpiBox(icon: "minus.circle.fill", title: "Expenses", value: ytdExpenses.currency, color: Color.sweeplyDestructive)
+                kpiBox(icon: "checkmark.circle.fill", title: "Net Profit", value: ytdNet.currency, color: ytdNet >= 0 ? Color.sweeplySuccess : Color.sweeplyDestructive)
+                kpiBox(icon: "doc.text.fill", title: "Invoices Paid", value: "\(ytdInvoiceCount)", color: Color.sweeplyAccent)
+                kpiBox(icon: "person.2.fill", title: "Active Clients", value: "\(activeClientsCount)", color: Color.sweeplyNavy)
+                kpiBox(icon: "briefcase.fill", title: "Jobs This Month", value: "\(jobsThisMonthCount)", color: Color.sweeplyWarning)
+                kpiBox(icon: "exclamationmark.triangle.fill", title: "Outstanding", value: unpaidTotal.currency, color: Color.sweeplyDestructive)
+                kpiBox(icon: "calendar", title: "Scheduled", value: "\(scheduledJobsCount)", color: Color.sweeplySuccess)
             }
+            .padding(.horizontal, 20)
+            .padding(.vertical, 4)
         }
     }
 
-    @State private var ytdCarouselIndex: Int = 0
+    private var activeClientsCount: Int {
+        let sixMonthsAgo = Calendar.current.date(byAdding: .month, value: -6, to: Date()) ?? Date()
+        return jobsStore.jobs.filter { $0.status == .completed && $0.date >= sixMonthsAgo }
+            .map { $0.clientId }.reduce(into: Set<UUID>()) { $0.insert($1) }.count
+    }
 
-    private func ytdStatCell(label: String, value: String, color: Color) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(label)
-                .font(.system(size: 11, weight: .medium))
-                .foregroundStyle(Color.sweeplyTextSub)
+    private var jobsThisMonthCount: Int {
+        let startOfMonth = Calendar.current.dateInterval(of: .month, for: Date())?.start ?? Date()
+        return jobsStore.jobs.filter { $0.date >= startOfMonth && $0.status == .completed }.count
+    }
+
+    private var scheduledJobsCount: Int {
+        jobsStore.jobs.filter { $0.status == .scheduled }.count
+    }
+
+    private func kpiBox(icon: String, title: String, value: String, color: Color) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 6) {
+                Image(systemName: icon)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(color)
+                Text(title)
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundStyle(Color.sweeplyTextSub)
+                    .lineLimit(1)
+            }
             Text(value)
-                .font(.system(size: 17, weight: .bold, design: .rounded))
+                .font(.system(size: 15, weight: .bold, design: .rounded))
                 .foregroundStyle(color)
-                .minimumScaleFactor(0.7)
                 .lineLimit(1)
+                .minimumScaleFactor(0.8)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(width: 110, alignment: .leading)
         .padding(12)
-        .background(color.opacity(0.06))
+        .background(Color.sweeplySurface)
         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(color.opacity(0.15), lineWidth: 1))
+        .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(Color.sweeplyBorder, lineWidth: 1))
     }
 
     // MARK: - Revenue Overview (3M / 6M)
