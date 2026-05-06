@@ -71,9 +71,10 @@ struct FinancialReportsView: View {
             return interval
         case .ytd:
             let startOfYear = cal.date(from: cal.dateComponents([.year], from: now)) ?? now
-            let priorYear = cal.date(byAdding: .year, value: -1, from: startOfYear) ?? startOfYear
-            let priorYearEnd = cal.date(byAdding: .day, value: -1, from: startOfYear) ?? startOfYear
-            return DateInterval(start: priorYear, end: priorYearEnd)
+            guard let priorYearStart = cal.date(byAdding: .year, value: -1, to: startOfYear),
+                  let priorYearEndDate = cal.date(byAdding: .day, value: -1, to: startOfYear)
+            else { return DateInterval(start: startOfYear, end: now) }
+            return DateInterval(start: priorYearStart, end: priorYearEndDate)
         }
     }
 
