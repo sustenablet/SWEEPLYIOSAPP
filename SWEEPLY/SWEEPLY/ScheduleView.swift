@@ -477,7 +477,7 @@ struct ScheduleView: View {
                     let maxCols = assignments.map(\.totalColumns).max() ?? 1
 
                     GeometryReader { geo in
-                        let labelW: CGFloat = 24
+                        let labelW: CGFloat = 28
                         let totalW  = geo.size.width - labelW
                         let colGap: CGFloat = 6
                         // When overlapping jobs exist, shrink each column so the next one peeks ~44pt
@@ -492,7 +492,7 @@ struct ScheduleView: View {
                             VStack(spacing: 0) {
                                 ForEach(hours, id: \.self) { hour in
                                     Text(timelineHourLabel(hour))
-                                        .font(.system(size: 10, weight: .medium, design: .monospaced))
+                                        .font(.system(size: 9, weight: .medium, design: .monospaced))
                                         .foregroundStyle(Color.sweeplyTextSub.opacity(0.55))
                                         .frame(width: labelW, alignment: .leading)
                                         .padding(.top, -5)

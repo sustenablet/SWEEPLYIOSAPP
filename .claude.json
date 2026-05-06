@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "revenuecat": {
+      "url": "https://mcp.revenuecat.ai/mcp",
+      "headers": {
+        "Authorization": "Bearer sk_fWxLoxtbmoicsVypUismWPgEKayHo"
+      }
+    }
+  }
+}

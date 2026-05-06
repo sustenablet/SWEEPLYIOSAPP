@@ -1033,7 +1033,10 @@ private func payButton(for member: TeamMember, status: PaymentStatus, rateAmount
 
         switch member.payRateType {
         case .perJob:
-            return Double(jobs.count) * member.payRateAmount
+            return jobs.reduce(0.0) { acc, job in
+                let rate = member.serviceRates[job.serviceType.rawValue] ?? member.payRateAmount
+                return acc + rate
+            }
         case .perDay:
             let dailyTotals = Dictionary(grouping: jobs) { job in
                 cal.startOfDay(for: job.date)
@@ -1268,7 +1271,6 @@ struct InvoicesListView: View {
         NavigationStack {
             ScrollView(showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 16) {
-                    // Summary strip
                     summaryStrip
 
                     // Status filter pills
@@ -1368,7 +1370,7 @@ struct InvoicesListView: View {
             .searchable(text: $searchText, placement: .navigationBarDrawer(displayMode: .always), prompt: "Search invoices…")
             .background(Color.sweeplyBackground.ignoresSafeArea())
             .navigationTitle("Invoices".translated())
-            .navigationBarTitleDisplayMode(.large)
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button("Close".translated()) { dismiss() }

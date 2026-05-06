@@ -2,14 +2,14 @@ import Foundation
 
 // MARK: - Enums
 
-enum JobStatus: String, CaseIterable, Codable {
+enum JobStatus: String, CaseIterable, Codable, Hashable {
     case scheduled   = "Scheduled"
     case inProgress  = "In Progress"
     case completed   = "Completed"
     case cancelled   = "Cancelled"
 }
 
-enum InvoiceStatus: String, CaseIterable, Codable {
+enum InvoiceStatus: String, CaseIterable, Codable, Hashable {
     case paid    = "Paid"
     case unpaid  = "Unpaid"
     case overdue = "Overdue"
@@ -395,7 +395,7 @@ enum PayRateType: String, CaseIterable, Codable {
     
     var description: String {
         switch self {
-        case .perJob:   return "$X per job completed"
+        case .perJob:   return "Different rate per service type"
         case .perDay:  return "$X for all jobs done that day"
         case .perWeek: return "$X for all jobs done that week"
         case .custom:  return "Owner enters custom amount"
@@ -419,6 +419,8 @@ struct TeamMember: Identifiable, Codable {
     var payRateEnabled: Bool = false
     // Which day of week to pay (Calendar weekday: 1=Sun, 2=Mon…7=Sat). Only used for .perWeek.
     var payDayOfWeek: Int? = nil
+    // Per-service rates: ServiceType.rawValue → dollar amount. Only used for .perJob.
+    var serviceRates: [String: Double] = [:]
     // Supabase auth user ID of the cleaner (set after they accept the invite)
     var cleanerUserId: UUID? = nil
 
@@ -431,8 +433,13 @@ struct TeamMember: Identifiable, Codable {
     }
     
     var payRateDescription: String {
-        guard payRateEnabled && payRateAmount > 0 else { return "Not set" }
-        return "$\(Int(payRateAmount)) \(payRateType.displayName.lowercased())"
+        guard payRateEnabled else { return "Not set" }
+        if payRateType == .perJob {
+            let count = serviceRates.filter { $0.value > 0 }.count
+            return count > 0 ? "\(count) service rate\(count == 1 ? "" : "s") · Per Job" : "Per Job"
+        }
+        guard payRateAmount > 0 else { return "Not set" }
+        return "\(payRateAmount.currency) \(payRateType.displayName.lowercased())"
     }
 }
 

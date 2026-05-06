@@ -435,15 +435,8 @@ struct MemberDetailView: View {
     @State private var localPhone: String
     @State private var isSavingContact = false
 
-    // Pay rate
-    @State private var localRateEnabled: Bool
-    @State private var localRateType: PayRateType
-    @State private var localRateAmountText: String
-    @State private var localPayMethod: PaymentMethod = .cash
-    @State private var localPayDay: Int = 6  // Calendar weekday: 1=Sun, 2=Mon…7=Sat; default Friday
-    @State private var isSavingPayRate = false
-    @State private var payRateSaved = false
-    @State private var paySetupExpanded = false
+    // Pay setup wizard
+    @State private var showPaySetup = false
 
     // History tab (combines Job History + Payment History)
     enum HistoryTab { case jobs, payments }
@@ -472,11 +465,6 @@ struct MemberDetailView: View {
         _localName = State(initialValue: member.name)
         _localEmail = State(initialValue: member.email)
         _localPhone = State(initialValue: member.phone)
-        _localRateEnabled = State(initialValue: member.payRateEnabled)
-        _localRateType = State(initialValue: member.payRateType == .perJob ? .perDay : member.payRateType)
-        _localRateAmountText = State(initialValue: member.payRateAmount > 0 ? String(format: "%.2f", member.payRateAmount) : "")
-        _localPayDay = State(initialValue: member.payDayOfWeek ?? 6)
-        _paySetupExpanded = State(initialValue: !member.payRateEnabled)
     }
 
     // MARK: - Derived
@@ -487,30 +475,19 @@ struct MemberDetailView: View {
         localPhone.trimmingCharacters(in: .whitespaces) != member.phone
     }
 
-    private var parsedRateAmount: Double { Double(localRateAmountText) ?? 0 }
-
-    private var hasPayRateChanges: Bool {
-        localRateEnabled != member.payRateEnabled ||
-        localRateType != member.payRateType ||
-        abs(parsedRateAmount - member.payRateAmount) > 0.001 ||
-        (localRateType == .perWeek && localPayDay != (member.payDayOfWeek ?? 6))
-    }
-
-    private var payRateSummary: String {
-        guard localRateEnabled else { return "" }
-        let via = localPayMethod.rawValue
-        switch localRateType {
-        case .perDay:
-            guard parsedRateAmount > 0 else { return "" }
-            return "\(parsedRateAmount.currency) every day · \(via)"
-        case .perWeek:
-            guard parsedRateAmount > 0 else { return "" }
-            let dayName = weekdayName(localPayDay)
-            return "\(parsedRateAmount.currency) every \(dayName) · \(via)"
-        case .custom:
-            return "Custom arrangement · \(via)"
-        default:
-            return ""
+    private var paySetupSummary: String {
+        guard member.payRateEnabled else { return "Not configured" }
+        let key = "memberPayMethod_\(member.id.uuidString)"
+        let methodRaw = UserDefaults.standard.string(forKey: key) ?? ""
+        let via = PaymentMethod(rawValue: methodRaw)?.rawValue ?? ""
+        let viaSuffix = via.isEmpty ? "" : " · \(via)"
+        switch member.payRateType {
+        case .perJob:
+            let count = member.serviceRates.filter { $0.value > 0 }.count
+            return count > 0 ? "\(count) service rate\(count == 1 ? "" : "s") · Per Job\(viaSuffix)" : "Per Job\(viaSuffix)"
+        case .perDay:   return "\(member.payRateAmount.currency) per day\(viaSuffix)"
+        case .perWeek:  return "\(member.payRateAmount.currency) per week\(viaSuffix)"
+        case .custom:   return "Custom\(viaSuffix)"
         }
     }
 
@@ -627,7 +604,6 @@ struct MemberDetailView: View {
             }
         }
         .onAppear {
-            localPayMethod = loadPayMethod()
             Task { await refreshPayments() }
         }
     }
@@ -866,201 +842,69 @@ struct MemberDetailView: View {
 
     private var paySetupCard: some View {
         VStack(spacing: 0) {
-            // Header
-            HStack {
+            HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("PAY SETUP".translated())
                         .font(.system(size: 10, weight: .bold))
                         .foregroundStyle(Color.sweeplyTextSub)
                         .tracking(0.8)
-                    Text("How you pay this cleaner".translated())
-                        .font(.system(size: 14, weight: .semibold))
+                    Text(member.payRateEnabled ? member.payRateType.displayName : "Not configured")
+                        .font(.system(size: 15, weight: .semibold))
                         .foregroundStyle(Color.sweeplyNavy)
+                    Text(paySetupSummary)
+                        .font(.system(size: 12))
+                        .foregroundStyle(Color.sweeplyTextSub)
+                        .lineLimit(2)
                 }
                 Spacer()
-                Toggle("", isOn: $localRateEnabled)
-                    .tint(Color.sweeplyAccent)
-                    .labelsHidden()
+                Button {
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    showPaySetup = true
+                } label: {
+                    Text(member.payRateEnabled ? "Edit".translated() : "Set Up".translated())
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 7)
+                        .background(Color.sweeplyNavy)
+                        .clipShape(Capsule())
+                }
+                .buttonStyle(.plain)
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 14)
 
-            if localRateEnabled {
+            // Per-job rate breakdown (read-only)
+            if member.payRateEnabled && member.payRateType == .perJob && !member.serviceRates.isEmpty {
                 Divider()
-
-                // Pay type selector (Per Job removed)
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("Pay Type".translated())
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(Color.sweeplyTextSub)
-
-                    HStack(spacing: 8) {
-                        ForEach([PayRateType.perDay, .perWeek, .custom], id: \.self) { type in
-                            Button {
-                                UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                                withAnimation(.easeInOut(duration: 0.15)) { localRateType = type }
-                            } label: {
-                                Text(type.shortLabel)
-                                    .font(.system(size: 13, weight: localRateType == type ? .semibold : .medium))
-                                    .foregroundStyle(localRateType == type ? .white : Color.sweeplyNavy)
-                                    .padding(.horizontal, 12)
-                                    .padding(.vertical, 7)
-                                    .background(localRateType == type ? Color.sweeplyNavy : Color.sweeplyBackground)
-                                    .clipShape(Capsule())
-                                    .overlay(Capsule().stroke(localRateType == type ? Color.clear : Color.sweeplyBorder, lineWidth: 1))
-                            }
-                            .buttonStyle(.plain)
+                VStack(spacing: 0) {
+                    ForEach(Array(member.serviceRates.filter { $0.value > 0 }.sorted { $0.key < $1.key }.enumerated()), id: \.element.key) { idx, entry in
+                        HStack {
+                            Text(entry.key)
+                                .font(.system(size: 13))
+                                .foregroundStyle(Color.sweeplyNavy)
+                            Spacer()
+                            Text(entry.value.currency)
+                                .font(.system(size: 13, weight: .semibold, design: .monospaced))
+                                .foregroundStyle(Color.sweeplyAccent)
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 9)
+                        if idx < member.serviceRates.filter({ $0.value > 0 }).count - 1 {
+                            Divider().padding(.horizontal, 16)
                         }
                     }
                 }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 14)
-
-                // Amount field (not for custom)
-                if localRateType != .custom {
-                    Divider()
-
-                    HStack(spacing: 10) {
-                        Text("$".translated())
-                            .font(.system(size: 18, weight: .bold, design: .monospaced))
-                            .foregroundStyle(Color.sweeplyNavy)
-                        TextField("0.00", text: $localRateAmountText)
-                            .font(.system(size: 18, weight: .bold, design: .monospaced))
-                            .keyboardType(.decimalPad)
-                            .foregroundStyle(Color.sweeplyNavy)
-                        Spacer()
-                        Text("per \(localRateType.perLabel)")
-                            .font(.system(size: 13))
-                            .foregroundStyle(Color.sweeplyTextSub)
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 14)
-                }
-
-                // Pay day picker — only for Per Week
-                if localRateType == .perWeek {
-                    Divider()
-
-                    VStack(alignment: .leading, spacing: 10) {
-                        Text("Pay Day".translated())
-                            .font(.system(size: 12, weight: .semibold))
-                            .foregroundStyle(Color.sweeplyTextSub)
-
-                        // Calendar weekday: 2=Mon, 3=Tue, 4=Wed, 5=Thu, 6=Fri, 7=Sat, 1=Sun
-                        let dayOrder: [(Int, String)] = [
-                            (2,"Mon"),(3,"Tue"),(4,"Wed"),(5,"Thu"),(6,"Fri"),(7,"Sat"),(1,"Sun")
-                        ]
-                        HStack(spacing: 6) {
-                            ForEach(dayOrder, id: \.0) { weekday, label in
-                                Button {
-                                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                                    withAnimation(.easeInOut(duration: 0.15)) { localPayDay = weekday }
-                                } label: {
-                                    Text(label)
-                                        .font(.system(size: 13, weight: localPayDay == weekday ? .bold : .medium))
-                                        .foregroundStyle(localPayDay == weekday ? .white : Color.sweeplyNavy)
-                                        .frame(maxWidth: .infinity)
-                                        .padding(.vertical, 8)
-                                        .background(localPayDay == weekday ? Color.sweeplyNavy : Color.sweeplyBackground)
-                                        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-                                        .overlay(
-                                            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                                                .stroke(localPayDay == weekday ? Color.clear : Color.sweeplyBorder, lineWidth: 1)
-                                        )
-                                }
-                                .buttonStyle(.plain)
-                            }
-                        }
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 14)
-                }
-
-                Divider()
-
-                // Pay method
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("Pay Via".translated())
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(Color.sweeplyTextSub)
-
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 8) {
-                            ForEach(PaymentMethod.allCases, id: \.self) { method in
-                                Button {
-                                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                                    withAnimation(.easeInOut(duration: 0.15)) {
-                                        localPayMethod = method
-                                        savePayMethod(method)
-                                    }
-                                } label: {
-                                    Text(method.rawValue)
-                                        .font(.system(size: 13, weight: localPayMethod == method ? .semibold : .medium))
-                                        .foregroundStyle(localPayMethod == method ? .white : Color.sweeplyNavy)
-                                        .padding(.horizontal, 12)
-                                        .padding(.vertical, 7)
-                                        .background(localPayMethod == method ? Color.sweeplyAccent : Color.sweeplyBackground)
-                                        .clipShape(Capsule())
-                                        .overlay(Capsule().stroke(localPayMethod == method ? Color.clear : Color.sweeplyBorder, lineWidth: 1))
-                                }
-                                .buttonStyle(.plain)
-                            }
-                        }
-                    }
-                }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 14)
-
-                if !payRateSummary.isEmpty {
-                    Divider()
-                    HStack(spacing: 8) {
-                        Image(systemName: "checkmark.circle.fill")
-                            .font(.system(size: 13))
-                            .foregroundStyle(Color.sweeplyAccent)
-                        Text(payRateSummary)
-                            .font(.system(size: 13, weight: .medium))
-                            .foregroundStyle(Color.sweeplyNavy)
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 12)
-                    .background(Color.sweeplyAccent.opacity(0.05))
-                }
-
-                if hasPayRateChanges {
-                    Divider()
-                    Button {
-                        Task { await savePayRate() }
-                    } label: {
-                        Group {
-                            if isSavingPayRate {
-                                ProgressView().tint(.white).scaleEffect(0.85)
-                            } else if payRateSaved {
-                                HStack(spacing: 6) {
-                                    Image(systemName: "checkmark")
-                                        .font(.system(size: 14, weight: .semibold))
-                                    Text("Saved".translated())
-                                        .font(.system(size: 15, weight: .semibold))
-                                }
-                            } else {
-                                Text("Save Pay Setup".translated())
-                                    .font(.system(size: 15, weight: .semibold))
-                            }
-                        }
-                        .foregroundStyle(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
-                        .background(Color.sweeplyNavy)
-                    }
-                    .disabled(isSavingPayRate)
-                }
+                .background(Color.sweeplyAccent.opacity(0.04))
             }
         }
         .background(Color.sweeplySurface)
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(Color.sweeplyBorder, lineWidth: 1))
-        .animation(.easeInOut(duration: 0.2), value: localRateEnabled)
-        .animation(.easeInOut(duration: 0.15), value: hasPayRateChanges)
+        .sheet(isPresented: $showPaySetup) {
+            MemberPaySetupView(member: member)
+                .environment(teamStore)
+        }
     }
 
     // MARK: - Combined History Card (Job History + Payment History)
@@ -1606,45 +1450,11 @@ struct MemberDetailView: View {
         }
     }
 
-    @MainActor
-    private func savePayRate() async {
-        isSavingPayRate = true
-        defer { isSavingPayRate = false }
-        let ok = await teamStore.updatePayRate(
-            id: member.id,
-            rateType: localRateType,
-            amount: localRateType == .custom ? 0 : parsedRateAmount,
-            enabled: localRateEnabled,
-            payDay: localRateType == .perWeek ? localPayDay : nil
-        )
-        if ok {
-            UINotificationFeedbackGenerator().notificationOccurred(.success)
-            payRateSaved = true
-            withAnimation(.easeInOut(duration: 0.25)) {
-                paySetupExpanded = false
-            }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { payRateSaved = false }
-        }
-    }
-
     private func refreshPayments() async {
         guard let ownerId = session.userId else { return }
         isLoadingPayments = true
         payments = await teamStore.loadPayments(memberId: member.id, ownerId: ownerId)
         isLoadingPayments = false
-    }
-
-    // MARK: - Pay Method Persistence (AppStorage equivalent)
-
-    private func loadPayMethod() -> PaymentMethod {
-        let key = "memberPayMethod_\(member.id.uuidString)"
-        let raw = UserDefaults.standard.string(forKey: key) ?? ""
-        return PaymentMethod(rawValue: raw) ?? .cash
-    }
-
-    private func savePayMethod(_ method: PaymentMethod) {
-        let key = "memberPayMethod_\(member.id.uuidString)"
-        UserDefaults.standard.set(method.rawValue, forKey: key)
     }
 
     // MARK: - Payment Note Parser
