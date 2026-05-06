@@ -477,7 +477,7 @@ struct ScheduleView: View {
                     let maxCols = assignments.map(\.totalColumns).max() ?? 1
 
                     GeometryReader { geo in
-                        let labelW: CGFloat = 38
+                        let labelW: CGFloat = 24
                         let totalW  = geo.size.width - labelW
                         let colGap: CGFloat = 6
                         // When overlapping jobs exist, shrink each column so the next one peeks ~44pt
@@ -494,7 +494,7 @@ struct ScheduleView: View {
                                     Text(timelineHourLabel(hour))
                                         .font(.system(size: 10, weight: .medium, design: .monospaced))
                                         .foregroundStyle(Color.sweeplyTextSub.opacity(0.55))
-                                        .frame(width: labelW, alignment: .trailing)
+                                        .frame(width: labelW, alignment: .leading)
                                         .padding(.top, -5)
                                         .frame(height: timelineHourHeight, alignment: .top)
                                 }
