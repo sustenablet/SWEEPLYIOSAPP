@@ -18,6 +18,9 @@ struct FinancialReportsView: View {
     @State private var selectedCashflowBar: String? = nil
     @State private var selectedCashflowValue: Double = 0
     @State private var plPeriod: PLPeriod = .thisMonth
+    @State private var revenueSlide: Int = 0
+    @State private var showForecastPopup: Bool = false
+    @State private var popupWeek: ForecastWeek? = nil
 
     // MARK: - Enums
 
@@ -191,6 +194,24 @@ struct FinancialReportsView: View {
         return days.reduce(0, +) / Double(days.count)
     }
 
+    // MARK: - Navigation helpers
+
+    private func jobsForStatus(_ status: JobStatus) -> [Job] {
+        switch status {
+        case .completed:              return jobsCompleted
+        case .scheduled, .inProgress: return jobsScheduled
+        case .cancelled:              return jobsCancelled
+        }
+    }
+
+    private func invoicesForStatus(_ status: InvoiceStatus) -> [Invoice] {
+        switch status {
+        case .paid:    return paidInvoices
+        case .unpaid:  return unpaidInvoices
+        case .overdue: return overdueInvoices
+        }
+    }
+
     // MARK: - Jobs data
 
     private var jobsThisMonth: [Job] {
@@ -219,6 +240,35 @@ struct FinancialReportsView: View {
             .sorted { $0.revenue > $1.revenue }
     }
 
+    private var completedJobsAll: [Job] { jobsStore.jobs.filter { $0.status == .completed } }
+
+    private var customServiceJobs: [Job] {
+        completedJobsAll.filter {
+            if case .custom = $0.serviceType { return true }
+            return false
+        }
+    }
+
+    private var totalRevenueAllTime: Double { revenueByService.reduce(0) { $0 + $1.revenue } }
+
+    private var avgTicketAllTime: Double {
+        let count = revenueByService.reduce(0) { $0 + $1.jobCount }
+        guard count > 0 else { return 0 }
+        return totalRevenueAllTime / Double(count)
+    }
+
+    private func serviceColor(at index: Int) -> Color {
+        let palette: [Color] = [
+            Color.sweeplyAccent,
+            Color.sweeplyNavy,
+            Color.sweeplyWarning,
+            Color.sweeplySuccess,
+            Color(hue: 0.08, saturation: 0.75, brightness: 0.80),
+            Color(hue: 0.58, saturation: 0.70, brightness: 0.75),
+        ]
+        return palette[index % palette.count]
+    }
+
     // MARK: - Payment methods
 
     private var paymentMethodStats: [(method: PaymentMethod, count: Int, total: Double)] {
@@ -240,7 +290,7 @@ struct FinancialReportsView: View {
                 VStack(alignment: .leading, spacing: 24) {
                     ytdSummarySection
                     sixMonthChartSection
-                    cashflowForecastSection
+                    cashflowSectionWithPopup
                     profitAndLossSection
                     expensesByCategorySection
                     revenueByServiceSection
@@ -276,16 +326,29 @@ struct FinancialReportsView: View {
                     .foregroundStyle(Color.sweeplyTextSub)
                     .tracking(0.8)
 
-                let cols = [GridItem(.flexible()), GridItem(.flexible())]
-                LazyVGrid(columns: cols, spacing: 10) {
-                    ytdStatCell(label: "Revenue",       value: ytdRevenue.currency,           color: Color.sweeplySuccess)
-                    ytdStatCell(label: "Expenses",      value: ytdExpenses.currency,           color: Color.sweeplyDestructive)
-                    ytdStatCell(label: "Net Profit",    value: ytdNet.currency,                color: ytdNet >= 0 ? Color.sweeplySuccess : Color.sweeplyDestructive)
-                    ytdStatCell(label: "Invoices Paid", value: "\(ytdInvoiceCount)",            color: Color.sweeplyAccent)
+                TabView(selection: $ytdCarouselIndex) {
+                    ytdStatCell(label: "Revenue",       value: ytdRevenue.currency,           color: Color.sweeplySuccess).tag(0)
+                    ytdStatCell(label: "Expenses",      value: ytdExpenses.currency,           color: Color.sweeplyDestructive).tag(1)
+                    ytdStatCell(label: "Net Profit",    value: ytdNet.currency,                color: ytdNet >= 0 ? Color.sweeplySuccess : Color.sweeplyDestructive).tag(2)
+                    ytdStatCell(label: "Invoices Paid", value: "\(ytdInvoiceCount)",            color: Color.sweeplyAccent).tag(3)
+                }
+                .tabViewStyle(.page(indexDisplayMode: .never))
+                .frame(height: 100)
+
+                HStack(spacing: 6) {
+                    ForEach(0..<4, id: \.self) { idx in
+                        Circle()
+                            .fill(idx == ytdCarouselIndex ? Color.sweeplyNavy : Color.sweeplyBorder.opacity(0.8))
+                            .frame(width: idx == ytdCarouselIndex ? 10 : 6, height: idx == ytdCarouselIndex ? 10 : 6)
+                            .animation(.easeInOut(duration: 0.2), value: ytdCarouselIndex)
+                    }
+                    Spacer()
                 }
             }
         }
     }
+
+    @State private var ytdCarouselIndex: Int = 0
 
     private func ytdStatCell(label: String, value: String, color: Color) -> some View {
         VStack(alignment: .leading, spacing: 4) {
@@ -495,7 +558,36 @@ struct FinancialReportsView: View {
                         .foregroundStyle(isSelected ? Color.sweeplyAccent : Color.sweeplyAccent.opacity(0.50))
                         .cornerRadius(4)
                     }
-                    .chartXSelection(value: $selectedForecastWeekLabel)
+                    .chartOverlay { proxy in
+                        GeometryReader { geo in
+                            Rectangle()
+                                .fill(.clear)
+                                .contentShape(Rectangle())
+                                .gesture(
+                                    DragGesture(minimumDistance: 0)
+                                        .onEnded { value in
+                                            let x = value.location.x
+                                            if let weekLabel: String = proxy.value(atX: x) {
+                                                withAnimation(.easeInOut(duration: 0.15)) {
+                                                    selectedForecastWeekLabel = weekLabel
+                                                }
+                                            }
+                                        }
+                                )
+                                .simultaneousGesture(
+                                    LongPressGesture(minimumDuration: 0.5)
+                                        .onEnded { _ in
+                                            let x = geo.frame(in: .local).midX
+                                            if let weekLabel: String = proxy.value(atX: x) {
+                                                if let week = cashflowForecast.first(where: { $0.weekLabel == weekLabel }) {
+                                                    popupWeek = week
+                                                    showForecastPopup = true
+                                                }
+                                            }
+                                        }
+                                )
+                        }
+                    }
                     .chartXAxis {
                         AxisMarks(values: .automatic) {
                             AxisValueLabel()
@@ -532,6 +624,130 @@ struct FinancialReportsView: View {
                     .padding(.top, 4)
                 }
             }
+        }
+    }
+
+    private var cashflowSectionWithPopup: some View {
+        ZStack {
+            cashflowForecastSection
+
+            if showForecastPopup, let week = popupWeek {
+                forecastPopupOverlay(week: week)
+            }
+        }
+    }
+
+    // MARK: - Forecast Popup
+
+    @ViewBuilder
+    private func forecastPopupOverlay(week: ForecastWeek) -> some View {
+        ZStack {
+            // Blurred background
+            Color.sweeplyNavy.opacity(0.35)
+                .ignoresSafeArea()
+                .blur(radius: 8)
+
+            // Popup card
+            VStack(spacing: 20) {
+                // Header
+                VStack(spacing: 4) {
+                    Text(week.weekLabel)
+                        .font(.system(size: 18, weight: .bold))
+                        .foregroundStyle(Color.sweeplyNavy)
+                    
+                    Text(week.weekStart, style: .date)
+                        .font(.system(size: 12))
+                        .foregroundStyle(Color.sweeplyTextSub)
+                }
+
+                Divider()
+
+                // Breakdown
+                VStack(spacing: 16) {
+                    // Scheduled Jobs
+                    HStack(spacing: 12) {
+                        ZStack {
+                            Circle()
+                                .fill(Color.sweeplyNavy.opacity(0.10))
+                                .frame(width: 36, height: 36)
+                            Image(systemName: "calendar.badge.clock")
+                                .font(.system(size: 14))
+                                .foregroundStyle(Color.sweeplyNavy)
+                        }
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Scheduled Jobs")
+                                .font(.system(size: 13, weight: .medium))
+                                .foregroundStyle(Color.sweeplyNavy)
+                            Text("\(week.jobCount) job\(week.jobCount == 1 ? "" : "s")")
+                                .font(.system(size: 11))
+                                .foregroundStyle(Color.sweeplyTextSub)
+                        }
+                        Spacer()
+                        Text(week.jobsAmount.currency)
+                            .font(.system(size: 15, weight: .bold, design: .monospaced))
+                            .foregroundStyle(Color.sweeplyNavy)
+                    }
+
+                    // Outstanding Invoices
+                    HStack(spacing: 12) {
+                        ZStack {
+                            Circle()
+                                .fill(Color.sweeplyAccent.opacity(0.10))
+                                .frame(width: 36, height: 36)
+                            Image(systemName: "doc.text.fill")
+                                .font(.system(size: 14))
+                                .foregroundStyle(Color.sweeplyAccent)
+                        }
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Outstanding Invoices")
+                                .font(.system(size: 13, weight: .medium))
+                                .foregroundStyle(Color.sweeplyNavy)
+                            Text("\(week.invoiceCount) invoice\(week.invoiceCount == 1 ? "" : "s")")
+                                .font(.system(size: 11))
+                                .foregroundStyle(Color.sweeplyTextSub)
+                        }
+                        Spacer()
+                        Text(week.invoicesAmount.currency)
+                            .font(.system(size: 15, weight: .bold, design: .monospaced))
+                            .foregroundStyle(Color.sweeplyAccent)
+                    }
+                }
+
+                Divider()
+
+                // Total
+                HStack {
+                    Text("Total Projected")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(Color.sweeplyNavy)
+                    Spacer()
+                    Text(week.total.currency)
+                        .font(.system(size: 18, weight: .bold, design: .monospaced))
+                        .foregroundStyle(Color.sweeplySuccess)
+                }
+
+                // Close button
+                Button {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        showForecastPopup = false
+                        popupWeek = nil
+                    }
+                } label: {
+                    Text("Close")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                        .background(Color.sweeplyNavy)
+                        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                }
+            }
+            .padding(24)
+            .background(Color.sweeplySurface)
+            .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(Color.sweeplyBorder, lineWidth: 1))
+            .shadow(color: Color.sweeplyNavy.opacity(0.15), radius: 20, x: 0, y: 10)
+            .padding(.horizontal, 32)
         }
     }
 
@@ -695,15 +911,36 @@ struct FinancialReportsView: View {
 
     private var revenueByServiceSection: some View {
         SectionCard {
-            VStack(alignment: .leading, spacing: 16) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("REVENUE BY SERVICE")
-                        .font(.system(size: 11, weight: .bold))
+            VStack(alignment: .leading, spacing: 14) {
+
+                // Header + View button
+                HStack(alignment: .firstTextBaseline) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("REVENUE BY SERVICE")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundStyle(Color.sweeplyTextSub)
+                            .tracking(0.8)
+                        Text("All completed jobs")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundStyle(Color.sweeplyNavy)
+                    }
+                    Spacer()
+                    NavigationLink {
+                        RevenueDetailView(
+                            revenueByService: revenueByService,
+                            completedJobs: completedJobsAll,
+                            customJobs: customServiceJobs,
+                            serviceColorAt: serviceColor
+                        )
+                    } label: {
+                        HStack(spacing: 3) {
+                            Text("View")
+                            Image(systemName: "chevron.right")
+                        }
+                        .font(.system(size: 12, weight: .medium))
                         .foregroundStyle(Color.sweeplyTextSub)
-                        .tracking(0.8)
-                    Text("All completed jobs")
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(Color.sweeplyNavy)
+                    }
+                    .buttonStyle(.plain)
                 }
 
                 if revenueByService.isEmpty {
@@ -716,46 +953,201 @@ struct FinancialReportsView: View {
                     }
                     .padding(.vertical, 8)
                 } else {
-                    let maxRev = revenueByService.map { $0.revenue }.max() ?? 1
-                    VStack(spacing: 12) {
-                        ForEach(revenueByService, id: \.service) { item in
-                            HStack(spacing: 12) {
-                                ZStack {
-                                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                                        .fill(Color.sweeplyAccent.opacity(0.10))
-                                        .frame(width: 32, height: 32)
-                                    Image(systemName: "sparkles")
-                                        .font(.system(size: 12, weight: .medium))
-                                        .foregroundStyle(Color.sweeplyAccent)
-                                }
-                                VStack(alignment: .leading, spacing: 4) {
-                                    HStack {
-                                        Text(item.service)
-                                            .font(.system(size: 13, weight: .medium))
-                                            .foregroundStyle(Color.sweeplyNavy)
-                                            .lineLimit(1)
-                                        Spacer()
-                                        Text("\(item.jobCount) job\(item.jobCount == 1 ? "" : "s")")
-                                            .font(.system(size: 11, weight: .medium))
-                                            .foregroundStyle(Color.sweeplyTextSub)
-                                        Text(item.revenue.currency)
-                                            .font(.system(size: 13, weight: .semibold, design: .monospaced))
-                                            .foregroundStyle(Color.sweeplyNavy)
-                                    }
-                                    GeometryReader { geo in
-                                        ZStack(alignment: .leading) {
-                                            Capsule().fill(Color.sweeplyBorder.opacity(0.6)).frame(height: 5)
-                                            Capsule().fill(Color.sweeplyAccent)
-                                                .frame(width: geo.size.width * CGFloat(item.revenue / maxRev), height: 5)
-                                        }
-                                    }
-                                    .frame(height: 5)
-                                }
+                    TabView(selection: $revenueSlide) {
+                        revenueServiceBarsSlide.tag(0)
+                        revenueAddOnsSlide.tag(1)
+                        revenuePieSlide.tag(2)
+                    }
+                    .tabViewStyle(.page(indexDisplayMode: .never))
+                    .frame(height: 210)
+
+                    HStack(spacing: 8) {
+                        ForEach(0..<3, id: \.self) { idx in
+                            Capsule()
+                                .fill(idx == revenueSlide ? Color.sweeplyNavy : Color.sweeplyBorder.opacity(0.8))
+                                .frame(width: idx == revenueSlide ? 18 : 8, height: 8)
+                                .animation(.easeInOut(duration: 0.2), value: revenueSlide)
+                        }
+                        Spacer()
+                        Text("\(revenueSlide + 1) / 3")
+                            .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                            .foregroundStyle(Color.sweeplyTextSub)
+                    }
+                }
+            }
+        }
+    }
+
+    // Slide 1 — Revenue bars
+    private var revenueServiceBarsSlide: some View {
+        let maxRev = revenueByService.map { $0.revenue }.max() ?? 1
+        return VStack(spacing: 10) {
+            ForEach(Array(revenueByService.prefix(4).enumerated()), id: \.element.service) { idx, item in
+                HStack(spacing: 10) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 7, style: .continuous)
+                            .fill(serviceColor(at: idx).opacity(0.12))
+                            .frame(width: 30, height: 30)
+                        Image(systemName: serviceIconFor(item.service))
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundStyle(serviceColor(at: idx))
+                    }
+                    VStack(alignment: .leading, spacing: 3) {
+                        HStack {
+                            Text(item.service)
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundStyle(Color.sweeplyNavy)
+                                .lineLimit(1)
+                            Spacer()
+                            Text("\(item.jobCount)")
+                                .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                                .foregroundStyle(Color.sweeplyTextSub)
+                            Text(item.revenue.currency)
+                                .font(.system(size: 12, weight: .bold, design: .monospaced))
+                                .foregroundStyle(serviceColor(at: idx))
+                        }
+                        GeometryReader { geo in
+                            ZStack(alignment: .leading) {
+                                Capsule().fill(Color.sweeplyBorder.opacity(0.5)).frame(height: 5)
+                                Capsule().fill(serviceColor(at: idx))
+                                    .frame(width: geo.size.width * CGFloat(item.revenue / maxRev), height: 5)
                             }
+                        }
+                        .frame(height: 5)
+                    }
+                }
+            }
+        }
+        .padding(.top, 4)
+    }
+
+    // Slide 2 — Add-ons & extras (custom service jobs)
+    private var revenueAddOnsSlide: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack {
+                Text("EXTRAS & ADD-ONS")
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundStyle(Color.sweeplyTextSub)
+                    .tracking(0.6)
+                Spacer()
+                Text("\(customServiceJobs.count) job\(customServiceJobs.count == 1 ? "" : "s")")
+                    .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                    .foregroundStyle(Color.sweeplyAccent)
+            }
+            .padding(.bottom, 10)
+
+            if customServiceJobs.isEmpty {
+                VStack(spacing: 8) {
+                    Image(systemName: "plus.circle.dashed")
+                        .font(.system(size: 28))
+                        .foregroundStyle(Color.sweeplyTextSub.opacity(0.3))
+                    Text("No custom or add-on services yet")
+                        .font(.system(size: 13))
+                        .foregroundStyle(Color.sweeplyTextSub)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                let addOnTotal = customServiceJobs.reduce(0) { $0 + $1.price }
+                HStack(spacing: 0) {
+                    statChip(label: "Revenue", value: addOnTotal.currency, color: Color.sweeplyAccent)
+                    Divider().frame(height: 36).padding(.horizontal, 12)
+                    statChip(label: "Avg Ticket",
+                             value: (addOnTotal / Double(customServiceJobs.count)).currency,
+                             color: Color.sweeplyNavy)
+                }
+                .padding(.bottom, 10)
+
+                VStack(spacing: 6) {
+                    ForEach(customServiceJobs.sorted { $0.price > $1.price }.prefix(3)) { job in
+                        HStack(spacing: 10) {
+                            ZStack {
+                                Circle().fill(Color.sweeplyAccent.opacity(0.10)).frame(width: 28, height: 28)
+                                Image(systemName: "plus.circle.fill")
+                                    .font(.system(size: 11))
+                                    .foregroundStyle(Color.sweeplyAccent)
+                            }
+                            VStack(alignment: .leading, spacing: 1) {
+                                Text(job.serviceType.rawValue)
+                                    .font(.system(size: 12, weight: .semibold))
+                                    .foregroundStyle(Color.sweeplyNavy)
+                                    .lineLimit(1)
+                                Text(job.clientName)
+                                    .font(.system(size: 11))
+                                    .foregroundStyle(Color.sweeplyTextSub)
+                                    .lineLimit(1)
+                            }
+                            Spacer()
+                            Text(job.price.currency)
+                                .font(.system(size: 13, weight: .bold, design: .monospaced))
+                                .foregroundStyle(Color.sweeplyNavy)
                         }
                     }
                 }
             }
+        }
+        .padding(.top, 4)
+    }
+
+    // Slide 3 — Pie / donut chart
+    @ViewBuilder
+    private var revenuePieSlide: some View {
+        if #available(iOS 17.0, *) {
+            HStack(alignment: .center, spacing: 16) {
+                Chart(Array(revenueByService.prefix(6).enumerated()), id: \.element.service) { idx, item in
+                    SectorMark(
+                        angle: .value("Jobs", item.jobCount),
+                        innerRadius: .ratio(0.54),
+                        angularInset: 1.5
+                    )
+                    .foregroundStyle(serviceColor(at: idx))
+                    .cornerRadius(3)
+                }
+                .frame(width: 120, height: 120)
+
+                VStack(alignment: .leading, spacing: 7) {
+                    ForEach(Array(revenueByService.prefix(5).enumerated()), id: \.element.service) { idx, item in
+                        let total = revenueByService.reduce(0) { $0 + $1.jobCount }
+                        let pct = total > 0 ? Int(Double(item.jobCount) / Double(total) * 100) : 0
+                        HStack(spacing: 6) {
+                            Circle().fill(serviceColor(at: idx)).frame(width: 7, height: 7)
+                            Text(item.service)
+                                .font(.system(size: 11, weight: .medium))
+                                .foregroundStyle(Color.sweeplyNavy)
+                                .lineLimit(1)
+                            Spacer()
+                            Text("\(pct)%")
+                                .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                                .foregroundStyle(Color.sweeplyTextSub)
+                        }
+                    }
+                }
+                .frame(maxWidth: .infinity)
+            }
+            .padding(.top, 8)
+        } else {
+            revenueServiceBarsSlide
+        }
+    }
+
+    private func statChip(label: String, value: String, color: Color) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(label)
+                .font(.system(size: 10, weight: .medium))
+                .foregroundStyle(Color.sweeplyTextSub)
+            Text(value)
+                .font(.system(size: 14, weight: .bold, design: .monospaced))
+                .foregroundStyle(color)
+        }
+    }
+
+    private func serviceIconFor(_ service: String) -> String {
+        switch service {
+        case "Standard Clean": return "house.fill"
+        case "Deep Clean":     return "sparkles"
+        case "Move In/Out":    return "shippingbox.fill"
+        case "Post Construction": return "hammer.fill"
+        case "Office Clean":  return "building.2.fill"
+        default:               return "wrench.and.screwdriver.fill"
         }
     }
 
@@ -775,15 +1167,32 @@ struct FinancialReportsView: View {
                 }
 
                 HStack(spacing: 10) {
-                    invoiceStatBox(label: "Completed", count: jobsCompleted.count,
-                                   total: jobsCompleted.reduce(0) { $0 + $1.price },
-                                   color: Color.sweeplySuccess)
-                    invoiceStatBox(label: "Scheduled",  count: jobsScheduled.count,
-                                   total: jobsScheduled.reduce(0) { $0 + $1.price },
-                                   color: Color.sweeplyAccent)
-                    invoiceStatBox(label: "Cancelled",  count: jobsCancelled.count,
-                                   total: nil,
-                                   color: Color.sweeplyDestructive)
+                    NavigationLink {
+                        JobsDetailListView(status: .completed, jobs: jobsCompleted)
+                    } label: {
+                        invoiceStatBox(label: "Completed", count: jobsCompleted.count,
+                                       total: jobsCompleted.reduce(0) { $0 + $1.price },
+                                       color: Color.sweeplySuccess, showChevron: true)
+                    }
+                    .buttonStyle(.plain)
+
+                    NavigationLink {
+                        JobsDetailListView(status: .scheduled, jobs: jobsScheduled)
+                    } label: {
+                        invoiceStatBox(label: "Scheduled", count: jobsScheduled.count,
+                                       total: jobsScheduled.reduce(0) { $0 + $1.price },
+                                       color: Color.sweeplyAccent, showChevron: true)
+                    }
+                    .buttonStyle(.plain)
+
+                    NavigationLink {
+                        JobsDetailListView(status: .cancelled, jobs: jobsCancelled)
+                    } label: {
+                        invoiceStatBox(label: "Cancelled", count: jobsCancelled.count,
+                                       total: nil,
+                                       color: Color.sweeplyDestructive, showChevron: true)
+                    }
+                    .buttonStyle(.plain)
                 }
 
                 if jobsCompleted.count + jobsCancelled.count > 0 {
@@ -822,9 +1231,29 @@ struct FinancialReportsView: View {
                     .tracking(0.8)
 
                 HStack(spacing: 10) {
-                    invoiceStatBox(label: "Paid",        count: paidInvoices.count,    total: paidTotal,    color: Color.sweeplySuccess)
-                    invoiceStatBox(label: "Outstanding", count: unpaidInvoices.count,   total: unpaidTotal,  color: Color.sweeplyWarning)
-                    invoiceStatBox(label: "Overdue",     count: overdueInvoices.count,  total: overdueTotal, color: Color.sweeplyDestructive)
+                    NavigationLink {
+                        InvoicesDetailListView(status: .paid, invoices: paidInvoices)
+                    } label: {
+                        invoiceStatBox(label: "Paid", count: paidInvoices.count,
+                                       total: paidTotal, color: Color.sweeplySuccess, showChevron: true)
+                    }
+                    .buttonStyle(.plain)
+
+                    NavigationLink {
+                        InvoicesDetailListView(status: .unpaid, invoices: unpaidInvoices)
+                    } label: {
+                        invoiceStatBox(label: "Outstanding", count: unpaidInvoices.count,
+                                       total: unpaidTotal, color: Color.sweeplyWarning, showChevron: true)
+                    }
+                    .buttonStyle(.plain)
+
+                    NavigationLink {
+                        InvoicesDetailListView(status: .overdue, invoices: overdueInvoices)
+                    } label: {
+                        invoiceStatBox(label: "Overdue", count: overdueInvoices.count,
+                                       total: overdueTotal, color: Color.sweeplyDestructive, showChevron: true)
+                    }
+                    .buttonStyle(.plain)
                 }
 
                 // Collection rate
@@ -921,10 +1350,20 @@ struct FinancialReportsView: View {
     private var paymentMethodsSection: some View {
         SectionCard {
             VStack(alignment: .leading, spacing: 16) {
-                Text("PAYMENT METHODS")
-                    .font(.system(size: 11, weight: .bold))
-                    .foregroundStyle(Color.sweeplyTextSub)
-                    .tracking(0.8)
+                HStack {
+                    Text("PAYMENT METHODS")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundStyle(Color.sweeplyTextSub)
+                        .tracking(0.8)
+                    Spacer()
+                    if !paymentMethodStats.isEmpty {
+                        NavigationLink(destination: PaymentMethodsListView()) {
+                            Text("View All")
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundStyle(Color.sweeplyAccent)
+                        }
+                    }
+                }
 
                 if paymentMethodStats.isEmpty {
                     HStack(spacing: 10) {
@@ -981,11 +1420,20 @@ struct FinancialReportsView: View {
 
     // MARK: - Shared Helpers
 
-    private func invoiceStatBox(label: String, count: Int, total: Double?, color: Color) -> some View {
+    private func invoiceStatBox(label: String, count: Int, total: Double?, color: Color, showChevron: Bool = false) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: 4) {
+            HStack(alignment: .center, spacing: 4) {
                 Circle().fill(color).frame(width: 6, height: 6)
-                Text(label).font(.system(size: 11, weight: .medium)).foregroundStyle(Color.sweeplyTextSub)
+                Text(label)
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(Color.sweeplyTextSub)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
+                if showChevron {
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 9, weight: .semibold))
+                        .foregroundStyle(Color.sweeplyTextSub.opacity(0.4))
+                }
             }
             Text("\(count)")
                 .font(.system(size: 20, weight: .bold, design: .rounded))
@@ -994,6 +1442,8 @@ struct FinancialReportsView: View {
                 Text(t.currency)
                     .font(.system(size: 11, weight: .medium, design: .monospaced))
                     .foregroundStyle(color)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
             } else {
                 Text("—")
                     .font(.system(size: 11, weight: .medium))
