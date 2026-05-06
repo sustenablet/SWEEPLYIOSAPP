@@ -602,53 +602,99 @@ struct FinancialReportsView: View {
                             .monospacedDigit()
                             .contentTransition(.numericText())
                             .animation(.easeInOut(duration: 0.2), value: overviewPeriodRaw)
-                        Text("avg".translated() + " \(avg.currency) / " + "month".translated())
-                            .font(.system(size: 11))
-                            .foregroundStyle(Color.sweeplyTextSub)
+                        if overviewPeriod != .oneMonth {
+                            Text("avg".translated() + " \(avg.currency) / " + "month".translated())
+                                .font(.system(size: 11))
+                                .foregroundStyle(Color.sweeplyTextSub)
+                        }
                     }
                     Spacer()
-                    if let trend = overviewTrend { overviewTrendBadge(trend: trend) }
+                    if overviewPeriod != .oneMonth, let trend = overviewTrend { overviewTrendBadge(trend: trend) }
                 }
 
-                Chart {
-                    ForEach(overviewBarData) { bar in
-                        AreaMark(x: .value("Month", bar.month), y: .value("Collected", bar.collected), series: .value("S", "collected"))
-                            .foregroundStyle(LinearGradient(colors: [Color.sweeplyAccent.opacity(0.22), Color.sweeplyAccent.opacity(0.02)], startPoint: .top, endPoint: .bottom))
-                            .interpolationMethod(.catmullRom)
-                        LineMark(x: .value("Month", bar.month), y: .value("Collected", bar.collected), series: .value("S", "collected"))
-                            .foregroundStyle(Color.sweeplyAccent)
-                            .lineStyle(StrokeStyle(lineWidth: 2.5))
-                            .interpolationMethod(.catmullRom)
-                        PointMark(x: .value("Month", bar.month), y: .value("Collected", bar.collected))
-                            .foregroundStyle(Color.sweeplyAccent)
-                            .symbolSize(selectedOverviewMonth == bar.month ? 64 : 28)
-                        LineMark(x: .value("Month", bar.month), y: .value("Outstanding", bar.scheduled), series: .value("S", "outstanding"))
-                            .foregroundStyle(Color.sweeplyNavy.opacity(0.3))
-                            .lineStyle(StrokeStyle(lineWidth: 1.5, dash: [5, 3]))
-                            .interpolationMethod(.catmullRom)
+                if overviewPeriod == .oneMonth, let bar = overviewBarData.first {
+                    // Single month view - show collected vs outstanding as bar
+                    VStack(spacing: 12) {
+                        HStack(spacing: 16) {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Collected".translated())
+                                    .font(.system(size: 11, weight: .medium))
+                                    .foregroundStyle(Color.sweeplyTextSub)
+                                Text(bar.collected.currency)
+                                    .font(.system(size: 18, weight: .bold, design: .rounded))
+                                    .foregroundStyle(Color.sweeplyAccent)
+                                    .monospacedDigit()
+                            }
+                            Spacer()
+                            VStack(alignment: .trailing, spacing: 4) {
+                                Text("Outstanding".translated())
+                                    .font(.system(size: 11, weight: .medium))
+                                    .foregroundStyle(Color.sweeplyTextSub)
+                                Text(bar.scheduled.currency)
+                                    .font(.system(size: 18, weight: .bold, design: .rounded))
+                                    .foregroundStyle(Color.sweeplyNavy.opacity(0.6))
+                                    .monospacedDigit()
+                            }
+                        }
+                        
+                        let maxAmount = max(bar.collected, bar.scheduled, 1)
+                        GeometryReader { geo in
+                            HStack(spacing: 8) {
+                                RoundedRectangle(cornerRadius: 6)
+                                    .fill(Color.sweeplyAccent)
+                                    .frame(width: geo.size.width * CGFloat(bar.collected / maxAmount) - 4)
+                                    .frame(height: 24)
+                                RoundedRectangle(cornerRadius: 6)
+                                    .fill(Color.sweeplyNavy.opacity(0.3))
+                                    .frame(width: geo.size.width * CGFloat(bar.scheduled / maxAmount) - 4)
+                                    .frame(height: 24)
+                            }
+                        }
+                        .frame(height: 24)
                     }
-                }
-                .chartXAxis {
-                    AxisMarks(values: .automatic) {
-                        AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5)).foregroundStyle(Color.sweeplyBorder.opacity(0.7))
-                        AxisValueLabel().font(.system(size: 10, weight: .medium)).foregroundStyle(Color.sweeplyTextSub)
+                } else {
+                    // Multi-month view - show trend chart
+                    Chart {
+                        ForEach(overviewBarData) { bar in
+                            AreaMark(x: .value("Month", bar.month), y: .value("Collected", bar.collected), series: .value("S", "collected"))
+                                .foregroundStyle(LinearGradient(colors: [Color.sweeplyAccent.opacity(0.22), Color.sweeplyAccent.opacity(0.02)], startPoint: .top, endPoint: .bottom))
+                                .interpolationMethod(.catmullRom)
+                            LineMark(x: .value("Month", bar.month), y: .value("Collected", bar.collected), series: .value("S", "collected"))
+                                .foregroundStyle(Color.sweeplyAccent)
+                                .lineStyle(StrokeStyle(lineWidth: 2.5))
+                                .interpolationMethod(.catmullRom)
+                            PointMark(x: .value("Month", bar.month), y: .value("Collected", bar.collected))
+                                .foregroundStyle(Color.sweeplyAccent)
+                                .symbolSize(selectedOverviewMonth == bar.month ? 64 : 28)
+                            LineMark(x: .value("Month", bar.month), y: .value("Outstanding", bar.scheduled), series: .value("S", "outstanding"))
+                                .foregroundStyle(Color.sweeplyNavy.opacity(0.3))
+                                .lineStyle(StrokeStyle(lineWidth: 1.5, dash: [5, 3]))
+                                .interpolationMethod(.catmullRom)
+                        }
                     }
-                }
-                .chartYAxis {
-                    AxisMarks(values: .automatic(desiredCount: 4)) { value in
-                        AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5)).foregroundStyle(Color.sweeplyBorder.opacity(0.5))
-                        AxisValueLabel {
-                            if let d = value.as(Double.self) {
-                                Text(d.shortCurrency).font(.system(size: 9, weight: .medium)).foregroundStyle(Color.sweeplyTextSub)
+                    .chartXAxis {
+                        AxisMarks(values: .automatic) {
+                            AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5)).foregroundStyle(Color.sweeplyBorder.opacity(0.7))
+                            AxisValueLabel().font(.system(size: 10, weight: .medium)).foregroundStyle(Color.sweeplyTextSub)
+                        }
+                    }
+                    .chartYAxis {
+                        AxisMarks(values: .automatic(desiredCount: 4)) { value in
+                            AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5)).foregroundStyle(Color.sweeplyBorder.opacity(0.5))
+                            AxisValueLabel {
+                                if let d = value.as(Double.self) {
+                                    Text(d.shortCurrency).font(.system(size: 9, weight: .medium)).foregroundStyle(Color.sweeplyTextSub)
+                                }
                             }
                         }
                     }
+                    .chartXSelection(value: $selectedOverviewMonth)
+                    .frame(height: 160)
+                    .animation(.easeInOut(duration: 0.3), value: overviewPeriodRaw)
                 }
-                .chartXSelection(value: $selectedOverviewMonth)
-                .frame(height: 160)
-                .animation(.easeInOut(duration: 0.3), value: overviewPeriodRaw)
 
-                if let month = selectedOverviewMonth,
+                if overviewPeriod != .oneMonth,
+                   let month = selectedOverviewMonth,
                    let bar = overviewBarData.first(where: { $0.month == month }) {
                     HStack(spacing: 0) {
                         VStack(alignment: .leading, spacing: 2) {
@@ -713,9 +759,6 @@ struct FinancialReportsView: View {
                             .monospacedDigit()
                             .contentTransition(.numericText())
                             .animation(.easeInOut(duration: 0.2), value: forecastWeekCount)
-                        Text("projected over %d weeks · avg %@/wk".translated(with: forecastWeekCount, forecastAvgWeekly.currency))
-                            .font(.system(size: 11))
-                            .foregroundStyle(Color.sweeplyTextSub)
                     }
                     Spacer()
                     if let sel = selectedForecastWeek {
@@ -1086,14 +1129,20 @@ struct FinancialReportsView: View {
 
             // Expenses by Category - connected bottom part
             VStack(alignment: .leading, spacing: 16) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("EXPENSES BY CATEGORY".translated())
-                        .font(.system(size: 11, weight: .bold))
-                        .foregroundStyle(Color.sweeplyTextSub)
-                        .tracking(0.8)
-                    Text(plPeriod.rawValue.translated())
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(Color.sweeplyNavy)
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("EXPENSES BY CATEGORY".translated())
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundStyle(Color.sweeplyTextSub)
+                            .tracking(0.8)
+                        Text(plPeriod.rawValue.translated())
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundStyle(Color.sweeplyNavy)
+                    }
+                    Spacer()
+                    periodToggle(options: PLPeriod.allCases.map { $0.rawValue }, selected: plPeriod.rawValue) { raw in
+                        if let p = PLPeriod(rawValue: raw) { plPeriod = p }
+                    }
                 }
 
                 let categories   = expenseStore.byCategory(in: plPeriodInterval)

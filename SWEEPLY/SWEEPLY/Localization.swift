@@ -716,6 +716,7 @@ enum Localization {
     "Are you sure you want to delete this job?": ["pt-BR": "Tem certeza que deseja excluir este job?"],
     "Due": ["pt-BR": "Vencimento"],
     "No expenses recorded this period.": ["pt-BR": "Nenhuma despesa registrada neste período."],
+    "Outstanding": ["pt-BR": "Pendente"],
 
     // MARK: - RevenueDetailView
     "Revenue by Service": ["pt-BR": "Faturamento por Serviço"],
