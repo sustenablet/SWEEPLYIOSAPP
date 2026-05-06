@@ -454,9 +454,7 @@
 				INFOPLIST_KEY_NSFaceIDUsageDescription = "Sweeply uses Face ID to protect your business data when the app lock is enabled.";
 				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "Sweeply needs your location to show your position on the map and help you navigate to job sites, even when the app is in the background.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Sweeply needs your location to show your position on the map and help you navigate to job sites.";
-				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Sweeply uses your microphone so you can dictate messages to the AI assistant.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Sweeply lets you attach photos to jobs for better job documentation.";
-				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "Sweeply uses speech recognition to transcribe your voice into text for the AI assistant.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
@@ -497,9 +495,7 @@
 				INFOPLIST_KEY_NSFaceIDUsageDescription = "Sweeply uses Face ID to protect your business data when the app lock is enabled.";
 				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "Sweeply needs your location to show your position on the map and help you navigate to job sites, even when the app is in the background.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Sweeply needs your location to show your position on the map and help you navigate to job sites.";
-				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Sweeply uses your microphone so you can dictate messages to the AI assistant.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Sweeply lets you attach photos to jobs for better job documentation.";
-				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "Sweeply uses speech recognition to transcribe your voice into text for the AI assistant.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";

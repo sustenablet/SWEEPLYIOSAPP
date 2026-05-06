@@ -156,6 +156,7 @@ struct ClientsView: View {
                         .padding(.top, 12)
                         .padding(.bottom, 100)
                 }
+                .frame(maxWidth: .infinity)
             }
             .background(Color.sweeplyBackground.ignoresSafeArea())
             .navigationBarHidden(true)

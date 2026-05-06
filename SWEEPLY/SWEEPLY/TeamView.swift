@@ -35,20 +35,16 @@ struct TeamView: View {
                         if !session.activeMemberships.isEmpty {
                             ForEach(session.activeMemberships) { (membership: TeamMembership) in
                                 Button {
-                                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                    UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                                     session.switchToMembership(membership)
                                 } label: {
-                                    let viewAsText = "View as \(membership.businessName)"
-                                    HStack(spacing: 6) {
-                                        Image(systemName: "person.crop.circle.badge.arrow.forward")
-                                            .font(.system(size: 12))
-                                            .foregroundStyle(Color.sweeplyAccent)
-                                        Text(viewAsText)
-                                            .font(.system(size: 13, weight: .medium))
-                                            .foregroundStyle(Color.sweeplyAccent)
-                                    }
-                                    .padding(.horizontal, 20)
-                                    .padding(.vertical, 8)
+                                    Text("Join \(membership.businessName)")
+                                        .font(.system(size: 13, weight: .bold))
+                                        .foregroundStyle(.white)
+                                        .padding(.horizontal, 16)
+                                        .padding(.vertical, 7)
+                                        .background(Color.sweeplyAccent)
+                                        .clipShape(Capsule())
                                 }
                                 .buttonStyle(.plain)
                             }

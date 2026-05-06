@@ -721,10 +721,15 @@ struct FinancialReportsView: View {
     @ViewBuilder
     private func forecastPopupOverlay(week: ForecastWeek) -> some View {
         ZStack {
-            // Blurred background
-            Color.sweeplyNavy.opacity(0.45)
+            // Dark background with blur - covers entire screen
+            Rectangle()
+                .fill(Color.sweeplyNavy.opacity(0.5))
                 .ignoresSafeArea()
-                .blur(radius: 10)
+            
+            // Blur effect layer
+            Rectangle()
+                .fill(.ultraThinMaterial)
+                .ignoresSafeArea()
 
             // Popup card
             VStack(spacing: 16) {
