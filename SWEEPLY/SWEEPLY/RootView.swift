@@ -37,6 +37,8 @@ struct RootView: View {
     @AppStorage("pendingShortcut") private var pendingShortcut: String = ""
     @AppStorage("pendingSpotlightLink") private var pendingSpotlightLink: String = ""
     @AppStorage("pendingScheduleDate") private var pendingScheduleDate: String = ""
+    @State private var lastTabBarApplyTime: Date = .distantPast
+    private let tabBarApplyCooldown: TimeInterval = 0.5
 
     enum Tab {
         case dashboard, schedule, clients, finances, business
@@ -411,6 +413,17 @@ struct RootView: View {
     }
 
     private func applyTabBarAppearance() {
+        // Debounce rapid calls to prevent race conditions
+        let now = Date()
+        guard now.timeIntervalSince(lastTabBarApplyTime) > tabBarApplyCooldown else { return }
+        lastTabBarApplyTime = now
+        
+        DispatchQueue.main.async {
+            applyTabBarAppearanceInternal()
+        }
+    }
+    
+    private func applyTabBarAppearanceInternal() {
         // ── Tab bar ──────────────────────────────────────────────────────────
         let tabAppearance = UITabBarAppearance()
         tabAppearance.configureWithOpaqueBackground()

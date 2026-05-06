@@ -709,7 +709,7 @@ struct ScheduleView: View {
                     .padding(.horizontal, 20)
                     .padding(.top, 12)
 
-                Text("Jobs for \(selectedDay.formatted(.dateTime.day().month()))")
+                Text("Jobs for".translated() + " \(selectedDay.formatted(.dateTime.day().month()))")
                     .font(.system(size: 14, weight: .bold))
                     .foregroundStyle(Color.sweeplyNavy)
                     .padding(.horizontal, 24)

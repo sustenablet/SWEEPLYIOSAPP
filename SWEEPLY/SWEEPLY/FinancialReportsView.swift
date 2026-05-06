@@ -38,19 +38,53 @@ struct FinancialReportsView: View {
         case ytd       = "Year"
     }
 
+    private var plPeriodInterval: DateInterval {
+        let cal = Calendar.current
+        let now = Date()
+        switch plPeriod {
+        case .thisMonth:
+            return cal.dateInterval(of: .month, for: now) ?? DateInterval(start: now, duration: 0)
+        case .lastMonth:
+            guard let lastMonth = cal.date(byAdding: .month, value: -1, to: now),
+                  let interval = cal.dateInterval(of: .month, for: lastMonth)
+            else { return DateInterval(start: now, duration: 0) }
+            return interval
+        case .ytd:
+            let startOfYear = cal.date(from: cal.dateComponents([.year], from: now)) ?? now
+            return DateInterval(start: startOfYear, end: now)
+        }
+    }
+
+    private var plPriorInterval: DateInterval {
+        let cal = Calendar.current
+        let now = Date()
+        switch plPeriod {
+        case .thisMonth:
+            guard let priorStart = cal.date(byAdding: .month, value: -1, to: plPeriodInterval.start),
+                  let interval = cal.dateInterval(of: .month, for: priorStart)
+            else { return DateInterval(start: now, duration: 0) }
+            return interval
+        case .lastMonth:
+            guard let twoMonthsAgo = cal.date(byAdding: .month, value: -2, to: now),
+                  let interval = cal.dateInterval(of: .month, for: twoMonthsAgo)
+            else { return DateInterval(start: now, duration: 0) }
+            return interval
+        case .ytd:
+            let startOfYear = cal.date(from: cal.dateComponents([.year], from: now)) ?? now
+            let priorYear = cal.date(byAdding: .year, value: -1, from: startOfYear) ?? startOfYear
+            let priorYearEnd = cal.date(byAdding: .day, value: -1, from: startOfYear) ?? startOfYear
+            return DateInterval(start: priorYear, end: priorYearEnd)
+        }
+    }
+
     // MARK: - Intervals
 
     private var currentMonthInterval: DateInterval {
-        let cal = Calendar.current
-        return cal.dateInterval(of: .month, for: Date()) ?? DateInterval(start: Date(), duration: 0)
+        plPeriodInterval
     }
 
     private var priorMonthInterval: DateInterval {
-        let cal = Calendar.current
-        guard let priorStart = cal.date(byAdding: .month, value: -1, to: currentMonthInterval.start),
-              let interval = cal.dateInterval(of: .month, for: priorStart)
-        else { return DateInterval(start: Date(), duration: 0) }
-        return interval
+        plPriorInterval
     }
 
     private var ytdInterval: DateInterval {
@@ -110,7 +144,13 @@ struct FinancialReportsView: View {
     private var overviewPeriod: OverviewPeriod { OverviewPeriod(rawValue: overviewPeriodRaw) ?? .sixMonth }
 
     private var overviewBarData: [MonthlyBar] {
-        let count = overviewPeriod == .threeMonth ? 3 : 6
+        let count: Int
+        switch overviewPeriod {
+        case .oneMonth:    count = 1
+        case .threeMonth: count = 3
+        case .sixMonth:   count = 6
+        case .twelveMonth: count = 12
+        }
         let cal = Calendar.current
         let now = Date()
         let f = DateFormatter(); f.dateFormat = "MMM"
@@ -295,8 +335,7 @@ struct FinancialReportsView: View {
                     revenueProgressSection
                     sixMonthChartSection
                     cashflowSectionWithPopup
-                    profitAndLossSection
-                    expensesByCategorySection
+                    profitAndLossWithExpensesSection
                     revenueByServiceSection
                     jobsSummarySection
                     invoiceHealthSection
@@ -336,7 +375,7 @@ struct FinancialReportsView: View {
     private var overviewPeriodFilterSheet: some View {
         VStack(alignment: .leading, spacing: 20) {
             HStack {
-                Text("Select Time Range")
+                Text("Select Time Range".translated())
                     .font(.system(size: 17, weight: .semibold))
                     .foregroundStyle(Color.sweeplyNavy)
                 Spacer()
@@ -379,10 +418,10 @@ struct FinancialReportsView: View {
 
     private func periodLabel(for period: OverviewPeriod) -> String {
         switch period {
-        case .oneMonth: return "Last Month"
-        case .threeMonth: return "Last 3 Months"
-        case .sixMonth: return "Last 6 Months"
-        case .twelveMonth: return "Last 12 Months"
+        case .oneMonth: return "Last Month".translated()
+        case .threeMonth: return "Last 3 Months".translated()
+        case .sixMonth: return "Last 6 Months".translated()
+        case .twelveMonth: return "Last 12 Months".translated()
         }
     }
 
@@ -391,14 +430,14 @@ struct FinancialReportsView: View {
     private var ytdSummarySection: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 12) {
-                kpiBox(icon: "dollarsign.circle.fill", title: "Revenue", value: ytdRevenue.currency, color: Color.sweeplySuccess)
-                kpiBox(icon: "minus.circle.fill", title: "Expenses", value: ytdExpenses.currency, color: Color.sweeplyDestructive)
-                kpiBox(icon: "checkmark.circle.fill", title: "Net Profit", value: ytdNet.currency, color: ytdNet >= 0 ? Color.sweeplySuccess : Color.sweeplyDestructive)
-                kpiBox(icon: "doc.text.fill", title: "Invoices Paid", value: "\(ytdInvoiceCount)", color: Color.sweeplyAccent)
-                kpiBox(icon: "person.2.fill", title: "Active Clients", value: "\(activeClientsCount)", color: Color.sweeplyNavy)
-                kpiBox(icon: "briefcase.fill", title: "Jobs This Month", value: "\(jobsThisMonthCount)", color: Color.sweeplyWarning)
-                kpiBox(icon: "exclamationmark.triangle.fill", title: "Outstanding", value: unpaidTotal.currency, color: Color.sweeplyDestructive)
-                kpiBox(icon: "calendar", title: "Scheduled", value: "\(scheduledJobsCount)", color: Color.sweeplySuccess)
+                kpiBox(icon: "dollarsign.circle.fill", title: "Revenue".translated(), value: ytdRevenue.currency, color: Color.sweeplySuccess)
+                kpiBox(icon: "minus.circle.fill", title: "Expenses".translated(), value: ytdExpenses.currency, color: Color.sweeplyDestructive)
+                kpiBox(icon: "checkmark.circle.fill", title: "Net Profit".translated(), value: ytdNet.currency, color: ytdNet >= 0 ? Color.sweeplySuccess : Color.sweeplyDestructive)
+                kpiBox(icon: "doc.text.fill", title: "Invoices Paid".translated(), value: "\(ytdInvoiceCount)", color: Color.sweeplyAccent)
+                kpiBox(icon: "person.2.fill", title: "Active Clients".translated(), value: "\(activeClientsCount)", color: Color.sweeplyNavy)
+                kpiBox(icon: "briefcase.fill", title: "Jobs This Month".translated(), value: "\(jobsThisMonthCount)", color: Color.sweeplyWarning)
+                kpiBox(icon: "exclamationmark.triangle.fill", title: "Outstanding".translated(), value: unpaidTotal.currency, color: Color.sweeplyDestructive)
+                kpiBox(icon: "calendar", title: "Scheduled".translated(), value: "\(scheduledJobsCount)", color: Color.sweeplySuccess)
             }
             .padding(.horizontal, 20)
             .padding(.vertical, 4)
@@ -455,17 +494,17 @@ struct FinancialReportsView: View {
         return VStack(spacing: 12) {
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Revenue Progress")
+                    Text("Revenue Progress".translated())
                         .font(.system(size: 15, weight: .semibold))
                         .foregroundStyle(Color.sweeplyNavy)
                     HStack(spacing: 4) {
-                        Text("Collected")
+                        Text("Collected".translated())
                             .font(.system(size: 11))
                             .foregroundStyle(Color.sweeplySuccess)
                         Text("·")
                             .font(.system(size: 10))
                             .foregroundStyle(Color.sweeplyTextSub)
-                        Text("Estimated")
+                        Text("Estimated".translated())
                             .font(.system(size: 11))
                             .foregroundStyle(Color.sweeplyTextSub)
                     }
@@ -483,12 +522,10 @@ struct FinancialReportsView: View {
 
             GeometryReader { geo in
                 ZStack(alignment: .leading) {
-                    // Background track
                     Capsule()
                         .fill(Color.sweeplyBorder)
                         .frame(height: 8)
 
-                    // Progress bar
                     Capsule()
                         .fill(
                             LinearGradient(
@@ -503,12 +540,12 @@ struct FinancialReportsView: View {
             .frame(height: 8)
 
             HStack {
-                Text("\(Int(progress * 100))% collected")
+                Text("\(Int(progress * 100))% " + "Collected".translated())
                     .font(.system(size: 11, weight: .medium))
                     .foregroundStyle(Color.sweeplySuccess)
                 Spacer()
                 if scheduled > 0 {
-                    Text("\(scheduled.currency) estimated")
+                    Text("\(scheduled.currency) " + "Estimated".translated())
                         .font(.system(size: 11, weight: .medium))
                         .foregroundStyle(Color.sweeplyWarning)
                 }
@@ -528,10 +565,10 @@ struct FinancialReportsView: View {
 
                 HStack(alignment: .top) {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Revenue Overview")
+                        Text("Revenue Overview".translated())
                             .font(.system(size: 15, weight: .semibold))
                             .foregroundStyle(Color.sweeplyNavy)
-                        Text("Collected vs outstanding")
+                        Text("Collected vs outstanding".translated())
                             .font(.system(size: 11))
                             .foregroundStyle(Color.sweeplyTextSub)
                     }
@@ -541,7 +578,7 @@ struct FinancialReportsView: View {
                         showOverviewPeriodFilter = true
                     } label: {
                         HStack(spacing: 4) {
-                            Text(overviewPeriod.rawValue)
+                            Text(periodLabel(for: overviewPeriod))
                                 .font(.system(size: 12, weight: .semibold))
                             Image(systemName: "chevron.down")
                                 .font(.system(size: 9, weight: .bold))
@@ -564,7 +601,7 @@ struct FinancialReportsView: View {
                             .monospacedDigit()
                             .contentTransition(.numericText())
                             .animation(.easeInOut(duration: 0.2), value: overviewPeriodRaw)
-                        Text("avg \(avg.currency) / month")
+                        Text("avg".translated() + " \(avg.currency) / " + "month".translated())
                             .font(.system(size: 11))
                             .foregroundStyle(Color.sweeplyTextSub)
                     }
@@ -652,10 +689,10 @@ struct FinancialReportsView: View {
 
                 HStack(alignment: .top) {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Cash-Flow Forecast")
+                        Text("Cash-Flow Forecast".translated())
                             .font(.system(size: 15, weight: .semibold))
                             .foregroundStyle(Color.sweeplyNavy)
-                        Text("Based on scheduled jobs & invoices")
+                        Text("Based on scheduled jobs & invoices".translated())
                             .font(.system(size: 11))
                             .foregroundStyle(Color.sweeplyTextSub)
                     }
@@ -675,7 +712,7 @@ struct FinancialReportsView: View {
                             .monospacedDigit()
                             .contentTransition(.numericText())
                             .animation(.easeInOut(duration: 0.2), value: forecastWeekCount)
-                        Text("projected over \(forecastWeekCount) weeks · avg \(forecastAvgWeekly.currency)/wk")
+                        Text("projected over %d weeks · avg %@/wk".translated(with: forecastWeekCount, forecastAvgWeekly.currency))
                             .font(.system(size: 11))
                             .foregroundStyle(Color.sweeplyTextSub)
                     }
@@ -685,7 +722,7 @@ struct FinancialReportsView: View {
                             Text(sel.total.currency)
                                 .font(.system(size: 15, weight: .bold, design: .monospaced))
                                 .foregroundStyle(Color.sweeplyAccent)
-                            Text("wk of \(sel.weekLabel)")
+                            Text("wk of".translated() + " \(sel.weekLabel)")
                                 .font(.system(size: 11))
                                 .foregroundStyle(Color.sweeplyTextSub)
                         }
@@ -779,7 +816,7 @@ struct FinancialReportsView: View {
                     HStack(spacing: 10) {
                         Image(systemName: "calendar.badge.plus")
                             .foregroundStyle(Color.sweeplyTextSub.opacity(0.5))
-                        Text("Schedule jobs or send invoices to see your forecast.")
+                        Text("Schedule jobs or send invoices to see your forecast.".translated())
                             .font(.system(size: 13))
                             .foregroundStyle(Color.sweeplyTextSub)
                     }
@@ -858,7 +895,7 @@ struct FinancialReportsView: View {
                 // Total & Comparison
                 VStack(spacing: 8) {
                     HStack {
-                        Text("Total Projected")
+                        Text("Total Projected".translated())
                             .font(.system(size: 14, weight: .semibold))
                             .foregroundStyle(Color.sweeplyNavy)
                         Spacer()
@@ -963,11 +1000,11 @@ struct FinancialReportsView: View {
             VStack(alignment: .leading, spacing: 16) {
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("PROFIT & LOSS")
+                        Text("Profit & Loss".translated().uppercased())
                             .font(.system(size: 11, weight: .bold))
                             .foregroundStyle(Color.sweeplyTextSub)
                             .tracking(0.8)
-                        Text(plPeriod.rawValue)
+                        Text(plPeriod.rawValue.translated())
                             .font(.system(size: 15, weight: .semibold))
                             .foregroundStyle(Color.sweeplyNavy)
                     }
@@ -978,11 +1015,11 @@ struct FinancialReportsView: View {
                 }
 
                 VStack(spacing: 0) {
-                    plRow(label: "Revenue",    value: plIncome,    color: Color.sweeplySuccess,                                         icon: "arrow.down.circle.fill",           isBold: false)
+                    plRow(label: "Revenue".translated(),    value: plIncome,    color: Color.sweeplySuccess,                                         icon: "arrow.down.circle.fill",           isBold: false)
                     Divider().padding(.leading, 40)
-                    plRow(label: "Expenses",   value: -plExpenses, color: Color.sweeplyDestructive,                                     icon: "arrow.up.circle.fill",             isBold: false)
+                    plRow(label: "Expenses".translated(),   value: -plExpenses, color: Color.sweeplyDestructive,                                     icon: "arrow.up.circle.fill",             isBold: false)
                     Divider()
-                    plRow(label: "Net Profit", value: plNet,       color: plNet >= 0 ? Color.sweeplySuccess : Color.sweeplyDestructive, icon: plNet >= 0 ? "checkmark.circle.fill" : "exclamationmark.circle.fill", isBold: true)
+                    plRow(label: "Net Profit".translated(), value: plNet,       color: plNet >= 0 ? Color.sweeplySuccess : Color.sweeplyDestructive, icon: plNet >= 0 ? "checkmark.circle.fill" : "exclamationmark.circle.fill", isBold: true)
                 }
                 .background(Color.sweeplySurface)
                 .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
@@ -1009,23 +1046,57 @@ struct FinancialReportsView: View {
         .padding(.vertical, 12)
     }
 
-    // MARK: - Expenses by Category
+    // MARK: - Combined P&L + Expenses Section
 
-    private var expensesByCategorySection: some View {
-        SectionCard {
+    private var profitAndLossWithExpensesSection: some View {
+        VStack(spacing: 0) {
+            // Profit & Loss - top part
+            VStack(alignment: .leading, spacing: 16) {
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Profit & Loss".translated().uppercased())
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundStyle(Color.sweeplyTextSub)
+                            .tracking(0.8)
+                        Text(plPeriod.rawValue.translated())
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundStyle(Color.sweeplyNavy)
+                    }
+                    Spacer()
+                    periodToggle(options: PLPeriod.allCases.map { $0.rawValue }, selected: plPeriod.rawValue) { raw in
+                        if let p = PLPeriod(rawValue: raw) { plPeriod = p }
+                    }
+                }
+
+                VStack(spacing: 0) {
+                    plRow(label: "Revenue".translated(),    value: plIncome,    color: Color.sweeplySuccess,                                         icon: "arrow.down.circle.fill",           isBold: false)
+                    Divider().padding(.leading, 40)
+                    plRow(label: "Expenses".translated(),   value: -plExpenses, color: Color.sweeplyDestructive,                                     icon: "arrow.up.circle.fill",             isBold: false)
+                    Divider()
+                    plRow(label: "Net Profit".translated(), value: plNet,       color: plNet >= 0 ? Color.sweeplySuccess : Color.sweeplyDestructive, icon: plNet >= 0 ? "checkmark.circle.fill" : "exclamationmark.circle.fill", isBold: true)
+                }
+            }
+            .padding(16)
+
+            // Divider between sections
+            Rectangle()
+                .fill(Color.sweeplyBorder)
+                .frame(height: 1)
+
+            // Expenses by Category - connected bottom part
             VStack(alignment: .leading, spacing: 16) {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("EXPENSES BY CATEGORY")
+                    Text("EXPENSES BY CATEGORY".translated())
                         .font(.system(size: 11, weight: .bold))
                         .foregroundStyle(Color.sweeplyTextSub)
                         .tracking(0.8)
-                    Text("This month")
+                    Text(plPeriod.rawValue.translated())
                         .font(.system(size: 15, weight: .semibold))
                         .foregroundStyle(Color.sweeplyNavy)
                 }
 
-                let categories   = expenseStore.byCategory(in: currentMonthInterval)
-                let priorCats    = Dictionary(uniqueKeysWithValues: expenseStore.byCategory(in: priorMonthInterval))
+                let categories   = expenseStore.byCategory(in: plPeriodInterval)
+                let priorCats    = Dictionary(uniqueKeysWithValues: expenseStore.byCategory(in: plPriorInterval))
                 let monthTotal   = categories.reduce(0) { $0 + $1.1 }
                 let priorTotal   = priorCats.values.reduce(0, +)
 
@@ -1033,7 +1104,7 @@ struct FinancialReportsView: View {
                     HStack(spacing: 10) {
                         Image(systemName: "cart.badge.questionmark")
                             .foregroundStyle(Color.sweeplyTextSub.opacity(0.5))
-                        Text("No expenses recorded this month.")
+                        Text("No expenses recorded this period.".translated())
                             .font(.system(size: 13))
                             .foregroundStyle(Color.sweeplyTextSub)
                     }
@@ -1049,7 +1120,68 @@ struct FinancialReportsView: View {
                     Divider()
 
                     HStack {
-                        Text("Total")
+                        Text("Total".translated())
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(Color.sweeplyNavy)
+                        Spacer()
+                        if priorTotal > 0 {
+                            let delta = monthTotal - priorTotal
+                            deltaBadge(delta: delta, invert: true)
+                        }
+                        Text(monthTotal.currency)
+                            .font(.system(size: 13, weight: .bold, design: .monospaced))
+                            .foregroundStyle(Color.sweeplyNavy)
+                    }
+                }
+            }
+            .padding(16)
+        }
+        .background(Color.sweeplySurface)
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(Color.sweeplyBorder, lineWidth: 1))
+    }
+
+    // MARK: - Expenses by Category
+
+    private var expensesByCategorySection: some View {
+        SectionCard {
+            VStack(alignment: .leading, spacing: 16) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("EXPENSES BY CATEGORY".translated())
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundStyle(Color.sweeplyTextSub)
+                        .tracking(0.8)
+                    Text("This month".translated())
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(Color.sweeplyNavy)
+                }
+
+                let categories   = expenseStore.byCategory(in: currentMonthInterval)
+                let priorCats    = Dictionary(uniqueKeysWithValues: expenseStore.byCategory(in: priorMonthInterval))
+                let monthTotal   = categories.reduce(0) { $0 + $1.1 }
+                let priorTotal   = priorCats.values.reduce(0, +)
+
+                if categories.isEmpty {
+                    HStack(spacing: 10) {
+                        Image(systemName: "cart.badge.questionmark")
+                            .foregroundStyle(Color.sweeplyTextSub.opacity(0.5))
+                        Text("No expenses recorded this month.".translated())
+                            .font(.system(size: 13))
+                            .foregroundStyle(Color.sweeplyTextSub)
+                    }
+                    .padding(.vertical, 8)
+                } else {
+                    let maxAmount = categories.map { $0.1 }.max() ?? 1
+                    VStack(spacing: 12) {
+                        ForEach(categories, id: \.0) { cat, amount in
+                            categoryRow(cat: cat, amount: amount, maxAmount: maxAmount, prior: priorCats[cat])
+                        }
+                    }
+
+                    Divider()
+
+                    HStack {
+                        Text("Total".translated())
                             .font(.system(size: 13, weight: .semibold))
                             .foregroundStyle(Color.sweeplyNavy)
                         Spacer()
@@ -1121,11 +1253,11 @@ struct FinancialReportsView: View {
                 // Header + View button
                 HStack(alignment: .firstTextBaseline) {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("REVENUE BY SERVICE")
+                        Text("REVENUE BY SERVICE".translated())
                             .font(.system(size: 11, weight: .bold))
                             .foregroundStyle(Color.sweeplyTextSub)
                             .tracking(0.8)
-                        Text("All completed jobs")
+                        Text("All completed jobs".translated())
                             .font(.system(size: 15, weight: .semibold))
                             .foregroundStyle(Color.sweeplyNavy)
                     }
@@ -1139,7 +1271,7 @@ struct FinancialReportsView: View {
                         )
                     } label: {
                         HStack(spacing: 3) {
-                            Text("View")
+                            Text("View".translated())
                             Image(systemName: "chevron.right")
                         }
                         .font(.system(size: 12, weight: .medium))
@@ -1152,7 +1284,7 @@ struct FinancialReportsView: View {
                     HStack(spacing: 10) {
                         Image(systemName: "briefcase")
                             .foregroundStyle(Color.sweeplyTextSub.opacity(0.5))
-                        Text("Complete jobs to see revenue by service.")
+                        Text("Complete jobs to see revenue by service.".translated())
                             .font(.system(size: 13))
                             .foregroundStyle(Color.sweeplyTextSub)
                     }
@@ -1186,7 +1318,20 @@ struct FinancialReportsView: View {
     // Slide 1 — Revenue bars
     private var revenueServiceBarsSlide: some View {
         let maxRev = revenueByService.map { $0.revenue }.max() ?? 1
-        return VStack(spacing: 10) {
+        return VStack(alignment: .leading, spacing: 0) {
+            HStack {
+                Text("MAIN SERVICES".translated())
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundStyle(Color.sweeplyTextSub)
+                    .tracking(0.6)
+                Spacer()
+                Text("\(revenueByService.count) service\(revenueByService.count == 1 ? "" : "s")")
+                    .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                    .foregroundStyle(Color.sweeplyAccent)
+            }
+            .padding(.bottom, 10)
+            
+            VStack(spacing: 10) {
             ForEach(Array(revenueByService.prefix(4).enumerated()), id: \.element.service) { idx, item in
                 HStack(spacing: 10) {
                     ZStack {
@@ -1222,15 +1367,16 @@ struct FinancialReportsView: View {
                     }
                 }
             }
+            }
+            .padding(.top, 4)
         }
-        .padding(.top, 4)
     }
 
     // Slide 2 — Add-ons & extras (custom service jobs)
     private var revenueAddOnsSlide: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack {
-                Text("EXTRAS & ADD-ONS")
+                Text("EXTRAS & ADD-ONS".translated())
                     .font(.system(size: 10, weight: .bold))
                     .foregroundStyle(Color.sweeplyTextSub)
                     .tracking(0.6)
@@ -1246,7 +1392,7 @@ struct FinancialReportsView: View {
                     Image(systemName: "plus.circle.dashed")
                         .font(.system(size: 28))
                         .foregroundStyle(Color.sweeplyTextSub.opacity(0.3))
-                    Text("No custom or add-on services yet")
+                    Text("No custom or add-on services yet".translated())
                         .font(.system(size: 13))
                         .foregroundStyle(Color.sweeplyTextSub)
                 }
@@ -1297,7 +1443,17 @@ struct FinancialReportsView: View {
     @ViewBuilder
     private var revenuePieSlide: some View {
         if #available(iOS 17.0, *) {
-            HStack(alignment: .center, spacing: 16) {
+            VStack(alignment: .leading, spacing: 0) {
+                HStack {
+                    Text("SERVICE BREAKDOWN".translated())
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundStyle(Color.sweeplyTextSub)
+                        .tracking(0.6)
+                    Spacer()
+                }
+                .padding(.bottom, 10)
+                
+                HStack(alignment: .center, spacing: 16) {
                 Chart(Array(revenueByService.prefix(6).enumerated()), id: \.element.service) { idx, item in
                     SectorMark(
                         angle: .value("Jobs", item.jobCount),
@@ -1327,8 +1483,9 @@ struct FinancialReportsView: View {
                     }
                 }
                 .frame(maxWidth: .infinity)
+                }
+                .padding(.top, 8)
             }
-            .padding(.top, 8)
         } else {
             revenueServiceBarsSlide
         }
@@ -1362,11 +1519,11 @@ struct FinancialReportsView: View {
         SectionCard {
             VStack(alignment: .leading, spacing: 16) {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("JOBS")
+                    Text("JOBS".translated())
                         .font(.system(size: 11, weight: .bold))
                         .foregroundStyle(Color.sweeplyTextSub)
                         .tracking(0.8)
-                    Text("This month")
+                    Text("This month".translated())
                         .font(.system(size: 15, weight: .semibold))
                         .foregroundStyle(Color.sweeplyNavy)
                 }
@@ -1403,7 +1560,7 @@ struct FinancialReportsView: View {
                 if jobsCompleted.count + jobsCancelled.count > 0 {
                     VStack(alignment: .leading, spacing: 6) {
                         HStack {
-                            Text("Completion Rate")
+                            Text("Completion Rate".translated())
                                 .font(.system(size: 12, weight: .medium))
                                 .foregroundStyle(Color.sweeplyTextSub)
                             Spacer()
@@ -1430,7 +1587,7 @@ struct FinancialReportsView: View {
     private var invoiceHealthSection: some View {
         SectionCard {
             VStack(alignment: .leading, spacing: 16) {
-                Text("INVOICE HEALTH")
+                Text("INVOICE HEALTH".translated())
                     .font(.system(size: 11, weight: .bold))
                     .foregroundStyle(Color.sweeplyTextSub)
                     .tracking(0.8)
@@ -1464,7 +1621,7 @@ struct FinancialReportsView: View {
                 // Collection rate
                 VStack(alignment: .leading, spacing: 6) {
                     HStack {
-                        Text("Collection Rate")
+                        Text("Collection Rate".translated())
                             .font(.system(size: 12, weight: .medium))
                             .foregroundStyle(Color.sweeplyTextSub)
                         Spacer()
@@ -1486,16 +1643,16 @@ struct FinancialReportsView: View {
                 let hasAging = !unpaidInvoices.isEmpty || !overdueInvoices.isEmpty
                 if hasAging {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("INVOICE AGING")
+                        Text("INVOICE AGING".translated())
                             .font(.system(size: 10, weight: .bold))
                             .foregroundStyle(Color.sweeplyTextSub)
                             .tracking(0.6)
                             .padding(.bottom, 4)
 
-                        agingRow(label: "Not due yet",      invoices: agingNotDueYet, color: Color.sweeplyAccent)
-                        agingRow(label: "1–7 days overdue", invoices: aging1to7,      color: Color.sweeplyWarning)
-                        agingRow(label: "8–30 days",        invoices: aging8to30,     color: Color(hue: 0.07, saturation: 0.75, brightness: 0.78))
-                        agingRow(label: "30+ days",         invoices: aging30plus,    color: Color.sweeplyDestructive)
+                        agingRow(label: "Not due yet".translated(),      invoices: agingNotDueYet, color: Color.sweeplyAccent)
+                        agingRow(label: "1–7 days overdue".translated(), invoices: aging1to7,      color: Color.sweeplyWarning)
+                        agingRow(label: "8–30 days".translated(),        invoices: aging8to30,     color: Color(hue: 0.07, saturation: 0.75, brightness: 0.78))
+                        agingRow(label: "30+ days".translated(),         invoices: aging30plus,    color: Color.sweeplyDestructive)
                     }
                     .padding(12)
                     .background(Color.sweeplyBackground)
@@ -1509,7 +1666,7 @@ struct FinancialReportsView: View {
                         Image(systemName: "clock")
                             .font(.system(size: 13))
                             .foregroundStyle(Color.sweeplyTextSub)
-                        Text("Avg. time to payment")
+                        Text("Avg. time to payment".translated())
                             .font(.system(size: 13))
                             .foregroundStyle(Color.sweeplyTextSub)
                         Spacer()
@@ -1556,14 +1713,14 @@ struct FinancialReportsView: View {
         SectionCard {
             VStack(alignment: .leading, spacing: 16) {
                 HStack {
-                    Text("PAYMENT METHODS")
+                    Text("PAYMENT METHODS".translated())
                         .font(.system(size: 11, weight: .bold))
                         .foregroundStyle(Color.sweeplyTextSub)
                         .tracking(0.8)
                     Spacer()
                     if !paymentMethodStats.isEmpty {
                         NavigationLink(destination: PaymentMethodsListView()) {
-                            Text("View All")
+                            Text("View All".translated())
                                 .font(.system(size: 12, weight: .medium))
                                 .foregroundStyle(Color.sweeplyAccent)
                         }
@@ -1574,7 +1731,7 @@ struct FinancialReportsView: View {
                     HStack(spacing: 10) {
                         Image(systemName: "creditcard")
                             .foregroundStyle(Color.sweeplyTextSub.opacity(0.5))
-                        Text("No paid invoices with payment method recorded.")
+                        Text("No paid invoices with payment method recorded.".translated())
                             .font(.system(size: 13))
                             .foregroundStyle(Color.sweeplyTextSub)
                     }

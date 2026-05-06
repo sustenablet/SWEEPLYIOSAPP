@@ -55,6 +55,7 @@ struct PaymentMethodsListView: View {
             .padding(.bottom, 40)
         }
         .background(Color.sweeplyBackground)
+        .toolbar(.visible, for: .navigationBar)
         .navigationTitle("Payment Methods")
         .navigationBarTitleDisplayMode(.large)
     }
@@ -63,7 +64,7 @@ struct PaymentMethodsListView: View {
         VStack(spacing: 12) {
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("TOTAL RECEIVED")
+                    Text("TOTAL RECEIVED".translated())
                         .font(.system(size: 10, weight: .bold))
                         .foregroundStyle(Color.sweeplyTextSub)
                         .tracking(0.8)
@@ -127,7 +128,7 @@ struct PaymentMethodsListView: View {
     private var invoicesListSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Text("INVOICES")
+                Text("INVOICES".translated())
                     .font(.system(size: 11, weight: .bold))
                     .foregroundStyle(Color.sweeplyTextSub)
                     .tracking(0.8)
@@ -141,7 +142,7 @@ struct PaymentMethodsListView: View {
                 HStack(spacing: 10) {
                     Image(systemName: "doc.text")
                         .foregroundStyle(Color.sweeplyTextSub.opacity(0.5))
-                    Text("No invoices found")
+                    Text("No invoices found".translated())
                         .font(.system(size: 14))
                         .foregroundStyle(Color.sweeplyTextSub)
                 }
