@@ -21,12 +21,15 @@ struct FinancialReportsView: View {
     @State private var revenueSlide: Int = 0
     @State private var showForecastPopup: Bool = false
     @State private var popupWeek: ForecastWeek? = nil
+    @State private var showOverviewPeriodFilter: Bool = false
 
     // MARK: - Enums
 
     enum OverviewPeriod: String, CaseIterable {
+        case oneMonth   = "1M"
         case threeMonth = "3M"
         case sixMonth   = "6M"
+        case twelveMonth = "12M"
     }
 
     enum PLPeriod: String, CaseIterable {
@@ -308,6 +311,11 @@ struct FinancialReportsView: View {
                     forecastPopupOverlay(week: week)
                 }
             }
+            .sheet(isPresented: $showOverviewPeriodFilter) {
+                overviewPeriodFilterSheet
+                    .presentationDetents([.height(280)])
+                    .presentationDragIndicator(.visible)
+            }
             .navigationTitle("Reports")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -319,6 +327,61 @@ struct FinancialReportsView: View {
                     .foregroundStyle(Color.sweeplyTextSub)
                 }
             }
+        }
+    }
+
+    // MARK: - Overview Period Filter Sheet
+
+    private var overviewPeriodFilterSheet: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            HStack {
+                Text("Select Time Range")
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundStyle(Color.sweeplyNavy)
+                Spacer()
+            }
+            .padding(.top, 8)
+
+            VStack(spacing: 8) {
+                ForEach(OverviewPeriod.allCases, id: \.self) { period in
+                    Button {
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        overviewPeriodRaw = period.rawValue
+                        selectedOverviewMonth = nil
+                        showOverviewPeriodFilter = false
+                    } label: {
+                        HStack {
+                            Text(periodLabel(for: period))
+                                .font(.system(size: 15, weight: .medium))
+                                .foregroundStyle(Color.sweeplyNavy)
+                            Spacer()
+                            if period == overviewPeriod {
+                                Image(systemName: "checkmark")
+                                    .font(.system(size: 14, weight: .bold))
+                                    .foregroundStyle(Color.sweeplyAccent)
+                            }
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 14)
+                        .background(period == overviewPeriod ? Color.sweeplyAccent.opacity(0.08) : Color.sweeplySurface)
+                        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                        .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).stroke(period == overviewPeriod ? Color.sweeplyAccent : Color.sweeplyBorder, lineWidth: 1))
+                    }
+                }
+            }
+
+            Spacer()
+        }
+        .padding(.horizontal, 20)
+        .background(Color.sweeplyBackground.ignoresSafeArea())
+    }
+
+    private func periodLabel(for period: OverviewPeriod) -> String {
+        switch period {
+        case .oneMonth: return "Last Month"
+        case .threeMonth: return "Last 3 Months"
+        case .sixMonth: return "Last 6 Months"
+        case .twelveMonth: return "Last 12 Months"
         }
     }
 
@@ -396,9 +459,21 @@ struct FinancialReportsView: View {
                             .foregroundStyle(Color.sweeplyTextSub)
                     }
                     Spacer()
-                    periodToggle(options: OverviewPeriod.allCases.map { $0.rawValue }, selected: overviewPeriod.rawValue) { raw in
-                        overviewPeriodRaw = raw
-                        selectedOverviewMonth = nil
+                    Button {
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        showOverviewPeriodFilter = true
+                    } label: {
+                        HStack(spacing: 4) {
+                            Text(overviewPeriod.rawValue)
+                                .font(.system(size: 12, weight: .semibold))
+                            Image(systemName: "chevron.down")
+                                .font(.system(size: 9, weight: .bold))
+                        }
+                        .foregroundStyle(Color.sweeplyAccent)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(Color.sweeplyAccent.opacity(0.10))
+                        .clipShape(Capsule())
                     }
                 }
 
