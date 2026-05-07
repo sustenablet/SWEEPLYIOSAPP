@@ -539,3 +539,347 @@ struct ProGateView<Content: View>: View {
         .background(Color.sweeplyBackground)
     }
 }
+
+// MARK: - Shared feature data
+
+private let proFeatures: [(icon: String, text: String)] = [
+    ("checkmark.circle.fill",             "Everything in Standard"),
+    ("person.3.fill",                     "Unlimited cleaners & teams"),
+    ("chart.bar.xaxis",                   "Revenue analytics dashboard"),
+    ("doc.text.fill",                     "Profit & loss breakdown"),
+    ("waveform.path.ecg",                 "Predictive cash flow"),
+    ("checklist",                         "Custom job checklists & notes"),
+    ("envelope.badge.fill",               "Invoice reminders & tracking"),
+    ("bubble.left.and.bubble.right.fill", "Team messaging & job updates"),
+    ("folder.badge.plus",                 "Unlimited expense categories"),
+]
+
+private let standardFeatures: [(icon: String, text: String)] = [
+    ("person.fill",          "Unlimited client profiles"),
+    ("briefcase.fill",       "Unlimited jobs & invoices"),
+    ("person.2.fill",        "Up to 3 team members"),
+    ("calendar",             "Smart calendar & recurring jobs"),
+    ("chart.pie.fill",       "Expense categorization"),
+    ("square.grid.2x2.fill", "Home-screen widgets"),
+]
+
+// MARK: - SubscriptionProView
+
+struct SubscriptionProView: View {
+    @Environment(\.dismiss)                private var dismiss
+    @Environment(SubscriptionManager.self) private var subscriptionManager
+
+    var body: some View {
+        ZStack {
+            Color.sweeplyBackground.ignoresSafeArea()
+
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: 0) {
+
+                    // ── Close ────────────────────────────────────────────
+                    HStack {
+                        Spacer()
+                        Button { dismiss() } label: {
+                            Image(systemName: "xmark")
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundStyle(Color.sweeplyNavy.opacity(0.6))
+                                .frame(width: 30, height: 30)
+                                .background(Color.sweeplyNavy.opacity(0.07))
+                                .clipShape(Circle())
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.top, 16)
+                    .padding(.bottom, 8)
+
+                    // ── Hero ─────────────────────────────────────────────
+                    VStack(spacing: 10) {
+                        Image("MascotSweeply")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 68, height: 68)
+
+                        Text("Sweeply Pro")
+                            .font(Font.sweeplyDisplay(24, weight: .bold))
+                            .foregroundStyle(Color.sweeplyNavy)
+
+                        // Status card
+                        HStack(spacing: 8) {
+                            Image(systemName: "checkmark.seal.fill")
+                                .font(.system(size: 13))
+                                .foregroundStyle(Color.sweeplyAccent)
+                            Text("Active")
+                                .font(.system(size: 13, weight: .semibold))
+                                .foregroundStyle(Color.sweeplyAccent)
+                            if let exp = subscriptionManager.expirationDate {
+                                Text("·")
+                                    .foregroundStyle(Color.sweeplyNavy.opacity(0.3))
+                                Text("Renews \(exp.formatted(.dateTime.month(.abbreviated).day().year()))")
+                                    .font(.system(size: 13))
+                                    .foregroundStyle(Color.sweeplyNavy.opacity(0.55))
+                            }
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 9)
+                        .background(Color.sweeplyAccent.opacity(0.08))
+                        .overlay(Capsule().stroke(Color.sweeplyAccent.opacity(0.25), lineWidth: 1))
+                        .clipShape(Capsule())
+                    }
+                    .padding(.bottom, 28)
+
+                    // ── What's included ───────────────────────────────────
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("WHAT'S INCLUDED")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundStyle(Color.sweeplyTextSub)
+                            .tracking(0.8)
+                            .padding(.horizontal, 20)
+
+                        VStack(alignment: .leading, spacing: 12) {
+                            ForEach(proFeatures, id: \.text) { f in
+                                HStack(spacing: 12) {
+                                    Image(systemName: f.icon)
+                                        .font(.system(size: 13, weight: .medium))
+                                        .foregroundStyle(Color.sweeplyAccent)
+                                        .frame(width: 20)
+                                    Text(f.text)
+                                        .font(.system(size: 14))
+                                        .foregroundStyle(Color.sweeplyNavy.opacity(0.8))
+                                }
+                            }
+                        }
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 18)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(Color.sweeplySurface)
+                        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                                .stroke(LinearGradient(colors: [Color.sweeplyAccent.opacity(0.4), Color.sweeplyAccent.opacity(0.1)], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1.5)
+                        )
+                        .padding(.horizontal, 20)
+                    }
+                    .padding(.bottom, 24)
+
+                    // ── Manage button ─────────────────────────────────────
+                    Button {
+                        if let url = URL(string: "https://apps.apple.com/account/subscriptions") {
+                            UIApplication.shared.open(url)
+                        }
+                    } label: {
+                        HStack(spacing: 8) {
+                            Text("Manage in App Store")
+                                .font(.system(size: 16, weight: .semibold))
+                            Image(systemName: "arrow.up.right")
+                                .font(.system(size: 13, weight: .semibold))
+                        }
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 15)
+                        .background(Color.sweeplyNavy)
+                        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 12)
+
+                    Text("To cancel, go to App Store → Subscriptions")
+                        .font(.system(size: 12))
+                        .foregroundStyle(Color.sweeplyNavy.opacity(0.35))
+                        .multilineTextAlignment(.center)
+                        .padding(.bottom, 40)
+                }
+            }
+        }
+    }
+}
+
+// MARK: - SubscriptionStandardUpgradeView
+
+struct SubscriptionStandardUpgradeView: View {
+    @Environment(\.dismiss)                private var dismiss
+    @Environment(SubscriptionManager.self) private var subscriptionManager
+
+    var onShowAllPlans: () -> Void = {}
+
+    @State private var isPurchasing = false
+    @State private var purchaseError: String?
+
+    private var proMonthlyPrice: String {
+        subscriptionManager.offerings?.current?.package(identifier: "$rc_custom_pro_monthly")?.storeProduct.localizedPriceString ?? "$19.99"
+    }
+
+    var body: some View {
+        ZStack {
+            Color.sweeplyBackground.ignoresSafeArea()
+
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: 0) {
+
+                    // ── Close ────────────────────────────────────────────
+                    HStack {
+                        Spacer()
+                        Button { dismiss() } label: {
+                            Image(systemName: "xmark")
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundStyle(Color.sweeplyNavy.opacity(0.6))
+                                .frame(width: 30, height: 30)
+                                .background(Color.sweeplyNavy.opacity(0.07))
+                                .clipShape(Circle())
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.top, 16)
+                    .padding(.bottom, 8)
+
+                    // ── Hero ─────────────────────────────────────────────
+                    VStack(spacing: 8) {
+                        Image("MascotSweeply")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 60, height: 60)
+
+                        Text("You're on Standard")
+                            .font(Font.sweeplyDisplay(22, weight: .bold))
+                            .foregroundStyle(Color.sweeplyNavy)
+
+                        Text("Upgrade to unlock everything in Pro.")
+                            .font(.system(size: 14))
+                            .foregroundStyle(Color.sweeplyTextSub)
+                    }
+                    .padding(.bottom, 24)
+
+                    // ── Your plan ─────────────────────────────────────────
+                    sectionCard(
+                        label: "YOUR PLAN",
+                        borderColor: Color.sweeplyNavy.opacity(0.15)
+                    ) {
+                        ForEach(standardFeatures, id: \.text) { f in
+                            featureRow(icon: f.icon, text: f.text, style: .included)
+                        }
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 14)
+
+                    // ── Unlock with Pro ───────────────────────────────────
+                    sectionCard(
+                        label: "UNLOCK WITH PRO",
+                        borderColor: Color.sweeplyAccent.opacity(0.4)
+                    ) {
+                        ForEach(proFeatures.filter { $0.text != "Everything in Standard" }, id: \.text) { f in
+                            featureRow(icon: f.icon, text: f.text, style: .locked)
+                        }
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 20)
+
+                    if let err = purchaseError {
+                        Text(err)
+                            .font(.system(size: 12))
+                            .foregroundStyle(Color.sweeplyDestructive)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 20)
+                            .padding(.bottom, 10)
+                    }
+
+                    // ── Upgrade CTA ───────────────────────────────────────
+                    Button {
+                        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                        Task { await upgradeToPro() }
+                    } label: {
+                        Group {
+                            if isPurchasing {
+                                ProgressView().tint(.white)
+                            } else {
+                                HStack(spacing: 6) {
+                                    Text("Upgrade to Pro")
+                                        .font(.system(size: 16, weight: .bold))
+                                    Text("· \(proMonthlyPrice)/mo")
+                                        .font(.system(size: 14))
+                                        .opacity(0.75)
+                                }
+                                .foregroundStyle(.white)
+                            }
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 15)
+                        .background(Color.sweeplyAccent)
+                        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(isPurchasing)
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 10)
+
+                    Button {
+                        dismiss()
+                        onShowAllPlans()
+                    } label: {
+                        Text("See all plans & pricing")
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundStyle(Color.sweeplyNavy.opacity(0.5))
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.bottom, 40)
+                }
+            }
+        }
+        .task { await subscriptionManager.loadOfferings() }
+    }
+
+    private enum FeatureStyle { case included, locked }
+
+    private func featureRow(icon: String, text: String, style: FeatureStyle) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: style == .locked ? "lock.fill" : icon)
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(style == .locked ? Color.sweeplyAccent : Color.sweeplySuccess)
+                .frame(width: 18)
+            Text(text)
+                .font(.system(size: 13))
+                .foregroundStyle(style == .locked ? Color.sweeplyNavy.opacity(0.7) : Color.sweeplyNavy.opacity(0.8))
+        }
+    }
+
+    private func sectionCard(label: String, borderColor: Color, @ViewBuilder content: () -> some View) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(label)
+                .font(.system(size: 11, weight: .bold))
+                .foregroundStyle(Color.sweeplyTextSub)
+                .tracking(0.8)
+
+            VStack(alignment: .leading, spacing: 10) {
+                content()
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 16)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color.sweeplySurface)
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .stroke(borderColor, lineWidth: 1.5)
+            )
+        }
+    }
+
+    private func upgradeToPro() async {
+        guard let package = subscriptionManager.offerings?.current?.package(identifier: "$rc_custom_pro_monthly") else {
+            dismiss(); onShowAllPlans(); return
+        }
+        isPurchasing = true
+        purchaseError = nil
+        do {
+            try await subscriptionManager.purchase(package: package)
+            isPurchasing = false
+            dismiss()
+        } catch {
+            isPurchasing = false
+            if (error as NSError).code != 1 {
+                purchaseError = "Purchase failed — please try again."
+            }
+        }
+    }
+}

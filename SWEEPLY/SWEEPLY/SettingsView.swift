@@ -19,11 +19,35 @@ struct SettingsView: View {
     @State private var showIntroOnboarding = false
     @State private var showLogoutConfirmation = false
     @State private var showPaywall = false
-    @State private var showCustomerCenter = false
+    @State private var showProManagement = false
+    @State private var showStandardUpgrade = false
     @State private var currentTestNotificationIndex = 0
     @AppStorage("hasSeenIntroOnboarding") private var hasSeenIntroOnboarding = true
 
     private var canSave: Bool { !isSaving && validationMessage == nil && hasUnsavedChanges }
+
+    private var subscriptionRowIcon: String {
+        switch subscriptionManager.accessLevel {
+        case .pro:                    return "checkmark.seal.fill"
+        case .standard:               return "star.circle.fill"
+        case .trial(let days) where days > 0: return "gift.fill"
+        default:                      return "creditcard"
+        }
+    }
+    private var subscriptionRowTitle: String {
+        switch subscriptionManager.accessLevel {
+        case .pro:               return "Sweeply Pro"
+        case .standard:          return "Sweeply Standard"
+        case .trial(let days):   return "Free Trial — \(days) days left"
+        case .expired:           return "Subscription"
+        }
+    }
+    private var subscriptionRowColor: Color {
+        switch subscriptionManager.accessLevel {
+        case .pro, .trial:  return Color.sweeplyAccent
+        default:            return Color.sweeplyNavy
+        }
+    }
 
     private var hasUnsavedChanges: Bool {
         profilesMatch(normalizedProfile(localProfile), normalizedProfile(baselineProfile)) == false
@@ -70,15 +94,15 @@ struct SettingsView: View {
                         }
                         rowDivider()
                         menuRow(
-                            icon: subscriptionManager.isPro ? "checkmark.seal.fill" : "creditcard",
-                            title: subscriptionManager.isPro ? "Manage Subscription".translated() : "Subscription".translated(),
-                            color: subscriptionManager.isPro ? Color.sweeplyAccent : Color.sweeplyNavy
+                            icon: subscriptionRowIcon,
+                            title: subscriptionRowTitle,
+                            color: subscriptionRowColor
                         ) {
                             UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                            if subscriptionManager.isPro {
-                                showCustomerCenter = true
-                            } else {
-                                showPaywall = true
+                            switch subscriptionManager.accessLevel {
+                            case .pro:      showProManagement = true
+                            case .standard: showStandardUpgrade = true
+                            case .trial, .expired: showPaywall = true
                             }
                         }
                     }
@@ -151,8 +175,18 @@ struct SettingsView: View {
                 SubscriptionPaywallView()
                     .environment(subscriptionManager)
             }
-            .sheet(isPresented: $showCustomerCenter) {
-                SubscriptionCustomerCenterView()
+            .sheet(isPresented: $showProManagement) {
+                SubscriptionProView()
+                    .environment(subscriptionManager)
+            }
+            .sheet(isPresented: $showStandardUpgrade) {
+                SubscriptionStandardUpgradeView(onShowAllPlans: {
+                    showPaywall = true
+                })
+                .environment(subscriptionManager)
+            }
+            .sheet(isPresented: .constant(false)) {
+                SubscriptionCustomerCenterView() // kept but unused
             }
             .sheet(isPresented: $showServiceCatalog) { ServiceCatalogView() }
             .sheet(isPresented: $showJobExtras)      { ServiceCatalogView(addonsOnly: true) }
