@@ -115,7 +115,7 @@ struct MemberPaySetupView: View {
 
     // MARK: - Bottom bar
 
-    private var bottomBar: some View {
+    @ViewBuilder private var bottomBar: some View {
         let isLastStep = step == totalSteps
         HStack(spacing: 10) {
             if step > 1 {
