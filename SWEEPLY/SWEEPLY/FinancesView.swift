@@ -23,6 +23,7 @@ struct FinancesView: View {
     @State private var showInvoicesList = false
     @State private var showExpenses = false
     @State private var showReports = false
+    @State private var showReportsPaywall = false
     @State private var showNewInvoice = false
     @State private var selectedInvoiceId: UUID? = nil
     @State private var showInvoiceDetail = false
@@ -289,6 +290,10 @@ struct FinancesView: View {
                 .environment(jobsStore)
                 .environment(subscriptionManager)
         }
+        .sheet(isPresented: $showReportsPaywall) {
+            SubscriptionPaywallView()
+                .environment(subscriptionManager)
+        }
         .sheet(isPresented: Binding(
             get: { markPaidInvoice != nil },
             set: { if !$0 { markPaidInvoice = nil } }
@@ -335,7 +340,11 @@ struct FinancesView: View {
                     }
                     Button {
                         UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                        showReports = true
+                        if subscriptionManager.hasProAccess {
+                            showReports = true
+                        } else {
+                            showReportsPaywall = true
+                        }
                     } label: {
                         Label("Reports", systemImage: "chart.bar.doc.horizontal.fill")
                     }

@@ -3,11 +3,13 @@ import SwiftUI
 // MARK: - TeamView
 
 struct TeamView: View {
-    @Environment(TeamStore.self)    private var teamStore
-    @Environment(ProfileStore.self) private var profileStore
-    @Environment(AppSession.self)   private var session
+    @Environment(TeamStore.self)           private var teamStore
+    @Environment(ProfileStore.self)        private var profileStore
+    @Environment(AppSession.self)          private var session
+    @Environment(SubscriptionManager.self) private var subscriptionManager
 
-    @State private var showInvite      = false
+    @State private var showInvite         = false
+    @State private var showUpgradePaywall = false
     @State private var selectedMember  : TeamMember? = nil
     @State private var deleteTarget    : TeamMember? = nil
     @State private var showDeleteConfirm = false
@@ -113,7 +115,12 @@ struct TeamView: View {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button {
                         UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                        showInvite = true
+                        // Standard plan: max 3 cleaners. Pro/trial: unlimited.
+                        if !subscriptionManager.hasProAccess && teamStore.members.count >= 3 {
+                            showUpgradePaywall = true
+                        } else {
+                            showInvite = true
+                        }
                     } label: {
                         HStack(spacing: 4) {
                             Image(systemName: "person.badge.plus")
@@ -124,6 +131,10 @@ struct TeamView: View {
                         .foregroundStyle(Color.sweeplyNavy)
                     }
                 }
+            }
+            .sheet(isPresented: $showUpgradePaywall) {
+                SubscriptionPaywallView()
+                    .environment(subscriptionManager)
             }
             .sheet(isPresented: $showInvite) {
                 InviteMemberSheet(ownerId: session.userId ?? UUID())
