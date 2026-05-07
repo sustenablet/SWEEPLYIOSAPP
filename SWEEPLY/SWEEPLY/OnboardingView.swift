@@ -100,7 +100,7 @@ struct OnboardingView: View {
 
     var body: some View {
         ZStack {
-            (step == 4 || step == 5 || step == 7
+            (step == 4 || step == 5
                 ? Color(red: 0.22, green: 0.50, blue: 0.92)
                 : Color.sweeplyBackground
             ).ignoresSafeArea()
@@ -1148,18 +1148,14 @@ struct OnboardingView: View {
         GeometryReader { geo in
             VStack(spacing: 0) {
 
-                // ── Top: mascot on blue ───────────────────────────────
-                ZStack {
-                    Image("MascotSweeply")
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: geo.size.width * 0.62)
-                        .opacity(checkmarkAppeared ? 1 : 0)
-                        .scaleEffect(checkmarkAppeared ? 1 : 0.88)
-                        .animation(.spring(response: 0.55, dampingFraction: 0.75).delay(0.08), value: checkmarkAppeared)
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(Color(red: 0.22, green: 0.50, blue: 0.92))
+                // ── Top: hero image ───────────────────────────────────
+                Image("MascotSweeply")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: geo.size.width)
+                    .padding(.top, 40)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(Color(red: 193/255, green: 223/255, blue: 253/255))
 
                 // ── Bottom: content card ──────────────────────────────
                 VStack(spacing: 0) {
@@ -1174,20 +1170,17 @@ struct OnboardingView: View {
                         let biz = businessName.trimmingCharacters(in: .whitespaces)
                         if !biz.isEmpty {
                             Text(biz)
-                                .font(.system(size: 16, weight: .semibold))
-                                .foregroundStyle(Color(red: 0.22, green: 0.50, blue: 0.92))
+                                .font(.system(size: 15, weight: .semibold))
+                                .foregroundStyle(Color.sweeplyTextSub)
                         }
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.top, 28)
-                    .padding(.bottom, 22)
-                    .opacity(checkmarkAppeared ? 1 : 0)
-                    .offset(y: checkmarkAppeared ? 0 : 10)
-                    .animation(.spring(response: 0.5, dampingFraction: 0.82).delay(0.18), value: checkmarkAppeared)
+                    .padding(.top, 24)
+                    .padding(.bottom, 18)
 
                     // Bullet rows
-                    VStack(alignment: .leading, spacing: 14) {
-                        allSetBullet(icon: "person.crop.circle.fill", text: "Your profile is set up and ready")
+                    VStack(alignment: .leading, spacing: 12) {
+                        allSetBullet(icon: "person.crop.circle.fill", text: "Your profile is set up")
 
                         if !selectedServices.isEmpty {
                             allSetBullet(
@@ -1196,8 +1189,8 @@ struct OnboardingView: View {
                             )
                         }
 
-                        allSetBullet(icon: "doc.text.fill", text: "Invoices & payments enabled")
-                        allSetBullet(icon: "calendar",      text: "Calendar & scheduling ready")
+                        allSetBullet(icon: "doc.text.fill",  text: "Invoices & payments ready")
+                        allSetBullet(icon: "calendar",       text: "Calendar & scheduling ready")
 
                         if !teamInviteMembers.isEmpty {
                             allSetBullet(
@@ -1207,10 +1200,7 @@ struct OnboardingView: View {
                         }
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.bottom, 28)
-                    .opacity(checkmarkAppeared ? 1 : 0)
-                    .offset(y: checkmarkAppeared ? 0 : 10)
-                    .animation(.spring(response: 0.5, dampingFraction: 0.82).delay(0.26), value: checkmarkAppeared)
+                    .padding(.bottom, 20)
 
                     // Error banner
                     if saveError {
@@ -1249,33 +1239,34 @@ struct OnboardingView: View {
                         .shadow(color: Color.sweeplyNavy.opacity(0.2), radius: 8, x: 0, y: 4)
                     }
                     .disabled(isSaving)
-
-                    Spacer().frame(height: geo.safeAreaInsets.bottom > 0 ? geo.safeAreaInsets.bottom + 8 : 28)
+                    .padding(.bottom, geo.safeAreaInsets.bottom > 0 ? geo.safeAreaInsets.bottom + 8 : 28)
                 }
                 .padding(.horizontal, 28)
                 .frame(maxWidth: .infinity)
                 .background(Color.sweeplyBackground)
+                .opacity(checkmarkAppeared ? 1 : 0)
+                .offset(y: checkmarkAppeared ? 0 : 32)
             }
             .ignoresSafeArea()
         }
         .onAppear {
             checkmarkAppeared = false
             saveError = false
-            withAnimation(.spring(response: 0.55, dampingFraction: 0.75).delay(0.05)) {
+            withAnimation(.spring(response: 0.55, dampingFraction: 0.82).delay(0.1)) {
                 checkmarkAppeared = true
             }
         }
     }
 
     private func allSetBullet(icon: String, text: String) -> some View {
-        HStack(spacing: 14) {
+        HStack(spacing: 12) {
             Image(systemName: icon)
-                .font(.system(size: 15, weight: .medium))
-                .foregroundStyle(Color(red: 0.22, green: 0.50, blue: 0.92))
-                .frame(width: 22)
+                .font(.system(size: 14, weight: .medium))
+                .foregroundStyle(Color.sweeplyAccent)
+                .frame(width: 20)
             Text(text)
-                .font(.system(size: 15))
-                .foregroundStyle(Color.sweeplyNavy.opacity(0.8))
+                .font(.system(size: 14))
+                .foregroundStyle(Color.sweeplyNavy.opacity(0.75))
         }
     }
 
