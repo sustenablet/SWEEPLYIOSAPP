@@ -116,15 +116,27 @@ struct MemberPaySetupView: View {
     // MARK: - Bottom bar
 
     private var bottomBar: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: 10) {
             if step > 1 {
                 Button {
                     UIImpactFeedbackGenerator(style: .light).impactOccurred()
                     withAnimation(.easeInOut(duration: 0.22)) { step -= 1 }
                 } label: {
-                    Text("Back")
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundStyle(Color.sweeplyTextSub)
+                    HStack(spacing: 6) {
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 13, weight: .semibold))
+                        Text("Back")
+                            .font(.system(size: 16, weight: .semibold))
+                    }
+                    .foregroundStyle(Color.sweeplyNavy)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 15)
+                    .background(Color.sweeplySurface)
+                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .stroke(Color.sweeplyBorder, lineWidth: 1)
+                    )
                 }
                 .buttonStyle(.plain)
             }

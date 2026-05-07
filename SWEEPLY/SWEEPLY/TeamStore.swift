@@ -292,7 +292,6 @@ final class TeamStore {
         }
 
         do {
-            // Try to update with serviceRates - if column doesn't exist, catch error and update without it
             try await client
                 .from("team_members")
                 .update(TeamMemberPayRatePatch(
@@ -305,22 +304,21 @@ final class TeamStore {
                 .eq("id", value: id.uuidString)
                 .execute()
         } catch {
-            // If service_rates column doesn't exist, try updating without it
+            // service_rates column may not exist yet — retry without it
             do {
                 try await client
                     .from("team_members")
-                    .update(TeamMemberPayRatePatch(
+                    .update(TeamMemberPayRateBasePatch(
                         payRateType: rateType.rawValue,
                         payRateAmount: amount,
                         payRateEnabled: enabled,
-                        payDayOfWeek: payDay,
-                        serviceRates: [:]
+                        payDayOfWeek: payDay
                     ))
                     .eq("id", value: id.uuidString)
                     .execute()
+                lastError = nil
             } catch {
                 lastError = error.localizedDescription
-                // Still update local state even if DB fails
                 if let idx = members.firstIndex(where: { $0.id == id }) {
                     members[idx].payRateType = rateType
                     members[idx].payRateAmount = amount
@@ -328,7 +326,7 @@ final class TeamStore {
                     members[idx].payDayOfWeek = payDay
                     members[idx].serviceRates = serviceRates
                 }
-                return true // Return true to let user continue (local state updated)
+                return true
             }
         }
         
@@ -438,6 +436,21 @@ private struct TeamMemberPayRatePatch: Encodable {
         case payRateEnabled = "pay_rate_enabled"
         case payDayOfWeek   = "pay_day_of_week"
         case serviceRates   = "service_rates"
+    }
+}
+
+// Fallback patch used when the service_rates column doesn't exist in the schema yet
+private struct TeamMemberPayRateBasePatch: Encodable {
+    let payRateType: String
+    let payRateAmount: Double
+    let payRateEnabled: Bool
+    let payDayOfWeek: Int?
+
+    enum CodingKeys: String, CodingKey {
+        case payRateType    = "pay_rate_type"
+        case payRateAmount  = "pay_rate_amount"
+        case payRateEnabled = "pay_rate_enabled"
+        case payDayOfWeek   = "pay_day_of_week"
     }
 }
 
