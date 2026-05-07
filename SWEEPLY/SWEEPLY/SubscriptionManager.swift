@@ -86,6 +86,14 @@ final class SubscriptionManager {
             ?? customerInfo?.entitlements[Self.standardEntitlementID]?.productIdentifier
     }
 
+    // MARK: - Trial
+
+    /// Anchors the trial start date to right now if it hasn't been set yet.
+    /// Call this once on app launch so the clock always starts at first use.
+    func startTrialIfNeeded() {
+        _ = trialStartDate
+    }
+
     // MARK: - Configuration
 
     static func configure() {

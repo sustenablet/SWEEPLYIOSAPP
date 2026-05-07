@@ -65,7 +65,7 @@ struct SubscriptionPaywallView: View {
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: 0) {
                         centeredLogo
-                            .padding(.top, 24)
+                            .padding(.top, 4)
                             .padding(.bottom, 12)
 
                         header
@@ -141,7 +141,7 @@ struct SubscriptionPaywallView: View {
         Image("MascotSweeply")
             .resizable()
             .scaledToFit()
-            .frame(width: 72, height: 72)
+            .frame(width: 92, height: 92)
             .frame(maxWidth: .infinity)
     }
 

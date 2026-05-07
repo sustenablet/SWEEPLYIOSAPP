@@ -99,6 +99,7 @@ struct SWEEPLYApp: App {
                     subscriptionManager.startListening()
                     Task {
                         await subscriptionManager.loadCustomerInfo()
+                        subscriptionManager.startTrialIfNeeded()
                         if appSession.isAuthenticated, let uid = appSession.userId {
                             await teamStore.load(ownerId: uid)
                             // Identify user in RevenueCat so purchases are tied to their account
