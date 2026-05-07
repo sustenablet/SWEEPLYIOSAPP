@@ -38,19 +38,16 @@ struct TeamView: View {
                                     .font(.system(size: 11, weight: .bold))
                                     .foregroundStyle(Color.sweeplyTextSub)
                                     .tracking(0.8)
-                                
+
                                 ForEach(session.activeMemberships) { (membership: TeamMembership) in
-                                    HStack(spacing: 8) {
+                                    HStack(spacing: 10) {
                                         Text(membership.businessName)
                                             .font(.system(size: 15, weight: .semibold))
                                             .foregroundStyle(Color.sweeplyNavy)
-                                        
-                                        Text("·")
-                                            .font(.system(size: 15))
-                                            .foregroundStyle(Color.sweeplyTextSub)
-                                        
-                                        Spacer()
-                                        
+                                            .lineLimit(1)
+
+                                        Spacer(minLength: 8)
+
                                         Button {
                                             UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                                             session.switchToMembership(membership)
@@ -67,6 +64,7 @@ struct TeamView: View {
                                     }
                                 }
                             }
+                            .padding(.horizontal, 20)
                         }
 
                         if let err = teamStore.lastError, !err.isEmpty {
