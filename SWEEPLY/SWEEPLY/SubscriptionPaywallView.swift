@@ -112,7 +112,12 @@ struct SubscriptionPaywallView: View {
                 }
             }
         }
-        .task { await subscriptionManager.loadOfferings() }
+        .task {
+            await subscriptionManager.loadOfferings()
+            if subscriptionManager.offerings?.current == nil {
+                purchaseError = "Could not load products — check your connection and try again."
+            }
+        }
     }
 
     // MARK: - Background
@@ -383,7 +388,7 @@ struct SubscriptionPaywallView: View {
             .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         }
         .buttonStyle(.plain)
-        .disabled(subscriptionManager.isPurchasing)
+        .disabled(subscriptionManager.isPurchasing || (selectedPlan == .pro ? proPackage : standardPackage) == nil)
         .scaleEffect(ctaPressed ? 0.98 : 1)
         .animation(.easeInOut(duration: 0.12), value: ctaPressed)
     }
