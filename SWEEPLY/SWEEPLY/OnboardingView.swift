@@ -67,9 +67,6 @@ struct OnboardingView: View {
         return defaults + customServices.filter { $0.isAddon }
     }
 
-    // Step 3 state
-    @State private var notifStatus: UNAuthorizationStatus = .notDetermined
-    @State private var notifDismissed = false
     @State private var checkmarkAppeared = false
     @State private var saveError = false
 
@@ -103,7 +100,7 @@ struct OnboardingView: View {
 
     var body: some View {
         ZStack {
-            (step == 4 || step == 5
+            (step == 4 || step == 5 || step == 7
                 ? Color(red: 0.22, green: 0.50, blue: 0.92)
                 : Color.sweeplyBackground
             ).ignoresSafeArea()
@@ -227,7 +224,7 @@ struct OnboardingView: View {
                     .frame(width: geo.size.width)
                     .padding(.top, 40)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .background(Color(red: 0.22, green: 0.50, blue: 0.92))
+                    .background(Color(red: 193/255, green: 223/255, blue: 253/255))
 
                 // ── Bottom: content card flush with image ─────────────
                 VStack(spacing: 0) {
@@ -1148,245 +1145,140 @@ struct OnboardingView: View {
     // MARK: - Step 7: All Set
 
     private var stepAllSet: some View {
-        VStack(spacing: 0) {
-            ScrollView(showsIndicators: false) {
+        GeometryReader { geo in
+            VStack(spacing: 0) {
+
+                // ── Top: mascot on blue ───────────────────────────────
+                ZStack {
+                    Image("MascotSweeply")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: geo.size.width * 0.62)
+                        .opacity(checkmarkAppeared ? 1 : 0)
+                        .scaleEffect(checkmarkAppeared ? 1 : 0.88)
+                        .animation(.spring(response: 0.55, dampingFraction: 0.75).delay(0.08), value: checkmarkAppeared)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(Color(red: 0.22, green: 0.50, blue: 0.92))
+
+                // ── Bottom: content card ──────────────────────────────
                 VStack(spacing: 0) {
 
-                    // ── Hero ──────────────────────────────────────────
-                    VStack(spacing: 0) {
-                        Spacer().frame(height: 48)
+                    // Headline
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Congrats, \(firstName)!")
+                            .font(.system(size: 28, weight: .bold, design: .rounded))
+                            .foregroundStyle(Color.sweeplyNavy)
+                            .tracking(-0.4)
 
-                        // Animated status badge
-                        HStack(spacing: 6) {
-                            Image(systemName: "checkmark.circle.fill")
-                                .font(.system(size: 13, weight: .semibold))
-                                .foregroundStyle(Color.sweeplyAccent)
-                            Text("Setup complete")
-                                .font(.system(size: 13, weight: .semibold))
-                                .foregroundStyle(Color.sweeplyAccent)
-                        }
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 7)
-                        .background(Color.sweeplyAccent.opacity(0.09))
-                        .clipShape(Capsule())
-                        .scaleEffect(checkmarkAppeared ? 1.0 : 0.6)
-                        .opacity(checkmarkAppeared ? 1.0 : 0)
-
-                        Spacer().frame(height: 22)
-
-                        // Business name — the headline
                         let biz = businessName.trimmingCharacters(in: .whitespaces)
                         if !biz.isEmpty {
                             Text(biz)
-                                .font(.system(size: 36, weight: .black, design: .rounded))
-                                .foregroundStyle(Color.sweeplyNavy)
-                                .multilineTextAlignment(.center)
-                                .tracking(-1.0)
-                                .lineSpacing(2)
-                                .padding(.horizontal, 28)
-                                .opacity(checkmarkAppeared ? 1.0 : 0)
-                                .offset(y: checkmarkAppeared ? 0 : 12)
+                                .font(.system(size: 16, weight: .semibold))
+                                .foregroundStyle(Color(red: 0.22, green: 0.50, blue: 0.92))
                         }
-
-                        Spacer().frame(height: 10)
-
-                        Text("Your business is ready to run.")
-                            .font(.system(size: 16))
-                            .foregroundStyle(Color.sweeplyTextSub)
-                            .opacity(checkmarkAppeared ? 1.0 : 0)
-
-                        Spacer().frame(height: 40)
                     }
-
-                    // ── Summary card ───────────────────────────────────
-                    VStack(alignment: .leading, spacing: 0) {
-                        Text("WHAT'S READY")
-                            .font(.system(size: 10, weight: .bold))
-                            .foregroundStyle(Color.sweeplyTextSub)
-                            .tracking(0.8)
-                            .padding(.bottom, 10)
-
-                        VStack(spacing: 0) {
-                            allSetRow(icon: "person.fill",
-                                      label: firstName,
-                                      detail: "Profile created")
-
-                            if !selectedServices.isEmpty {
-                                Divider().padding(.leading, 60)
-                                allSetRow(icon: "sparkles",
-                                          label: "\(selectedServices.count) service\(selectedServices.count == 1 ? "" : "s")",
-                                          detail: "Added to your catalog")
-                            }
-
-                            if !teamInviteMembers.isEmpty {
-                                Divider().padding(.leading, 60)
-                                allSetRow(icon: "person.2.fill",
-                                          label: "\(teamInviteMembers.count) team member\(teamInviteMembers.count == 1 ? "" : "s")",
-                                          detail: "Invite sent")
-                            }
-                        }
-                        .background(Color.sweeplySurface)
-                        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                .stroke(Color.sweeplyBorder, lineWidth: 1)
-                        )
-                    }
-                    .padding(.horizontal, 24)
-
-                    // ── Notification nudge ─────────────────────────────
-                    if notifStatus == .notDetermined && !notifDismissed {
-                        notificationCard
-                            .padding(.horizontal, 24)
-                            .padding(.top, 14)
-                    }
-
-                    Spacer().frame(height: 32)
-                }
-            }
-            .background(Color.sweeplyBackground)
-
-            // ── Sticky CTA ─────────────────────────────────────────
-            VStack(spacing: 0) {
-                Divider().opacity(0.5)
-
-                if saveError {
-                    HStack(spacing: 10) {
-                        Image(systemName: "exclamationmark.triangle.fill")
-                            .font(.system(size: 13))
-                        Text("Couldn't save — tap to try again.")
-                            .font(.system(size: 13, weight: .medium))
-                    }
-                    .foregroundStyle(Color.sweeplyDestructive)
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 10)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(Color.sweeplyDestructive.opacity(0.08))
-                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-                    .padding(.horizontal, 24)
-                    .padding(.top, 12)
-                    .transition(.opacity.combined(with: .move(edge: .bottom)))
-                }
+                    .padding(.top, 28)
+                    .padding(.bottom, 22)
+                    .opacity(checkmarkAppeared ? 1 : 0)
+                    .offset(y: checkmarkAppeared ? 0 : 10)
+                    .animation(.spring(response: 0.5, dampingFraction: 0.82).delay(0.18), value: checkmarkAppeared)
 
-                Button {
-                    UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-                    saveAndFinish()
-                } label: {
-                    Group {
-                        if isSaving {
-                            ProgressView().tint(.white)
-                        } else {
-                            Text(saveError ? "Try Again" : "Open Dashboard")
-                                .font(.system(size: 17, weight: .bold))
+                    // Bullet rows
+                    VStack(alignment: .leading, spacing: 14) {
+                        allSetBullet(icon: "person.crop.circle.fill", text: "Your profile is set up and ready")
+
+                        if !selectedServices.isEmpty {
+                            allSetBullet(
+                                icon: "sparkles",
+                                text: "\(selectedServices.count) service\(selectedServices.count == 1 ? "" : "s") added to your catalog"
+                            )
+                        }
+
+                        allSetBullet(icon: "doc.text.fill", text: "Invoices & payments enabled")
+                        allSetBullet(icon: "calendar",      text: "Calendar & scheduling ready")
+
+                        if !teamInviteMembers.isEmpty {
+                            allSetBullet(
+                                icon: "person.2.fill",
+                                text: "\(teamInviteMembers.count) team invite\(teamInviteMembers.count == 1 ? "" : "s") sent"
+                            )
                         }
                     }
-                    .foregroundStyle(.white)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 54)
-                    .background(isSaving ? Color.sweeplyNavy.opacity(0.45) : Color.sweeplyNavy)
-                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                    .shadow(color: Color.sweeplyNavy.opacity(0.2), radius: 8, x: 0, y: 4)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.bottom, 28)
+                    .opacity(checkmarkAppeared ? 1 : 0)
+                    .offset(y: checkmarkAppeared ? 0 : 10)
+                    .animation(.spring(response: 0.5, dampingFraction: 0.82).delay(0.26), value: checkmarkAppeared)
+
+                    // Error banner
+                    if saveError {
+                        HStack(spacing: 8) {
+                            Image(systemName: "exclamationmark.triangle.fill").font(.system(size: 13))
+                            Text("Couldn't save — tap to try again.")
+                                .font(.system(size: 13, weight: .medium))
+                        }
+                        .foregroundStyle(Color.sweeplyDestructive)
+                        .padding(.horizontal, 14).padding(.vertical, 10)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(Color.sweeplyDestructive.opacity(0.08))
+                        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                        .padding(.bottom, 12)
+                        .transition(.opacity.combined(with: .move(edge: .top)))
+                    }
+
+                    // CTA
+                    Button {
+                        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                        saveAndFinish()
+                    } label: {
+                        Group {
+                            if isSaving {
+                                ProgressView().tint(.white)
+                            } else {
+                                Text(saveError ? "Try Again" : "Open Dashboard")
+                                    .font(.system(size: 17, weight: .bold))
+                            }
+                        }
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 54)
+                        .background(isSaving ? Color.sweeplyNavy.opacity(0.45) : Color.sweeplyNavy)
+                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        .shadow(color: Color.sweeplyNavy.opacity(0.2), radius: 8, x: 0, y: 4)
+                    }
+                    .disabled(isSaving)
+
+                    Spacer().frame(height: geo.safeAreaInsets.bottom > 0 ? geo.safeAreaInsets.bottom + 8 : 28)
                 }
-                .disabled(isSaving)
-                .padding(.horizontal, 24)
-                .padding(.top, 16)
-                .padding(.bottom, 32)
+                .padding(.horizontal, 28)
+                .frame(maxWidth: .infinity)
+                .background(Color.sweeplyBackground)
             }
-            .background(Color.sweeplyBackground)
+            .ignoresSafeArea()
         }
         .onAppear {
             checkmarkAppeared = false
             saveError = false
-            notifDismissed = false
-            withAnimation(.spring(response: 0.55, dampingFraction: 0.75).delay(0.12)) {
+            withAnimation(.spring(response: 0.55, dampingFraction: 0.75).delay(0.05)) {
                 checkmarkAppeared = true
             }
-            UNUserNotificationCenter.current().getNotificationSettings { settings in
-                DispatchQueue.main.async { notifStatus = settings.authorizationStatus }
-            }
         }
     }
 
-    private func allSetRow(icon: String, label: String, detail: String) -> some View {
+    private func allSetBullet(icon: String, text: String) -> some View {
         HStack(spacing: 14) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 9, style: .continuous)
-                    .fill(Color.sweeplyAccent.opacity(0.10))
-                    .frame(width: 36, height: 36)
-                Image(systemName: icon)
-                    .font(.system(size: 15, weight: .medium))
-                    .foregroundStyle(Color.sweeplyAccent)
-            }
-            VStack(alignment: .leading, spacing: 2) {
-                Text(label)
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(Color.sweeplyNavy)
-                Text(detail)
-                    .font(.system(size: 12))
-                    .foregroundStyle(Color.sweeplyTextSub)
-            }
-            Spacer()
+            Image(systemName: icon)
+                .font(.system(size: 15, weight: .medium))
+                .foregroundStyle(Color(red: 0.22, green: 0.50, blue: 0.92))
+                .frame(width: 22)
+            Text(text)
+                .font(.system(size: 15))
+                .foregroundStyle(Color.sweeplyNavy.opacity(0.8))
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 13)
     }
 
-    private var notificationCard: some View {
-        HStack(spacing: 12) {
-            ZStack {
-                Circle()
-                    .fill(Color.sweeplyAccent.opacity(0.10))
-                    .frame(width: 38, height: 38)
-                Image(systemName: "bell.fill")
-                    .font(.system(size: 16))
-                    .foregroundStyle(Color.sweeplyAccent)
-            }
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text("Stay on top of jobs & invoices")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(Color.sweeplyNavy)
-                Text("Get reminders before they're due")
-                    .font(.system(size: 11))
-                    .foregroundStyle(Color.sweeplyTextSub)
-            }
-
-            Spacer()
-
-            Button {
-                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-                NotificationManager.shared.requestAuthorization()
-                withAnimation { notifStatus = .authorized }
-            } label: {
-                Text("Allow")
-                    .font(.system(size: 12, weight: .bold))
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 7)
-                    .background(Color.sweeplyAccent)
-                    .clipShape(Capsule())
-            }
-            .buttonStyle(.plain)
-
-            Button {
-                UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                withAnimation { notifDismissed = true }
-            } label: {
-                Image(systemName: "xmark")
-                    .font(.system(size: 11, weight: .bold))
-                    .foregroundStyle(Color.sweeplyTextSub)
-                    .frame(width: 24, height: 24)
-            }
-            .buttonStyle(.plain)
-        }
-        .padding(14)
-        .background(Color.sweeplySurface)
-        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 14)
-                .stroke(Color.sweeplyBorder, lineWidth: 1)
-        )
-    }
 
     private var firstName: String {
         fullName.trimmingCharacters(in: .whitespaces).components(separatedBy: " ").first ?? "there"
