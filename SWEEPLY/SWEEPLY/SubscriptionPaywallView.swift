@@ -269,13 +269,15 @@ struct SubscriptionPaywallView: View {
         switch plan {
         case .pro:
             return [
-                FeatureItem(text: "Everything in Standard", icon: "checkmark.circle.fill", highlight: true),
-                FeatureItem(text: "Unlimited cleaners & teams",   icon: "person.3.fill"),
-                FeatureItem(text: "Revenue analytics dashboard",  icon: "chart.bar.xaxis"),
-                FeatureItem(text: "Profit & loss breakdown",      icon: "doc.text.fill"),
-                FeatureItem(text: "Predictive cash flow",         icon: "waveform.path.ecg"),
-                FeatureItem(text: "Custom job checklists & notes",      icon: "checklist"),
-                FeatureItem(text: "Client satisfaction & review tracking", icon: "hand.thumbsup.fill"),
+                FeatureItem(text: "Everything in Standard",              icon: "checkmark.circle.fill",              highlight: true),
+                FeatureItem(text: "Unlimited cleaners & teams",          icon: "person.3.fill"),
+                FeatureItem(text: "Revenue analytics dashboard",         icon: "chart.bar.xaxis"),
+                FeatureItem(text: "Profit & loss breakdown",             icon: "doc.text.fill"),
+                FeatureItem(text: "Predictive cash flow",                icon: "waveform.path.ecg"),
+                FeatureItem(text: "Custom job checklists & notes",       icon: "checklist"),
+                FeatureItem(text: "Invoice reminders & tracking",        icon: "envelope.badge.fill"),
+                FeatureItem(text: "Team messaging & job updates",        icon: "bubble.left.and.bubble.right.fill"),
+                FeatureItem(text: "Unlimited expense categories",        icon: "folder.badge.plus"),
             ]
         case .standard:
             return [

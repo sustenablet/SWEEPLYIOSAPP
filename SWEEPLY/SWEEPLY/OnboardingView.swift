@@ -119,8 +119,8 @@ struct OnboardingView: View {
                     case 2: stepServices.transition(stepTransition).id(2)
                     case 3: stepTeam.transition(stepTransition).id(3)
                     case 4: stepNotifications.transition(stepTransition).id(4)
-                    case 5: stepPaywall.transition(stepTransition).id(5)
-                    case 6: stepLocation.transition(stepTransition).id(6)
+                    case 5: stepLocation.transition(stepTransition).id(5)
+                    case 6: stepPaywall.transition(stepTransition).id(6)
                     case 7: stepAllSet.transition(stepTransition).id(7)
                     default: EmptyView()
                     }
@@ -805,119 +805,109 @@ struct OnboardingView: View {
         }
     }
 
-    // MARK: - Step 5: Paywall (trial intro)
+    // MARK: - Step 6: Paywall (trial intro)
 
     private var stepPaywall: some View {
         ZStack {
             Color.sweeplyBackground.ignoresSafeArea()
 
-            ScrollView(showsIndicators: false) {
-                VStack(spacing: 0) {
+            VStack(spacing: 0) {
 
-                    // ── Trial hero ────────────────────────────────────
-                    VStack(spacing: 14) {
-                        Image("MascotSweeply")
-                            .resizable()
-                            .scaledToFit()
-                            .frame(width: 72, height: 72)
-                            .padding(.top, 44)
+                // ── Trial hero ────────────────────────────────────────
+                VStack(spacing: 8) {
+                    Image("MascotSweeply")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 60, height: 60)
+                        .padding(.top, 20)
 
-                        // Trial badge
-                        HStack(spacing: 6) {
-                            Image(systemName: "gift.fill")
-                                .font(.system(size: 12, weight: .semibold))
-                            Text("Your free trial starts today")
-                                .font(.system(size: 13, weight: .semibold))
-                        }
-                        .foregroundStyle(Color.sweeplyAccent)
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 8)
-                        .background(Color.sweeplyAccent.opacity(0.10))
-                        .overlay(Capsule().stroke(Color.sweeplyAccent.opacity(0.3), lineWidth: 1))
-                        .clipShape(Capsule())
-
-                        VStack(spacing: 6) {
-                            Text("30 days free,\nthen choose your plan.")
-                                .font(.system(size: 26, weight: .bold))
-                                .foregroundStyle(Color.sweeplyNavy)
-                                .multilineTextAlignment(.center)
-                                .tracking(-0.5)
-                            Text("No payment needed until your trial ends.")
-                                .font(.system(size: 14))
-                                .foregroundStyle(Color.sweeplyTextSub)
-                                .multilineTextAlignment(.center)
-                        }
-                        .padding(.horizontal, 28)
+                    HStack(spacing: 6) {
+                        Image(systemName: "gift.fill")
+                            .font(.system(size: 11, weight: .semibold))
+                        Text("Your free trial starts today")
+                            .font(.system(size: 12, weight: .semibold))
                     }
-                    .padding(.bottom, 28)
+                    .foregroundStyle(Color.sweeplyAccent)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 7)
+                    .background(Color.sweeplyAccent.opacity(0.10))
+                    .overlay(Capsule().stroke(Color.sweeplyAccent.opacity(0.3), lineWidth: 1))
+                    .clipShape(Capsule())
 
-                    // ── Plan toggle ───────────────────────────────────
-                    obPlanToggle
-                        .padding(.horizontal, 20)
-                        .padding(.bottom, 16)
-
-                    // ── Feature box ───────────────────────────────────
-                    obFeatureBox
-                        .padding(.horizontal, 20)
-                        .padding(.bottom, 14)
-
-                    // ── Billing cards ─────────────────────────────────
-                    obBillingCards
-                        .padding(.horizontal, 20)
-                        .padding(.bottom, 20)
-
-                    if let err = paywallError {
-                        HStack(spacing: 8) {
-                            Image(systemName: "exclamationmark.circle.fill")
-                                .foregroundStyle(Color.sweeplyDestructive)
-                            Text(err)
-                                .font(.system(size: 13))
-                                .foregroundStyle(Color.sweeplyNavy.opacity(0.85))
-                        }
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 10)
-                        .background(Color.sweeplyDestructive.opacity(0.08))
-                        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-                        .padding(.horizontal, 20)
-                        .padding(.bottom, 12)
+                    VStack(spacing: 4) {
+                        Text("30 days free,\nthen choose your plan.")
+                            .font(.system(size: 22, weight: .bold))
+                            .foregroundStyle(Color.sweeplyNavy)
+                            .multilineTextAlignment(.center)
+                            .tracking(-0.4)
+                        Text("No payment needed until your trial ends.")
+                            .font(.system(size: 13))
+                            .foregroundStyle(Color.sweeplyTextSub)
+                            .multilineTextAlignment(.center)
                     }
+                    .padding(.horizontal, 28)
+                }
+                .padding(.bottom, 16)
 
-                    // ── CTA ───────────────────────────────────────────
-                    Button {
-                        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-                        Task { await obStartTrial() }
-                    } label: {
-                        Group {
-                            if paywallPurchasing {
-                                ProgressView().tint(.white)
-                            } else {
-                                Text("Start Free Trial")
-                                    .font(.system(size: 17, weight: .bold))
-                                    .foregroundStyle(.white)
-                            }
-                        }
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 54)
-                        .background(paywallPlan == .pro ? Color.sweeplyAccent : Color.sweeplyNavy)
-                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                        .shadow(color: Color.sweeplyNavy.opacity(0.18), radius: 8, x: 0, y: 4)
-                    }
-                    .buttonStyle(.plain)
-                    .disabled(paywallPurchasing)
+                // ── Plan toggle ───────────────────────────────────────
+                obPlanToggle
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 10)
+
+                // ── Feature box ───────────────────────────────────────
+                obFeatureBox
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 10)
+
+                // ── Billing cards ─────────────────────────────────────
+                obBillingCards
                     .padding(.horizontal, 20)
                     .padding(.bottom, 14)
 
-                    Button {
-                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                        advance()
-                    } label: {
-                        Text("I'll decide later")
-                            .font(.system(size: 14, weight: .medium))
-                            .foregroundStyle(Color.sweeplyTextSub)
-                    }
-                    .buttonStyle(.plain)
-                    .padding(.bottom, 40)
+                if let err = paywallError {
+                    Text(err)
+                        .font(.system(size: 12))
+                        .foregroundStyle(Color.sweeplyDestructive)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 20)
+                        .padding(.bottom, 8)
                 }
+
+                // ── CTA ───────────────────────────────────────────────
+                Button {
+                    UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                    Task { await obStartTrial() }
+                } label: {
+                    Group {
+                        if paywallPurchasing {
+                            ProgressView().tint(.white)
+                        } else {
+                            Text("Start Free Trial")
+                                .font(.system(size: 17, weight: .bold))
+                                .foregroundStyle(.white)
+                        }
+                    }
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 52)
+                    .background(paywallPlan == .pro ? Color.sweeplyAccent : Color.sweeplyNavy)
+                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    .shadow(color: Color.sweeplyNavy.opacity(0.18), radius: 8, x: 0, y: 4)
+                }
+                .buttonStyle(.plain)
+                .disabled(paywallPurchasing)
+                .padding(.horizontal, 20)
+                .padding(.bottom, 10)
+
+                Button {
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    advance()
+                } label: {
+                    Text("I'll decide later")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(Color.sweeplyTextSub)
+                }
+                .buttonStyle(.plain)
+                .padding(.bottom, 24)
             }
         }
         .task { await subscriptionManager.loadOfferings() }
@@ -960,12 +950,14 @@ struct OnboardingView: View {
 
     private var obFeatureBox: some View {
         let features: [(icon: String, text: String, highlight: Bool)] = paywallPlan == .pro ? [
-            ("checkmark.circle.fill", "Everything in Standard",          true),
-            ("person.3.fill",         "Unlimited cleaners & teams",       false),
-            ("chart.bar.xaxis",       "Revenue analytics dashboard",      false),
-            ("checklist",             "Custom job checklists & notes",     false),
-            ("waveform.path.ecg",     "Predictive cash flow",             false),
-            ("hand.thumbsup.fill",    "Client satisfaction tracking",     false),
+            ("checkmark.circle.fill",              "Everything in Standard",           true),
+            ("person.3.fill",                      "Unlimited cleaners & teams",        false),
+            ("chart.bar.xaxis",                    "Revenue analytics dashboard",       false),
+            ("checklist",                          "Custom job checklists & notes",     false),
+            ("waveform.path.ecg",                  "Predictive cash flow",              false),
+            ("envelope.badge.fill",                "Invoice reminders & tracking",      false),
+            ("bubble.left.and.bubble.right.fill",  "Team messaging & job updates",      false),
+            ("folder.badge.plus",                  "Unlimited expense categories",      false),
         ] : [
             ("person.fill",           "Unlimited client profiles",        false),
             ("briefcase.fill",        "Unlimited jobs & invoices",        false),
@@ -974,21 +966,21 @@ struct OnboardingView: View {
             ("chart.pie.fill",        "Expense categorization",           false),
             ("square.grid.2x2.fill",  "Home-screen widgets",             false),
         ]
-        return VStack(alignment: .leading, spacing: 12) {
+        return VStack(alignment: .leading, spacing: 8) {
             ForEach(features, id: \.text) { f in
-                HStack(spacing: 12) {
+                HStack(spacing: 10) {
                     Image(systemName: f.icon)
-                        .font(.system(size: 13, weight: .medium))
+                        .font(.system(size: 12, weight: .medium))
                         .foregroundStyle(f.highlight ? Color.sweeplyAccent : Color.sweeplyNavy.opacity(0.45))
-                        .frame(width: 20)
+                        .frame(width: 18)
                     Text(f.text)
-                        .font(.system(size: 14, weight: f.highlight ? .semibold : .regular))
+                        .font(.system(size: 13, weight: f.highlight ? .semibold : .regular))
                         .foregroundStyle(f.highlight ? Color.sweeplyNavy : Color.sweeplyNavy.opacity(0.75))
                 }
             }
         }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 18)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 14)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(Color.sweeplySurface)
         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
@@ -1082,7 +1074,7 @@ struct OnboardingView: View {
         }
     }
 
-    // MARK: - Step 6: Location
+    // MARK: - Step 5: Location
 
     private var stepLocation: some View {
         GeometryReader { geo in
