@@ -124,6 +124,15 @@ struct SWEEPLYApp: App {
                         Task { try? await SupabaseManager.shared?.auth.session(from: url) }
                     }
                 }
+                .onChange(of: appSession.isAuthenticated) { _, isAuth in
+                    Task {
+                        if isAuth, let uid = appSession.userId {
+                            await subscriptionManager.identify(userId: uid.uuidString)
+                        } else {
+                            await subscriptionManager.reset()
+                        }
+                    }
+                }
                 .onContinueUserActivity(CSSearchableItemActionType) { activity in
                     if let deepLink = SpotlightIndexer.deepLink(from: activity) {
                         UserDefaults.standard.set(deepLink, forKey: "pendingSpotlightLink")
