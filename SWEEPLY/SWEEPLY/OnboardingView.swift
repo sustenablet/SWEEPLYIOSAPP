@@ -103,7 +103,10 @@ struct OnboardingView: View {
 
     var body: some View {
         ZStack {
-            Color.sweeplyBackground.ignoresSafeArea()
+            (step == 4 || step == 5
+                ? Color(red: 0.22, green: 0.50, blue: 0.92)
+                : Color.sweeplyBackground
+            ).ignoresSafeArea()
 
             VStack(spacing: 0) {
                 // Header — shown on data-collection steps only (not paywall/location/all-set)
@@ -169,7 +172,7 @@ struct OnboardingView: View {
                         Text("Previous")
                             .font(.system(size: 14, weight: .medium))
                     }
-                    .foregroundStyle(Color.sweeplyNavy)
+                    .foregroundStyle(step == 4 ? .white : Color.sweeplyNavy)
                 }
                 .buttonStyle(.plain)
                 .frame(width: 80, alignment: .leading)
@@ -181,10 +184,10 @@ struct OnboardingView: View {
             GeometryReader { geo in
                 ZStack(alignment: .leading) {
                     Capsule()
-                        .fill(Color.sweeplyBorder)
+                        .fill(step == 4 ? Color.white.opacity(0.3) : Color.sweeplyBorder)
                         .frame(height: 4)
                     Capsule()
-                        .fill(Color.sweeplyAccent)
+                        .fill(step == 4 ? Color.white : Color.sweeplyAccent)
                         .frame(width: geo.size.width * (CGFloat(step - 1) / 4.0), height: 4)
                         .animation(.spring(response: 0.4, dampingFraction: 0.8), value: step)
                 }
@@ -224,7 +227,7 @@ struct OnboardingView: View {
                     .frame(width: geo.size.width)
                     .padding(.top, 40)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .background(Color(red: 0.757, green: 0.875, blue: 0.992))
+                    .background(Color(red: 0.22, green: 0.50, blue: 0.92))
 
                 // ── Bottom: content card flush with image ─────────────
                 VStack(spacing: 0) {
@@ -750,7 +753,7 @@ struct OnboardingView: View {
                     .frame(width: geo.size.width)
                     .padding(.top, 40)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .background(Color(red: 0.757, green: 0.875, blue: 0.992))
+                    .background(Color(red: 0.22, green: 0.50, blue: 0.92))
 
                 // ── Bottom: content card flush with image ─────────────
                 VStack(spacing: 0) {
@@ -1087,7 +1090,7 @@ struct OnboardingView: View {
                     .frame(width: geo.size.width)
                     .padding(.top, 40)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .background(Color(red: 0.757, green: 0.875, blue: 0.992))
+                    .background(Color(red: 0.22, green: 0.50, blue: 0.92))
 
                 // ── Bottom: content card flush with image ─────────────
                 VStack(spacing: 0) {

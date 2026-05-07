@@ -1,3 +1,5 @@
+import AuthenticationServices
+import CryptoKit
 import SwiftUI
 import Supabase
 
@@ -16,6 +18,8 @@ struct AuthView: View {
     @State private var keyboardHeight: CGFloat = 0
     @State private var showPassword = false
     @State private var hasStartedTypingPassword = false
+    @State private var appleSignInNonce = ""
+    @State private var isSocialSubmitting = false
 
     private var canSubmit: Bool {
         isValidEmail(email) && password.count >= 6 && !isSubmitting
@@ -38,8 +42,9 @@ struct AuthView: View {
                 Color(red: 253/255, green: 253/255, blue: 255/255)
                     .ignoresSafeArea()
 
-                // Blue color above the image only
-                Color(red: 0.827, green: 0.867, blue: 0.992)
+                // Blur effect above the image only
+                Rectangle()
+                    .fill(.ultraThinMaterial)
                     .frame(height: 180)
                     .frame(maxWidth: .infinity)
 
@@ -236,7 +241,26 @@ struct AuthView: View {
             ctaButton
                 .padding(.horizontal, 28)
                 .padding(.top, 20)
-                .padding(.bottom, 40)
+
+            // Social divider
+            HStack(spacing: 12) {
+                Rectangle().fill(Color.sweeplyBorder).frame(height: 1)
+                Text("or").font(.system(size: 12)).foregroundStyle(Color.sweeplyTextSub)
+                Rectangle().fill(Color.sweeplyBorder).frame(height: 1)
+            }
+            .padding(.horizontal, 28)
+            .padding(.top, 20)
+
+            // Social buttons
+            HStack(spacing: 12) {
+                appleSignInButton
+                googleSignInButton
+            }
+            .padding(.horizontal, 28)
+            .padding(.top, 10)
+            .padding(.bottom, 40)
+            .disabled(isSocialSubmitting)
+            .opacity(isSocialSubmitting ? 0.6 : 1)
         }
         .background(
             Color(red: 253/255, green: 253/255, blue: 255/255)
@@ -319,6 +343,7 @@ struct AuthView: View {
                         .font(.system(size: 15))
                         .foregroundStyle(Color.sweeplyTextSub)
                 }
+                .buttonStyle(.plain)
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 15)
@@ -439,6 +464,81 @@ struct AuthView: View {
         }
         .disabled(!canSubmit)
         .animation(.easeInOut(duration: 0.15), value: canSubmit)
+    }
+
+    // MARK: - Social Buttons
+
+    private var appleSignInButton: some View {
+        SignInWithAppleButton(.signIn) { request in
+            let nonce = randomNonce()
+            appleSignInNonce = nonce
+            request.requestedScopes = [.fullName, .email]
+            request.nonce = sha256(nonce)
+        } onCompletion: { result in
+            switch result {
+            case .success(let auth):
+                guard let credential = auth.credential as? ASAuthorizationAppleIDCredential,
+                      let tokenData = credential.identityToken,
+                      let idToken = String(data: tokenData, encoding: .utf8) else { return }
+                isSocialSubmitting = true
+                Task {
+                    await session.signInWithApple(idToken: idToken, nonce: appleSignInNonce)
+                    isSocialSubmitting = false
+                }
+            case .failure:
+                break
+            }
+        }
+        .signInWithAppleButtonStyle(.black)
+        .frame(height: 50)
+        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+    }
+
+    private var googleSignInButton: some View {
+        Button {
+            isSocialSubmitting = true
+            Task {
+                await session.signInWithGoogle()
+                isSocialSubmitting = false
+            }
+        } label: {
+            HStack(spacing: 10) {
+                // Google "G" badge
+                ZStack {
+                    Circle()
+                        .fill(Color.white)
+                        .frame(width: 22, height: 22)
+                    Text("G")
+                        .font(.system(size: 13, weight: .bold))
+                        .foregroundStyle(Color(red: 66/255, green: 133/255, blue: 244/255))
+                }
+                Text("Google")
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundStyle(Color.primary)
+            }
+            .frame(maxWidth: .infinity)
+            .frame(height: 50)
+            .background(Color(red: 235/255, green: 237/255, blue: 238/255))
+            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .stroke(Color.sweeplyBorder, lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
+    }
+
+    // MARK: - Nonce helpers
+
+    private func randomNonce(length: Int = 32) -> String {
+        var randomBytes = [UInt8](repeating: 0, count: length)
+        _ = SecRandomCopyBytes(kSecRandomDefault, randomBytes.count, &randomBytes)
+        let charset: [Character] = Array("0123456789ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvwxyz-._")
+        return String(randomBytes.map { charset[Int($0) % charset.count] })
+    }
+
+    private func sha256(_ input: String) -> String {
+        SHA256.hash(data: Data(input.utf8)).compactMap { String(format: "%02x", $0) }.joined()
     }
 
     // MARK: - Submit
