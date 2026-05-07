@@ -488,18 +488,24 @@ struct MemberDetailView: View {
         localPhone.trimmingCharacters(in: .whitespaces) != member.phone
     }
 
+    // Always read live data from the store so the card refreshes after pay setup closes
+    private var currentMember: TeamMember {
+        teamStore.members.first(where: { $0.id == member.id }) ?? member
+    }
+
     private var paySetupSummary: String {
-        guard member.payRateEnabled else { return "Not configured" }
-        let key = "memberPayMethod_\(member.id.uuidString)"
+        let m = currentMember
+        guard m.payRateEnabled else { return "Not configured" }
+        let key = "memberPayMethod_\(m.id.uuidString)"
         let methodRaw = UserDefaults.standard.string(forKey: key) ?? ""
         let via = PaymentMethod(rawValue: methodRaw)?.rawValue ?? ""
         let viaSuffix = via.isEmpty ? "" : " · \(via)"
-        switch member.payRateType {
+        switch m.payRateType {
         case .perJob:
-            let count = member.serviceRates.filter { $0.value > 0 }.count
+            let count = m.serviceRates.filter { $0.value > 0 }.count
             return count > 0 ? "\(count) service rate\(count == 1 ? "" : "s") · Per Job\(viaSuffix)" : "Per Job\(viaSuffix)"
-        case .perDay:   return "\(member.payRateAmount.currency) per day\(viaSuffix)"
-        case .perWeek:  return "\(member.payRateAmount.currency) per week\(viaSuffix)"
+        case .perDay:   return "\(m.payRateAmount.currency) per day\(viaSuffix)"
+        case .perWeek:  return "\(m.payRateAmount.currency) per week\(viaSuffix)"
         case .custom:   return "Custom\(viaSuffix)"
         }
     }
@@ -854,14 +860,15 @@ struct MemberDetailView: View {
     // MARK: - Pay Setup Card
 
     private var paySetupCard: some View {
-        VStack(spacing: 0) {
+        let m = currentMember
+        return VStack(spacing: 0) {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("PAY SETUP".translated())
                         .font(.system(size: 10, weight: .bold))
                         .foregroundStyle(Color.sweeplyTextSub)
                         .tracking(0.8)
-                    Text(member.payRateEnabled ? member.payRateType.displayName : "Not configured")
+                    Text(m.payRateEnabled ? m.payRateType.displayName : "Not configured")
                         .font(.system(size: 15, weight: .semibold))
                         .foregroundStyle(Color.sweeplyNavy)
                     Text(paySetupSummary)
@@ -874,7 +881,7 @@ struct MemberDetailView: View {
                     UIImpactFeedbackGenerator(style: .light).impactOccurred()
                     showPaySetup = true
                 } label: {
-                    Text(member.payRateEnabled ? "Edit".translated() : "Set Up".translated())
+                    Text(m.payRateEnabled ? "Edit".translated() : "Set Up".translated())
                         .font(.system(size: 13, weight: .semibold))
                         .foregroundStyle(.white)
                         .padding(.horizontal, 14)
@@ -888,10 +895,10 @@ struct MemberDetailView: View {
             .padding(.vertical, 14)
 
             // Per-job rate breakdown (read-only)
-            if member.payRateEnabled && member.payRateType == .perJob && !member.serviceRates.isEmpty {
+            if m.payRateEnabled && m.payRateType == .perJob && !m.serviceRates.isEmpty {
                 Divider()
                 VStack(spacing: 0) {
-                    ForEach(Array(member.serviceRates.filter { $0.value > 0 }.sorted { $0.key < $1.key }.enumerated()), id: \.element.key) { idx, entry in
+                    ForEach(Array(m.serviceRates.filter { $0.value > 0 }.sorted { $0.key < $1.key }.enumerated()), id: \.element.key) { idx, entry in
                         HStack {
                             Text(entry.key)
                                 .font(.system(size: 13))
@@ -903,7 +910,7 @@ struct MemberDetailView: View {
                         }
                         .padding(.horizontal, 16)
                         .padding(.vertical, 9)
-                        if idx < member.serviceRates.filter({ $0.value > 0 }).count - 1 {
+                        if idx < m.serviceRates.filter({ $0.value > 0 }).count - 1 {
                             Divider().padding(.horizontal, 16)
                         }
                     }

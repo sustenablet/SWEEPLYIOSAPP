@@ -116,17 +116,18 @@ struct MemberPaySetupView: View {
     // MARK: - Bottom bar
 
     private var bottomBar: some View {
-        VStack(spacing: 10) {
+        let isLastStep = step == totalSteps
+        HStack(spacing: 10) {
             if step > 1 {
                 Button {
                     UIImpactFeedbackGenerator(style: .light).impactOccurred()
                     withAnimation(.easeInOut(duration: 0.22)) { step -= 1 }
                 } label: {
-                    HStack(spacing: 6) {
+                    HStack(spacing: 5) {
                         Image(systemName: "chevron.left")
                             .font(.system(size: 13, weight: .semibold))
                         Text("Back")
-                            .font(.system(size: 16, weight: .semibold))
+                            .font(.system(size: 15, weight: .semibold))
                     }
                     .foregroundStyle(Color.sweeplyNavy)
                     .frame(maxWidth: .infinity)
@@ -141,7 +142,6 @@ struct MemberPaySetupView: View {
                 .buttonStyle(.plain)
             }
 
-            let isLastStep = step == totalSteps
             Button {
                 UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                 if isLastStep {
@@ -152,22 +152,21 @@ struct MemberPaySetupView: View {
             } label: {
                 Group {
                     if isSaving {
-                        ProgressView()
-                            .tint(.white)
+                        ProgressView().tint(.white)
                     } else {
                         HStack(spacing: 6) {
                             Text(isLastStep ? "Save Setup" : "Next")
-                                .font(.system(size: 16, weight: .semibold))
+                                .font(.system(size: 15, weight: .semibold))
                             if !isLastStep {
                                 Image(systemName: "arrow.right")
-                                    .font(.system(size: 14, weight: .semibold))
+                                    .font(.system(size: 13, weight: .semibold))
                             }
                         }
                         .foregroundStyle(.white)
                     }
                 }
                 .frame(maxWidth: .infinity)
-                .padding(.vertical, 16)
+                .padding(.vertical, 15)
                 .background(isNextEnabled ? Color.sweeplyNavy : Color.sweeplyNavy.opacity(0.35))
                 .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
             }
