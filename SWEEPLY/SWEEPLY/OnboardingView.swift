@@ -1111,6 +1111,7 @@ struct OnboardingView: View {
 
                     Button {
                         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                        LocationManager.shared.requestPermission()
                         locationRequested = true
                         advance()
                     } label: {

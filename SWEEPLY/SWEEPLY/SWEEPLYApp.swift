@@ -94,7 +94,6 @@ struct SWEEPLYApp: App {
                     notificationManager.checkAuthorizationStatus()
                     registerQuickActions()
                     AppDelegate.scheduleBackgroundRefresh()
-                    LocationManager.shared.requestPermission()
                     // Start RevenueCat customer info listener and load initial state
                     subscriptionManager.startListening()
                     Task {
