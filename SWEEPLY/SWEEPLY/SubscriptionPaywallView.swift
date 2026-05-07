@@ -25,6 +25,7 @@ struct SubscriptionPaywallView: View {
     @State private var billing: BillingPeriod = .monthly
     @State private var selectedPlan: PlanType = .pro
     @State private var purchaseError: String?
+    @State private var restoreMessage: String?
     @State private var appeared = false
     @State private var ctaPressed = false
 
@@ -52,9 +53,29 @@ struct SubscriptionPaywallView: View {
         subscriptionManager.offerings?.current?.package(identifier: "$rc_custom_pro_yearly")?.storeProduct.localizedPriceString ?? "$179.99"
     }
 
+    private var currencyFooterText: String {
+        let pkg = subscriptionManager.offerings?.current?.package(identifier: "$rc_monthly")
+            ?? subscriptionManager.offerings?.current?.package(identifier: "$rc_custom_pro_monthly")
+        let code = pkg?.storeProduct.currencyCode ?? "USD"
+        return "Cancel anytime · Auto-renews · Prices in \(code)"
+    }
+
     private var currentMonthlyPrice: String { selectedPlan == .pro ? proMonthlyPrice : standardMonthlyPrice }
     private var currentYearlyPrice: String  { selectedPlan == .pro ? proYearlyPrice  : standardYearlyPrice }
-    private var currentYearlyPerMonth: String { selectedPlan == .pro ? "~$15.00/mo" : "~$6.67/mo" }
+    private var currentYearlyPerMonth: String {
+        let yearlyID = selectedPlan == .pro ? "$rc_custom_pro_yearly" : "$rc_annual"
+        if let pkg = subscriptionManager.offerings?.current?.package(identifier: yearlyID) {
+            let monthly = pkg.storeProduct.price / 12
+            let formatter = NumberFormatter()
+            formatter.numberStyle = .currency
+            formatter.currencyCode = pkg.storeProduct.currencyCode ?? "USD"
+            formatter.maximumFractionDigits = 2
+            if let str = formatter.string(from: NSDecimalNumber(decimal: monthly)) {
+                return "~\(str)/mo"
+            }
+        }
+        return selectedPlan == .pro ? "~$15.00/mo" : "~$6.67/mo"
+    }
 
     // MARK: - Body
 
@@ -112,12 +133,7 @@ struct SubscriptionPaywallView: View {
                 }
             }
         }
-        .task {
-            await subscriptionManager.loadOfferings()
-            if subscriptionManager.offerings?.current == nil {
-                purchaseError = "Could not load products — check your connection and try again."
-            }
-        }
+        .task { await fetchOfferings() }
     }
 
     // MARK: - Background
@@ -204,6 +220,21 @@ struct SubscriptionPaywallView: View {
                                 .overlay(
                                     Capsule().stroke(
                                         selectedPlan == .pro ? Color.white.opacity(0.3) : Color.sweeplyAccent.opacity(0.5),
+                                        lineWidth: 1
+                                    )
+                                )
+                                .clipShape(Capsule())
+                        }
+                        if plan == .standard && subscriptionManager.isStandard && !subscriptionManager.isPro {
+                            Text("Active")
+                                .font(.system(size: 10, weight: .bold))
+                                .foregroundStyle(selectedPlan == .standard ? .white : Color.sweeplySuccess)
+                                .padding(.horizontal, 7)
+                                .padding(.vertical, 3)
+                                .background(selectedPlan == .standard ? Color.white.opacity(0.2) : Color.sweeplySuccess.opacity(0.15))
+                                .overlay(
+                                    Capsule().stroke(
+                                        selectedPlan == .standard ? Color.white.opacity(0.3) : Color.sweeplySuccess.opacity(0.5),
                                         lineWidth: 1
                                     )
                                 )
@@ -365,8 +396,14 @@ struct SubscriptionPaywallView: View {
 
     // MARK: - CTA Button
 
+    private var isCurrentPlan: Bool {
+        (selectedPlan == .standard && subscriptionManager.isStandard && !subscriptionManager.isPro)
+            || (selectedPlan == .pro && subscriptionManager.isPro)
+    }
+
     private var ctaButton: some View {
         Button {
+            guard !isCurrentPlan else { return }
             UIImpactFeedbackGenerator(style: .medium).impactOccurred()
             ctaPressed = true
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) { ctaPressed = false }
@@ -376,24 +413,50 @@ struct SubscriptionPaywallView: View {
             HStack(spacing: 8) {
                 if subscriptionManager.isPurchasing {
                     ProgressView().tint(.white)
+                } else if isCurrentPlan {
+                    HStack(spacing: 6) {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.system(size: 14))
+                        Text("Current Plan")
+                            .font(.system(size: 16, weight: .bold))
+                    }
+                    .foregroundStyle(.white)
                 } else {
-                    Text(selectedPlan == .pro ? "Get Pro" : "Get Standard")
+                    Text(selectedPlan == .pro ? "Upgrade to Pro" : "Get Standard")
                         .font(.system(size: 16, weight: .bold))
                         .foregroundStyle(.white)
                 }
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 16)
-            .background(selectedPlan == .pro ? Color.sweeplyAccent : Color.sweeplyNavy)
+            .background(
+                isCurrentPlan
+                    ? Color.sweeplySuccess
+                    : (selectedPlan == .pro ? Color.sweeplyAccent : Color.sweeplyNavy)
+            )
             .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         }
         .buttonStyle(.plain)
-        .disabled(subscriptionManager.isPurchasing || (selectedPlan == .pro ? proPackage : standardPackage) == nil)
+        .disabled(subscriptionManager.isPurchasing || isCurrentPlan || (selectedPlan == .pro ? proPackage : standardPackage) == nil)
         .scaleEffect(ctaPressed ? 0.98 : 1)
         .animation(.easeInOut(duration: 0.12), value: ctaPressed)
     }
 
     // MARK: - Helpers
+
+    private func fetchOfferings() async {
+        await subscriptionManager.loadOfferings()
+        let current = subscriptionManager.offerings?.current
+        let hasPackages = current?.package(identifier: "$rc_monthly") != nil
+            || current?.package(identifier: "$rc_annual") != nil
+            || current?.package(identifier: "$rc_custom_pro_monthly") != nil
+            || current?.package(identifier: "$rc_custom_pro_yearly") != nil
+        if hasPackages {
+            purchaseError = nil
+        } else {
+            purchaseError = "Could not load products — check your connection and try again."
+        }
+    }
 
     private func errorBanner(_ message: String) -> some View {
         HStack(spacing: 8) {
@@ -402,6 +465,19 @@ struct SubscriptionPaywallView: View {
             Text(message)
                 .font(.system(size: 13))
                 .foregroundStyle(Color.sweeplyNavy.opacity(0.85))
+                .frame(maxWidth: .infinity, alignment: .leading)
+            Button {
+                purchaseError = nil
+                Task { await fetchOfferings() }
+            } label: {
+                if subscriptionManager.isLoadingOfferings {
+                    ProgressView().scaleEffect(0.75)
+                } else {
+                    Text("Retry")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(Color.sweeplyDestructive)
+                }
+            }
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 10)
@@ -438,7 +514,7 @@ struct SubscriptionPaywallView: View {
                 }
                 footerDot
                 footerLink("Privacy Policy") {
-                    if let url = URL(string: "https://www.apple.com/legal/privacy/") {
+                    if let url = URL(string: "https://sweeplyapp.online/privacy") {
                         UIApplication.shared.open(url)
                     }
                 }
@@ -446,11 +522,23 @@ struct SubscriptionPaywallView: View {
                 footerLink("Restore Purchases") {
                     Task {
                         try? await subscriptionManager.restorePurchases()
-                        if subscriptionManager.isSubscribed { dismiss() }
+                        if subscriptionManager.isSubscribed {
+                            dismiss()
+                        } else {
+                            restoreMessage = "No active subscription found."
+                            try? await Task.sleep(nanoseconds: 3_000_000_000)
+                            restoreMessage = nil
+                        }
                     }
                 }
             }
-            Text("Cancel anytime · Auto-renews · Prices in USD")
+            if let msg = restoreMessage {
+                Text(msg)
+                    .font(.system(size: 12))
+                    .foregroundStyle(Color.sweeplyTextSub)
+                    .transition(.opacity)
+            }
+            Text(currencyFooterText)
                 .font(.system(size: 11))
                 .foregroundStyle(Color.sweeplyNavy.opacity(0.25))
                 .multilineTextAlignment(.center)
@@ -705,9 +793,14 @@ struct SubscriptionStandardUpgradeView: View {
 
     @State private var isPurchasing = false
     @State private var purchaseError: String?
+    @State private var offeringsError = false
 
     private var proMonthlyPrice: String {
         subscriptionManager.offerings?.current?.package(identifier: "$rc_custom_pro_monthly")?.storeProduct.localizedPriceString ?? "$19.99"
+    }
+
+    private var proPackageAvailable: Bool {
+        subscriptionManager.offerings?.current?.package(identifier: "$rc_custom_pro_monthly") != nil
     }
 
     var body: some View {
@@ -775,6 +868,38 @@ struct SubscriptionStandardUpgradeView: View {
                     .padding(.horizontal, 20)
                     .padding(.bottom, 20)
 
+                    if offeringsError {
+                        HStack(spacing: 8) {
+                            Image(systemName: "exclamationmark.circle.fill")
+                                .foregroundStyle(Color.sweeplyDestructive)
+                            Text("Could not load products — check your connection.")
+                                .font(.system(size: 12))
+                                .foregroundStyle(Color.sweeplyNavy.opacity(0.8))
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                            Button {
+                                offeringsError = false
+                                Task {
+                                    await subscriptionManager.loadOfferings()
+                                    offeringsError = subscriptionManager.offerings?.current?.package(identifier: "$rc_custom_pro_monthly") == nil
+                                }
+                            } label: {
+                                if subscriptionManager.isLoadingOfferings {
+                                    ProgressView().scaleEffect(0.75)
+                                } else {
+                                    Text("Retry")
+                                        .font(.system(size: 12, weight: .semibold))
+                                        .foregroundStyle(Color.sweeplyDestructive)
+                                }
+                            }
+                        }
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 10)
+                        .background(Color.sweeplyDestructive.opacity(0.08))
+                        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                        .padding(.horizontal, 20)
+                        .padding(.bottom, 10)
+                    }
+
                     if let err = purchaseError {
                         Text(err)
                             .font(.system(size: 12))
@@ -790,26 +915,28 @@ struct SubscriptionStandardUpgradeView: View {
                         Task { await upgradeToPro() }
                     } label: {
                         Group {
-                            if isPurchasing {
+                            if isPurchasing || subscriptionManager.isLoadingOfferings {
                                 ProgressView().tint(.white)
                             } else {
                                 HStack(spacing: 6) {
                                     Text("Upgrade to Pro")
                                         .font(.system(size: 16, weight: .bold))
-                                    Text("· \(proMonthlyPrice)/mo")
-                                        .font(.system(size: 14))
-                                        .opacity(0.75)
+                                    if proPackageAvailable {
+                                        Text("· \(proMonthlyPrice)/mo")
+                                            .font(.system(size: 14))
+                                            .opacity(0.75)
+                                    }
                                 }
                                 .foregroundStyle(.white)
                             }
                         }
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 15)
-                        .background(Color.sweeplyAccent)
+                        .background(offeringsError ? Color.sweeplyAccent.opacity(0.4) : Color.sweeplyAccent)
                         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
                     }
                     .buttonStyle(.plain)
-                    .disabled(isPurchasing)
+                    .disabled(isPurchasing || subscriptionManager.isLoadingOfferings || offeringsError)
                     .padding(.horizontal, 20)
                     .padding(.bottom, 10)
 
@@ -826,7 +953,10 @@ struct SubscriptionStandardUpgradeView: View {
                 }
             }
         }
-        .task { await subscriptionManager.loadOfferings() }
+        .task {
+            await subscriptionManager.loadOfferings()
+            offeringsError = subscriptionManager.offerings?.current?.package(identifier: "$rc_custom_pro_monthly") == nil
+        }
     }
 
     private enum FeatureStyle { case included, locked }
@@ -867,7 +997,8 @@ struct SubscriptionStandardUpgradeView: View {
 
     private func upgradeToPro() async {
         guard let package = subscriptionManager.offerings?.current?.package(identifier: "$rc_custom_pro_monthly") else {
-            dismiss(); onShowAllPlans(); return
+            offeringsError = true
+            return
         }
         isPurchasing = true
         purchaseError = nil
