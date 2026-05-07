@@ -375,11 +375,6 @@ struct SubscriptionPaywallView: View {
                     Text(selectedPlan == .pro ? "Get Pro" : "Get Standard")
                         .font(.system(size: 16, weight: .bold))
                         .foregroundStyle(.white)
-                    if billing == .monthly {
-                        Text("· 1 month free")
-                            .font(.system(size: 13))
-                            .foregroundStyle(.white.opacity(0.65))
-                    }
                 }
             }
             .frame(maxWidth: .infinity)
