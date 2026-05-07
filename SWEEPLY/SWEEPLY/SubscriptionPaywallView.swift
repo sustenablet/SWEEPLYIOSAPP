@@ -138,16 +138,11 @@ struct SubscriptionPaywallView: View {
     // MARK: - Centered Logo
 
     private var centeredLogo: some View {
-        VStack(spacing: 10) {
-            Image("MascotSweeply")
-                .resizable()
-                .scaledToFit()
-                .frame(width: 56, height: 56)
-            Text("Sweeply")
-                .font(Font.sweeplyDisplay(26, weight: .bold))
-                .foregroundStyle(Color.sweeplyNavy)
-        }
-        .frame(maxWidth: .infinity)
+        Image("MascotSweeply")
+            .resizable()
+            .scaledToFit()
+            .frame(width: 72, height: 72)
+            .frame(maxWidth: .infinity)
     }
 
     // MARK: - Header
@@ -279,8 +274,8 @@ struct SubscriptionPaywallView: View {
                 FeatureItem(text: "Revenue analytics dashboard",  icon: "chart.bar.xaxis"),
                 FeatureItem(text: "Profit & loss breakdown",      icon: "doc.text.fill"),
                 FeatureItem(text: "Predictive cash flow",         icon: "waveform.path.ecg"),
-                FeatureItem(text: "Priority in-app support",      icon: "bolt.fill"),
-                FeatureItem(text: "Early access to new features", icon: "star.fill"),
+                FeatureItem(text: "Custom job checklists & notes",      icon: "checklist"),
+                FeatureItem(text: "Client satisfaction & review tracking", icon: "hand.thumbsup.fill"),
             ]
         case .standard:
             return [
