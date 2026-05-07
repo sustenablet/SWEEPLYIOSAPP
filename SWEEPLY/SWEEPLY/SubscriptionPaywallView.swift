@@ -64,8 +64,11 @@ struct SubscriptionPaywallView: View {
             NavigationStack {
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: 0) {
+                        centeredLogo
+                            .padding(.top, 24)
+                            .padding(.bottom, 12)
+
                         header
-                            .padding(.top, 8)
                             .padding(.bottom, 20)
 
                         planToggle
@@ -102,11 +105,7 @@ struct SubscriptionPaywallView: View {
                 }
                 .background(Color.clear)
                 .toolbarBackground(.clear, for: .navigationBar)
-                .toolbarColorScheme(.dark, for: .navigationBar)
                 .toolbar {
-                    ToolbarItem(placement: .topBarLeading) {
-                        logoButton
-                    }
                     ToolbarItem(placement: .topBarTrailing) {
                         closeButton
                     }
@@ -116,26 +115,10 @@ struct SubscriptionPaywallView: View {
         .task { await subscriptionManager.loadOfferings() }
     }
 
-    // MARK: - Atmosphere Background
+    // MARK: - Background
 
     private var atmosphereBackground: some View {
-        ZStack {
-            LinearGradient(
-                stops: [
-                    .init(color: Color(red: 0.85, green: 0.92, blue: 0.98), location: 0),
-                    .init(color: Color(red: 0.75, green: 0.88, blue: 0.95), location: 0.5),
-                    .init(color: Color(red: 0.70, green: 0.85, blue: 0.93), location: 1),
-                ],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-            Circle()
-                .fill(Color.sweeplyAccent.opacity(0.08))
-                .frame(width: 400, height: 400)
-                .blur(radius: 100)
-                .offset(x: 0, y: -150)
-        }
-        .ignoresSafeArea()
+        Color.sweeplyBackground.ignoresSafeArea()
     }
 
     // MARK: - Close Button
@@ -152,18 +135,19 @@ struct SubscriptionPaywallView: View {
         }
     }
 
-    // MARK: - Logo Button
+    // MARK: - Centered Logo
 
-    private var logoButton: some View {
-        HStack(spacing: 8) {
+    private var centeredLogo: some View {
+        VStack(spacing: 10) {
             Image("MascotSweeply")
                 .resizable()
                 .scaledToFit()
-                .frame(width: 32, height: 32)
+                .frame(width: 56, height: 56)
             Text("Sweeply")
-                .font(Font.sweeplyDisplay(20, weight: .bold))
+                .font(Font.sweeplyDisplay(26, weight: .bold))
                 .foregroundStyle(Color.sweeplyNavy)
         }
+        .frame(maxWidth: .infinity)
     }
 
     // MARK: - Header
@@ -227,20 +211,20 @@ struct SubscriptionPaywallView: View {
                         }
                     }
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 10)
+                    .padding(.vertical, 7)
                     .background(selectedPlan == plan ? Color.sweeplyNavy : Color.clear)
-                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
                 }
                 .buttonStyle(.plain)
             }
         }
-        .padding(4)
+        .padding(3)
         .background(Color.sweeplyNavy.opacity(0.06))
         .overlay(
-            RoundedRectangle(cornerRadius: 13, style: .continuous)
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
                 .stroke(Color.sweeplyNavy.opacity(0.1), lineWidth: 1)
         )
-        .clipShape(RoundedRectangle(cornerRadius: 13, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
         .padding(.horizontal, 20)
     }
 
