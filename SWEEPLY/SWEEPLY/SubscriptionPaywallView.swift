@@ -28,6 +28,7 @@ struct SubscriptionPaywallView: View {
     @State private var restoreMessage: String?
     @State private var appeared = false
     @State private var ctaPressed = false
+    @State private var didSetInitialPlan = false
 
     private var standardPackage: Package? {
         billing == .monthly
@@ -134,6 +135,13 @@ struct SubscriptionPaywallView: View {
             }
         }
         .task { await fetchOfferings() }
+    .onAppear {
+        guard !didSetInitialPlan else { return }
+        didSetInitialPlan = true
+        // Pre-select the current plan so subscribed users land on their own tab
+        if subscriptionManager.isPro { selectedPlan = .pro }
+        else if subscriptionManager.isStandard { selectedPlan = .pro } // nudge Standard → Pro upgrade
+    }
     }
 
     // MARK: - Background
@@ -170,30 +178,62 @@ struct SubscriptionPaywallView: View {
 
     private var header: some View {
         VStack(spacing: 8) {
-            Text("Run your cleaning business like a pro.")
+            Text(headerSubtitle)
                 .font(.system(size: 15))
                 .foregroundStyle(Color.sweeplyNavy.opacity(0.55))
                 .multilineTextAlignment(.center)
 
-            if subscriptionManager.isInTrial {
-                trialBadge.padding(.top, 4)
-            }
+            statusBadge.padding(.top, 4)
         }
         .padding(.horizontal, 24)
     }
 
-    private var trialBadge: some View {
-        HStack(spacing: 6) {
-            Image(systemName: "gift.fill")
-                .font(.system(size: 11))
-            Text("\(subscriptionManager.trialDaysRemaining) days left in your free trial")
-                .font(.system(size: 13, weight: .semibold))
+    private var headerSubtitle: String {
+        if subscriptionManager.isPro    { return "You're on Sweeply Pro — manage or explore your plan below." }
+        if subscriptionManager.isStandard { return "You're on Standard — upgrade to Pro to unlock everything." }
+        return "Run your cleaning business like a pro."
+    }
+
+    @ViewBuilder
+    private var statusBadge: some View {
+        if subscriptionManager.isPro {
+            planBadge(
+                icon: "checkmark.seal.fill",
+                label: proStatusLabel,
+                color: Color.sweeplyAccent
+            )
+        } else if subscriptionManager.isStandard {
+            planBadge(
+                icon: "star.circle.fill",
+                label: "Standard Plan — Active",
+                color: Color.sweeplyNavy
+            )
+        } else if subscriptionManager.isInTrial {
+            planBadge(
+                icon: "gift.fill",
+                label: "\(subscriptionManager.trialDaysRemaining) days left in your free trial",
+                color: Color.sweeplyAccent
+            )
         }
-        .foregroundStyle(Color.sweeplyAccent)
+    }
+
+    private var proStatusLabel: String {
+        if let exp = subscriptionManager.expirationDate {
+            return "Pro · Renews \(exp.formatted(.dateTime.month(.abbreviated).day()))"
+        }
+        return "Sweeply Pro — Active"
+    }
+
+    private func planBadge(icon: String, label: String, color: Color) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: icon).font(.system(size: 11))
+            Text(label).font(.system(size: 13, weight: .semibold))
+        }
+        .foregroundStyle(color)
         .padding(.horizontal, 16)
         .padding(.vertical, 8)
-        .background(Color.sweeplyAccent.opacity(0.15))
-        .overlay(Capsule().stroke(Color.sweeplyAccent.opacity(0.4), lineWidth: 1))
+        .background(color.opacity(0.12))
+        .overlay(Capsule().stroke(color.opacity(0.35), lineWidth: 1))
         .clipShape(Capsule())
     }
 
@@ -401,8 +441,32 @@ struct SubscriptionPaywallView: View {
             || (selectedPlan == .pro && subscriptionManager.isPro)
     }
 
+    // Pro users can't downgrade to Standard in-app (Apple rule — must go via App Store)
+    private var isDowngrade: Bool {
+        subscriptionManager.isPro && selectedPlan == .standard
+    }
+
+    private var ctaLabel: String {
+        if isCurrentPlan  { return "Current Plan" }
+        if isDowngrade    { return "Manage in App Store" }
+        if subscriptionManager.isStandard && selectedPlan == .pro { return "Upgrade to Pro" }
+        return selectedPlan == .pro ? "Get Pro" : "Get Standard"
+    }
+
+    private var ctaColor: Color {
+        if isCurrentPlan  { return Color.sweeplySuccess }
+        if isDowngrade    { return Color.sweeplyNavy.opacity(0.5) }
+        return selectedPlan == .pro ? Color.sweeplyAccent : Color.sweeplyNavy
+    }
+
     private var ctaButton: some View {
         Button {
+            if isDowngrade {
+                if let url = URL(string: "https://apps.apple.com/account/subscriptions") {
+                    UIApplication.shared.open(url)
+                }
+                return
+            }
             guard !isCurrentPlan else { return }
             UIImpactFeedbackGenerator(style: .medium).impactOccurred()
             ctaPressed = true
@@ -415,29 +479,23 @@ struct SubscriptionPaywallView: View {
                     ProgressView().tint(.white)
                 } else if isCurrentPlan {
                     HStack(spacing: 6) {
-                        Image(systemName: "checkmark.circle.fill")
-                            .font(.system(size: 14))
-                        Text("Current Plan")
-                            .font(.system(size: 16, weight: .bold))
+                        Image(systemName: "checkmark.circle.fill").font(.system(size: 14))
+                        Text(ctaLabel).font(.system(size: 16, weight: .bold))
                     }
                     .foregroundStyle(.white)
                 } else {
-                    Text(selectedPlan == .pro ? "Upgrade to Pro" : "Get Standard")
+                    Text(ctaLabel)
                         .font(.system(size: 16, weight: .bold))
                         .foregroundStyle(.white)
                 }
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 16)
-            .background(
-                isCurrentPlan
-                    ? Color.sweeplySuccess
-                    : (selectedPlan == .pro ? Color.sweeplyAccent : Color.sweeplyNavy)
-            )
+            .background(ctaColor)
             .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         }
         .buttonStyle(.plain)
-        .disabled(subscriptionManager.isPurchasing || isCurrentPlan || (selectedPlan == .pro ? proPackage : standardPackage) == nil)
+        .disabled(subscriptionManager.isPurchasing || (isCurrentPlan && !isDowngrade) || (!isDowngrade && (selectedPlan == .pro ? proPackage : standardPackage) == nil))
         .scaleEffect(ctaPressed ? 0.98 : 1)
         .animation(.easeInOut(duration: 0.12), value: ctaPressed)
     }
@@ -506,9 +564,27 @@ struct SubscriptionPaywallView: View {
 
     private var footer: some View {
         VStack(spacing: 10) {
+            // Manage subscription link for active subscribers
+            if subscriptionManager.isStandard || subscriptionManager.isPro {
+                Button {
+                    if let url = URL(string: "https://apps.apple.com/account/subscriptions") {
+                        UIApplication.shared.open(url)
+                    }
+                } label: {
+                    HStack(spacing: 5) {
+                        Text("Manage Subscription")
+                            .font(.system(size: 13, weight: .medium))
+                        Image(systemName: "arrow.up.right")
+                            .font(.system(size: 11, weight: .medium))
+                    }
+                    .foregroundStyle(Color.sweeplyNavy.opacity(0.55))
+                }
+                .buttonStyle(.plain)
+            }
+
             HStack(spacing: 0) {
                 footerLink("Terms of Service") {
-                    if let url = URL(string: "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/") {
+                    if let url = URL(string: "https://sweeplyapp.online/terms") {
                         UIApplication.shared.open(url)
                     }
                 }
@@ -561,13 +637,6 @@ struct SubscriptionPaywallView: View {
     }
 }
 
-// MARK: - SubscriptionCustomerCenterView
-
-struct SubscriptionCustomerCenterView: View {
-    var body: some View {
-        CustomerCenterView()
-    }
-}
 
 // MARK: - ProGateView
 
@@ -628,389 +697,29 @@ struct ProGateView<Content: View>: View {
     }
 }
 
-// MARK: - Shared feature data
-
-private let proFeatures: [(icon: String, text: String)] = [
-    ("checkmark.circle.fill",             "Everything in Standard"),
-    ("person.3.fill",                     "Unlimited cleaners & teams"),
-    ("chart.bar.xaxis",                   "Revenue analytics dashboard"),
-    ("doc.text.fill",                     "Profit & loss breakdown"),
-    ("waveform.path.ecg",                 "Predictive cash flow"),
-    ("checklist",                         "Custom job checklists & notes"),
-    ("envelope.badge.fill",               "Invoice reminders & tracking"),
-    ("bubble.left.and.bubble.right.fill", "Team messaging & job updates"),
-    ("folder.badge.plus",                 "Unlimited expense categories"),
-]
-
-private let standardFeatures: [(icon: String, text: String)] = [
-    ("person.fill",          "Unlimited client profiles"),
-    ("briefcase.fill",       "Unlimited jobs & invoices"),
-    ("person.2.fill",        "Up to 3 team members"),
-    ("calendar",             "Smart calendar & recurring jobs"),
-    ("chart.pie.fill",       "Expense categorization"),
-    ("square.grid.2x2.fill", "Home-screen widgets"),
-]
-
-// MARK: - SubscriptionProView
+// MARK: - SubscriptionProView (deprecated — use SubscriptionPaywallView)
+// Kept as a thin redirect so any stale call sites still compile.
 
 struct SubscriptionProView: View {
     @Environment(\.dismiss)                private var dismiss
     @Environment(SubscriptionManager.self) private var subscriptionManager
 
     var body: some View {
-        ZStack {
-            Color.sweeplyBackground.ignoresSafeArea()
-
-            ScrollView(showsIndicators: false) {
-                VStack(spacing: 0) {
-
-                    // ── Close ────────────────────────────────────────────
-                    HStack {
-                        Spacer()
-                        Button { dismiss() } label: {
-                            Image(systemName: "xmark")
-                                .font(.system(size: 12, weight: .semibold))
-                                .foregroundStyle(Color.sweeplyNavy.opacity(0.6))
-                                .frame(width: 30, height: 30)
-                                .background(Color.sweeplyNavy.opacity(0.07))
-                                .clipShape(Circle())
-                        }
-                        .buttonStyle(.plain)
-                    }
-                    .padding(.horizontal, 20)
-                    .padding(.top, 16)
-                    .padding(.bottom, 8)
-
-                    // ── Hero ─────────────────────────────────────────────
-                    VStack(spacing: 10) {
-                        Image("MascotSweeply")
-                            .resizable()
-                            .scaledToFit()
-                            .frame(width: 68, height: 68)
-
-                        Text("Sweeply Pro")
-                            .font(Font.sweeplyDisplay(24, weight: .bold))
-                            .foregroundStyle(Color.sweeplyNavy)
-
-                        // Status card
-                        HStack(spacing: 8) {
-                            Image(systemName: "checkmark.seal.fill")
-                                .font(.system(size: 13))
-                                .foregroundStyle(Color.sweeplyAccent)
-                            Text("Active")
-                                .font(.system(size: 13, weight: .semibold))
-                                .foregroundStyle(Color.sweeplyAccent)
-                            if let exp = subscriptionManager.expirationDate {
-                                Text("·")
-                                    .foregroundStyle(Color.sweeplyNavy.opacity(0.3))
-                                Text("Renews \(exp.formatted(.dateTime.month(.abbreviated).day().year()))")
-                                    .font(.system(size: 13))
-                                    .foregroundStyle(Color.sweeplyNavy.opacity(0.55))
-                            }
-                        }
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 9)
-                        .background(Color.sweeplyAccent.opacity(0.08))
-                        .overlay(Capsule().stroke(Color.sweeplyAccent.opacity(0.25), lineWidth: 1))
-                        .clipShape(Capsule())
-                    }
-                    .padding(.bottom, 28)
-
-                    // ── What's included ───────────────────────────────────
-                    VStack(alignment: .leading, spacing: 10) {
-                        Text("WHAT'S INCLUDED")
-                            .font(.system(size: 11, weight: .bold))
-                            .foregroundStyle(Color.sweeplyTextSub)
-                            .tracking(0.8)
-                            .padding(.horizontal, 20)
-
-                        VStack(alignment: .leading, spacing: 12) {
-                            ForEach(proFeatures, id: \.text) { f in
-                                HStack(spacing: 12) {
-                                    Image(systemName: f.icon)
-                                        .font(.system(size: 13, weight: .medium))
-                                        .foregroundStyle(Color.sweeplyAccent)
-                                        .frame(width: 20)
-                                    Text(f.text)
-                                        .font(.system(size: 14))
-                                        .foregroundStyle(Color.sweeplyNavy.opacity(0.8))
-                                }
-                            }
-                        }
-                        .padding(.horizontal, 20)
-                        .padding(.vertical, 18)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(Color.sweeplySurface)
-                        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                                .stroke(LinearGradient(colors: [Color.sweeplyAccent.opacity(0.4), Color.sweeplyAccent.opacity(0.1)], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1.5)
-                        )
-                        .padding(.horizontal, 20)
-                    }
-                    .padding(.bottom, 24)
-
-                    // ── Manage button ─────────────────────────────────────
-                    Button {
-                        if let url = URL(string: "https://apps.apple.com/account/subscriptions") {
-                            UIApplication.shared.open(url)
-                        }
-                    } label: {
-                        HStack(spacing: 8) {
-                            Text("Manage in App Store")
-                                .font(.system(size: 16, weight: .semibold))
-                            Image(systemName: "arrow.up.right")
-                                .font(.system(size: 13, weight: .semibold))
-                        }
-                        .foregroundStyle(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 15)
-                        .background(Color.sweeplyNavy)
-                        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-                    }
-                    .buttonStyle(.plain)
-                    .padding(.horizontal, 20)
-                    .padding(.bottom, 12)
-
-                    Text("To cancel, go to App Store → Subscriptions")
-                        .font(.system(size: 12))
-                        .foregroundStyle(Color.sweeplyNavy.opacity(0.35))
-                        .multilineTextAlignment(.center)
-                        .padding(.bottom, 40)
-                }
-            }
-        }
+        SubscriptionPaywallView()
+            .environment(subscriptionManager)
     }
 }
 
-// MARK: - SubscriptionStandardUpgradeView
+// MARK: - SubscriptionStandardUpgradeView (deprecated — use SubscriptionPaywallView)
+// Kept as a thin redirect so any stale call sites still compile.
 
 struct SubscriptionStandardUpgradeView: View {
     @Environment(\.dismiss)                private var dismiss
     @Environment(SubscriptionManager.self) private var subscriptionManager
-
     var onShowAllPlans: () -> Void = {}
 
-    @State private var isPurchasing = false
-    @State private var purchaseError: String?
-    @State private var offeringsError = false
-
-    private var proMonthlyPrice: String {
-        subscriptionManager.offerings?.current?.package(identifier: "$rc_custom_pro_monthly")?.storeProduct.localizedPriceString ?? "$19.99"
-    }
-
-    private var proPackageAvailable: Bool {
-        subscriptionManager.offerings?.current?.package(identifier: "$rc_custom_pro_monthly") != nil
-    }
-
     var body: some View {
-        ZStack {
-            Color.sweeplyBackground.ignoresSafeArea()
-
-            ScrollView(showsIndicators: false) {
-                VStack(spacing: 0) {
-
-                    // ── Close ────────────────────────────────────────────
-                    HStack {
-                        Spacer()
-                        Button { dismiss() } label: {
-                            Image(systemName: "xmark")
-                                .font(.system(size: 12, weight: .semibold))
-                                .foregroundStyle(Color.sweeplyNavy.opacity(0.6))
-                                .frame(width: 30, height: 30)
-                                .background(Color.sweeplyNavy.opacity(0.07))
-                                .clipShape(Circle())
-                        }
-                        .buttonStyle(.plain)
-                    }
-                    .padding(.horizontal, 20)
-                    .padding(.top, 16)
-                    .padding(.bottom, 8)
-
-                    // ── Hero ─────────────────────────────────────────────
-                    VStack(spacing: 8) {
-                        Image("MascotSweeply")
-                            .resizable()
-                            .scaledToFit()
-                            .frame(width: 60, height: 60)
-
-                        Text("You're on Standard")
-                            .font(Font.sweeplyDisplay(22, weight: .bold))
-                            .foregroundStyle(Color.sweeplyNavy)
-
-                        Text("Upgrade to unlock everything in Pro.")
-                            .font(.system(size: 14))
-                            .foregroundStyle(Color.sweeplyTextSub)
-                    }
-                    .padding(.bottom, 24)
-
-                    // ── Your plan ─────────────────────────────────────────
-                    sectionCard(
-                        label: "YOUR PLAN",
-                        borderColor: Color.sweeplyNavy.opacity(0.15)
-                    ) {
-                        ForEach(standardFeatures, id: \.text) { f in
-                            featureRow(icon: f.icon, text: f.text, style: .included)
-                        }
-                    }
-                    .padding(.horizontal, 20)
-                    .padding(.bottom, 14)
-
-                    // ── Unlock with Pro ───────────────────────────────────
-                    sectionCard(
-                        label: "UNLOCK WITH PRO",
-                        borderColor: Color.sweeplyAccent.opacity(0.4)
-                    ) {
-                        ForEach(proFeatures.filter { $0.text != "Everything in Standard" }, id: \.text) { f in
-                            featureRow(icon: f.icon, text: f.text, style: .locked)
-                        }
-                    }
-                    .padding(.horizontal, 20)
-                    .padding(.bottom, 20)
-
-                    if offeringsError {
-                        HStack(spacing: 8) {
-                            Image(systemName: "exclamationmark.circle.fill")
-                                .foregroundStyle(Color.sweeplyDestructive)
-                            Text("Could not load products — check your connection.")
-                                .font(.system(size: 12))
-                                .foregroundStyle(Color.sweeplyNavy.opacity(0.8))
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                            Button {
-                                offeringsError = false
-                                Task {
-                                    await subscriptionManager.loadOfferings()
-                                    offeringsError = subscriptionManager.offerings?.current?.package(identifier: "$rc_custom_pro_monthly") == nil
-                                }
-                            } label: {
-                                if subscriptionManager.isLoadingOfferings {
-                                    ProgressView().scaleEffect(0.75)
-                                } else {
-                                    Text("Retry")
-                                        .font(.system(size: 12, weight: .semibold))
-                                        .foregroundStyle(Color.sweeplyDestructive)
-                                }
-                            }
-                        }
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 10)
-                        .background(Color.sweeplyDestructive.opacity(0.08))
-                        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-                        .padding(.horizontal, 20)
-                        .padding(.bottom, 10)
-                    }
-
-                    if let err = purchaseError {
-                        Text(err)
-                            .font(.system(size: 12))
-                            .foregroundStyle(Color.sweeplyDestructive)
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal, 20)
-                            .padding(.bottom, 10)
-                    }
-
-                    // ── Upgrade CTA ───────────────────────────────────────
-                    Button {
-                        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-                        Task { await upgradeToPro() }
-                    } label: {
-                        Group {
-                            if isPurchasing || subscriptionManager.isLoadingOfferings {
-                                ProgressView().tint(.white)
-                            } else {
-                                HStack(spacing: 6) {
-                                    Text("Upgrade to Pro")
-                                        .font(.system(size: 16, weight: .bold))
-                                    if proPackageAvailable {
-                                        Text("· \(proMonthlyPrice)/mo")
-                                            .font(.system(size: 14))
-                                            .opacity(0.75)
-                                    }
-                                }
-                                .foregroundStyle(.white)
-                            }
-                        }
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 15)
-                        .background(offeringsError ? Color.sweeplyAccent.opacity(0.4) : Color.sweeplyAccent)
-                        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-                    }
-                    .buttonStyle(.plain)
-                    .disabled(isPurchasing || subscriptionManager.isLoadingOfferings || offeringsError)
-                    .padding(.horizontal, 20)
-                    .padding(.bottom, 10)
-
-                    Button {
-                        dismiss()
-                        onShowAllPlans()
-                    } label: {
-                        Text("See all plans & pricing")
-                            .font(.system(size: 14, weight: .medium))
-                            .foregroundStyle(Color.sweeplyNavy.opacity(0.5))
-                    }
-                    .buttonStyle(.plain)
-                    .padding(.bottom, 40)
-                }
-            }
-        }
-        .task {
-            await subscriptionManager.loadOfferings()
-            offeringsError = subscriptionManager.offerings?.current?.package(identifier: "$rc_custom_pro_monthly") == nil
-        }
-    }
-
-    private enum FeatureStyle { case included, locked }
-
-    private func featureRow(icon: String, text: String, style: FeatureStyle) -> some View {
-        HStack(spacing: 12) {
-            Image(systemName: style == .locked ? "lock.fill" : icon)
-                .font(.system(size: 12, weight: .medium))
-                .foregroundStyle(style == .locked ? Color.sweeplyAccent : Color.sweeplySuccess)
-                .frame(width: 18)
-            Text(text)
-                .font(.system(size: 13))
-                .foregroundStyle(style == .locked ? Color.sweeplyNavy.opacity(0.7) : Color.sweeplyNavy.opacity(0.8))
-        }
-    }
-
-    private func sectionCard(label: String, borderColor: Color, @ViewBuilder content: () -> some View) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text(label)
-                .font(.system(size: 11, weight: .bold))
-                .foregroundStyle(Color.sweeplyTextSub)
-                .tracking(0.8)
-
-            VStack(alignment: .leading, spacing: 10) {
-                content()
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 16)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color.sweeplySurface)
-            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .stroke(borderColor, lineWidth: 1.5)
-            )
-        }
-    }
-
-    private func upgradeToPro() async {
-        guard let package = subscriptionManager.offerings?.current?.package(identifier: "$rc_custom_pro_monthly") else {
-            offeringsError = true
-            return
-        }
-        isPurchasing = true
-        purchaseError = nil
-        do {
-            try await subscriptionManager.purchase(package: package)
-            isPurchasing = false
-            dismiss()
-        } catch {
-            isPurchasing = false
-            if (error as NSError).code != 1 {
-                purchaseError = "Purchase failed — please try again."
-            }
-        }
+        SubscriptionPaywallView()
+            .environment(subscriptionManager)
     }
 }

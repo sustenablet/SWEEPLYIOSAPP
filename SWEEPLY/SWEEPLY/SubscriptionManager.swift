@@ -29,6 +29,7 @@ final class SubscriptionManager {
     private(set) var customerInfo: CustomerInfo?
     private(set) var offerings: Offerings?
     private(set) var isLoading = false
+    private(set) var isLoadingOfferings = false
     private(set) var isPurchasing = false
     private(set) var isRestoring = false
     private(set) var lastError: String?
@@ -119,6 +120,9 @@ final class SubscriptionManager {
 
     @MainActor
     func loadOfferings() async {
+        guard !isLoadingOfferings else { return }
+        isLoadingOfferings = true
+        defer { isLoadingOfferings = false }
         do {
             offerings = try await Purchases.shared.offerings()
         } catch {

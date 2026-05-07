@@ -19,8 +19,6 @@ struct SettingsView: View {
     @State private var showIntroOnboarding = false
     @State private var showLogoutConfirmation = false
     @State private var showPaywall = false
-    @State private var showProManagement = false
-    @State private var showStandardUpgrade = false
     @State private var currentTestNotificationIndex = 0
     @AppStorage("hasSeenIntroOnboarding") private var hasSeenIntroOnboarding = true
 
@@ -99,11 +97,7 @@ struct SettingsView: View {
                             color: subscriptionRowColor
                         ) {
                             UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                            switch subscriptionManager.accessLevel {
-                            case .pro:      showProManagement = true
-                            case .standard: showStandardUpgrade = true
-                            case .trial, .expired: showPaywall = true
-                            }
+                            showPaywall = true
                         }
                     }
 
@@ -174,19 +168,6 @@ struct SettingsView: View {
             .sheet(isPresented: $showPaywall) {
                 SubscriptionPaywallView()
                     .environment(subscriptionManager)
-            }
-            .sheet(isPresented: $showProManagement) {
-                SubscriptionProView()
-                    .environment(subscriptionManager)
-            }
-            .sheet(isPresented: $showStandardUpgrade) {
-                SubscriptionStandardUpgradeView(onShowAllPlans: {
-                    showPaywall = true
-                })
-                .environment(subscriptionManager)
-            }
-            .sheet(isPresented: .constant(false)) {
-                SubscriptionCustomerCenterView() // kept but unused
             }
             .sheet(isPresented: $showServiceCatalog) { ServiceCatalogView() }
             .sheet(isPresented: $showJobExtras)      { ServiceCatalogView(addonsOnly: true) }
