@@ -1162,7 +1162,7 @@ struct OnboardingView: View {
 
                     // Headline
                     VStack(alignment: .leading, spacing: 6) {
-                        Text("\(firstName), you're in business.")
+                        Text("\(firstName), your business is ready.")
                             .font(.system(size: 26, weight: .bold, design: .rounded))
                             .foregroundStyle(Color.sweeplyNavy)
                             .tracking(-0.4)
