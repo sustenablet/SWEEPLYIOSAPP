@@ -100,7 +100,7 @@ struct OnboardingView: View {
 
     var body: some View {
         ZStack {
-            (step == 4 || step == 5
+            (step == 4 || step == 5 || step == 7
                 ? Color(red: 0.22, green: 0.50, blue: 0.92)
                 : Color.sweeplyBackground
             ).ignoresSafeArea()
@@ -1149,13 +1149,13 @@ struct OnboardingView: View {
             VStack(spacing: 0) {
 
                 // ── Top: hero image ───────────────────────────────────
-                Image("MascotSweeply")
+                Image("AllSetImage")
                     .resizable()
                     .scaledToFit()
                     .frame(width: geo.size.width)
                     .padding(.top, 40)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .background(Color(red: 193/255, green: 223/255, blue: 253/255))
+                    .background(Color(red: 0.22, green: 0.50, blue: 0.92))
 
                 // ── Bottom: content card ──────────────────────────────
                 VStack(spacing: 0) {
