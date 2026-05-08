@@ -15,6 +15,7 @@ struct DashboardView: View {
     @Environment(NotificationsStore.self) private var notificationsStore
     @Environment(TeamStore.self) private var teamStore
     @Environment(SubscriptionManager.self) private var subscriptionManager
+    @AppStorage("newFeatureDot_revenueBar") private var dotRevenueBar = false
 
     @State private var appeared = false
     @State private var showProfileMenu = false
@@ -226,6 +227,11 @@ private var healthCards: [DashboardHealthCardModel] {
                     weeklyRevenueProgress
                         .padding(.horizontal, 20)
                         .padding(.bottom, 8)
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            guard dotRevenueBar else { return }
+                            withAnimation(.easeInOut(duration: 0.2)) { dotRevenueBar = false }
+                        }
                 }
 
                 // ── Sub-sections with spacing ────────────────────
@@ -470,11 +476,16 @@ private var healthCards: [DashboardHealthCardModel] {
     private var weeklyRevenueProgress: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Text("Revenue this week")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(Color.sweeplyNavy.opacity(0.5))
-                    .textCase(.uppercase)
-                    .tracking(0.4)
+                HStack(spacing: 6) {
+                    Text("Revenue this week")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(Color.sweeplyNavy.opacity(0.5))
+                        .textCase(.uppercase)
+                        .tracking(0.4)
+                    if dotRevenueBar {
+                        NewFeatureDot()
+                    }
+                }
                 Spacer()
                 Text("\(Int(weekRevenueProgress * 100))%")
                     .font(.system(size: 12, weight: .bold, design: .monospaced))

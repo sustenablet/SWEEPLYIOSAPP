@@ -30,6 +30,10 @@ struct RootView: View {
     @State private var lastNotificationRefresh = Date.distantPast
 
     @AppStorage("hasSeenIntroOnboarding") private var hasSeenIntroOnboarding = true
+    @AppStorage("lastKnownIsProPlan")      private var lastKnownIsProPlan = false
+    @AppStorage("newFeatureDot_revenueBar")  private var dotRevenueBar  = false
+    @AppStorage("newFeatureDot_reports")     private var dotReports     = false
+    @AppStorage("newFeatureDot_teamBanner")  private var dotTeamBanner  = false
     // Observing appLanguage forces the entire view hierarchy to re-render on language change,
     // so all .translated() calls pick up the new language immediately.
     @AppStorage("appLanguage") private var appLanguage: String = "en"
@@ -338,6 +342,15 @@ struct RootView: View {
         }
         .onChange(of: session.currentViewMode) { _, _ in
             Task { await jobsStore.load(isAuthenticated: session.isAuthenticated) }
+        }
+        .onChange(of: subscriptionManager.isPro) { wasPro, isPro in
+            if isPro && !wasPro {
+                // User just upgraded to Pro — light up all new-feature dots
+                dotRevenueBar = true
+                dotReports    = true
+                dotTeamBanner = true
+            }
+            lastKnownIsProPlan = isPro
         }
         .onChange(of: session.isAuthenticated) { _, authed in
             if authed {

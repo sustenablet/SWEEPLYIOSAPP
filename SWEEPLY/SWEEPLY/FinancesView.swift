@@ -11,8 +11,9 @@ struct FinancesView: View {
     @Environment(TeamStore.self)    private var teamStore
     @Environment(SubscriptionManager.self) private var subscriptionManager
 
-    @AppStorage("financesChartPeriod")    private var selectedPeriodRaw: String = ChartPeriod.week.rawValue
-    @AppStorage("financesInvoiceFilter")  private var selectedFilterRaw: String = InvoiceFilter.all.rawValue
+    @AppStorage("financesChartPeriod")       private var selectedPeriodRaw: String = ChartPeriod.week.rawValue
+    @AppStorage("financesInvoiceFilter")     private var selectedFilterRaw: String = InvoiceFilter.all.rawValue
+    @AppStorage("newFeatureDot_reports")     private var dotReports = false
 
     private var selectedPeriod: ChartPeriod { ChartPeriod(rawValue: selectedPeriodRaw) ?? .week }
     private var selectedPeriodBinding: Binding<ChartPeriod> {
@@ -341,6 +342,7 @@ struct FinancesView: View {
                     Button {
                         UIImpactFeedbackGenerator(style: .light).impactOccurred()
                         if subscriptionManager.hasProAccess {
+                            withAnimation(.easeInOut(duration: 0.2)) { dotReports = false }
                             showReports = true
                         } else {
                             showReportsPaywall = true
@@ -349,16 +351,22 @@ struct FinancesView: View {
                         Label("Reports", systemImage: "chart.bar.doc.horizontal.fill")
                     }
                 } label: {
-                    Image(systemName: "line.3.horizontal")
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundStyle(Color.sweeplyNavy)
-                        .frame(width: 40, height: 40)
-                        .background(Color.sweeplySurface)
-                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                .stroke(Color.sweeplyBorder, lineWidth: 1)
-                        )
+                    ZStack(alignment: .topTrailing) {
+                        Image(systemName: "line.3.horizontal")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundStyle(Color.sweeplyNavy)
+                            .frame(width: 40, height: 40)
+                            .background(Color.sweeplySurface)
+                            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                    .stroke(Color.sweeplyBorder, lineWidth: 1)
+                            )
+                        if dotReports && subscriptionManager.hasProAccess {
+                            NewFeatureDot()
+                                .offset(x: 4, y: -4)
+                        }
+                    }
                 }
             }
             .padding(.top, 8)

@@ -14,6 +14,8 @@ struct TeamView: View {
     @State private var deleteTarget    : TeamMember? = nil
     @State private var showDeleteConfirm = false
 
+    @AppStorage("newFeatureDot_teamBanner") private var dotTeamBanner = false
+
     @Environment(\.dismiss) private var dismiss
 
     private var cleaners: [TeamMember]  { teamStore.members.filter { $0.role == .member } }
@@ -28,6 +30,10 @@ struct TeamView: View {
 
                 ScrollView {
                     VStack(spacing: 16) {
+                        if dotTeamBanner && subscriptionManager.isPro {
+                            proUnlockBanner
+                        }
+
                         if !session.pendingInvites.isEmpty {
                             pendingInvitesSection
                         }
@@ -104,6 +110,13 @@ struct TeamView: View {
                     }
                 }
             }
+            .onAppear {
+                if dotTeamBanner && subscriptionManager.isPro {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                        withAnimation(.easeInOut(duration: 0.3)) { dotTeamBanner = false }
+                    }
+                }
+            }
             .navigationTitle("My Team".translated())
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -163,6 +176,49 @@ struct TeamView: View {
                 Text("This will remove them from your roster. You can invite them again anytime.".translated())
             }
         }
+    }
+
+    // MARK: - Pro Unlock Banner
+
+    private var proUnlockBanner: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "person.badge.plus")
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundStyle(.white)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text("You're on Pro")
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundStyle(.white)
+                Text("Add unlimited team members to your business.")
+                    .font(.system(size: 12))
+                    .foregroundStyle(.white.opacity(0.85))
+            }
+
+            Spacer()
+
+            Button {
+                withAnimation(.easeInOut(duration: 0.2)) { dotTeamBanner = false }
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(.white.opacity(0.8))
+                    .frame(width: 24, height: 24)
+                    .background(.white.opacity(0.15))
+                    .clipShape(Circle())
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 14)
+        .background(
+            LinearGradient(
+                colors: [Color(red: 0.22, green: 0.50, blue: 0.92), Color(red: 0.18, green: 0.42, blue: 0.80)],
+                startPoint: .leading, endPoint: .trailing
+            )
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .transition(.opacity.combined(with: .move(edge: .top)))
     }
 
     // MARK: - Pending Invites
