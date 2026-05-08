@@ -14,6 +14,7 @@ struct DashboardView: View {
     @Environment(ProfileStore.self) private var profileStore
     @Environment(NotificationsStore.self) private var notificationsStore
     @Environment(TeamStore.self) private var teamStore
+    @Environment(SubscriptionManager.self) private var subscriptionManager
 
     @State private var appeared = false
     @State private var showProfileMenu = false
@@ -140,6 +141,15 @@ struct DashboardView: View {
         invoicesStore.invoices.filter { $0.status == .overdue }.count
     }
 
+    private var weekEstimated: Double {
+        currentWeekJobs.reduce(0) { $0 + $1.price }
+    }
+
+    private var weekRevenueProgress: Double {
+        guard weekEstimated > 0 else { return 0 }
+        return min(weekEarned / weekEstimated, 1.0)
+    }
+
 private var healthCards: [DashboardHealthCardModel] {
         [
             DashboardHealthCardModel(
@@ -210,6 +220,13 @@ private var healthCards: [DashboardHealthCardModel] {
                 .padding(.horizontal, 20)
                 .padding(.vertical, 12)
                 .padding(.bottom, 24)
+
+                // ── Pro: Weekly Revenue Progress ─────────────────
+                if subscriptionManager.isPro {
+                    weeklyRevenueProgress
+                        .padding(.horizontal, 20)
+                        .padding(.bottom, 8)
+                }
 
                 // ── Sub-sections with spacing ────────────────────
                 VStack(spacing: 12) {
@@ -446,6 +463,63 @@ private var healthCards: [DashboardHealthCardModel] {
             .fill(Color.sweeplyBorder)
             .frame(width: 1)
             .padding(.vertical, 6)
+    }
+
+    // MARK: - Pro: Weekly Revenue Progress
+
+    private var weeklyRevenueProgress: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text("Revenue this week")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(Color.sweeplyNavy.opacity(0.5))
+                    .textCase(.uppercase)
+                    .tracking(0.4)
+                Spacer()
+                Text("\(Int(weekRevenueProgress * 100))%")
+                    .font(.system(size: 12, weight: .bold, design: .monospaced))
+                    .foregroundStyle(Color.sweeplyAccent)
+            }
+
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    Capsule()
+                        .fill(Color.sweeplyNavy.opacity(0.08))
+                        .frame(height: 7)
+                    Capsule()
+                        .fill(
+                            LinearGradient(
+                                colors: [Color.sweeplyAccent, Color.sweeplyAccent.opacity(0.7)],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
+                        .frame(width: max(0, geo.size.width * weekRevenueProgress), height: 7)
+                        .animation(.spring(response: 0.5, dampingFraction: 0.8), value: weekRevenueProgress)
+                }
+            }
+            .frame(height: 7)
+
+            HStack {
+                HStack(spacing: 4) {
+                    Circle()
+                        .fill(Color.sweeplyAccent)
+                        .frame(width: 6, height: 6)
+                    Text("\(weekEarned.currency) collected")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(Color.sweeplyNavy.opacity(0.6))
+                }
+                Spacer()
+                HStack(spacing: 4) {
+                    Circle()
+                        .fill(Color.sweeplyNavy.opacity(0.18))
+                        .frame(width: 6, height: 6)
+                    Text("\(weekEstimated.currency) estimated")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(Color.sweeplyNavy.opacity(0.4))
+                }
+            }
+        }
     }
 
     // MARK: - Premium Wrapper Sections
