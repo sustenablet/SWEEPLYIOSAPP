@@ -1162,17 +1162,15 @@ struct OnboardingView: View {
 
                     // Headline
                     VStack(alignment: .leading, spacing: 6) {
-                        Text("Congrats, \(firstName)!")
-                            .font(.system(size: 28, weight: .bold, design: .rounded))
+                        Text("\(firstName), you're in business.")
+                            .font(.system(size: 26, weight: .bold, design: .rounded))
                             .foregroundStyle(Color.sweeplyNavy)
                             .tracking(-0.4)
 
-                        let biz = businessName.trimmingCharacters(in: .whitespaces)
-                        if !biz.isEmpty {
-                            Text(biz)
-                                .font(.system(size: 15, weight: .semibold))
-                                .foregroundStyle(Color.sweeplyTextSub)
-                        }
+                        Text("Start booking jobs, sending invoices, and getting paid.")
+                            .font(.system(size: 14))
+                            .foregroundStyle(Color.sweeplyTextSub)
+                            .lineSpacing(2)
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.top, 24)
@@ -1180,13 +1178,19 @@ struct OnboardingView: View {
 
                     // Bullet rows
                     VStack(alignment: .leading, spacing: 12) {
-                        allSetBullet(icon: "person.crop.circle.fill", text: "Your profile is set up")
+                        let biz = businessName.trimmingCharacters(in: .whitespaces)
+                        allSetBullet(
+                            icon: "person.crop.circle.fill",
+                            text: biz.isEmpty ? "Your profile is set up" : "\(biz) is set up"
+                        )
 
-                        if !selectedServices.isEmpty {
-                            allSetBullet(
-                                icon: "sparkles",
-                                text: "\(selectedServices.count) service\(selectedServices.count == 1 ? "" : "s") added to your catalog"
-                            )
+                        let mainCount = allMainServices.filter { selectedServices.contains($0.name) }.count
+                        let addonCount = allAddonServices.filter { selectedServices.contains($0.name) }.count
+                        if mainCount > 0 || addonCount > 0 {
+                            let mainPart = mainCount > 0 ? "\(mainCount) service\(mainCount == 1 ? "" : "s")" : nil
+                            let addonPart = addonCount > 0 ? "\(addonCount) extra\(addonCount == 1 ? "" : "s")" : nil
+                            let catalogText = [mainPart, addonPart].compactMap { $0 }.joined(separator: " & ")
+                            allSetBullet(icon: "sparkles", text: "\(catalogText) added to your catalog")
                         }
 
                         allSetBullet(icon: "doc.text.fill",  text: "Invoices & payments ready")
