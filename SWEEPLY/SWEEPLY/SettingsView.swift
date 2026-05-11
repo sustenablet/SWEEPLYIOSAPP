@@ -18,6 +18,8 @@ struct SettingsView: View {
     @State private var showOnboarding = false
     @State private var showIntroOnboarding = false
     @State private var showLogoutConfirmation = false
+    @State private var showDeleteConfirmation = false
+    @State private var isDeletingAccount = false
     @State private var showPaywall = false
     @State private var currentTestNotificationIndex = 0
     @AppStorage("hasSeenIntroOnboarding") private var hasSeenIntroOnboarding = true
@@ -91,6 +93,20 @@ struct SettingsView: View {
                             }
                         }
                         rowDivider()
+                        menuRow(icon: "hand.raised", title: "Privacy Policy".translated()) {
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                            if let url = URL(string: "https://sweeplyapp.online/privacy") {
+                                UIApplication.shared.open(url)
+                            }
+                        }
+                        rowDivider()
+                        menuRow(icon: "doc.text", title: "Terms of Service".translated()) {
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                            if let url = URL(string: "https://sweeplyapp.online/terms") {
+                                UIApplication.shared.open(url)
+                            }
+                        }
+                        rowDivider()
                         menuRow(
                             icon: subscriptionRowIcon,
                             title: subscriptionRowTitle,
@@ -158,6 +174,23 @@ struct SettingsView: View {
                 }
             } message: {
                 Text("You'll need to sign in again to access your account.".translated())
+            }
+            .confirmationDialog("Delete your account?".translated(), isPresented: $showDeleteConfirmation, titleVisibility: .visible) {
+                Button("Delete Account".translated(), role: .destructive) {
+                    Task {
+                        isDeletingAccount = true
+                        let success = await session.deleteAccount()
+                        isDeletingAccount = false
+                        if !success {
+                            if let url = URL(string: "mailto:sustenablet@gmail.com?subject=Account%20Deletion%20Request") {
+                                UIApplication.shared.open(url)
+                            }
+                        }
+                    }
+                }
+                Button("Cancel".translated(), role: .cancel) {}
+            } message: {
+                Text("This will permanently delete your account and all your business data. This cannot be undone.".translated())
             }
             .fullScreenCover(isPresented: $showIntroOnboarding) {
                 IntroOnboardingView {
@@ -671,11 +704,17 @@ private var preferencesSection: some View {
             }
 
             Button {
-                // delete account confirmation handled externally if needed
+                UIImpactFeedbackGenerator(style: .heavy).impactOccurred()
+                showDeleteConfirmation = true
             } label: {
                 HStack(spacing: 14) {
                     settingsIcon("trash.fill", color: Color.sweeplyDestructive)
-                    Text("Delete Account".translated()).font(.system(size: 15, weight: .semibold)).foregroundStyle(Color.sweeplyDestructive)
+                    if isDeletingAccount {
+                        ProgressView().tint(Color.sweeplyDestructive)
+                        Text("Deleting…".translated()).font(.system(size: 15, weight: .semibold)).foregroundStyle(Color.sweeplyDestructive)
+                    } else {
+                        Text("Delete Account".translated()).font(.system(size: 15, weight: .semibold)).foregroundStyle(Color.sweeplyDestructive)
+                    }
                     Spacer()
                 }
                 .padding(.horizontal, 16).padding(.vertical, 12)
@@ -684,6 +723,7 @@ private var preferencesSection: some View {
                 .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(Color.sweeplyDestructive.opacity(0.2), lineWidth: 1))
             }
             .buttonStyle(.plain)
+            .disabled(isDeletingAccount)
             .padding(.top, 16)
         }
     }

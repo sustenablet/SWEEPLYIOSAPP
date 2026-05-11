@@ -83,6 +83,20 @@ struct CleanerSettingsView: View {
                             }
                         }
                         rowDivider()
+                        menuRow(icon: "hand.raised", title: "Privacy Policy".translated()) {
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                            if let url = URL(string: "https://sweeplyapp.online/privacy") {
+                                UIApplication.shared.open(url)
+                            }
+                        }
+                        rowDivider()
+                        menuRow(icon: "doc.text", title: "Terms of Service".translated()) {
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                            if let url = URL(string: "https://sweeplyapp.online/terms") {
+                                UIApplication.shared.open(url)
+                            }
+                        }
+                        rowDivider()
                         NavigationLink(destination: aboutPage) {
                             menuRowLabel(icon: "info.circle", title: "About".translated())
                         }
@@ -493,7 +507,7 @@ struct CleanerSettingsView: View {
 
     private var leaveTeamButton: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("DANGER ZONE")
+            Text("DANGER ZONE".translated())
                 .font(.system(size: 10, weight: .bold))
                 .foregroundStyle(Color.sweeplyDestructive.opacity(0.7))
                 .tracking(0.8)
@@ -524,7 +538,7 @@ struct CleanerSettingsView: View {
                             .font(.system(size: 15, weight: .semibold))
                             .foregroundStyle(Color.sweeplyDestructive)
                         if leaveError {
-                            Text("Something went wrong — try again.")
+                            Text("Something went wrong — try again.".translated())
                                 .font(.system(size: 11))
                                 .foregroundStyle(Color.sweeplyDestructive.opacity(0.8))
                         } else {

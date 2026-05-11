@@ -1,3 +1,4 @@
+import AuthenticationServices
 import Foundation
 import Observation
 import Supabase
@@ -116,6 +117,30 @@ final class AppSession {
         }
     }
     
+    func signInWithGoogle() async {
+        guard let client = SupabaseManager.shared else { return }
+        lastAuthError = nil
+        do {
+            try await client.auth.signInWithOAuth(provider: .google)
+        } catch let error as ASWebAuthenticationSessionError where error.code == .canceledLogin {
+            // user dismissed — no error shown
+        } catch {
+            lastAuthError = humanizedAuthError(error)
+        }
+    }
+
+    func signInWithApple(idToken: String, nonce: String) async {
+        guard let client = SupabaseManager.shared else { return }
+        lastAuthError = nil
+        do {
+            try await client.auth.signInWithIdToken(
+                credentials: .init(provider: .apple, idToken: idToken, nonce: nonce)
+            )
+        } catch {
+            lastAuthError = humanizedAuthError(error)
+        }
+    }
+
     func cancelConfirmation() {
         confirmationTask?.cancel()
         resendCooldownTask?.cancel()
@@ -148,6 +173,19 @@ final class AppSession {
             resetTeamState()
         } catch {
             lastAuthError = error.localizedDescription
+        }
+    }
+
+    func deleteAccount() async -> Bool {
+        guard let client = SupabaseManager.shared else { return false }
+        lastAuthError = nil
+        do {
+            try await client.functions.invoke("delete-account")
+            resetTeamState()
+            return true
+        } catch {
+            lastAuthError = error.localizedDescription
+            return false
         }
     }
 
