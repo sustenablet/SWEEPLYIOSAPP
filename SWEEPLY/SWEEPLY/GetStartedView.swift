@@ -1,36 +1,24 @@
 import SwiftUI
 
 struct GetStartedView: View {
-    let onGetStarted: () -> Void
+    let onSignUp: () -> Void
+    let onLogIn: () -> Void
 
     @State private var appeared = false
     @State private var displayedText = ""
     private var fullText: String { "Welcome to Sweeply".translated() }
-    private var typedText: AttributedString {
-        var result = AttributedString()
-        let welcome = AttributedString("Welcome to ")
-        var sweeply = AttributedString("Sweeply")
-        sweeply.foregroundColor = Color.sweeplyWordmarkBlue
-        result.append(welcome)
-        result.append(sweeply)
-        return result
-    }
+
     @State private var charIndex = 0
 
     var body: some View {
         ZStack {
-            // Full-bleed background image
             Image("GetStartedBG")
                 .resizable()
                 .scaledToFill()
                 .ignoresSafeArea()
 
-            // Dark gradient overlay for legibility
             LinearGradient(
-                colors: [
-                    Color.black.opacity(0.15),
-                    Color.black.opacity(0.55)
-                ],
+                colors: [Color.black.opacity(0.15), Color.black.opacity(0.58)],
                 startPoint: .top,
                 endPoint: .bottom
             )
@@ -43,20 +31,17 @@ struct GetStartedView: View {
                     .opacity(appeared ? 1 : 0)
                     .offset(y: appeared ? 0 : 16)
 
-                Spacer()
-                    .frame(height: 28)
+                Spacer().frame(height: 36)
 
-                getStartedButton
+                buttonRow
                     .opacity(appeared ? 1 : 0)
                     .offset(y: appeared ? 0 : 12)
             }
             .padding(.horizontal, 24)
-            .padding(.bottom, 40)
+            .padding(.bottom, 44)
         }
         .onAppear {
-            withAnimation(.easeOut(duration: 0.3).delay(0.05)) {
-                appeared = true
-            }
+            withAnimation(.easeOut(duration: 0.3).delay(0.05)) { appeared = true }
             startTypewriter()
         }
     }
@@ -95,24 +80,44 @@ struct GetStartedView: View {
         }
     }
 
-    private var getStartedButton: some View {
-        Button {
-            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-            onGetStarted()
-        } label: {
-            Text("Get Started".translated())
-                .font(.system(size: 17, weight: .semibold))
-                .foregroundStyle(.white)
-                .frame(maxWidth: .infinity)
-                .frame(height: 56)
-                .background(Color.sweeplyWordmarkBlue)
-                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+    private var buttonRow: some View {
+        HStack(spacing: 12) {
+            // Log In — outlined
+            Button {
+                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                onLogIn()
+            } label: {
+                Text("Log In".translated())
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 56)
+                    .background(.white.opacity(0.18))
+                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                            .stroke(.white.opacity(0.45), lineWidth: 1.5)
+                    )
+            }
+
+            // Sign Up — solid blue
+            Button {
+                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                onSignUp()
+            } label: {
+                Text("Sign Up".translated())
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 56)
+                    .background(Color.sweeplyWordmarkBlue)
+                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    .shadow(color: Color.sweeplyWordmarkBlue.opacity(0.4), radius: 10, y: 4)
+            }
         }
     }
 }
 
 #Preview {
-    GetStartedView {
-        print("Get started tapped")
-    }
+    GetStartedView(onSignUp: {}, onLogIn: {})
 }

@@ -3,15 +3,25 @@ import UserNotifications
 import RevenueCat
 
 struct OnboardingView: View {
+    var isSignUpFlow: Bool = false
+    var onDismiss: (() -> Void)? = nil
+
     private struct TeamInvite: Identifiable {
         let id = UUID()
         var name: String
         var email: String
     }
 
+    private struct RecurringCard: Identifiable {
+        let id = UUID()
+        var name: String = ""
+        var frequency: String = "Weekly"
+    }
+
     @Environment(ProfileStore.self)        private var profileStore
     @Environment(AppSession.self)          private var session
     @Environment(TeamStore.self)           private var teamStore
+    @Environment(ClientsStore.self)        private var clientsStore
     @Environment(SubscriptionManager.self) private var subscriptionManager
 
     // Paywall step local enums (mirrors private types in SubscriptionPaywallView)
@@ -25,8 +35,23 @@ struct OnboardingView: View {
     @State private var step = 0
     @State private var goingForward = true
 
-    // Step 1 fields
-    @State private var fullName = ""
+    // Discovery steps (0-3)
+    @State private var describesYouIndex: Int? = nil
+    @State private var goalIndex: Int? = nil
+    @State private var clientCountIndex: Int? = nil
+    @State private var recurringCards: [RecurringCard] = [RecurringCard()]
+
+    // Account creation steps (4-7)
+    @State private var firstName = ""
+    @State private var lastName = ""
+    @State private var email = ""
+    @State private var usePasscode = false
+    @State private var password = ""
+    @State private var showPassword = false
+    @State private var isCreatingAccount = false
+    @State private var accountError: String? = nil
+
+    // Existing identity fields (kept for saveAndFinish compatibility)
     @State private var businessName = ""
     @State private var phone = ""
     @FocusState private var focusedField: IdentityField?
@@ -89,39 +114,134 @@ struct OnboardingView: View {
     private func advance() {
         focusedField = nil
         goingForward = true
-        withAnimation(.easeInOut(duration: 0.28)) { step += 1 }
+        withAnimation(.easeInOut(duration: 0.28)) {
+            switch step {
+            case 2: step = (clientCountIndex ?? 0) > 0 ? 3 : 4
+            case 3: step = 4
+            case 6:
+                if usePasscode {
+                    step = 8
+                    Task { await createAccount() }
+                } else {
+                    step = 7
+                }
+            case 7:
+                step = 8
+                Task { await createAccount() }
+            default: step += 1
+            }
+        }
     }
 
     private func goBack() {
         focusedField = nil
         goingForward = false
-        withAnimation(.easeInOut(duration: 0.22)) { step -= 1 }
+        withAnimation(.easeInOut(duration: 0.22)) {
+            switch step {
+            case 4: step = (clientCountIndex ?? 0) > 0 ? 3 : 2
+            case 8: step = usePasscode ? 6 : 7
+            default: step -= 1
+            }
+        }
+    }
+
+    private var fullName: String {
+        "\(firstName) \(lastName)".trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private var passwordHas8: Bool { password.count >= 8 }
+    private var passwordHasUpper: Bool { password.range(of: "[A-Z]", options: .regularExpression) != nil }
+    private var passwordHasLower: Bool { password.range(of: "[a-z]", options: .regularExpression) != nil }
+    private var passwordHasNumber: Bool { password.range(of: "[0-9]", options: .regularExpression) != nil }
+    private var passwordIsValid: Bool { passwordHas8 && passwordHasUpper && passwordHasLower && passwordHasNumber }
+
+    private var isBlueStep: Bool { step == 10 || step == 11 || step == 13 }
+
+    private func createAccount() async {
+        guard !isCreatingAccount else { return }
+        await MainActor.run { isCreatingAccount = true; accountError = nil }
+
+        let pwd: String
+        if usePasscode {
+            let generated = (UUID().uuidString + UUID().uuidString).replacingOccurrences(of: "-", with: "")
+            KeychainHelper.save(key: "sweeply_auth_password", value: generated)
+            UserDefaults.standard.set(true, forKey: "biometricLockEnabled")
+            UserDefaults.standard.set(true, forKey: "sweeply_uses_passcode_auth")
+            pwd = generated
+        } else {
+            pwd = password
+        }
+
+        await session.signUpDirect(email: email.trimmingCharacters(in: .whitespacesAndNewlines), password: pwd)
+
+        // Wait up to 10s for session to be established
+        for _ in 0..<20 {
+            if session.userId != nil { break }
+            try? await Task.sleep(nanoseconds: 500_000_000)
+        }
+
+        await MainActor.run {
+            isCreatingAccount = false
+            if session.lastAuthError == nil && session.userId != nil {
+                applyDiscoveryEffects()
+            } else if session.lastAuthError != nil {
+                accountError = session.lastAuthError
+                // Step back to whichever input caused the error
+                withAnimation(.easeInOut(duration: 0.28)) {
+                    step = usePasscode ? 6 : 7
+                }
+            }
+        }
+    }
+
+    private func applyDiscoveryEffects() {
+        // Page B: "Get invoices paid faster" → open Finances tab first
+        if goalIndex == 1 {
+            UserDefaults.standard.set("finances", forKey: "sweeply_initial_tab_override")
+        }
+        // Page A: "Switching from another app" → show import tip after onboarding
+        if describesYouIndex == 3 {
+            UserDefaults.standard.set(true, forKey: "sweeply_show_import_tip")
+        }
+        // Page A: "Manage a team" → badge the team section
+        if describesYouIndex == 2 {
+            UserDefaults.standard.set(true, forKey: "sweeply_team_badge")
+        }
     }
 
     var body: some View {
         ZStack {
-            (step == 4 || step == 5 || step == 7
+            (isBlueStep
                 ? Color(red: 0.22, green: 0.50, blue: 0.92)
                 : Color.sweeplyBackground
             ).ignoresSafeArea()
 
             VStack(spacing: 0) {
-                // Header — shown on data-collection steps only (not paywall/location/all-set)
-                if step >= 1 && step <= 4 {
+                // Header — shown on setup steps (services, team, notifications, location)
+                if step >= 8 && step <= 11 {
                     headerBar
                         .transition(.opacity)
                 }
 
                 ZStack {
                     switch step {
-                    case 0: stepWelcome.transition(stepTransition).id(0)
-                    case 1: stepIdentity.transition(stepTransition).id(1)
-                    case 2: stepServices.transition(stepTransition).id(2)
-                    case 3: stepTeam.transition(stepTransition).id(3)
-                    case 4: stepNotifications.transition(stepTransition).id(4)
-                    case 5: stepLocation.transition(stepTransition).id(5)
-                    case 6: stepPaywall.transition(stepTransition).id(6)
-                    case 7: stepAllSet.transition(stepTransition).id(7)
+                    // Discovery
+                    case 0:  stepDescribesYou.transition(stepTransition).id(0)
+                    case 1:  stepGoal.transition(stepTransition).id(1)
+                    case 2:  stepClientCount.transition(stepTransition).id(2)
+                    case 3:  stepRecurringClients.transition(stepTransition).id(3)
+                    // Account creation
+                    case 4:  stepName.transition(stepTransition).id(4)
+                    case 5:  stepBusinessName.transition(stepTransition).id(5)
+                    case 6:  stepEmail.transition(stepTransition).id(6)
+                    case 7:  stepPassword.transition(stepTransition).id(7)
+                    // Setup
+                    case 8:  stepServices.transition(stepTransition).id(8)
+                    case 9:  stepTeam.transition(stepTransition).id(9)
+                    case 10: stepNotifications.transition(stepTransition).id(10)
+                    case 11: stepLocation.transition(stepTransition).id(11)
+                    case 12: stepPaywall.transition(stepTransition).id(12)
+                    case 13: stepAllSet.transition(stepTransition).id(13)
                     default: EmptyView()
                     }
                 }
@@ -158,7 +278,7 @@ struct OnboardingView: View {
     private var headerBar: some View {
         HStack(spacing: 12) {
             // Previous — shown on steps 1-5
-            if step >= 1 {
+            if step >= 9 {
                 Button {
                     UIImpactFeedbackGenerator(style: .light).impactOccurred()
                     goBack()
@@ -169,7 +289,7 @@ struct OnboardingView: View {
                         Text("Previous".translated())
                             .font(.system(size: 14, weight: .medium))
                     }
-                    .foregroundStyle(step == 4 ? .white : Color.sweeplyNavy)
+                    .foregroundStyle(step == 10 ? .white : Color.sweeplyNavy)
                 }
                 .buttonStyle(.plain)
                 .frame(width: 80, alignment: .leading)
@@ -177,22 +297,22 @@ struct OnboardingView: View {
                 Color.clear.frame(width: 80, height: 1)
             }
 
-            // Progress bar — 3 steps
+            // Progress bar — 4 setup steps (8–11)
             GeometryReader { geo in
                 ZStack(alignment: .leading) {
                     Capsule()
-                        .fill(step == 4 ? Color.white.opacity(0.3) : Color.sweeplyBorder)
+                        .fill(step == 10 ? Color.white.opacity(0.3) : Color.sweeplyBorder)
                         .frame(height: 4)
                     Capsule()
-                        .fill(step == 4 ? Color.white : Color.sweeplyAccent)
-                        .frame(width: geo.size.width * (CGFloat(step - 1) / 4.0), height: 4)
+                        .fill(step == 10 ? Color.white : Color.sweeplyAccent)
+                        .frame(width: geo.size.width * (CGFloat(step - 7) / 4.0), height: 4)
                         .animation(.spring(response: 0.4, dampingFraction: 0.8), value: step)
                 }
             }
             .frame(height: 4)
 
-            // Skip — only on step 2 (services), else balance spacer
-            if step == 2 {
+            // Skip — only on services step (8)
+            if step == 8 {
                 Button {
                     UIImpactFeedbackGenerator(style: .light).impactOccurred()
                     advance()
@@ -211,124 +331,239 @@ struct OnboardingView: View {
         .padding(.vertical, 14)
     }
 
-    // MARK: - Step 0: Welcome
+    // MARK: - Step 0: What describes you?
 
-    private var stepWelcome: some View {
-        GeometryReader { geo in
-            VStack(spacing: 0) {
-
-                // ── Top: hero image ──────────────────────────────────
-                Image("SignupImage")
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: geo.size.width)
-                    .padding(.top, 40)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .background(Color(red: 193/255, green: 223/255, blue: 253/255))
-
-                // ── Bottom: content card flush with image ─────────────
-                VStack(spacing: 0) {
-                    VStack(alignment: .leading, spacing: 10) {
-                        Text("Let's get you set up".translated())
-                            .font(.system(size: 28, weight: .bold, design: .rounded))
-                            .foregroundStyle(Color.sweeplyNavy)
-                            .tracking(-0.4)
-
-                        Text("Get your workspace ready and start managing jobs with ease.".translated())
-                            .font(.system(size: 15))
-                            .foregroundStyle(Color.sweeplyTextSub)
-                            .lineSpacing(3)
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.top, 28)
-                    .padding(.bottom, 32)
-
-                    Button {
-                        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-                        advance()
-                    } label: {
-                        Text("Get started".translated())
-                            .font(.system(size: 17, weight: .bold))
-                            .foregroundStyle(.white)
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 54)
-                            .background(Color.sweeplyNavy)
-                            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                            .shadow(color: Color.sweeplyNavy.opacity(0.2), radius: 8, x: 0, y: 4)
-                    }
-                    .padding(.bottom, geo.safeAreaInsets.bottom > 0 ? geo.safeAreaInsets.bottom + 8 : 28)
-                }
-                .padding(.horizontal, 28)
-                .frame(maxWidth: .infinity)
-                .background(Color.sweeplyBackground)
-                .opacity(welcomeAppeared ? 1 : 0)
-                .offset(y: welcomeAppeared ? 0 : 32)
-            }
-            .ignoresSafeArea()
-        }
-        .onAppear {
-            welcomeAppeared = false
-            withAnimation(.spring(response: 0.55, dampingFraction: 0.82).delay(0.1)) {
-                welcomeAppeared = true
-            }
-        }
+    private var stepDescribesYou: some View {
+        discoveryPage(
+            question: "What best\ndescribes you?",
+            options: [
+                ("🌱", "Starting a new cleaning business"),
+                ("⚙️", "Already running, need better tools"),
+                ("👥", "Managing a team of cleaners"),
+                ("🔄", "Switching from another app")
+            ],
+            selection: $describesYouIndex,
+            onContinue: { advance() }
+        )
     }
 
-    // MARK: - Step 1: Identity
+    // MARK: - Step 1: Main goal
 
-    private var stepIdentity: some View {
+    private var stepGoal: some View {
+        discoveryPage(
+            question: "What's your\nmain goal?",
+            options: [
+                ("📅", "Stay on top of jobs and schedule"),
+                ("💸", "Get invoices paid faster"),
+                ("📈", "Build a bigger client base"),
+                ("👤", "Manage and pay my team")
+            ],
+            selection: $goalIndex,
+            onContinue: { advance() }
+        )
+    }
+
+    // MARK: - Step 2: Client count
+
+    private var stepClientCount: some View {
+        discoveryPage(
+            question: "How many clients\ndo you have now?",
+            options: [
+                ("🌿", "Just starting — 0 to 5"),
+                ("📊", "Growing — 6 to 20"),
+                ("🏆", "Established — 21 to 50"),
+                ("🚀", "Scaling fast — 50+")
+            ],
+            selection: $clientCountIndex,
+            onContinue: { advance() }
+        )
+    }
+
+    // MARK: - Discovery page builder
+
+    private func discoveryPage(
+        question: String,
+        options: [(String, String)],
+        selection: Binding<Int?>,
+        onContinue: @escaping () -> Void
+    ) -> some View {
         VStack(spacing: 0) {
             ScrollView(showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 0) {
-                    VStack(alignment: .leading, spacing: 10) {
-                        Text("Tell us about\nyour business".translated())
+                    // Back button for steps > 0
+                    if step > 0 {
+                        Button {
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                            goBack()
+                        } label: {
+                            HStack(spacing: 4) {
+                                Image(systemName: "chevron.left")
+                                    .font(.system(size: 13, weight: .semibold))
+                                Text("Back".translated())
+                                    .font(.system(size: 14, weight: .medium))
+                            }
+                            .foregroundStyle(Color.sweeplyTextSub)
+                        }
+                        .buttonStyle(.plain)
+                        .padding(.horizontal, 24)
+                        .padding(.top, 16)
+                        .padding(.bottom, 8)
+                    } else {
+                        Spacer().frame(height: 32)
+                    }
+
+                    Text(question.translated())
+                        .font(.system(size: 34, weight: .bold))
+                        .foregroundStyle(Color.sweeplyNavy)
+                        .lineSpacing(2)
+                        .tracking(-0.6)
+                        .padding(.horizontal, 24)
+                        .padding(.top, step == 0 ? 40 : 16)
+                        .padding(.bottom, 32)
+
+                    VStack(spacing: 10) {
+                        ForEach(Array(options.enumerated()), id: \.offset) { idx, option in
+                            Button {
+                                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                    selection.wrappedValue = idx
+                                }
+                            } label: {
+                                HStack(spacing: 14) {
+                                    Text(option.0)
+                                        .font(.system(size: 22))
+                                        .frame(width: 36)
+                                    Text(option.1.translated())
+                                        .font(.system(size: 16, weight: .medium))
+                                        .foregroundStyle(selection.wrappedValue == idx ? Color.sweeplyAccent : Color.sweeplyNavy)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                    if selection.wrappedValue == idx {
+                                        Image(systemName: "checkmark.circle.fill")
+                                            .foregroundStyle(Color.sweeplyAccent)
+                                            .font(.system(size: 18))
+                                    }
+                                }
+                                .padding(.horizontal, 18)
+                                .padding(.vertical, 16)
+                                .background(
+                                    selection.wrappedValue == idx
+                                        ? Color.sweeplyAccent.opacity(0.08)
+                                        : Color.sweeplySurface
+                                )
+                                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                        .stroke(
+                                            selection.wrappedValue == idx ? Color.sweeplyAccent : Color.sweeplyBorder,
+                                            lineWidth: selection.wrappedValue == idx ? 1.5 : 1
+                                        )
+                                )
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                    .padding(.horizontal, 24)
+                    .padding(.bottom, 32)
+                }
+            }
+
+            Divider().opacity(0.5)
+            primaryButton(
+                label: "Continue",
+                isEnabled: selection.wrappedValue != nil,
+                action: {
+                    UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                    onContinue()
+                }
+            )
+            .padding(.horizontal, 24)
+            .padding(.top, 16)
+            .padding(.bottom, 32)
+            .background(Color.sweeplyBackground)
+        }
+    }
+
+    // MARK: - Step 3: Recurring clients
+
+    private var stepRecurringClients: some View {
+        VStack(spacing: 0) {
+            ScrollView(showsIndicators: false) {
+                VStack(alignment: .leading, spacing: 0) {
+                    HStack {
+                        Button {
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                            goBack()
+                        } label: {
+                            HStack(spacing: 4) {
+                                Image(systemName: "chevron.left")
+                                    .font(.system(size: 13, weight: .semibold))
+                                Text("Back".translated())
+                                    .font(.system(size: 14, weight: .medium))
+                            }
+                            .foregroundStyle(Color.sweeplyTextSub)
+                        }
+                        .buttonStyle(.plain)
+
+                        Spacer()
+
+                        Button {
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                            advance()
+                        } label: {
+                            Text("Skip".translated())
+                                .font(.system(size: 14, weight: .medium))
+                                .foregroundStyle(Color.sweeplyTextSub)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    .padding(.horizontal, 24)
+                    .padding(.top, 16)
+                    .padding(.bottom, 8)
+
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Who are your regulars?".translated())
                             .font(.system(size: 34, weight: .bold))
                             .foregroundStyle(Color.sweeplyNavy)
-                            .lineSpacing(2)
                             .tracking(-0.6)
 
-                        Text("This appears on your invoices and client messages.".translated())
+                        Text("We'll add them to your client list.".translated())
                             .font(.system(size: 15))
                             .foregroundStyle(Color.sweeplyTextSub)
                     }
                     .padding(.horizontal, 24)
-                    .padding(.top, 8)
+                    .padding(.top, 16)
+                    .padding(.bottom, 28)
 
-                    Spacer().frame(height: 32)
+                    VStack(spacing: 10) {
+                        ForEach($recurringCards) { $card in
+                            recurringCardRow(card: $card)
+                        }
 
-                    VStack(spacing: 12) {
-                        OnboardingField(
-                            placeholder: "Your name",
-                            text: $fullName,
-                            icon: "person",
-                            keyboardType: .default,
-                            submitLabel: .next,
-                            onSubmit: { focusedField = .business }
-                        )
-                        .focused($focusedField, equals: .name)
-
-                        OnboardingField(
-                            placeholder: "Business name (e.g. Sunrise Cleaning)",
-                            text: $businessName,
-                            icon: "building.2",
-                            keyboardType: .default,
-                            submitLabel: .next,
-                            onSubmit: { focusedField = .phone }
-                        )
-                        .focused($focusedField, equals: .business)
-
-                        OnboardingField(
-                            placeholder: "Phone (optional)",
-                            text: $phone,
-                            icon: "phone",
-                            keyboardType: .phonePad,
-                            submitLabel: .done,
-                            onSubmit: { focusedField = nil }
-                        )
-                        .focused($focusedField, equals: .phone)
+                        Button {
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                            withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                                recurringCards.append(RecurringCard())
+                            }
+                        } label: {
+                            HStack(spacing: 8) {
+                                Image(systemName: "plus.circle.fill")
+                                    .foregroundStyle(Color.sweeplyAccent)
+                                Text("Add another client".translated())
+                                    .font(.system(size: 15, weight: .medium))
+                                    .foregroundStyle(Color.sweeplyAccent)
+                            }
+                            .padding(.horizontal, 18)
+                            .padding(.vertical, 14)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(Color.sweeplyAccent.opacity(0.06))
+                            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                            .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                .stroke(Color.sweeplyAccent.opacity(0.25), lineWidth: 1))
+                        }
+                        .buttonStyle(.plain)
                     }
                     .padding(.horizontal, 24)
-                    .padding(.bottom, 24)
+                    .padding(.bottom, 32)
                 }
             }
             .scrollDismissesKeyboard(.interactively)
@@ -336,7 +571,7 @@ struct OnboardingView: View {
             Divider().opacity(0.5)
             primaryButton(
                 label: "Continue",
-                isEnabled: identityStepValid,
+                isEnabled: recurringCards.contains { !$0.name.trimmingCharacters(in: .whitespaces).isEmpty },
                 action: {
                     UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                     focusedField = nil
@@ -348,16 +583,379 @@ struct OnboardingView: View {
             .padding(.bottom, 32)
             .background(Color.sweeplyBackground)
         }
+    }
+
+    @ViewBuilder
+    private func recurringCardRow(card: Binding<RecurringCard>) -> some View {
+        HStack(spacing: 10) {
+            TextField("Client name".translated(), text: card.name)
+                .font(.system(size: 15))
+                .padding(.horizontal, 14)
+                .padding(.vertical, 13)
+                .background(Color.sweeplySurface)
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .stroke(Color.sweeplyBorder, lineWidth: 1))
+                .frame(maxWidth: .infinity)
+
+            HStack(spacing: 0) {
+                ForEach(["W", "2W", "M"], id: \.self) { freq in
+                    let full = freq == "W" ? "Weekly" : freq == "2W" ? "Biweekly" : "Monthly"
+                    Button {
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        card.frequency.wrappedValue = full
+                    } label: {
+                        Text(freq)
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(card.frequency.wrappedValue == full ? .white : Color.sweeplyTextSub)
+                            .frame(width: 34, height: 34)
+                            .background(card.frequency.wrappedValue == full ? Color.sweeplyAccent : Color.clear)
+                            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(3)
+            .background(Color.sweeplySurface)
+            .clipShape(RoundedRectangle(cornerRadius: 11, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 11, style: .continuous)
+                .stroke(Color.sweeplyBorder, lineWidth: 1))
+
+            if recurringCards.count > 1 {
+                Button {
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                        recurringCards.removeAll { $0.id == card.id }
+                    }
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(Color.sweeplyTextSub)
+                        .frame(width: 28, height: 28)
+                        .background(Color.sweeplySurface)
+                        .clipShape(Circle())
+                        .overlay(Circle().stroke(Color.sweeplyBorder, lineWidth: 1))
+                }
+                .buttonStyle(.plain)
+            }
+        }
+    }
+
+    // MARK: - Step 4: Name
+
+    private var stepName: some View {
+        accountCreationPage(
+            title: "What's your\nname?",
+            subtitle: "This appears on your invoices and client messages.",
+            content: {
+                AnyView(VStack(spacing: 12) {
+                    OnboardingField(
+                        placeholder: "First name",
+                        text: $firstName,
+                        icon: "person",
+                        keyboardType: .default,
+                        submitLabel: .next,
+                        onSubmit: { focusedField = .business }
+                    )
+                    .focused($focusedField, equals: .name)
+
+                    OnboardingField(
+                        placeholder: "Last name",
+                        text: $lastName,
+                        icon: "person",
+                        keyboardType: .default,
+                        submitLabel: .done,
+                        onSubmit: { focusedField = nil }
+                    )
+                    .focused($focusedField, equals: .phone)
+                })
+            },
+            isEnabled: !firstName.trimmingCharacters(in: .whitespaces).isEmpty &&
+                       !lastName.trimmingCharacters(in: .whitespaces).isEmpty,
+            onContinue: { advance() }
+        )
+    }
+
+    // MARK: - Step 5: Business name
+
+    private var stepBusinessName: some View {
+        accountCreationPage(
+            title: "Name your\nbusiness",
+            subtitle: "You can change this anytime in Settings.",
+            content: {
+                AnyView(OnboardingField(
+                    placeholder: "e.g. Sunrise Cleaning",
+                    text: $businessName,
+                    icon: "building.2",
+                    keyboardType: .default,
+                    submitLabel: .done,
+                    onSubmit: { focusedField = nil }
+                )
+                .focused($focusedField, equals: .business))
+            },
+            isEnabled: !businessName.trimmingCharacters(in: .whitespaces).isEmpty,
+            onContinue: { advance() }
+        )
+    }
+
+    // MARK: - Step 6: Email
+
+    @FocusState private var emailFocused: Bool
+    @FocusState private var passwordFocused: Bool
+
+    private var stepEmail: some View {
+        accountCreationPage(
+            title: "What's your\nemail?",
+            subtitle: nil,
+            content: {
+                AnyView(VStack(alignment: .leading, spacing: 20) {
+                    OnboardingField(
+                        placeholder: "your@email.com",
+                        text: $email,
+                        icon: "envelope",
+                        keyboardType: .emailAddress,
+                        submitLabel: .continue,
+                        onSubmit: {
+                            emailFocused = false
+                            if isValidEmailAddress(email) { advance() }
+                        }
+                    )
+                    .focused($emailFocused, equals: true)
+                    .autocorrectionDisabled()
+                    .textInputAutocapitalization(.never)
+
+                    // Enable Passcode button
+                    Button {
+                        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                        usePasscode = true
+                        emailFocused = false
+                        if isValidEmailAddress(email) { advance() }
+                    } label: {
+                        HStack(spacing: 10) {
+                            Image(systemName: "faceid")
+                                .font(.system(size: 18))
+                                .foregroundStyle(Color.sweeplyAccent)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Enable Passcode".translated())
+                                    .font(.system(size: 15, weight: .semibold))
+                                    .foregroundStyle(Color.sweeplyNavy)
+                                Text("Sign in with Face ID instead of a password".translated())
+                                    .font(.system(size: 12))
+                                    .foregroundStyle(Color.sweeplyTextSub)
+                            }
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundStyle(Color.sweeplyBorder)
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 14)
+                        .background(Color.sweeplySurface)
+                        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .stroke(Color.sweeplyBorder, lineWidth: 1))
+                    }
+                    .buttonStyle(.plain)
+
+                    // Terms agreement
+                    HStack(spacing: 4) {
+                        Text("I agree to Sweeply's".translated())
+                            .font(.system(size: 12))
+                            .foregroundStyle(Color.sweeplyTextSub)
+                        Button {
+                            if let url = URL(string: "https://sweeplyapp.online/terms") {
+                                UIApplication.shared.open(url)
+                            }
+                        } label: {
+                            Text("Terms of Service".translated())
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundStyle(Color.sweeplyAccent)
+                                .underline()
+                        }
+                        .buttonStyle(.plain)
+                        Text("and".translated())
+                            .font(.system(size: 12))
+                            .foregroundStyle(Color.sweeplyTextSub)
+                        Button {
+                            if let url = URL(string: "https://sweeplyapp.online/privacy") {
+                                UIApplication.shared.open(url)
+                            }
+                        } label: {
+                            Text("Privacy Policy".translated())
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundStyle(Color.sweeplyAccent)
+                                .underline()
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding(.top, 4)
+                })
+            },
+            isEnabled: isValidEmailAddress(email),
+            onContinue: { advance() }
+        )
+    }
+
+    // MARK: - Step 7: Password
+
+    private var stepPassword: some View {
+        accountCreationPage(
+            title: "Create a\npassword",
+            subtitle: nil,
+            content: {
+                AnyView(VStack(alignment: .leading, spacing: 20) {
+                    // Password field with show/hide
+                    HStack(spacing: 0) {
+                        Image(systemName: "lock")
+                            .font(.system(size: 15))
+                            .foregroundStyle(Color.sweeplyTextSub)
+                            .frame(width: 44)
+
+                        Group {
+                            if showPassword {
+                                TextField("Password".translated(), text: $password)
+                            } else {
+                                SecureField("Password".translated(), text: $password)
+                            }
+                        }
+                        .font(.system(size: 15))
+                        .autocorrectionDisabled()
+                        .textInputAutocapitalization(.never)
+                        .focused($passwordFocused, equals: true)
+
+                        Button {
+                            showPassword.toggle()
+                        } label: {
+                            Image(systemName: showPassword ? "eye.slash" : "eye")
+                                .font(.system(size: 15))
+                                .foregroundStyle(Color.sweeplyTextSub)
+                                .frame(width: 44)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    .frame(height: 52)
+                    .background(Color.sweeplySurface)
+                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .stroke(passwordFocused ? Color.sweeplyAccent : Color.sweeplyBorder, lineWidth: passwordFocused ? 1.5 : 1))
+
+                    // Live checklist
+                    VStack(alignment: .leading, spacing: 10) {
+                        passwordCheckRow("At least 8 characters", met: passwordHas8)
+                        passwordCheckRow("1 uppercase letter", met: passwordHasUpper)
+                        passwordCheckRow("1 lowercase letter", met: passwordHasLower)
+                        passwordCheckRow("1 number", met: passwordHasNumber)
+                    }
+                    .padding(.horizontal, 4)
+
+                    // Error
+                    if let err = accountError {
+                        Text(err)
+                            .font(.system(size: 13))
+                            .foregroundStyle(Color.sweeplyDestructive)
+                            .padding(.horizontal, 4)
+                    }
+                })
+            },
+            isEnabled: passwordIsValid && !isCreatingAccount,
+            onContinue: {
+                focusedField = nil
+                passwordFocused = false
+                advance()
+            },
+            isLoading: isCreatingAccount
+        )
+    }
+
+    @ViewBuilder
+    private func passwordCheckRow(_ label: String, met: Bool) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: met ? "checkmark.circle.fill" : "circle")
+                .font(.system(size: 15))
+                .foregroundStyle(met ? Color.green : Color.sweeplyBorder)
+                .animation(.spring(response: 0.25, dampingFraction: 0.7), value: met)
+            Text(label.translated())
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(met ? Color.sweeplyNavy : Color.sweeplyTextSub)
+                .animation(.easeInOut(duration: 0.2), value: met)
+        }
+    }
+
+    // MARK: - Account creation page builder
+
+    private func accountCreationPage(
+        title: String,
+        subtitle: String?,
+        content: () -> AnyView,
+        isEnabled: Bool,
+        onContinue: @escaping () -> Void,
+        isLoading: Bool = false
+    ) -> some View {
+        VStack(spacing: 0) {
+            ScrollView(showsIndicators: false) {
+                VStack(alignment: .leading, spacing: 0) {
+                    Button {
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        goBack()
+                    } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: "chevron.left")
+                                .font(.system(size: 13, weight: .semibold))
+                            Text("Back".translated())
+                                .font(.system(size: 14, weight: .medium))
+                        }
+                        .foregroundStyle(Color.sweeplyTextSub)
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.horizontal, 24)
+                    .padding(.top, 16)
+                    .padding(.bottom, 8)
+
+                    VStack(alignment: .leading, spacing: subtitle != nil ? 8 : 0) {
+                        Text(title.translated())
+                            .font(.system(size: 34, weight: .bold))
+                            .foregroundStyle(Color.sweeplyNavy)
+                            .lineSpacing(2)
+                            .tracking(-0.6)
+
+                        if let sub = subtitle {
+                            Text(sub.translated())
+                                .font(.system(size: 15))
+                                .foregroundStyle(Color.sweeplyTextSub)
+                        }
+                    }
+                    .padding(.horizontal, 24)
+                    .padding(.top, 16)
+                    .padding(.bottom, 32)
+
+                    content()
+                        .padding(.horizontal, 24)
+                        .padding(.bottom, 32)
+                }
+            }
+            .scrollDismissesKeyboard(.interactively)
+
+            Divider().opacity(0.5)
+            primaryButton(
+                label: isLoading ? "Creating account…" : "Continue",
+                isEnabled: isEnabled,
+                action: onContinue
+            )
+            .padding(.horizontal, 24)
+            .padding(.top, 16)
+            .padding(.bottom, 32)
+            .background(Color.sweeplyBackground)
+        }
         .ignoresSafeArea(.keyboard, edges: .bottom)
-        .onAppear { focusedField = nil }
     }
 
-    private var identityStepValid: Bool {
-        !fullName.trimmingCharacters(in: .whitespaces).isEmpty &&
-        !businessName.trimmingCharacters(in: .whitespaces).isEmpty
+    private func isValidEmailAddress(_ value: String) -> Bool {
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.contains("@") && trimmed.contains(".") && trimmed.count >= 5
     }
 
-    // MARK: - Step 2: Services
+    // MARK: - Step 8: Services (was Step 2)
 
     private var stepServices: some View {
         ScrollView(showsIndicators: false) {
@@ -1314,15 +1912,16 @@ struct OnboardingView: View {
         Task {
             var profile = profileStore.profile ?? UserProfile(
                 id: userId,
-                fullName: fullName.trimmingCharacters(in: .whitespacesAndNewlines),
+                fullName: fullName,
                 businessName: businessName.trimmingCharacters(in: .whitespacesAndNewlines),
-                email: "",
+                email: email.trimmingCharacters(in: .whitespacesAndNewlines),
                 phone: phone.trimmingCharacters(in: .whitespacesAndNewlines),
                 settings: AppSettings()
             )
-            profile.fullName = fullName.trimmingCharacters(in: .whitespacesAndNewlines)
+            profile.fullName    = fullName
             profile.businessName = businessName.trimmingCharacters(in: .whitespacesAndNewlines)
-            profile.phone = phone.trimmingCharacters(in: .whitespacesAndNewlines)
+            profile.email       = email.trimmingCharacters(in: .whitespacesAndNewlines)
+            profile.phone       = phone.trimmingCharacters(in: .whitespacesAndNewlines)
 
             let chosenServices = AppSettings.defaultServiceCatalog.filter {
                 selectedServices.contains($0.name)
@@ -1345,6 +1944,28 @@ struct OnboardingView: View {
                         addedAt: Date()
                     )
                     _ = await teamStore.add(tm)
+                }
+            }
+
+            // Save recurring clients from Page D
+            if success {
+                for card in recurringCards where !card.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    let client = Client(
+                        id: UUID(),
+                        userId: userId,
+                        name: card.name.trimmingCharacters(in: .whitespacesAndNewlines),
+                        email: "",
+                        phone: "",
+                        address: "",
+                        city: "",
+                        state: "",
+                        zip: "",
+                        preferredService: nil,
+                        entryInstructions: "",
+                        notes: "Recurring: \(card.frequency)",
+                        createdAt: Date()
+                    )
+                    _ = await clientsStore.insert(client, userId: userId)
                 }
             }
 

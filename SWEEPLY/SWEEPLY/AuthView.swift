@@ -4,6 +4,8 @@ import SwiftUI
 import Supabase
 
 struct AuthView: View {
+    var onDismiss: (() -> Void)? = nil
+
     @Environment(AppSession.self) private var session
 
     @State private var email = ""

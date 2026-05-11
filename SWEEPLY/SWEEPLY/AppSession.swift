@@ -165,6 +165,18 @@ final class AppSession {
         }
     }
 
+    /// Sign up without triggering the email-confirmation waiting UI.
+    /// Used by the new onboarding flow which handles progression internally.
+    func signUpDirect(email: String, password: String) async {
+        guard let client = SupabaseManager.shared else { return }
+        lastAuthError = nil
+        do {
+            _ = try await client.auth.signUp(email: email, password: password)
+        } catch {
+            lastAuthError = humanizedAuthError(error)
+        }
+    }
+
     func signOut() async {
         guard let client = SupabaseManager.shared else { return }
         lastAuthError = nil

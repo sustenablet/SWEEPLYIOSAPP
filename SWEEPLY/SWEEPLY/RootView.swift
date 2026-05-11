@@ -21,6 +21,8 @@ struct RootView: View {
     @State private var showNewInvoice = false
     @State private var showQuickAdd = false
     @State private var showOnboarding = false
+    @State private var showSignUpFlow = false
+    @State private var showLoginFlow = false
     @State private var isLocked = false
     @State private var minimumSplashElapsed = false
     @State private var showIntroOnboarding = false
@@ -68,10 +70,11 @@ struct RootView: View {
                     hasSeenIntroOnboarding = true
                     showIntroOnboarding = false
                 }
-            } else if !session.isAuthenticated && !getStartedDismissed {
-                GetStartedView {
-                    getStartedDismissed = true
-                }
+            } else if !session.isAuthenticated && !getStartedDismissed && !showSignUpFlow && !showLoginFlow {
+                GetStartedView(
+                    onSignUp: { showSignUpFlow = true },
+                    onLogIn:  { showLoginFlow  = true }
+                )
             } else if session.isAuthenticated {
                 ZStack {
                     switch session.currentViewMode {
@@ -97,8 +100,14 @@ struct RootView: View {
                     SubscriptionPaywallView()
                         .interactiveDismissDisabled()
                 }
+            } else if showSignUpFlow {
+                OnboardingView(isSignUpFlow: true) {
+                    showSignUpFlow = false
+                }
+            } else if showLoginFlow {
+                AuthView(onDismiss: { showLoginFlow = false })
             } else {
-                AuthView()
+                AuthView(onDismiss: nil)
             }
         }
         .preferredColorScheme(.light)
@@ -305,7 +314,7 @@ struct RootView: View {
             NewInvoiceView()
         }
         .fullScreenCover(isPresented: $showOnboarding) {
-            OnboardingView()
+            OnboardingView(isSignUpFlow: false, onDismiss: nil)
         }
         .onChange(of: showOnboarding) { _, _ in }
         .onChange(of: profileStore.profile?.businessName ?? "") { _, businessName in
