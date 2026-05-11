@@ -30,7 +30,7 @@ struct TeamView: View {
 
                 ScrollView {
                     VStack(spacing: 16) {
-                        if dotTeamBanner && subscriptionManager.isPro {
+                        if dotTeamBanner && subscriptionManager.hasProAccess {
                             proUnlockBanner
                         }
 
@@ -111,7 +111,7 @@ struct TeamView: View {
                 }
             }
             .onAppear {
-                if dotTeamBanner && subscriptionManager.isPro {
+                if dotTeamBanner && subscriptionManager.hasProAccess {
                     DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
                         withAnimation(.easeInOut(duration: 0.3)) { dotTeamBanner = false }
                     }

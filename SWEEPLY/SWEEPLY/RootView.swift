@@ -70,7 +70,11 @@ struct RootView: View {
                     hasSeenIntroOnboarding = true
                     showIntroOnboarding = false
                 }
-            } else if !session.isAuthenticated && !getStartedDismissed && !showSignUpFlow && !showLoginFlow {
+            } else if showSignUpFlow {
+                OnboardingView(isSignUpFlow: true) {
+                    showSignUpFlow = false
+                }
+            } else if !session.isAuthenticated && !getStartedDismissed && !showLoginFlow {
                 GetStartedView(
                     onSignUp: { showSignUpFlow = true },
                     onLogIn:  { showLoginFlow  = true }
@@ -100,14 +104,10 @@ struct RootView: View {
                     SubscriptionPaywallView()
                         .interactiveDismissDisabled()
                 }
-            } else if showSignUpFlow {
-                OnboardingView(isSignUpFlow: true) {
-                    showSignUpFlow = false
-                }
             } else if showLoginFlow {
-                AuthView(onDismiss: { showLoginFlow = false })
+                LoginView(onDismiss: { showLoginFlow = false })
             } else {
-                AuthView(onDismiss: nil)
+                LoginView(onDismiss: nil)
             }
         }
         .preferredColorScheme(.light)
@@ -220,12 +220,12 @@ struct RootView: View {
 
     private var biometricLockOverlay: some View {
         ZStack {
-            Color.sweeplyNavy.ignoresSafeArea()
+            Color.sweeplyBackground.ignoresSafeArea()
             VStack(spacing: 32) {
                 Spacer()
                 ZStack {
                     Circle()
-                        .fill(Color.white.opacity(0.08))
+                        .fill(Color.sweeplyAccent)
                         .frame(width: 100, height: 100)
                     Text("S")
                         .font(.system(size: 44, weight: .black, design: .rounded))
@@ -234,10 +234,10 @@ struct RootView: View {
                 VStack(spacing: 10) {
                     Text("Sweeply is Locked".translated())
                         .font(.system(size: 22, weight: .bold))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(Color.sweeplyNavy)
                     Text("Your business data is protected.".translated())
                         .font(.system(size: 15))
-                        .foregroundStyle(.white.opacity(0.6))
+                        .foregroundStyle(Color.sweeplyTextSub)
                 }
                 Spacer()
                 Button {
@@ -250,10 +250,10 @@ struct RootView: View {
                         Text("Unlock Sweeply".translated())
                             .font(.system(size: 16, weight: .semibold))
                     }
-                    .foregroundStyle(Color.sweeplyNavy)
+                    .foregroundStyle(.white)
                     .padding(.horizontal, 32)
                     .padding(.vertical, 14)
-                    .background(.white)
+                    .background(Color.sweeplyNavy)
                     .clipShape(Capsule())
                 }
                 .padding(.bottom, 48)

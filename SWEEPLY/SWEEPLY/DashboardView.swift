@@ -223,7 +223,7 @@ private var healthCards: [DashboardHealthCardModel] {
                 .padding(.bottom, 24)
 
                 // ── Pro: Weekly Revenue Progress ─────────────────
-                if subscriptionManager.isPro {
+                if subscriptionManager.hasProAccess {
                     weeklyRevenueProgress
                         .padding(.horizontal, 20)
                         .padding(.bottom, 8)

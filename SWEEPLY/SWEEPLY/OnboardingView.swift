@@ -657,7 +657,7 @@ struct OnboardingView: View {
             title: "What's your\nemail?",
             subtitle: nil,
             content: {
-                AnyView(VStack(alignment: .leading, spacing: 16) {
+                AnyView(VStack(alignment: .leading, spacing: 20) {
                     OnboardingField(
                         placeholder: "your@email.com",
                         text: $email,
@@ -670,60 +670,75 @@ struct OnboardingView: View {
                     .autocorrectionDisabled()
                     .textInputAutocapitalization(.never)
 
-                    // Enable Face ID checkbox
-                    checkboxRow(
-                        isChecked: $usePasscode,
-                        label: "Enable Face ID",
-                        detail: "Sign in without a password"
-                    )
-
-                    // Terms & Privacy checkbox
-                    Button {
-                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                        withAnimation(.spring(response: 0.25, dampingFraction: 0.7)) {
-                            agreedToTerms.toggle()
-                        }
-                    } label: {
-                        HStack(alignment: .top, spacing: 12) {
-                            Image(systemName: agreedToTerms ? "checkmark.square.fill" : "square")
-                                .font(.system(size: 20))
-                                .foregroundStyle(agreedToTerms ? Color.sweeplyAccent : Color.sweeplyBorder)
-                                .animation(.spring(response: 0.25, dampingFraction: 0.7), value: agreedToTerms)
-
-                            HStack(spacing: 3) {
-                                Text("I agree to Sweeply's".translated())
-                                    .font(.system(size: 13))
-                                    .foregroundStyle(Color.sweeplyTextSub)
-                                Button {
-                                    if let url = URL(string: "https://sweeplyapp.online/terms") {
-                                        UIApplication.shared.open(url)
-                                    }
-                                } label: {
-                                    Text("Terms of Service".translated())
-                                        .font(.system(size: 13, weight: .medium))
-                                        .foregroundStyle(Color.sweeplyAccent)
-                                        .underline()
+                    VStack(alignment: .leading, spacing: 14) {
+                        // Enable Face ID — plain row, no card background
+                        Button {
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                            withAnimation(.spring(response: 0.25, dampingFraction: 0.7)) { usePasscode.toggle() }
+                        } label: {
+                            HStack(alignment: .center, spacing: 12) {
+                                Image(systemName: usePasscode ? "checkmark.square.fill" : "square")
+                                    .font(.system(size: 20))
+                                    .foregroundStyle(usePasscode ? Color.sweeplyAccent : Color.sweeplyBorder)
+                                    .animation(.spring(response: 0.25, dampingFraction: 0.7), value: usePasscode)
+                                VStack(alignment: .leading, spacing: 1) {
+                                    Text("Enable Face ID".translated())
+                                        .font(.system(size: 14, weight: .semibold))
+                                        .foregroundStyle(Color.sweeplyNavy)
+                                    Text("Sign in without a password".translated())
+                                        .font(.system(size: 12))
+                                        .foregroundStyle(Color.sweeplyTextSub)
                                 }
-                                .buttonStyle(.plain)
-                                Text("and".translated())
-                                    .font(.system(size: 13))
-                                    .foregroundStyle(Color.sweeplyTextSub)
-                                Button {
-                                    if let url = URL(string: "https://sweeplyapp.online/privacy") {
-                                        UIApplication.shared.open(url)
-                                    }
-                                } label: {
-                                    Text("Privacy Policy".translated())
-                                        .font(.system(size: 13, weight: .medium))
-                                        .foregroundStyle(Color.sweeplyAccent)
-                                        .underline()
-                                }
-                                .buttonStyle(.plain)
+                                Spacer()
                             }
-                            .fixedSize(horizontal: false, vertical: true)
                         }
+                        .buttonStyle(.plain)
+
+                        // Terms & Privacy — plain row aligned with Face ID checkbox above
+                        Button {
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                            withAnimation(.spring(response: 0.25, dampingFraction: 0.7)) { agreedToTerms.toggle() }
+                        } label: {
+                            HStack(alignment: .top, spacing: 12) {
+                                Image(systemName: agreedToTerms ? "checkmark.square.fill" : "square")
+                                    .font(.system(size: 20))
+                                    .foregroundStyle(agreedToTerms ? Color.sweeplyAccent : Color.sweeplyBorder)
+                                    .animation(.spring(response: 0.25, dampingFraction: 0.7), value: agreedToTerms)
+                                HStack(spacing: 3) {
+                                    Text("I agree to Sweeply's".translated())
+                                        .font(.system(size: 13))
+                                        .foregroundStyle(Color.sweeplyTextSub)
+                                    Button {
+                                        if let url = URL(string: "https://sweeplyapp.online/terms") {
+                                            UIApplication.shared.open(url)
+                                        }
+                                    } label: {
+                                        Text("Terms of Service".translated())
+                                            .font(.system(size: 13, weight: .medium))
+                                            .foregroundStyle(Color.sweeplyAccent)
+                                            .underline()
+                                    }
+                                    .buttonStyle(.plain)
+                                    Text("and".translated())
+                                        .font(.system(size: 13))
+                                        .foregroundStyle(Color.sweeplyTextSub)
+                                    Button {
+                                        if let url = URL(string: "https://sweeplyapp.online/privacy") {
+                                            UIApplication.shared.open(url)
+                                        }
+                                    } label: {
+                                        Text("Privacy Policy".translated())
+                                            .font(.system(size: 13, weight: .medium))
+                                            .foregroundStyle(Color.sweeplyAccent)
+                                            .underline()
+                                    }
+                                    .buttonStyle(.plain)
+                                }
+                                .fixedSize(horizontal: false, vertical: true)
+                            }
+                        }
+                        .buttonStyle(.plain)
                     }
-                    .buttonStyle(.plain)
                 })
             },
             isEnabled: isValidEmailAddress(email) && agreedToTerms,
@@ -905,7 +920,8 @@ struct OnboardingView: View {
 
     private func isValidEmailAddress(_ value: String) -> Bool {
         let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
-        return trimmed.contains("@") && trimmed.contains(".") && trimmed.count >= 5
+        let regex = #"^[A-Z0-9a-z._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$"#
+        return trimmed.range(of: regex, options: .regularExpression) != nil
     }
 
     // MARK: - Step 8: Services (was Step 2)
@@ -1433,7 +1449,7 @@ struct OnboardingView: View {
                         if paywallPurchasing {
                             ProgressView().tint(.white)
                         } else {
-                            Text("Start Free Trial".translated())
+                            Text(paywallBilling == .yearly ? "Subscribe Yearly".translated() : "Start Free Trial".translated())
                                 .font(.system(size: 17, weight: .bold))
                                 .foregroundStyle(.white)
                         }
@@ -1451,6 +1467,7 @@ struct OnboardingView: View {
 
                 Button {
                     UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    subscriptionManager.startLocalTrial()
                     advance()
                 } label: {
                     Text("I'll decide later".translated())
@@ -1920,6 +1937,7 @@ struct OnboardingView: View {
                 isSaving = false
                 if success {
                     UINotificationFeedbackGenerator().notificationOccurred(.success)
+                    onDismiss?()
                 } else {
                     withAnimation { saveError = true }
                     UINotificationFeedbackGenerator().notificationOccurred(.error)

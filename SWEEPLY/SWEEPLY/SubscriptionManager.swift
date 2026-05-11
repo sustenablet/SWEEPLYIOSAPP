@@ -21,8 +21,6 @@ final class SubscriptionManager {
     static let apiKey                = "appl_hoKbHHnURrLVPDKpGKktXmrSsLJ"
     static let proEntitlementID      = "pro"
     static let standardEntitlementID = "standard"
-    static let trialDurationDays     = 30
-    private static let trialStartKey = "sweeply_trial_start"
 
     // MARK: State
 
@@ -34,26 +32,6 @@ final class SubscriptionManager {
     private(set) var isRestoring = false
     private(set) var lastError: String?
 
-    // MARK: - Trial
-
-    var trialStartDate: Date {
-        if let stored = UserDefaults.standard.object(forKey: Self.trialStartKey) as? Date {
-            return stored
-        }
-        let now = Date()
-        UserDefaults.standard.set(now, forKey: Self.trialStartKey)
-        return now
-    }
-
-    var trialDaysRemaining: Int {
-        let elapsed = Calendar.current.dateComponents([.day], from: trialStartDate, to: Date()).day ?? 0
-        return max(0, Self.trialDurationDays - elapsed)
-    }
-
-    var isInTrial: Bool {
-        trialDaysRemaining > 0 && !isStandard && !isPro
-    }
-
     // MARK: - Entitlements
 
     var isPro: Bool {
@@ -64,16 +42,71 @@ final class SubscriptionManager {
         customerInfo?.entitlements[Self.standardEntitlementID]?.isActive == true
     }
 
-    // Any active access (trial, standard, or pro)
-    var isSubscribed: Bool { isStandard || isPro || isInTrial }
+    // MARK: - Trial: RevenueCat (purchased introductory offer)
 
-    // Pro-level access: subscribed to Pro OR in free trial
-    var hasProAccess: Bool { isPro || isInTrial }
+    var isInProTrial: Bool {
+        customerInfo?.entitlements[Self.proEntitlementID]?.isActive == true &&
+        customerInfo?.entitlements[Self.proEntitlementID]?.periodType == .trial
+    }
+
+    var isInStandardTrial: Bool {
+        customerInfo?.entitlements[Self.standardEntitlementID]?.isActive == true &&
+        customerInfo?.entitlements[Self.standardEntitlementID]?.periodType == .trial
+    }
+
+    var isInRevenueCatTrial: Bool { isInProTrial || isInStandardTrial }
+
+    var revenueCatTrialDaysRemaining: Int {
+        let entitlement = isInProTrial
+            ? customerInfo?.entitlements[Self.proEntitlementID]
+            : customerInfo?.entitlements[Self.standardEntitlementID]
+        guard let exp = entitlement?.expirationDate else { return 0 }
+        return max(0, Calendar.current.dateComponents([.day], from: Date(), to: exp).day ?? 0)
+    }
+
+    // MARK: - Trial: Local (users who tapped "I'll decide later")
+
+    private static let localTrialStartKey   = "sweeply_trial_start"
+    private static let localTrialDurationDays = 30
+
+    var isInLocalTrial: Bool {
+        guard !isStandard, !isPro else { return false }
+        guard let start = UserDefaults.standard.object(forKey: Self.localTrialStartKey) as? Date else { return false }
+        let elapsed = Calendar.current.dateComponents([.day], from: start, to: Date()).day ?? 0
+        return elapsed < Self.localTrialDurationDays
+    }
+
+    var localTrialDaysRemaining: Int {
+        guard let start = UserDefaults.standard.object(forKey: Self.localTrialStartKey) as? Date else { return 0 }
+        let elapsed = Calendar.current.dateComponents([.day], from: start, to: Date()).day ?? 0
+        return max(0, Self.localTrialDurationDays - elapsed)
+    }
+
+    func startLocalTrial() {
+        guard UserDefaults.standard.object(forKey: Self.localTrialStartKey) == nil else { return }
+        UserDefaults.standard.set(Date(), forKey: Self.localTrialStartKey)
+    }
+
+    // MARK: - Combined
+
+    var isInTrial: Bool { isInRevenueCatTrial || isInLocalTrial }
+
+    var trialDaysRemaining: Int {
+        isInRevenueCatTrial ? revenueCatTrialDaysRemaining : localTrialDaysRemaining
+    }
+
+    // Any active access
+    var isSubscribed: Bool { isStandard || isPro || isInLocalTrial }
+
+    // Pro-level access: active Pro entitlement (includes Pro trial via RevenueCat)
+    var hasProAccess: Bool { isPro }
 
     var accessLevel: AccessLevel {
-        if isPro        { return .pro }
-        if isInTrial    { return .trial(daysRemaining: trialDaysRemaining) }
-        if isStandard   { return .standard }
+        if isPro && isInProTrial           { return .trial(daysRemaining: revenueCatTrialDaysRemaining) }
+        if isPro                           { return .pro }
+        if isStandard && isInStandardTrial { return .trial(daysRemaining: revenueCatTrialDaysRemaining) }
+        if isStandard                      { return .standard }
+        if isInLocalTrial                  { return .trial(daysRemaining: localTrialDaysRemaining) }
         return .expired
     }
 
@@ -85,14 +118,6 @@ final class SubscriptionManager {
     var activeProductID: String? {
         customerInfo?.entitlements[Self.proEntitlementID]?.productIdentifier
             ?? customerInfo?.entitlements[Self.standardEntitlementID]?.productIdentifier
-    }
-
-    // MARK: - Trial
-
-    /// Anchors the trial start date to right now if it hasn't been set yet.
-    /// Call this once on app launch so the clock always starts at first use.
-    func startTrialIfNeeded() {
-        _ = trialStartDate
     }
 
     // MARK: - Configuration

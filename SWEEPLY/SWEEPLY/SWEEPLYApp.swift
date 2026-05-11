@@ -95,8 +95,9 @@ struct SWEEPLYApp: App {
                     // Start RevenueCat customer info listener and load initial state
                     subscriptionManager.startListening()
                     Task {
-                        await subscriptionManager.loadCustomerInfo()
-                        subscriptionManager.startTrialIfNeeded()
+                        async let customerInfoLoad: () = subscriptionManager.loadCustomerInfo()
+                        async let offeringsLoad: () = subscriptionManager.loadOfferings()
+                        _ = await (customerInfoLoad, offeringsLoad)
                         if appSession.isAuthenticated, let uid = appSession.userId {
                             await teamStore.load(ownerId: uid)
                             // Identify user in RevenueCat so purchases are tied to their account
