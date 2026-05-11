@@ -374,6 +374,8 @@ struct RootView: View {
                 teamStore.clear()
                 expenseStore.clear()
                 getStartedDismissed = false
+                showSignUpFlow = false
+                showLoginFlow = false
             }
         }
         // Rebuild pay-day reminders whenever jobs or team members change

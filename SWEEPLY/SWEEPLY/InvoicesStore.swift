@@ -210,37 +210,41 @@ final class InvoicesStore {
     }
 
     func markOverdueInvoices() async {
-        let today = Calendar.current.startOfDay(for: Date())
-        let overdueIds = invoices
-            .filter { $0.status == .unpaid && Calendar.current.startOfDay(for: $0.dueDate) < today }
-            .map { $0.id }
-        guard !overdueIds.isEmpty else { return }
-
-        // Update locally first for immediate UI response
-        for id in overdueIds {
-            if let idx = invoices.firstIndex(where: { $0.id == id }) {
-                invoices[idx].status = .overdue
-            }
-        }
-
-        // Persist to Supabase
         guard let client = SupabaseManager.shared else { return }
-        for id in overdueIds {
-            do {
-                let patch = InvoiceStatusPatch(status: InvoiceStatus.overdue.rawValue)
-                let refreshed: InvoiceRow = try await client
+        let today = Calendar.current.startOfDay(for: Date())
+
+        // Query Supabase directly — safe to call from background tasks
+        // where the in-memory `invoices` array may be empty.
+        do {
+            let rows: [InvoiceRow] = try await client
+                .from("invoices")
+                .select()
+                .eq("status", value: InvoiceStatus.unpaid.rawValue)
+                .lt("due_date", value: ISO8601DateFormatter().string(from: today))
+                .execute()
+                .value
+
+            guard !rows.isEmpty else { return }
+            let ids = rows.map { $0.id }
+
+            let patch = InvoiceStatusPatch(status: InvoiceStatus.overdue.rawValue)
+            for id in ids {
+                try? await client
                     .from("invoices")
                     .update(patch)
                     .eq("id", value: id)
-                    .select()
-                    .single()
                     .execute()
-                    .value
-                if let idx = invoices.firstIndex(where: { $0.id == refreshed.id }) {
-                    invoices[idx] = refreshed.toInvoice()
+            }
+
+            // Refresh in-memory list if already loaded
+            if !invoices.isEmpty {
+                for id in ids {
+                    if let idx = invoices.firstIndex(where: { $0.id == id }) {
+                        invoices[idx].status = .overdue
+                    }
                 }
-            } catch { /* skip individual failures silently */ }
-        }
+            }
+        } catch { /* silent — background task, not user-facing */ }
     }
 
     /// Returns the next sequential invoice number (e.g. "INV-0044").
