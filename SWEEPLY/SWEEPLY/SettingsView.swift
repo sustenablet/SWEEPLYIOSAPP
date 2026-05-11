@@ -183,7 +183,7 @@ struct SettingsView: View {
                         isDeletingAccount = false
                         if !success {
                             if let url = URL(string: "mailto:sustenablet@gmail.com?subject=Account%20Deletion%20Request") {
-                                UIApplication.shared.open(url)
+                                await UIApplication.shared.open(url)
                             }
                         }
                     }

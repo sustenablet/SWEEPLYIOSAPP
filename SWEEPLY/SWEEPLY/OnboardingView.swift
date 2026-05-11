@@ -1873,10 +1873,6 @@ struct OnboardingView: View {
     }
 
 
-    private var firstName: String {
-        fullName.trimmingCharacters(in: .whitespaces).components(separatedBy: " ").first ?? "there"
-    }
-
     // MARK: - Primary Button (light steps)
 
     private func primaryButton(
@@ -1952,7 +1948,6 @@ struct OnboardingView: View {
                 for card in recurringCards where !card.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                     let client = Client(
                         id: UUID(),
-                        userId: userId,
                         name: card.name.trimmingCharacters(in: .whitespacesAndNewlines),
                         email: "",
                         phone: "",
@@ -1962,8 +1957,7 @@ struct OnboardingView: View {
                         zip: "",
                         preferredService: nil,
                         entryInstructions: "",
-                        notes: "Recurring: \(card.frequency)",
-                        createdAt: Date()
+                        notes: "Recurring: \(card.frequency)"
                     )
                     _ = await clientsStore.insert(client, userId: userId)
                 }
