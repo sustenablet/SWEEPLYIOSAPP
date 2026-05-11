@@ -193,7 +193,7 @@ struct ClientsView: View {
             isPresented: Binding(get: { deleteTarget != nil }, set: { if !$0 { deleteTarget = nil } }),
             titleVisibility: .visible
         ) {
-            Button("Delete", role: .destructive) {
+            Button("Delete".translated(), role: .destructive) {
                 if let t = deleteTarget {
                     UIImpactFeedbackGenerator(style: .heavy).impactOccurred()
                     Task {

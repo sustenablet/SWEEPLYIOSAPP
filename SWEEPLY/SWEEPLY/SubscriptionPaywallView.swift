@@ -58,7 +58,7 @@ struct SubscriptionPaywallView: View {
         let pkg = subscriptionManager.offerings?.current?.package(identifier: "$rc_monthly")
             ?? subscriptionManager.offerings?.current?.package(identifier: "$rc_custom_pro_monthly")
         let code = pkg?.storeProduct.currencyCode ?? "USD"
-        return "Cancel anytime · Auto-renews · Prices in \(code)"
+        return "Cancel anytime · Auto-renews · Prices in %@".translated(with: code)
     }
 
     private var currentMonthlyPrice: String { selectedPlan == .pro ? proMonthlyPrice : standardMonthlyPrice }
@@ -189,9 +189,9 @@ struct SubscriptionPaywallView: View {
     }
 
     private var headerSubtitle: String {
-        if subscriptionManager.isPro    { return "You're on Sweeply Pro — manage or explore your plan below." }
-        if subscriptionManager.isStandard { return "You're on Standard — upgrade to Pro to unlock everything." }
-        return "Run your cleaning business like a pro."
+        if subscriptionManager.isPro    { return "You're on Sweeply Pro — manage or explore your plan below.".translated() }
+        if subscriptionManager.isStandard { return "You're on Standard — upgrade to Pro to unlock everything.".translated() }
+        return "Run your cleaning business like a pro.".translated()
     }
 
     @ViewBuilder
@@ -205,13 +205,13 @@ struct SubscriptionPaywallView: View {
         } else if subscriptionManager.isStandard {
             planBadge(
                 icon: "star.circle.fill",
-                label: "Standard Plan — Active",
+                label: "Standard Plan — Active".translated(),
                 color: Color.sweeplyNavy
             )
         } else if subscriptionManager.isInTrial {
             planBadge(
                 icon: "gift.fill",
-                label: "\(subscriptionManager.trialDaysRemaining) days left in your free trial",
+                label: "%d days left in your free trial".translated(with: subscriptionManager.trialDaysRemaining),
                 color: Color.sweeplyAccent
             )
         }
@@ -219,9 +219,9 @@ struct SubscriptionPaywallView: View {
 
     private var proStatusLabel: String {
         if let exp = subscriptionManager.expirationDate {
-            return "Pro · Renews \(exp.formatted(.dateTime.month(.abbreviated).day()))"
+            return "Pro · Renews %@".translated(with: exp.formatted(.dateTime.month(.abbreviated).day()))
         }
-        return "Sweeply Pro — Active"
+        return "Sweeply Pro — Active".translated()
     }
 
     private func planBadge(icon: String, label: String, color: Color) -> some View {
@@ -247,11 +247,11 @@ struct SubscriptionPaywallView: View {
                     withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) { selectedPlan = plan }
                 } label: {
                     HStack(spacing: 6) {
-                        Text(plan.rawValue)
+                        Text(plan.rawValue.translated())
                             .font(.system(size: 14, weight: selectedPlan == plan ? .semibold : .regular))
                             .foregroundStyle(selectedPlan == plan ? .white : Color.sweeplyNavy.opacity(0.5))
                         if plan == .pro {
-                            Text("Popular")
+                            Text("Popular".translated())
                                 .font(.system(size: 10, weight: .bold))
                                 .foregroundStyle(selectedPlan == .pro ? .white : Color.sweeplyAccent)
                                 .padding(.horizontal, 7)
@@ -266,7 +266,7 @@ struct SubscriptionPaywallView: View {
                                 .clipShape(Capsule())
                         }
                         if plan == .standard && subscriptionManager.isStandard && !subscriptionManager.isPro {
-                            Text("Active")
+                            Text("Active".translated())
                                 .font(.system(size: 10, weight: .bold))
                                 .foregroundStyle(selectedPlan == .standard ? .white : Color.sweeplySuccess)
                                 .padding(.horizontal, 7)
@@ -373,7 +373,7 @@ struct SubscriptionPaywallView: View {
                 .font(.system(size: 13, weight: .medium))
                 .foregroundStyle(highlight ? Color.sweeplyAccent : Color.sweeplyNavy.opacity(0.45))
                 .frame(width: 20)
-            Text(text)
+            Text(text.translated())
                 .font(.system(size: 14, weight: highlight ? .semibold : .regular))
                 .foregroundStyle(highlight ? Color.sweeplyNavy : Color.sweeplyNavy.opacity(0.75))
         }
@@ -396,12 +396,12 @@ struct SubscriptionPaywallView: View {
         } label: {
             VStack(alignment: .leading, spacing: 4) {
                 HStack {
-                    Text(period.rawValue)
+                    Text(period.rawValue.translated())
                         .font(.system(size: 13, weight: .semibold))
                         .foregroundStyle(isSelected ? Color.sweeplyNavy : Color.sweeplyNavy.opacity(0.5))
                     Spacer()
                     if period == .yearly {
-                        Text("Save 26%")
+                        Text("Save 26%".translated())
                             .font(.system(size: 10, weight: .bold))
                             .foregroundStyle(isSelected ? Color.sweeplyAccent : Color.sweeplyNavy.opacity(0.35))
                             .padding(.horizontal, 7)
@@ -413,7 +413,7 @@ struct SubscriptionPaywallView: View {
                 Text(period == .monthly ? currentMonthlyPrice : currentYearlyPrice)
                     .font(Font.sweeplyDisplay(18, weight: .bold))
                     .foregroundStyle(isSelected ? Color.sweeplyNavy : Color.sweeplyNavy.opacity(0.45))
-                Text(period == .monthly ? "/month" : "\(currentYearlyPerMonth) · billed yearly")
+                Text(period == .monthly ? "/month".translated() : "\(currentYearlyPerMonth) · \("billed yearly".translated())")
                     .font(.system(size: 11))
                     .foregroundStyle(isSelected ? Color.sweeplyNavy.opacity(0.5) : Color.sweeplyNavy.opacity(0.3))
             }
@@ -447,10 +447,10 @@ struct SubscriptionPaywallView: View {
     }
 
     private var ctaLabel: String {
-        if isCurrentPlan  { return "Current Plan" }
-        if isDowngrade    { return "Manage in App Store" }
-        if subscriptionManager.isStandard && selectedPlan == .pro { return "Upgrade to Pro" }
-        return selectedPlan == .pro ? "Get Pro" : "Get Standard"
+        if isCurrentPlan  { return "Current Plan".translated() }
+        if isDowngrade    { return "Manage in App Store".translated() }
+        if subscriptionManager.isStandard && selectedPlan == .pro { return "Upgrade to Pro".translated() }
+        return selectedPlan == .pro ? "Get Pro".translated() : "Get Standard".translated()
     }
 
     private var ctaColor: Color {
@@ -512,7 +512,7 @@ struct SubscriptionPaywallView: View {
         if hasPackages {
             purchaseError = nil
         } else {
-            purchaseError = "Could not load products — check your connection and try again."
+            purchaseError = "Could not load products — check your connection and try again.".translated()
         }
     }
 
@@ -531,7 +531,7 @@ struct SubscriptionPaywallView: View {
                 if subscriptionManager.isLoadingOfferings {
                     ProgressView().scaleEffect(0.75)
                 } else {
-                    Text("Retry")
+                    Text("Retry".translated())
                         .font(.system(size: 13, weight: .semibold))
                         .foregroundStyle(Color.sweeplyDestructive)
                 }
@@ -555,7 +555,7 @@ struct SubscriptionPaywallView: View {
             dismiss()
         } catch {
             if (error as NSError).code != 1 {
-                purchaseError = "Purchase failed — please try again."
+                purchaseError = "Purchase failed — please try again.".translated()
             }
         }
     }
@@ -572,7 +572,7 @@ struct SubscriptionPaywallView: View {
                     }
                 } label: {
                     HStack(spacing: 5) {
-                        Text("Manage Subscription")
+                        Text("Manage Subscription".translated())
                             .font(.system(size: 13, weight: .medium))
                         Image(systemName: "arrow.up.right")
                             .font(.system(size: 11, weight: .medium))
@@ -583,25 +583,25 @@ struct SubscriptionPaywallView: View {
             }
 
             HStack(spacing: 0) {
-                footerLink("Terms of Service") {
+                footerLink("Terms of Service".translated()) {
                     if let url = URL(string: "https://sweeplyapp.online/terms") {
                         UIApplication.shared.open(url)
                     }
                 }
                 footerDot
-                footerLink("Privacy Policy") {
+                footerLink("Privacy Policy".translated()) {
                     if let url = URL(string: "https://sweeplyapp.online/privacy") {
                         UIApplication.shared.open(url)
                     }
                 }
                 footerDot
-                footerLink("Restore Purchases") {
+                footerLink("Restore Purchases".translated()) {
                     Task {
                         try? await subscriptionManager.restorePurchases()
                         if subscriptionManager.isSubscribed {
                             dismiss()
                         } else {
-                            restoreMessage = "No active subscription found."
+                            restoreMessage = "No active subscription found.".translated()
                             try? await Task.sleep(nanoseconds: 3_000_000_000)
                             restoreMessage = nil
                         }
@@ -670,17 +670,17 @@ struct ProGateView<Content: View>: View {
             }
 
             VStack(spacing: 6) {
-                Text("Sweeply Pro")
+                Text("Sweeply Pro".translated())
                     .font(.system(size: 20, weight: .bold))
                     .foregroundStyle(Color.sweeplyNavy)
-                Text("Upgrade to Pro to unlock this feature.")
+                Text("Upgrade to Pro to unlock this feature.".translated())
                     .font(.system(size: 14))
                     .foregroundStyle(Color.sweeplyTextSub)
                     .multilineTextAlignment(.center)
             }
 
             Button { showPaywall = true } label: {
-                Text("See Plans")
+                Text("See Plans".translated())
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundStyle(.white)
                     .frame(maxWidth: .infinity)

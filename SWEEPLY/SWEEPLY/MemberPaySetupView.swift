@@ -78,11 +78,11 @@ struct MemberPaySetupView: View {
                 // Bottom navigation
                 bottomBar
             }
-            .navigationTitle("Pay Setup")
+            .navigationTitle("Pay Setup".translated())
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel") {
+                    Button("Cancel".translated()) {
                         UIImpactFeedbackGenerator(style: .light).impactOccurred()
                         dismiss()
                     }
@@ -106,7 +106,7 @@ struct MemberPaySetupView: View {
             }
             .padding(.horizontal, 24)
 
-            Text("Step \(step) of \(totalSteps)")
+            Text("Step %d of %d".translated(with: step, totalSteps))
                 .font(.system(size: 11, weight: .semibold, design: .monospaced))
                 .foregroundStyle(Color.sweeplyTextSub)
         }
@@ -126,7 +126,7 @@ struct MemberPaySetupView: View {
                     HStack(spacing: 5) {
                         Image(systemName: "chevron.left")
                             .font(.system(size: 13, weight: .semibold))
-                        Text("Back")
+                        Text("Back".translated())
                             .font(.system(size: 15, weight: .semibold))
                     }
                     .foregroundStyle(Color.sweeplyNavy)
@@ -155,7 +155,7 @@ struct MemberPaySetupView: View {
                         ProgressView().tint(.white)
                     } else {
                         HStack(spacing: 6) {
-                            Text(isLastStep ? "Save Setup" : "Next")
+                            Text(isLastStep ? "Save Setup".translated() : "Next".translated())
                                 .font(.system(size: 15, weight: .semibold))
                             if !isLastStep {
                                 Image(systemName: "arrow.right")
@@ -196,11 +196,13 @@ struct MemberPaySetupView: View {
 
     // MARK: - Step 1: Pay Type
 
+    private var firstName: String { member.name.components(separatedBy: " ").first ?? member.name }
+
     private var payTypeStep: some View {
         VStack(alignment: .leading, spacing: 28) {
             stepHeader(
-                title: "How do you pay \(member.name.components(separatedBy: " ").first ?? member.name)?",
-                subtitle: "Choose the pay structure that fits your arrangement."
+                title: "How do you pay %@?".translated(with: firstName),
+                subtitle: "Choose the pay structure that fits your arrangement.".translated()
             )
 
             VStack(spacing: 12) {
@@ -267,8 +269,8 @@ struct MemberPaySetupView: View {
     private var serviceRatesStep: some View {
         VStack(alignment: .leading, spacing: 28) {
             stepHeader(
-                title: "Set your rate per service",
-                subtitle: "Enter how much you pay for each type of job. Leave blank to skip a service."
+                title: "Set your rate per service".translated(),
+                subtitle: "Enter how much you pay for each type of job. Leave blank to skip a service.".translated()
             )
 
             VStack(spacing: 0) {
@@ -364,20 +366,19 @@ struct MemberPaySetupView: View {
     }
 
     private var flatAmountTitle: String {
-        let name = member.name.components(separatedBy: " ").first ?? member.name
         switch selectedPayType {
-        case .perDay:  return "How much per day?"
-        case .perWeek: return "How much per week?"
-        case .custom:  return "What's the amount for \(name)?"
+        case .perDay:  return "How much per day?".translated()
+        case .perWeek: return "How much per week?".translated()
+        case .custom:  return "What's the amount for %@?".translated(with: firstName)
         default:       return "How much?"
         }
     }
 
     private var flatAmountSubtitle: String {
         switch selectedPayType {
-        case .perDay:  return "This amount is paid for every day they work, regardless of how many jobs."
-        case .perWeek: return "This flat amount covers all their work for the week."
-        case .custom:  return "Enter a custom amount you'll pay. You can adjust this at any time."
+        case .perDay:  return "This amount is paid for every day they work, regardless of how many jobs.".translated()
+        case .perWeek: return "This flat amount covers all their work for the week.".translated()
+        case .custom:  return "Enter a custom amount you'll pay. You can adjust this at any time.".translated()
         default:       return ""
         }
     }
@@ -385,11 +386,11 @@ struct MemberPaySetupView: View {
     // MARK: - Step 3: Pay Day (Per Week only)
 
     private var payDayStep: some View {
-        let days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+        let days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map { $0.translated() }
         return VStack(alignment: .leading, spacing: 28) {
             stepHeader(
-                title: "Which day do you pay \(member.name.components(separatedBy: " ").first ?? member.name)?",
-                subtitle: "They'll receive a notification on this day as a reminder."
+                title: "Which day do you pay %@?".translated(with: firstName),
+                subtitle: "They'll receive a notification on this day as a reminder.".translated()
             )
 
             HStack(spacing: 8) {
@@ -424,8 +425,8 @@ struct MemberPaySetupView: View {
     private var paymentMethodStep: some View {
         VStack(alignment: .leading, spacing: 28) {
             stepHeader(
-                title: "How will you send payment?",
-                subtitle: "Choose how you typically pay this team member."
+                title: "How will you send payment?".translated(),
+                subtitle: "Choose how you typically pay this team member.".translated()
             )
 
             let columns = [GridItem(.flexible()), GridItem(.flexible())]
@@ -474,20 +475,20 @@ struct MemberPaySetupView: View {
     private var summaryStep: some View {
         VStack(alignment: .leading, spacing: 28) {
             stepHeader(
-                title: "All set! Here's the summary",
-                subtitle: "Review before saving. You can edit this at any time from the member profile."
+                title: "All set! Here's the summary".translated(),
+                subtitle: "Review before saving. You can edit this at any time from the member profile.".translated()
             )
 
             VStack(spacing: 0) {
-                summaryRow(icon: "briefcase.fill", label: "Pay Type", value: selectedPayType.displayName)
+                summaryRow(icon: "briefcase.fill", label: "Pay Type".translated(), value: selectedPayType.displayName)
                 Divider().padding(.leading, 54)
 
                 if selectedPayType == .perJob {
                     let active = standardServices.filter { (serviceRates[$0.rawValue] ?? 0) > 0 }
                     summaryRow(
                         icon: "dollarsign.circle.fill",
-                        label: "Rates",
-                        value: active.isEmpty ? "None set" : "\(active.count) service\(active.count == 1 ? "" : "s")"
+                        label: "Rates".translated(),
+                        value: active.isEmpty ? "None set".translated() : "\(active.count) \(active.count == 1 ? "service".translated() : "services".translated())"
                     )
                     if !active.isEmpty {
                         VStack(spacing: 8) {
@@ -509,17 +510,17 @@ struct MemberPaySetupView: View {
                 } else {
                     summaryRow(
                         icon: "dollarsign.circle.fill",
-                        label: "Amount",
+                        label: "Amount".translated(),
                         value: "\((Double(flatAmount) ?? 0).currency) \(selectedPayType == .custom ? "" : selectedPayType.displayName.lowercased())"
                     )
                 }
 
                 Divider().padding(.leading, 54)
                 if selectedPayType == .perWeek {
-                    summaryRow(icon: "calendar", label: "Pay Day", value: weekdayFullName(payDay))
+                    summaryRow(icon: "calendar", label: "Pay Day".translated(), value: weekdayFullName(payDay))
                     Divider().padding(.leading, 54)
                 }
-                summaryRow(icon: paymentMethod.icon, label: "Via", value: paymentMethod.rawValue)
+                summaryRow(icon: paymentMethod.icon, label: "Via".translated(), value: paymentMethod.rawValue)
             }
             .background(Color.sweeplySurface)
             .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
@@ -550,7 +551,7 @@ struct MemberPaySetupView: View {
 
     private func weekdayFullName(_ weekday: Int) -> String {
         let names = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
-        return names[max(0, min(6, weekday - 1))]
+        return names[max(0, min(6, weekday - 1))].translated()
     }
 
     // MARK: - Shared UI

@@ -625,7 +625,7 @@ struct CompletedJobsListView: View {
                 }
             }
             ToolbarItem(placement: .topBarTrailing) {
-                Button("Done") { dismiss() }
+                Button("Done".translated()) { dismiss() }
                     .font(.system(size: 16, weight: .medium))
             }
         }
@@ -693,7 +693,7 @@ struct CompletedJobsListView: View {
                 .font(.system(size: 16, weight: .medium))
                 .foregroundStyle(Color.sweeplyTextSub)
             if !searchText.isEmpty {
-                Button("Clear Search") {
+                Button("Clear Search".translated()) {
                     searchText = ""
                 }
                 .font(.system(size: 14, weight: .semibold))
@@ -706,7 +706,7 @@ struct CompletedJobsListView: View {
     
     private var headerSection: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text("Completed Jobs")
+            Text("Completed Jobs".translated())
                 .font(.system(size: 28, weight: .semibold))
                 .foregroundStyle(Color.sweeplyNavy)
             Text(totalEarnings.currency)
@@ -799,7 +799,7 @@ struct CompletedJobsListView: View {
                     Text(shortDateFormatter.string(from: job.date))
                         .font(.system(size: 11))
                         .foregroundStyle(Color.sweeplyTextSub.opacity(0.7))
-                    Text("at")
+                    Text("at".translated())
                         .font(.system(size: 11))
                         .foregroundStyle(Color.sweeplyTextSub.opacity(0.5))
                     Text(financeTimeString(from: job.date))
@@ -873,7 +873,7 @@ struct UpcomingJobsListView: View {
         .background(Color.sweeplyBackground.ignoresSafeArea())
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
-                Button("Done") { dismiss() }
+                Button("Done".translated()) { dismiss() }
                     .font(.system(size: 16, weight: .medium))
             }
         }
@@ -881,7 +881,7 @@ struct UpcomingJobsListView: View {
     
     private var headerSection: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text("Upcoming Earnings")
+            Text("Upcoming Earnings".translated())
                 .font(.system(size: 28, weight: .semibold))
                 .foregroundStyle(Color.sweeplyNavy)
             Text(totalPotential.currency)
@@ -981,7 +981,7 @@ struct UpcomingJobsListView: View {
                     Text(shortDateFormatter.string(from: job.date))
                         .font(.system(size: 11))
                         .foregroundStyle(Color.sweeplyTextSub.opacity(0.7))
-                    Text("at")
+                    Text("at".translated())
                         .font(.system(size: 11))
                         .foregroundStyle(Color.sweeplyTextSub.opacity(0.5))
                     Text(financeTimeString(from: job.date))

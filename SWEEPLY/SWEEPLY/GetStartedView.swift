@@ -5,7 +5,7 @@ struct GetStartedView: View {
 
     @State private var appeared = false
     @State private var displayedText = ""
-    private let fullText = "Welcome to Sweeply"
+    private var fullText: String { "Welcome to Sweeply".translated() }
     private var typedText: AttributedString {
         var result = AttributedString()
         let welcome = AttributedString("Welcome to ")

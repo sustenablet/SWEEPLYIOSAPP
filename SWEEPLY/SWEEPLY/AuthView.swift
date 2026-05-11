@@ -245,7 +245,7 @@ struct AuthView: View {
             // Social divider
             HStack(spacing: 12) {
                 Rectangle().fill(Color.sweeplyBorder).frame(height: 1)
-                Text("or").font(.system(size: 12)).foregroundStyle(Color.sweeplyTextSub)
+                Text("or".translated()).font(.system(size: 12)).foregroundStyle(Color.sweeplyTextSub)
                 Rectangle().fill(Color.sweeplyBorder).frame(height: 1)
             }
             .padding(.horizontal, 28)

@@ -92,10 +92,10 @@ struct InvoiceDetailView: View {
                     }
                 }
                 .alert("Delete Invoice?", isPresented: $showingDeleteConfirm) {
-                    Button("Delete", role: .destructive) { deleteInvoice(invoice) }
-                    Button("Cancel", role: .cancel) {}
+                    Button("Delete".translated(), role: .destructive) { deleteInvoice(invoice) }
+                    Button("Cancel".translated(), role: .cancel) {}
                 } message: {
-                    Text("This will permanently delete \(invoice.invoiceNumber). This can't be undone.")
+                    Text("This will permanently delete %@. This can't be undone.".translated(with: invoice.invoiceNumber))
                 }
             } else {
                 VStack(spacing: 16) {
@@ -249,7 +249,7 @@ struct InvoiceDetailView: View {
 
     private func lineItemsCard(invoice: Invoice) -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("SERVICES")
+            Text("SERVICES".translated())
                 .font(.system(size: 11, weight: .bold))
                 .foregroundStyle(Color.sweeplyTextSub)
                 .tracking(1.0)
@@ -282,7 +282,7 @@ struct InvoiceDetailView: View {
                     Divider().padding(.top, 4)
 
                     HStack {
-                        Text("TOTAL")
+                        Text("TOTAL".translated())
                             .font(.system(size: 13, weight: .bold))
                             .foregroundStyle(Color.sweeplyNavy)
                         Spacer()
@@ -687,7 +687,7 @@ private struct EditInvoiceSheet: View {
                         // Line items
                         if !lineItems.isEmpty {
                             VStack(alignment: .leading, spacing: 12) {
-                                editSectionHeader("SERVICES")
+                                editSectionHeader("SERVICES".translated())
                                 VStack(spacing: 8) {
                                     ForEach($lineItems) { $item in
                                         EditLineItemRow(item: $item) {

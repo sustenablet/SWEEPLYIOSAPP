@@ -477,7 +477,7 @@ private var healthCards: [DashboardHealthCardModel] {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
                 HStack(spacing: 6) {
-                    Text("Revenue this week")
+                    Text("Revenue this week".translated())
                         .font(.system(size: 12, weight: .semibold))
                         .foregroundStyle(Color.sweeplyNavy.opacity(0.5))
                         .textCase(.uppercase)
@@ -680,9 +680,9 @@ struct DashJobRow: View {
                     Text(job.price.currency).font(.system(size: 13, weight: .semibold, design: .monospaced))
                         .foregroundStyle(isCancelled ? Color.sweeplyDestructive : Color.primary)
                     Menu {
-                        Button("Start Job", systemImage: "play.fill") { Task { await jobsStore.updateStatus(id: job.id, status: .inProgress) } }
-                        Button("Mark Complete", systemImage: "checkmark") { Task { await jobsStore.updateStatus(id: job.id, status: .completed) } }
-                        Button("Cancel Job", systemImage: "xmark", role: .destructive) { Task { await jobsStore.updateStatus(id: job.id, status: .cancelled) } }
+                        Button("Start Job".translated(), systemImage: "play.fill") { Task { await jobsStore.updateStatus(id: job.id, status: .inProgress) } }
+                        Button("Mark Complete".translated(), systemImage: "checkmark") { Task { await jobsStore.updateStatus(id: job.id, status: .completed) } }
+                        Button("Cancel Job".translated(), systemImage: "xmark", role: .destructive) { Task { await jobsStore.updateStatus(id: job.id, status: .cancelled) } }
                     } label: { Image(systemName: "ellipsis").font(.system(size: 14)).foregroundStyle(Color.sweeplyTextSub).padding(.leading, 8) }
                 }
                 Text("\(job.serviceType.rawValue) · \(durationStr) · \(clientCity)").font(.system(size: 12)).foregroundStyle(Color.sweeplyTextSub).lineLimit(1)

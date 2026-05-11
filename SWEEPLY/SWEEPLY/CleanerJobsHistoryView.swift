@@ -165,7 +165,7 @@ private struct FilterPill: View {
     
     var body: some View {
         Button(action: action) {
-            Text(title)
+            Text(title.translated())
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(isSelected ? .white : Color.sweeplyTextSub)
                 .padding(.horizontal, 14)
@@ -234,7 +234,7 @@ private struct CleanerJobHistoryRow: View {
     }
     
     private var statusBadge: some View {
-        Text(job.status.rawValue)
+        Text(job.status.rawValue.translated())
             .font(.system(size: 10, weight: .semibold))
             .padding(.horizontal, 8)
             .padding(.vertical, 4)

@@ -743,7 +743,7 @@ struct ExpensesView: View {
                 Text("No expenses in \(shortMonthLabel)")
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundStyle(Color.sweeplyNavy)
-                Text("Track supplies, fuel, equipment,\nand every business cost here.")
+                Text("Track supplies, fuel, equipment,\nand every business cost here.".translated())
                     .font(.system(size: 13))
                     .foregroundStyle(Color.sweeplyTextSub)
                     .multilineTextAlignment(.center)

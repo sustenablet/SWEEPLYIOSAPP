@@ -5,25 +5,25 @@ struct IntroOnboardingView: View {
 
     @State private var page = 0
 
-    private let pages: [IntroPage] = [
+    private var pages: [IntroPage] {[
         IntroPage(
-            title: "Your Cleaning Business.\nIn Control.",
+            title: "Your Cleaning Business.\nIn Control.".translated(),
             subtitle: "Jobs, clients, and payments - organized in one place.".translated(),
             imageName: "IntroOnboardingHero"
         ),
         IntroPage(
-            title: "Schedule Smarter",
+            title: "Schedule Smarter".translated(),
             subtitle: "Create jobs, assign cleaners, and track status in real time.".translated(),
             imageName: nil,
             iconName: "calendar.badge.clock"
         ),
         IntroPage(
-            title: "Get Paid Faster",
+            title: "Get Paid Faster".translated(),
             subtitle: "Send invoices and track paid, unpaid, and overdue balances.".translated(),
             imageName: nil,
             iconName: "dollarsign.circle"
         )
-    ]
+    ]}
 
     var body: some View {
         ZStack {
@@ -56,7 +56,7 @@ struct IntroOnboardingView: View {
                         onFinish()
                     }
                 } label: {
-                    Text(page == pages.count - 1 ? "Get Started" : "Next")
+                    Text(page == pages.count - 1 ? "Get Started".translated() : "Next".translated())
                         .font(.system(size: 17, weight: .bold))
                         .foregroundStyle(.white)
                         .frame(maxWidth: .infinity)

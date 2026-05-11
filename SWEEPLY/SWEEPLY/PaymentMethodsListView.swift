@@ -15,7 +15,7 @@ struct PaymentMethodsListView: View {
     }
     
     private var tabs: [(method: PaymentMethod?, label: String)] {
-        var result: [(method: PaymentMethod?, label: String)] = [(nil, "All")]
+        var result: [(method: PaymentMethod?, label: String)] = [(nil, "All".translated())]
         for method in PaymentMethod.allCases {
             if paymentMethodInvoices[method] != nil {
                 result.append((method, method.rawValue))
@@ -56,7 +56,7 @@ struct PaymentMethodsListView: View {
         }
         .background(Color.sweeplyBackground)
         .toolbar(.visible, for: .navigationBar)
-        .navigationTitle("Payment Methods")
+        .navigationTitle("Payment Methods".translated())
         .navigationBarTitleDisplayMode(.large)
     }
     

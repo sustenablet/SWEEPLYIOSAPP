@@ -11,7 +11,6 @@ struct RootView: View {
     @Environment(NotificationsStore.self)   private var notificationsStore
     @Environment(TeamStore.self)            private var teamStore
     @Environment(ExpenseStore.self)         private var expenseStore
-    @Environment(MessagesStore.self)        private var messagesStore
     @Environment(SubscriptionManager.self)  private var subscriptionManager
 
     @State private var selectedTab: Tab = .dashboard

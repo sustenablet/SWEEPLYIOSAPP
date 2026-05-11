@@ -2,7 +2,11 @@
   "permissions": {
     "allow": [
       "Bash(git rm:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(xcodebuild -project /Users/joaoleite/Desktop/SWEEPLYIOSAPP/SWEEPLY/SWEEPLY.xcodeproj -scheme SWEEPLY -destination \"generic/platform=iOS Simulator\" -configuration Debug build)",
+      "Bash(git -C /Users/joaoleite/Desktop/SWEEPLYIOSAPP add SWEEPLY/SWEEPLY/RootView.swift SWEEPLY/SWEEPLY/DashboardView.swift SWEEPLY/SWEEPLY/FinancesView.swift SWEEPLY/SWEEPLY/TeamView.swift SWEEPLY/SWEEPLY/Components/NewFeatureDot.swift)",
+      "Bash(git -C /Users/joaoleite/Desktop/SWEEPLYIOSAPP commit -m ' *)",
+      "WebFetch(domain:sweeplyapp.online)"
     ]
   },
   "prefersReducedMotion": false

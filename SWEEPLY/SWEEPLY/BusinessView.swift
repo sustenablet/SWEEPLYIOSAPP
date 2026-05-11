@@ -259,7 +259,7 @@ struct BusinessView: View {
                 // Team membership switcher
                 if !session.activeMemberships.isEmpty {
                     VStack(alignment: .leading, spacing: 10) {
-                        Text("TEAMS")
+                        Text("TEAMS".translated())
                             .font(.system(size: 11, weight: .bold))
                             .foregroundStyle(Color.sweeplyTextSub)
                             .tracking(0.8)
@@ -285,7 +285,7 @@ struct BusinessView: View {
                                     UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                                     session.switchToMembership(membership)
                                 } label: {
-                                    Text("Join")
+                                    Text("Join".translated())
                                         .font(.system(size: 13, weight: .bold))
                                         .foregroundStyle(.white)
                                         .padding(.horizontal, 16)

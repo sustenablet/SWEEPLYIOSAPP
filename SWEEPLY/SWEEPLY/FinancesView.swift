@@ -518,7 +518,7 @@ compactMetric(title: "Avg. invoice".translated(), value: avgInvoiceValue.currenc
                     .font(.system(size: 28, weight: .light))
                     .foregroundStyle(Color.sweeplyAccent)
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Advanced Finance")
+                    Text("Advanced Finance".translated())
                         .font(.system(size: 15, weight: .semibold))
                         .foregroundStyle(Color.primary)
                     Text("P&L reports, cash-flow forecasting, and team payroll are available on Pro.")

@@ -359,7 +359,7 @@ struct JobDetailView: View {
     private func jobPhotosSection(job: Job) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Text("PHOTOS")
+                Text("PHOTOS".translated())
                     .font(.system(size: 11, weight: .bold))
                     .foregroundStyle(Color.sweeplyTextSub)
                     .tracking(1.0)

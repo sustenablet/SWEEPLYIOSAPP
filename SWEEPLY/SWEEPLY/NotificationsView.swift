@@ -150,25 +150,39 @@ struct NotificationsView: View {
 
     private var tabSelector: some View {
         ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
+            HStack(spacing: 2) {
                 ForEach(NotificationTab.allCases, id: \.self) { tab in
-                    TabButton(
-                        title: tabLabel(tab),
-                        icon: tabIcon(tab),
-                        isSelected: selectedTab == tab,
-                        action: {
-                            withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
-                                selectedTab = tab
-                            }
-                        }
-                    )
+                    tabPill(tab)
                 }
             }
+            .padding(4)
+            .background(Color.sweeplyBackground)
+            .clipShape(Capsule())
             .padding(.horizontal, 20)
-            .padding(.vertical, 4)
         }
-        .frame(height: 48)
         .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
+    }
+
+    private func tabPill(_ tab: NotificationTab) -> some View {
+        Button {
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                selectedTab = tab
+            }
+        } label: {
+            HStack(spacing: 5) {
+                Image(systemName: tabIcon(tab))
+                    .font(.system(size: 11, weight: .medium))
+                Text(tabLabel(tab))
+                    .font(.system(size: 13, weight: selectedTab == tab ? .semibold : .medium))
+            }
+            .padding(.horizontal, 13)
+            .padding(.vertical, 8)
+            .background(selectedTab == tab ? Color.sweeplyNavy : Color.clear)
+            .foregroundStyle(selectedTab == tab ? .white : Color.sweeplyTextSub)
+            .clipShape(Capsule())
+        }
+        .buttonStyle(.plain)
     }
     
     private func tabIcon(_ tab: NotificationTab) -> String {
@@ -191,39 +205,6 @@ struct NotificationsView: View {
     
 
 
-// MARK: - Custom Tab Button
-
-private struct TabButton: View {
-    let title: String
-    let icon: String
-    let isSelected: Bool
-    let action: () -> Void
-    
-    var body: some View {
-        Button(action: action) {
-            HStack(spacing: 6) {
-                Image(systemName: icon)
-                    .font(.system(size: 12, weight: .medium))
-                
-                Text(title)
-                    .font(.system(size: 13, weight: .semibold))
-            }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 10)
-            .background {
-                if isSelected {
-                    RoundedRectangle(cornerRadius: 20)
-                        .fill(Color.sweeplyNavy)
-                } else {
-                    RoundedRectangle(cornerRadius: 20)
-                        .fill(Color.sweeplySurface)
-                }
-            }
-            .foregroundStyle(isSelected ? .white : Color.sweeplyTextSub)
-        }
-        .buttonStyle(.plain)
-    }
-}
 
 private func tabLabel(_ tab: NotificationTab) -> String {
     switch tab {

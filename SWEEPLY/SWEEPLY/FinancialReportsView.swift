@@ -357,11 +357,11 @@ struct FinancialReportsView: View {
                     .presentationDetents([.height(280)])
                     .presentationDragIndicator(.visible)
             }
-            .navigationTitle("Reports")
+            .navigationTitle("Reports".translated())
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Close") {
+                    Button("Close".translated()) {
                         UIImpactFeedbackGenerator(style: .light).impactOccurred()
                         dismiss()
                     }
@@ -991,7 +991,7 @@ struct FinancialReportsView: View {
                     HStack {
                         Image(systemName: "xmark")
                             .font(.system(size: 12, weight: .bold))
-                        Text("Close")
+                        Text("Close".translated())
                     }
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(.white)

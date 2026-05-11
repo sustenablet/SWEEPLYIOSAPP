@@ -229,7 +229,7 @@ struct NewInvoiceView: View {
 
     private var servicesSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            InvoiceFormSectionHeader(title: "SERVICES")
+            InvoiceFormSectionHeader(title: "SERVICES".translated())
 
             if lineItems.isEmpty {
                 Button {
@@ -402,7 +402,7 @@ struct NewInvoiceView: View {
             Divider()
 
             HStack {
-                Text("TOTAL")
+                Text("TOTAL".translated())
                     .font(.system(size: 18, weight: .bold))
                     .foregroundStyle(Color.sweeplyNavy)
                 Spacer()
@@ -718,7 +718,7 @@ private struct ServicePickerSheet: View {
                             }
                         }
                     } header: {
-                        Text("SERVICES")
+                        Text("SERVICES".translated())
                     }
                 }
 
@@ -746,7 +746,7 @@ private struct ServicePickerSheet: View {
                             }
                         }
                     } header: {
-                        Text("EXTRAS")
+                        Text("EXTRAS".translated())
                     }
                 }
 

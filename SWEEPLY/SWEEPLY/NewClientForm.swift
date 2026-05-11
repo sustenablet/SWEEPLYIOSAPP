@@ -126,7 +126,7 @@ struct NewClientForm: View {
 
                     // Preferences
                     VStack(alignment: .leading, spacing: 14) {
-                        Text("PREFERENCES").font(.system(size: 10, weight: .bold)).foregroundStyle(Color.sweeplyTextSub).tracking(1.0)
+                        Text("PREFERENCES".translated()).font(.system(size: 10, weight: .bold)).foregroundStyle(Color.sweeplyTextSub).tracking(1.0)
                         VStack(alignment: .leading, spacing: 6) {
                             Text("Preferred Service".translated()).font(.system(size: 12)).foregroundStyle(Color.sweeplyTextSub)
                             Menu {

@@ -166,7 +166,7 @@ struct OnboardingView: View {
                     HStack(spacing: 4) {
                         Image(systemName: "chevron.left")
                             .font(.system(size: 13, weight: .semibold))
-                        Text("Previous")
+                        Text("Previous".translated())
                             .font(.system(size: 14, weight: .medium))
                     }
                     .foregroundStyle(step == 4 ? .white : Color.sweeplyNavy)
@@ -229,12 +229,12 @@ struct OnboardingView: View {
                 // ── Bottom: content card flush with image ─────────────
                 VStack(spacing: 0) {
                     VStack(alignment: .leading, spacing: 10) {
-                        Text("Let's get you set up")
+                        Text("Let's get you set up".translated())
                             .font(.system(size: 28, weight: .bold, design: .rounded))
                             .foregroundStyle(Color.sweeplyNavy)
                             .tracking(-0.4)
 
-                        Text("Get your workspace ready and start managing jobs with ease.")
+                        Text("Get your workspace ready and start managing jobs with ease.".translated())
                             .font(.system(size: 15))
                             .foregroundStyle(Color.sweeplyTextSub)
                             .lineSpacing(3)
@@ -281,7 +281,7 @@ struct OnboardingView: View {
             ScrollView(showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 0) {
                     VStack(alignment: .leading, spacing: 10) {
-                        Text("Tell us about\nyour business")
+                        Text("Tell us about\nyour business".translated())
                             .font(.system(size: 34, weight: .bold))
                             .foregroundStyle(Color.sweeplyNavy)
                             .lineSpacing(2)
@@ -363,7 +363,7 @@ struct OnboardingView: View {
         ScrollView(showsIndicators: false) {
             VStack(alignment: .leading, spacing: 0) {
                 VStack(alignment: .leading, spacing: 10) {
-                    Text("What services\ndo you offer?")
+                    Text("What services\ndo you offer?".translated())
                         .font(.system(size: 34, weight: .bold))
                         .foregroundStyle(Color.sweeplyNavy)
                         .lineSpacing(2)
@@ -528,12 +528,12 @@ struct OnboardingView: View {
 
                     // Header
                     VStack(alignment: .leading, spacing: 10) {
-                        Text("Build your team")
+                        Text("Build your team".translated())
                             .font(.system(size: 34, weight: .bold))
                             .foregroundStyle(Color.sweeplyNavy)
                             .tracking(-0.6)
 
-                        Text("Invite team members who'll complete jobs with you. You can always add more later.")
+                        Text("Invite team members who'll complete jobs with you. You can always add more later.".translated())
                             .font(.system(size: 15))
                             .foregroundStyle(Color.sweeplyTextSub)
                             .lineSpacing(3)
@@ -618,7 +618,7 @@ struct OnboardingView: View {
                     // Added members
                     if !teamInviteMembers.isEmpty {
                         VStack(alignment: .leading, spacing: 0) {
-                            Text("PENDING INVITES")
+                            Text("PENDING INVITES".translated())
                                 .font(.system(size: 10, weight: .bold))
                                 .foregroundStyle(Color.sweeplyTextSub)
                                 .tracking(0.8)
@@ -687,7 +687,7 @@ struct OnboardingView: View {
                             Image(systemName: "info.circle")
                                 .font(.system(size: 14))
                                 .foregroundStyle(Color.sweeplyAccent)
-                            Text("Fill in name and email above to add a team member.")
+                            Text("Fill in name and email above to add a team member.".translated())
                                 .font(.system(size: 13))
                                 .foregroundStyle(Color.sweeplyTextSub)
                         }
@@ -755,12 +755,12 @@ struct OnboardingView: View {
                 // ── Bottom: content card flush with image ─────────────
                 VStack(spacing: 0) {
                     VStack(alignment: .leading, spacing: 10) {
-                        Text("Stay in the loop")
+                        Text("Stay in the loop".translated())
                             .font(.system(size: 28, weight: .bold, design: .rounded))
                             .foregroundStyle(Color.sweeplyNavy)
                             .tracking(-0.4)
 
-                        Text("Get notified about upcoming jobs, payments, and team updates.")
+                        Text("Get notified about upcoming jobs, payments, and team updates.".translated())
                             .font(.system(size: 15))
                             .foregroundStyle(Color.sweeplyTextSub)
                             .lineSpacing(3)
@@ -775,7 +775,7 @@ struct OnboardingView: View {
                         notificationRequested = true
                         advance()
                     } label: {
-                        Text("Enable Notifications")
+                        Text("Enable Notifications".translated())
                             .font(.system(size: 17, weight: .bold))
                             .foregroundStyle(.white)
                             .frame(maxWidth: .infinity)
@@ -789,7 +789,7 @@ struct OnboardingView: View {
                         UIImpactFeedbackGenerator(style: .light).impactOccurred()
                         advance()
                     } label: {
-                        Text("Maybe later")
+                        Text("Maybe later".translated())
                             .font(.system(size: 15, weight: .medium))
                             .foregroundStyle(Color.sweeplyTextSub)
                     }
@@ -824,7 +824,7 @@ struct OnboardingView: View {
                     HStack(spacing: 6) {
                         Image(systemName: "gift.fill")
                             .font(.system(size: 11, weight: .semibold))
-                        Text("Your free trial starts today")
+                        Text("Your free trial starts today".translated())
                             .font(.system(size: 12, weight: .semibold))
                     }
                     .foregroundStyle(Color.sweeplyAccent)
@@ -835,12 +835,12 @@ struct OnboardingView: View {
                     .clipShape(Capsule())
 
                     VStack(spacing: 4) {
-                        Text("30 days free,\nthen choose your plan.")
+                        Text("30 days free,\nthen choose your plan.".translated())
                             .font(.system(size: 22, weight: .bold))
                             .foregroundStyle(Color.sweeplyNavy)
                             .multilineTextAlignment(.center)
                             .tracking(-0.4)
-                        Text("No payment needed until your trial ends.")
+                        Text("No payment needed until your trial ends.".translated())
                             .font(.system(size: 13))
                             .foregroundStyle(Color.sweeplyTextSub)
                             .multilineTextAlignment(.center)
@@ -882,7 +882,7 @@ struct OnboardingView: View {
                         if paywallPurchasing {
                             ProgressView().tint(.white)
                         } else {
-                            Text("Start Free Trial")
+                            Text("Start Free Trial".translated())
                                 .font(.system(size: 17, weight: .bold))
                                 .foregroundStyle(.white)
                         }
@@ -902,7 +902,7 @@ struct OnboardingView: View {
                     UIImpactFeedbackGenerator(style: .light).impactOccurred()
                     advance()
                 } label: {
-                    Text("I'll decide later")
+                    Text("I'll decide later".translated())
                         .font(.system(size: 13, weight: .medium))
                         .foregroundStyle(Color.sweeplyTextSub)
                 }
@@ -925,7 +925,7 @@ struct OnboardingView: View {
                             .font(.system(size: 14, weight: paywallPlan == plan ? .semibold : .regular))
                             .foregroundStyle(paywallPlan == plan ? .white : Color.sweeplyNavy.opacity(0.5))
                         if plan == .pro {
-                            Text("Popular")
+                            Text("Popular".translated())
                                 .font(.system(size: 10, weight: .bold))
                                 .foregroundStyle(paywallPlan == .pro ? .white : Color.sweeplyAccent)
                                 .padding(.horizontal, 7).padding(.vertical, 3)
@@ -1092,12 +1092,12 @@ struct OnboardingView: View {
                 // ── Bottom: content card flush with image ─────────────
                 VStack(spacing: 0) {
                     VStack(alignment: .leading, spacing: 10) {
-                        Text("Enable your location")
+                        Text("Enable your location".translated())
                             .font(.system(size: 28, weight: .bold, design: .rounded))
                             .foregroundStyle(Color.sweeplyNavy)
                             .tracking(-0.4)
 
-                        Text("Quickly find nearby jobs and get directions to your clients.")
+                        Text("Quickly find nearby jobs and get directions to your clients.".translated())
                             .font(.system(size: 15))
                             .foregroundStyle(Color.sweeplyTextSub)
                             .lineSpacing(3)
@@ -1112,7 +1112,7 @@ struct OnboardingView: View {
                         locationRequested = true
                         advance()
                     } label: {
-                        Text("Enable Location")
+                        Text("Enable Location".translated())
                             .font(.system(size: 17, weight: .bold))
                             .foregroundStyle(.white)
                             .frame(maxWidth: .infinity)
@@ -1126,7 +1126,7 @@ struct OnboardingView: View {
                         UIImpactFeedbackGenerator(style: .light).impactOccurred()
                         advance()
                     } label: {
-                        Text("Maybe later")
+                        Text("Maybe later".translated())
                             .font(.system(size: 15, weight: .medium))
                             .foregroundStyle(Color.sweeplyTextSub)
                     }
@@ -1162,12 +1162,12 @@ struct OnboardingView: View {
 
                     // Headline
                     VStack(alignment: .leading, spacing: 6) {
-                        Text("\(firstName), your business is ready.")
+                        Text("%@, your business is ready.".translated(with: firstName))
                             .font(.system(size: 26, weight: .bold, design: .rounded))
                             .foregroundStyle(Color.sweeplyNavy)
                             .tracking(-0.4)
 
-                        Text("Start booking jobs, sending invoices, and getting paid.")
+                        Text("Start booking jobs, sending invoices, and getting paid.".translated())
                             .font(.system(size: 14))
                             .foregroundStyle(Color.sweeplyTextSub)
                             .lineSpacing(2)
@@ -1210,7 +1210,7 @@ struct OnboardingView: View {
                     if saveError {
                         HStack(spacing: 8) {
                             Image(systemName: "exclamationmark.triangle.fill").font(.system(size: 13))
-                            Text("Couldn't save — tap to try again.")
+                            Text("Couldn't save — tap to try again.".translated())
                                 .font(.system(size: 13, weight: .medium))
                         }
                         .foregroundStyle(Color.sweeplyDestructive)
@@ -1556,14 +1556,14 @@ private struct CreateServiceSheet: View {
     var body: some View {
         VStack(spacing: 0) {
             HStack {
-                Button("Cancel", action: onCancel)
+                Button("Cancel".translated(), action: onCancel)
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(Color.sweeplyTextSub)
                 Spacer()
-                Text(isAddon ? "Add Extra" : "Add Service")
+                Text(isAddon ? "Add Extra".translated() : "Add Service".translated())
                     .font(.system(size: 16, weight: .bold))
                 Spacer()
-                Button("Save", action: onSave)
+                Button("Save".translated(), action: onSave)
                     .font(.system(size: 14, weight: .bold))
                     .foregroundStyle(isValid ? Color.sweeplyAccent : Color.sweeplyTextSub)
                     .disabled(!isValid)

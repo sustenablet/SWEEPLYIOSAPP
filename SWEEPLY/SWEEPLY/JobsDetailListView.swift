@@ -14,9 +14,9 @@ struct JobsDetailListView: View {
 
     private var navTitle: String {
         switch status {
-        case .completed:              return "Completed Jobs"
-        case .scheduled, .inProgress: return "Upcoming Jobs"
-        case .cancelled:              return "Cancelled Jobs"
+        case .completed:              return "Completed Jobs".translated()
+        case .scheduled, .inProgress: return "Upcoming Jobs".translated()
+        case .cancelled:              return "Cancelled Jobs".translated()
         }
     }
 
@@ -69,7 +69,7 @@ struct JobsDetailListView: View {
                     .font(.system(size: 48, weight: .bold, design: .rounded))
                     .foregroundStyle(accentColor)
                     .monospacedDigit()
-                Text(jobs.count == 1 ? "job this month" : "jobs this month")
+                Text(jobs.count == 1 ? "job this month".translated() : "jobs this month".translated())
                     .font(.system(size: 13))
                     .foregroundStyle(Color.sweeplyTextSub)
             }
@@ -79,7 +79,7 @@ struct JobsDetailListView: View {
                     Text(totalValue.currency)
                         .font(.system(size: 24, weight: .bold, design: .monospaced))
                         .foregroundStyle(Color.sweeplyNavy)
-                    Text("total value")
+                    Text("total value".translated())
                         .font(.system(size: 11))
                         .foregroundStyle(Color.sweeplyTextSub)
                 }
@@ -90,12 +90,20 @@ struct JobsDetailListView: View {
         .padding(.bottom, 20)
     }
 
+    private var emptyStateText: String {
+        switch status {
+        case .completed:              return "No completed jobs this month".translated()
+        case .scheduled, .inProgress: return "No upcoming jobs this month".translated()
+        case .cancelled:              return "No cancelled jobs this month".translated()
+        }
+    }
+
     private var emptyState: some View {
         VStack(spacing: 12) {
             Image(systemName: "tray")
                 .font(.system(size: 36))
                 .foregroundStyle(Color.sweeplyTextSub.opacity(0.35))
-            Text("No \(status.rawValue.lowercased()) jobs this month")
+            Text(emptyStateText)
                 .font(.system(size: 15, weight: .medium))
                 .foregroundStyle(Color.sweeplyTextSub)
         }
@@ -161,7 +169,7 @@ private struct JobDetailRow: View {
                         HStack(spacing: 2) {
                             Image(systemName: "repeat")
                                 .font(.system(size: 9, weight: .medium))
-                            Text("Recurring")
+                            Text("Recurring".translated())
                                 .font(.system(size: 10))
                         }
                         .foregroundStyle(Color.sweeplyTextSub.opacity(0.7))

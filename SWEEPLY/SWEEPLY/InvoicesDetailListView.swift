@@ -14,9 +14,9 @@ struct InvoicesDetailListView: View {
 
     private var navTitle: String {
         switch status {
-        case .paid:    return "Paid Invoices"
-        case .unpaid:  return "Outstanding Invoices"
-        case .overdue: return "Overdue Invoices"
+        case .paid:    return "Paid Invoices".translated()
+        case .unpaid:  return "Outstanding Invoices".translated()
+        case .overdue: return "Overdue Invoices".translated()
         }
     }
 
@@ -70,7 +70,7 @@ struct InvoicesDetailListView: View {
                     .font(.system(size: 48, weight: .bold, design: .rounded))
                     .foregroundStyle(accentColor)
                     .monospacedDigit()
-                Text(invoices.count == 1 ? "invoice" : "invoices")
+                Text(invoices.count == 1 ? "invoice".translated() : "invoices".translated())
                     .font(.system(size: 13))
                     .foregroundStyle(Color.sweeplyTextSub)
             }
@@ -79,7 +79,7 @@ struct InvoicesDetailListView: View {
                 Text(totalAmount.currency)
                     .font(.system(size: 24, weight: .bold, design: .monospaced))
                     .foregroundStyle(Color.sweeplyNavy)
-                Text("total")
+                Text("total".translated())
                     .font(.system(size: 11))
                     .foregroundStyle(Color.sweeplyTextSub)
             }
@@ -89,12 +89,20 @@ struct InvoicesDetailListView: View {
         .padding(.bottom, 20)
     }
 
+    private var emptyStateText: String {
+        switch status {
+        case .paid:    return "No paid invoices".translated()
+        case .unpaid:  return "No outstanding invoices".translated()
+        case .overdue: return "No overdue invoices".translated()
+        }
+    }
+
     private var emptyState: some View {
         VStack(spacing: 12) {
             Image(systemName: "doc.text")
                 .font(.system(size: 36))
                 .foregroundStyle(Color.sweeplyTextSub.opacity(0.35))
-            Text("No \(status.rawValue.lowercased()) invoices")
+            Text(emptyStateText)
                 .font(.system(size: 15, weight: .medium))
                 .foregroundStyle(Color.sweeplyTextSub)
         }
@@ -160,7 +168,9 @@ private struct InvoiceDetailRow: View {
             HStack(spacing: 4) {
                 Image(systemName: "exclamationmark.circle.fill")
                     .font(.system(size: 10))
-                Text("\(daysOverdue) day\(daysOverdue == 1 ? "" : "s") overdue")
+                Text(daysOverdue == 1
+                     ? "%d day overdue".translated(with: daysOverdue)
+                     : "%d days overdue".translated(with: daysOverdue))
                     .font(.system(size: 11, weight: .medium))
             }
             .foregroundStyle(Color.sweeplyDestructive)
@@ -169,7 +179,11 @@ private struct InvoiceDetailRow: View {
             HStack(spacing: 4) {
                 Image(systemName: "calendar")
                     .font(.system(size: 10))
-                Text(daysUntilDue == 0 ? "Due today" : "Due in \(daysUntilDue) day\(daysUntilDue == 1 ? "" : "s")")
+                Text(daysUntilDue == 0
+                     ? "Due today".translated()
+                     : daysUntilDue == 1
+                         ? "Due in 1 day".translated()
+                         : "Due in %d days".translated(with: daysUntilDue))
                     .font(.system(size: 11, weight: .medium))
             }
             .foregroundStyle(Color.sweeplyWarning)
@@ -179,7 +193,7 @@ private struct InvoiceDetailRow: View {
                 HStack(spacing: 4) {
                     Image(systemName: "checkmark.circle.fill")
                         .font(.system(size: 10))
-                    Text("Paid \(formatted(paidAt))")
+                    Text("Paid %@".translated(with: formatted(paidAt)))
                         .font(.system(size: 11, weight: .medium))
                 }
                 .foregroundStyle(Color.sweeplySuccess)
@@ -193,7 +207,7 @@ private struct InvoiceDetailRow: View {
     private var statusBadge: some View {
         switch status {
         case .overdue:
-            Text("Overdue")
+            Text("Overdue".translated())
                 .font(.system(size: 10, weight: .semibold))
                 .foregroundStyle(.white)
                 .padding(.horizontal, 8)
@@ -202,7 +216,7 @@ private struct InvoiceDetailRow: View {
                 .clipShape(Capsule())
 
         case .unpaid:
-            Text("Outstanding")
+            Text("Outstanding".translated())
                 .font(.system(size: 10, weight: .semibold))
                 .foregroundStyle(Color.sweeplyWarning)
                 .padding(.horizontal, 8)
@@ -211,7 +225,7 @@ private struct InvoiceDetailRow: View {
                 .clipShape(Capsule())
 
         case .paid:
-            Text("Paid")
+            Text("Paid".translated())
                 .font(.system(size: 10, weight: .semibold))
                 .foregroundStyle(Color.sweeplySuccess)
                 .padding(.horizontal, 8)

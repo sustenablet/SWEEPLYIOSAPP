@@ -58,7 +58,7 @@ struct ProductTutorialView: View {
                 Button {
                     advance()
                 } label: {
-                    Text(page == totalPages - 1 ? "Get started" : "Continue")
+                    Text(page == totalPages - 1 ? "Get started".translated() : "Continue".translated())
                         .font(.system(size: 17, weight: .semibold))
                         .foregroundStyle(.white)
                         .frame(maxWidth: .infinity)
@@ -150,18 +150,18 @@ struct ProductTutorialView: View {
     private var pages: [TutorialPage] {
         [
             TutorialPage(
-                eyebrow: "SCHEDULING",
-                headline: "Book a job in\n20 seconds.",
+                eyebrow: "SCHEDULING".translated(),
+                headline: "Book a job in\n20 seconds.".translated(),
                 preview: AnyView(ScheduleTutorialPreview())
             ),
             TutorialPage(
-                eyebrow: "INVOICING",
-                headline: "Send invoices.\nGet paid.",
+                eyebrow: "INVOICING".translated(),
+                headline: "Send invoices.\nGet paid.".translated(),
                 preview: AnyView(FinancesTutorialPreview())
             ),
             TutorialPage(
-                eyebrow: "YOU'RE READY",
-                headline: "Let's go.",
+                eyebrow: "YOU'RE READY".translated(),
+                headline: "Let's go.".translated(),
                 preview: AnyView(ReadyTutorialPreview())
             )
         ]
@@ -350,7 +350,7 @@ private struct ReadyTutorialPreview: View {
             }
 
             VStack(spacing: 5) {
-                Text("Sweeply".translated())
+                Text("Sweeply")
                     .font(.system(size: 18, weight: .bold))
                     .foregroundStyle(Color.sweeplyNavy)
                 Text("Run jobs. Get paid. Grow.".translated())
@@ -359,8 +359,8 @@ private struct ReadyTutorialPreview: View {
             }
 
             VStack(spacing: 6) {
-                readyRow(icon: "calendar.badge.checkmark", label: "Scheduling")
-                readyRow(icon: "doc.text.fill", label: "Invoicing")
+                readyRow(icon: "calendar.badge.checkmark", label: "Scheduling".translated())
+                readyRow(icon: "doc.text.fill", label: "Invoicing".translated())
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)

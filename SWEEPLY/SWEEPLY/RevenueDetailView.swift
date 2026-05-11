@@ -37,7 +37,7 @@ struct RevenueDetailView: View {
             .padding(.bottom, 80)
         }
         .background(Color.sweeplyBackground.ignoresSafeArea())
-        .navigationTitle("Revenue by Service")
+        .navigationTitle("Revenue by Service".translated())
         .navigationBarTitleDisplayMode(.inline)
     }
 
@@ -56,7 +56,7 @@ struct RevenueDetailView: View {
 
     private func summaryCell(label: String, value: String, color: Color) -> some View {
         VStack(alignment: .leading, spacing: 3) {
-            Text(label)
+            Text(label.translated())
                 .font(.system(size: 11))
                 .foregroundStyle(Color.sweeplyTextSub)
             Text(value)
@@ -73,7 +73,7 @@ struct RevenueDetailView: View {
     private var revenueBreakdownSection: some View {
         SectionCard {
             VStack(alignment: .leading, spacing: 14) {
-                sectionHeader(label: "REVENUE BREAKDOWN", title: "By service type")
+                sectionHeader(label: "REVENUE BREAKDOWN".translated(), title: "By service type".translated())
 
                 VStack(spacing: 14) {
                     ForEach(Array(revenueByService.enumerated()), id: \.element.service) { idx, item in
@@ -93,11 +93,11 @@ struct RevenueDetailView: View {
                                         .foregroundStyle(Color.sweeplyNavy)
                                         .lineLimit(1)
                                     HStack(spacing: 8) {
-                                        Text("\(item.jobCount) job\(item.jobCount == 1 ? "" : "s")")
+                                        Text("\(item.jobCount) \(item.jobCount == 1 ? "job".translated() : "jobs".translated())")
                                             .font(.system(size: 11))
                                             .foregroundStyle(Color.sweeplyTextSub)
                                         let avg = item.jobCount > 0 ? item.revenue / Double(item.jobCount) : 0
-                                        Text("avg \(avg.currency)")
+                                        Text("avg %@".translated(with: avg.currency))
                                             .font(.system(size: 11, weight: .medium))
                                             .foregroundStyle(Color.sweeplyTextSub)
                                     }
@@ -135,7 +135,7 @@ struct RevenueDetailView: View {
         if #available(iOS 17.0, *) {
             SectionCard {
                 VStack(alignment: .leading, spacing: 16) {
-                    sectionHeader(label: "SERVICE MIX", title: "Jobs by type")
+                    sectionHeader(label: "SERVICE MIX".translated(), title: "Jobs by type".translated())
 
                     HStack(alignment: .center, spacing: 20) {
                         Chart(Array(revenueByService.enumerated()), id: \.element.service) { idx, item in
@@ -153,7 +153,7 @@ struct RevenueDetailView: View {
                                 Text("\(totalJobs)")
                                     .font(.system(size: 22, weight: .bold, design: .rounded))
                                     .foregroundStyle(Color.sweeplyNavy)
-                                Text("jobs")
+                                Text("jobs".translated())
                                     .font(.system(size: 10))
                                     .foregroundStyle(Color.sweeplyTextSub)
                             }
@@ -189,19 +189,19 @@ struct RevenueDetailView: View {
     private var addOnsSection: some View {
         SectionCard {
             VStack(alignment: .leading, spacing: 14) {
-                sectionHeader(label: "EXTRAS & ADD-ONS",
-                              title: "Custom services",
+                sectionHeader(label: "EXTRAS & ADD-ONS".translated(),
+                              title: "Custom services".translated(),
                               badge: "\(customJobs.count)")
 
                 let addOnTotal = customJobs.reduce(0) { $0 + $1.price }
                 let addOnAvg   = customJobs.isEmpty ? 0 : addOnTotal / Double(customJobs.count)
 
                 HStack(spacing: 0) {
-                    addonStat(label: "Total", value: addOnTotal.currency, color: .sweeplyAccent)
+                    addonStat(label: "Total".translated(), value: addOnTotal.currency, color: .sweeplyAccent)
                     Divider().frame(height: 38).padding(.horizontal, 14)
-                    addonStat(label: "Avg Ticket", value: addOnAvg.currency, color: .sweeplyNavy)
+                    addonStat(label: "Avg Ticket".translated(), value: addOnAvg.currency, color: .sweeplyNavy)
                     Divider().frame(height: 38).padding(.horizontal, 14)
-                    addonStat(label: "Jobs", value: "\(customJobs.count)", color: .sweeplyWarning)
+                    addonStat(label: "Jobs".translated(), value: "\(customJobs.count)", color: .sweeplyWarning)
                 }
                 .padding(12)
                 .background(Color.sweeplyAccent.opacity(0.05))
@@ -242,7 +242,7 @@ struct RevenueDetailView: View {
     private var avgTicketSection: some View {
         SectionCard {
             VStack(alignment: .leading, spacing: 14) {
-                sectionHeader(label: "AVG TICKET", title: "Per service type")
+                sectionHeader(label: "AVG TICKET".translated(), title: "Per service type".translated())
 
                 VStack(spacing: 0) {
                     ForEach(Array(revenueByService.sorted {

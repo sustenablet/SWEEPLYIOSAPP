@@ -891,12 +891,6 @@ enum Localization {
     "Run jobs. Get paid. Grow.": ["pt-BR": "Gerencie jobs. Receba. Cresça."],
     "Get started": ["pt-BR": "Começar"],
 
-    // MARK: - NewChatSheet / ClientChatView
-    "Add a client first to start messaging.": ["pt-BR": "Adicione um cliente primeiro para começar a conversa."],
-    "No clients found": ["pt-BR": "Nenhum cliente encontrado"],
-    "Start a conversation with %@.": ["pt-BR": "Inicie uma conversa com %@."],
-    "No messages yet": ["pt-BR": "Nenhuma mensagem ainda"],
-
     // MARK: - OnboardingView (late additions)
     "Previous": ["pt-BR": "Anterior"],
     "Tell us about\nyour business": ["pt-BR": "Fale sobre\nseu negócio"],

@@ -1266,7 +1266,7 @@ private struct ScheduleJobRow: View {
         .contextMenu {
             ForEach(JobStatus.allCases, id: \.self) { status in
                 if job.status != status {
-                    Button("Mark as \(status.rawValue)") {
+                    Button("Mark as %@".translated(with: status.rawValue.translated())) {
                         if status == .completed {
                             UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                         } else {
@@ -1277,11 +1277,11 @@ private struct ScheduleJobRow: View {
                     }
                 }
             }
-            Button("Delete", role: .destructive) { showDeleteConfirm = true }
+            Button("Delete".translated(), role: .destructive) { showDeleteConfirm = true }
         }
         .alert("Delete Job?", isPresented: $showDeleteConfirm) {
-            Button("Cancel", role: .cancel) {}
-            Button("Delete", role: .destructive) {
+            Button("Cancel".translated(), role: .cancel) {}
+            Button("Delete".translated(), role: .destructive) {
                 UIImpactFeedbackGenerator(style: .heavy).impactOccurred()
                 Task { await jobsStore.delete(id: job.id) }
             }

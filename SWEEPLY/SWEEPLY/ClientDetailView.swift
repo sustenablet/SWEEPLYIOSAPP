@@ -120,7 +120,7 @@ struct ClientDetailView: View {
                                     UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                                     Task { await toggleArchive(client: client) }
                                 } label: {
-                                    Label(client.isActive ? "Archive Client" : "Unarchive Client",
+                                    Label(client.isActive ? "Archive Client".translated() : "Unarchive Client".translated(),
                                           systemImage: client.isActive ? "archivebox" : "archivebox.fill")
                                 }
 
@@ -144,7 +144,7 @@ struct ClientDetailView: View {
                     NewClientForm(editingClient: client)
                 }
                 .confirmationDialog("Delete Client?".translated(), isPresented: $showDeleteConfirmation, titleVisibility: .visible) {
-                    Button("Delete permanently", role: .destructive) {
+                    Button("Delete permanently".translated(), role: .destructive) {
                         UIImpactFeedbackGenerator(style: .heavy).impactOccurred()
                         Task {
                             let success = await clientsStore.delete(id: client.id)
@@ -152,7 +152,7 @@ struct ClientDetailView: View {
                         }
                     }
                 } message: {
-                    Text("This will permanently remove \(client.name) and all their associated data. This action cannot be undone.")
+                    Text("This will permanently remove %@ and all their associated data. This action cannot be undone.".translated(with: client.name))
                 }
             } else {
                 VStack(spacing: 16) {
@@ -213,7 +213,7 @@ struct ClientDetailView: View {
                         Circle()
                             .fill(client.isActive ? Color.sweeplySuccess : Color.sweeplyTextSub)
                             .frame(width: 8, height: 8)
-                        Text(client.isActive ? "Active" : "Archived")
+                        Text(client.isActive ? "Active".translated() : "Archived".translated())
                             .font(.system(size: 11, weight: .bold))
                             .foregroundStyle(client.isActive ? Color.sweeplySuccess : Color.sweeplyTextSub)
                     }
@@ -260,7 +260,7 @@ struct ClientDetailView: View {
                         Text("\(upcomingClientJobs.count)")
                             .font(.system(size: 22, weight: .bold, design: .monospaced))
                             .foregroundStyle(Color.sweeplyAccent)
-                        Text(upcomingClientJobs.count == 1 ? "upcoming job" : "upcoming jobs")
+                        Text(upcomingClientJobs.count == 1 ? "upcoming job".translated() : "upcoming jobs".translated())
                             .font(.system(size: 9, weight: .semibold))
                             .foregroundStyle(Color.sweeplyTextSub)
                             .multilineTextAlignment(.trailing)
@@ -271,13 +271,13 @@ struct ClientDetailView: View {
 
             // Quick Actions
             HStack(spacing: 12) {
-                QuickActionButton(icon: "phone.fill", label: "Call", color: Color.sweeplyAccent) {
+                QuickActionButton(icon: "phone.fill", label: "Call".translated(), color: Color.sweeplyAccent) {
                     callClient()
                 }
-                QuickActionButton(icon: "envelope.fill", label: "Email", color: Color.sweeplyAccent) {
+                QuickActionButton(icon: "envelope.fill", label: "Email".translated(), color: Color.sweeplyAccent) {
                     emailClient()
                 }
-                QuickActionButton(icon: "map.fill", label: "Navigate", color: Color.sweeplyNavy) {
+                QuickActionButton(icon: "map.fill", label: "Navigate".translated(), color: Color.sweeplyNavy) {
                     navigateClient()
                 }
             }
@@ -325,11 +325,11 @@ struct ClientDetailView: View {
     // MARK: - Stats Row
     private var statsRow: some View {
         HStack(spacing: 0) {
-            StatCell(label: "Total Revenue", value: totalRevenue.currency, valueColor: .sweeplySuccess)
+            StatCell(label: "Total Revenue".translated(), value: totalRevenue.currency, valueColor: .sweeplySuccess)
             dividerLine
-            StatCell(label: "Outstanding", value: outstanding.currency, valueColor: outstanding > 0 ? .sweeplyWarning : .sweeplyTextSub)
+            StatCell(label: "Outstanding".translated(), value: outstanding.currency, valueColor: outstanding > 0 ? .sweeplyWarning : .sweeplyTextSub)
             dividerLine
-            StatCell(label: "Completed", value: "\(completedJobsCount)")
+            StatCell(label: "Completed".translated(), value: "\(completedJobsCount)")
         }
         .padding(.vertical, 16)
         .background(Color.sweeplySurface)
@@ -348,13 +348,13 @@ struct ClientDetailView: View {
     private func notesCard(client: Client) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             if !client.entryInstructions.isEmpty {
-                NoteRow(icon: "key.fill", label: "Entry Instructions", text: client.entryInstructions)
+                NoteRow(icon: "key.fill", label: "Entry Instructions".translated(), text: client.entryInstructions)
             }
             if !client.entryInstructions.isEmpty && !client.notes.isEmpty {
                 Divider()
             }
             if !client.notes.isEmpty {
-                NoteRow(icon: "note.text", label: "Notes", text: client.notes)
+                NoteRow(icon: "note.text", label: "Notes".translated(), text: client.notes)
             }
         }
         .padding(14)
@@ -367,14 +367,14 @@ struct ClientDetailView: View {
     private var jobsSection: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .center) {
-                sectionHeader("Job History", count: filteredClientJobs.count)
+                sectionHeader("Job History".translated(), count: filteredClientJobs.count)
                 Spacer()
                 HStack(spacing: 4) {
                     ForEach(JobHistoryFilter.allCases, id: \.self) { filter in
                         Button {
                             withAnimation(.easeInOut(duration: 0.15)) { jobHistoryFilter = filter }
                         } label: {
-                            Text(filter.rawValue)
+                            Text(filter.rawValue.translated())
                                 .font(.system(size: 11, weight: jobHistoryFilter == filter ? .bold : .medium))
                                 .foregroundStyle(jobHistoryFilter == filter ? .white : Color.sweeplyTextSub)
                                 .padding(.horizontal, 10)
@@ -395,8 +395,8 @@ struct ClientDetailView: View {
                 emptyState(
                     icon: "briefcase",
                     message: jobHistoryFilter == .upcoming
-                        ? "No upcoming jobs scheduled"
-                        : "No jobs with this client yet"
+                        ? "No upcoming jobs scheduled".translated()
+                        : "No jobs with this client yet".translated()
                 )
             } else {
                 VStack(spacing: 8) {
@@ -411,10 +411,10 @@ struct ClientDetailView: View {
     // MARK: - Invoices Section
     private var invoicesSection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            sectionHeader("Invoice History", count: clientInvoices.count)
+            sectionHeader("Invoice History".translated(), count: clientInvoices.count)
 
             if clientInvoices.isEmpty {
-                emptyState(icon: "doc.text", message: "No invoices for this client yet")
+                emptyState(icon: "doc.text", message: "No invoices for this client yet".translated())
             } else {
                 VStack(spacing: 8) {
                     ForEach(clientInvoices.prefix(10)) { invoice in

@@ -108,7 +108,7 @@ struct CleanerJobDetailView: View {
                 .foregroundStyle(Color.sweeplyAccent)
                 .frame(width: 28)
             VStack(alignment: .leading, spacing: 2) {
-                Text(label)
+                Text(label.translated())
                     .font(.system(size: 11, weight: .medium))
                     .foregroundStyle(Color.sweeplyTextSub)
                     .textCase(.uppercase)
@@ -145,7 +145,7 @@ struct CleanerJobDetailView: View {
         VStack(spacing: 10) {
             // Check In — shown when scheduled
             if job.status == .scheduled {
-                actionButton(label: "Check In — I'm Here", icon: "mappin.circle.fill", color: Color.sweeplyAccent) {
+                actionButton(label: "Check In — I'm Here".translated(), icon: "mappin.circle.fill", color: Color.sweeplyAccent) {
                     checkIn(job)
                 }
             }
@@ -153,7 +153,7 @@ struct CleanerJobDetailView: View {
             // Mark Complete — shown when in progress (or scheduled for quick finish)
             if job.status == .scheduled || job.status == .inProgress {
                 actionButton(
-                    label: "Mark Complete",
+                    label: "Mark Complete".translated(),
                     icon: "checkmark.circle.fill",
                     color: Color.sweeplySuccess,
                     secondary: job.status == .scheduled
@@ -196,7 +196,7 @@ struct CleanerJobDetailView: View {
                 } else {
                     Image(systemName: icon).font(.system(size: 15, weight: .semibold))
                 }
-                Text(label).font(.system(size: 15, weight: .semibold))
+                Text(label.translated()).font(.system(size: 15, weight: .semibold))
             }
             .foregroundStyle(secondary ? color : .white)
             .frame(maxWidth: .infinity)
@@ -209,7 +209,7 @@ struct CleanerJobDetailView: View {
     }
 
     private func statusBadge(_ status: JobStatus) -> some View {
-        Text(status.rawValue)
+        Text(status.rawValue.translated())
             .font(.system(size: 11, weight: .semibold))
             .padding(.horizontal, 10)
             .padding(.vertical, 5)
@@ -228,9 +228,9 @@ struct CleanerJobDetailView: View {
     }
 
     private func durationLabel(_ hours: Double) -> String {
-        if hours == 1 { return "1 hour" }
-        if hours == floor(hours) { return "\(Int(hours)) hours" }
-        return String(format: "%.1f hours", hours)
+        if hours == 1 { return "1 hour".translated() }
+        if hours == floor(hours) { return "%d hours".translated(with: Int(hours)) }
+        return "%.1f hours".translated(with: hours)
     }
 
     private func checkIn(_ job: Job) {

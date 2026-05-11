@@ -105,7 +105,7 @@ struct CleanerProfileMenuView: View {
                         .font(.system(size: 14, weight: .medium))
                         .foregroundStyle(iconColor)
                 }
-                Text(label)
+                Text(label.translated())
                     .font(.system(size: 15))
                     .foregroundStyle(Color.primary)
                 Spacer()

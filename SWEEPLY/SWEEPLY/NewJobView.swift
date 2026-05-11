@@ -243,7 +243,7 @@ struct NewJobForm: View {
                                         .font(.system(size: 12, weight: .medium))
                                         .foregroundStyle(Color.sweeplyNavy)
                                         .fixedSize(horizontal: false, vertical: true)
-                                    Text("You can still schedule this job.")
+                                    Text("You can still schedule this job.".translated())
                                         .font(.system(size: 11))
                                         .foregroundStyle(Color.sweeplyTextSub)
                                 }
@@ -351,7 +351,7 @@ struct NewJobForm: View {
                                             .background(Color.sweeplyBackground)
                                             .clipShape(RoundedRectangle(cornerRadius: 8))
                                             .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.sweeplyBorder, lineWidth: 1))
-                                        Text("days")
+                                        Text("days".translated())
                                             .font(.system(size: 14))
                                         Spacer()
                                     }

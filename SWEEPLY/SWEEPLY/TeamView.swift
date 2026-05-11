@@ -42,7 +42,7 @@ struct TeamView: View {
 
                         if !session.activeMemberships.isEmpty {
                             VStack(alignment: .leading, spacing: 10) {
-                                Text("TEAMS")
+                                Text("TEAMS".translated())
                                     .font(.system(size: 11, weight: .bold))
                                     .foregroundStyle(Color.sweeplyTextSub)
                                     .tracking(0.8)
@@ -60,7 +60,7 @@ struct TeamView: View {
                                             UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                                             session.switchToMembership(membership)
                                         } label: {
-                                            Text("Join")
+                                            Text("Join".translated())
                                                 .font(.system(size: 13, weight: .bold))
                                                 .foregroundStyle(.white)
                                                 .padding(.horizontal, 16)
@@ -165,13 +165,13 @@ struct TeamView: View {
                 isPresented: $showDeleteConfirm,
                 titleVisibility: .visible
             ) {
-                Button("Remove", role: .destructive) {
+                Button("Remove".translated(), role: .destructive) {
                     guard let target = deleteTarget else { return }
                     UIImpactFeedbackGenerator(style: .heavy).impactOccurred()
                     Task { await teamStore.remove(id: target.id) }
                     deleteTarget = nil
                 }
-                Button("Cancel", role: .cancel) { deleteTarget = nil }
+                Button("Cancel".translated(), role: .cancel) { deleteTarget = nil }
             } message: {
                 Text("This will remove them from your roster. You can invite them again anytime.".translated())
             }
@@ -187,10 +187,10 @@ struct TeamView: View {
                 .foregroundStyle(.white)
 
             VStack(alignment: .leading, spacing: 2) {
-                Text("You're on Pro")
+                Text("You're on Pro".translated())
                     .font(.system(size: 13, weight: .bold))
                     .foregroundStyle(.white)
-                Text("Add unlimited team members to your business.")
+                Text("Add unlimited team members to your business.".translated())
                     .font(.system(size: 12))
                     .foregroundStyle(.white.opacity(0.85))
             }
@@ -258,7 +258,7 @@ struct TeamView: View {
                     Text(invite.businessName)
                         .font(.system(size: 15, weight: .semibold))
                         .foregroundStyle(Color.primary)
-                    Text("Invited you as \(invite.role.capitalized)")
+                    Text("Invited you as %@".translated(with: invite.role.capitalized))
                         .font(.system(size: 13))
                         .foregroundStyle(Color.sweeplyTextSub)
                 }
@@ -637,7 +637,7 @@ struct MemberDetailView: View {
                 isPresented: $showDeleteConfirm,
                 titleVisibility: .visible
             ) {
-                Button("Remove", role: .destructive) {
+                Button("Remove".translated(), role: .destructive) {
                     Task {
                         let ok = await teamStore.remove(id: member.id)
                         if ok { dismiss() }
@@ -721,7 +721,7 @@ struct MemberDetailView: View {
                         .foregroundStyle(Color.sweeplyTextSub)
                 }
 
-                Text("Member since \(member.addedAt.formatted(date: .abbreviated, time: .omitted))")
+                Text("Member since %@".translated(with: member.addedAt.formatted(date: .abbreviated, time: .omitted)))
                     .font(.system(size: 12))
                     .foregroundStyle(Color.sweeplyTextSub.opacity(0.7))
             }
@@ -1015,10 +1015,10 @@ struct MemberDetailView: View {
 
                 // Compact pill switcher
                 HStack(spacing: 0) {
-                    tabPillButton("Jobs", isActive: historyTab == .jobs) {
+                    tabPillButton("Jobs".translated(), isActive: historyTab == .jobs) {
                         withAnimation(.easeInOut(duration: 0.18)) { historyTab = .jobs }
                     }
-                    tabPillButton("Payments", isActive: historyTab == .payments) {
+                    tabPillButton("Payments".translated(), isActive: historyTab == .payments) {
                         withAnimation(.easeInOut(duration: 0.18)) { historyTab = .payments }
                     }
                 }
@@ -1217,7 +1217,7 @@ struct MemberDetailView: View {
                     Text("No jobs assigned yet".translated())
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundStyle(Color.sweeplyTextSub)
-                    Text("Jobs will appear here once \(member.name.components(separatedBy: " ").first ?? member.name) is assigned work")
+                    Text("Jobs will appear here once %@ is assigned work".translated(with: member.name.components(separatedBy: " ").first ?? member.name))
                         .font(.system(size: 12))
                         .foregroundStyle(Color.sweeplyTextSub.opacity(0.6))
                         .multilineTextAlignment(.center)
@@ -1952,7 +1952,7 @@ struct MemberFullHistoryView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Done") { dismiss() }
+                    Button("Done".translated()) { dismiss() }
                         .foregroundStyle(Color.sweeplyNavy)
                 }
             }
