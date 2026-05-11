@@ -56,7 +56,7 @@ struct RootView: View {
     @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
-        Group {
+        ZStack {
             if !SupabaseManager.isConfigured {
                 mainTabs
             } else if !session.hasResolvedInitialSession || !minimumSplashElapsed {
@@ -72,13 +72,21 @@ struct RootView: View {
                 }
             } else if showSignUpFlow {
                 OnboardingView(isSignUpFlow: true) {
-                    showSignUpFlow = false
+                    withAnimation(.easeInOut(duration: 0.3)) {
+                        showSignUpFlow = false
+                    }
                 }
+                .transition(.move(edge: .trailing))
             } else if !session.isAuthenticated && !getStartedDismissed && !showLoginFlow {
                 GetStartedView(
-                    onSignUp: { showSignUpFlow = true },
-                    onLogIn:  { showLoginFlow  = true }
+                    onSignUp: {
+                        withAnimation(.easeInOut(duration: 0.3)) { showSignUpFlow = true }
+                    },
+                    onLogIn: {
+                        withAnimation(.easeInOut(duration: 0.3)) { showLoginFlow = true }
+                    }
                 )
+                .transition(.move(edge: .leading))
             } else if session.isAuthenticated {
                 ZStack {
                     switch session.currentViewMode {
@@ -110,6 +118,8 @@ struct RootView: View {
                 LoginView(onDismiss: nil)
             }
         }
+        .animation(.easeInOut(duration: 0.3), value: showSignUpFlow)
+        .animation(.easeInOut(duration: 0.3), value: showLoginFlow)
         .preferredColorScheme(.light)
         .onChange(of: scenePhase) { _, phase in
             if phase == .background && biometricLockEnabled {

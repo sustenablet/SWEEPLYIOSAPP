@@ -119,13 +119,7 @@ struct OnboardingView: View {
             switch step {
             case 2: step = (clientCountIndex ?? 0) > 0 ? 3 : 4
             case 3: step = 4
-            case 6:
-                if usePasscode {
-                    step = 8
-                    Task { await createAccount() }
-                } else {
-                    step = 7
-                }
+            case 6: step = 7
             case 7:
                 step = 8
                 Task { await createAccount() }
@@ -140,7 +134,7 @@ struct OnboardingView: View {
         withAnimation(.easeInOut(duration: 0.22)) {
             switch step {
             case 4: step = (clientCountIndex ?? 0) > 0 ? 3 : 2
-            case 8: step = usePasscode ? 6 : 7
+            case 8: step = 7
             default: step -= 1
             }
         }
@@ -162,15 +156,13 @@ struct OnboardingView: View {
         guard !isCreatingAccount else { return }
         await MainActor.run { isCreatingAccount = true; accountError = nil }
 
-        let pwd: String
+        // Always use the real password the user typed
+        let pwd = password
+
+        // Enable Face ID as an additional sign-in method if the user opted in
         if usePasscode {
-            let generated = (UUID().uuidString + UUID().uuidString).replacingOccurrences(of: "-", with: "")
-            KeychainHelper.save(key: "sweeply_auth_password", value: generated)
             UserDefaults.standard.set(true, forKey: "biometricLockEnabled")
             UserDefaults.standard.set(true, forKey: "sweeply_uses_passcode_auth")
-            pwd = generated
-        } else {
-            pwd = password
         }
 
         await session.signUpDirect(email: email.trimmingCharacters(in: .whitespacesAndNewlines), password: pwd)
@@ -187,10 +179,7 @@ struct OnboardingView: View {
                 applyDiscoveryEffects()
             } else if session.lastAuthError != nil {
                 accountError = session.lastAuthError
-                // Step back to whichever input caused the error
-                withAnimation(.easeInOut(duration: 0.28)) {
-                    step = usePasscode ? 6 : 7
-                }
+                withAnimation(.easeInOut(duration: 0.28)) { step = 7 }
             }
         }
     }
@@ -249,9 +238,9 @@ struct OnboardingView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
-        .onTapGesture {
+        .simultaneousGesture(TapGesture().onEnded {
             focusedField = nil
-        }
+        })
         .interactiveDismissDisabled(true)
         .sheet(isPresented: $showCreateService) {
             CreateServiceSheet(
