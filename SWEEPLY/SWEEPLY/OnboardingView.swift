@@ -46,6 +46,7 @@ struct OnboardingView: View {
     @State private var lastName = ""
     @State private var email = ""
     @State private var usePasscode = false
+    @State private var agreedToTerms = false
     @State private var password = ""
     @State private var showPassword = false
     @State private var isCreatingAccount = false
@@ -217,8 +218,8 @@ struct OnboardingView: View {
             ).ignoresSafeArea()
 
             VStack(spacing: 0) {
-                // Header — shown on setup steps (services, team, notifications, location)
-                if step >= 8 && step <= 11 {
+                // Header — shown on all steps up to location (0–11)
+                if step <= 11 {
                     headerBar
                         .transition(.opacity)
                 }
@@ -276,43 +277,40 @@ struct OnboardingView: View {
     // Header Bar
 
     private var headerBar: some View {
-        HStack(spacing: 12) {
-            // Previous — shown on steps 1-5
-            if step >= 9 {
-                Button {
-                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                    goBack()
-                } label: {
-                    HStack(spacing: 4) {
-                        Image(systemName: "chevron.left")
-                            .font(.system(size: 13, weight: .semibold))
-                        Text("Previous".translated())
-                            .font(.system(size: 14, weight: .medium))
-                    }
-                    .foregroundStyle(step == 10 ? .white : Color.sweeplyNavy)
+        let onBlue = step == 10 || step == 11
+        return HStack(spacing: 12) {
+            // Back button — step 0 goes back to GetStartedView, others go to previous step
+            Button {
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                if step == 0 { onDismiss?() } else { goBack() }
+            } label: {
+                HStack(spacing: 4) {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 13, weight: .semibold))
+                    Text("Back".translated())
+                        .font(.system(size: 14, weight: .medium))
                 }
-                .buttonStyle(.plain)
-                .frame(width: 80, alignment: .leading)
-            } else {
-                Color.clear.frame(width: 80, height: 1)
+                .foregroundStyle(onBlue ? .white : Color.sweeplyNavy)
             }
+            .buttonStyle(.plain)
+            .frame(width: 80, alignment: .leading)
 
-            // Progress bar — 4 setup steps (8–11)
+            // Progress bar — spans all 12 header steps (0–11)
             GeometryReader { geo in
                 ZStack(alignment: .leading) {
                     Capsule()
-                        .fill(step == 10 ? Color.white.opacity(0.3) : Color.sweeplyBorder)
+                        .fill(onBlue ? Color.white.opacity(0.3) : Color.sweeplyBorder)
                         .frame(height: 4)
                     Capsule()
-                        .fill(step == 10 ? Color.white : Color.sweeplyAccent)
-                        .frame(width: geo.size.width * (CGFloat(step - 7) / 4.0), height: 4)
+                        .fill(onBlue ? Color.white : Color.sweeplyAccent)
+                        .frame(width: geo.size.width * (CGFloat(step + 1) / 12.0), height: 4)
                         .animation(.spring(response: 0.4, dampingFraction: 0.8), value: step)
                 }
             }
             .frame(height: 4)
 
-            // Skip — only on services step (8)
-            if step == 8 {
+            // Skip — services step (8) and recurring clients step (3)
+            if step == 8 || step == 3 {
                 Button {
                     UIImpactFeedbackGenerator(style: .light).impactOccurred()
                     advance()
@@ -337,10 +335,10 @@ struct OnboardingView: View {
         discoveryPage(
             question: "What best\ndescribes you?",
             options: [
-                ("🌱", "Starting a new cleaning business"),
-                ("⚙️", "Already running, need better tools"),
-                ("👥", "Managing a team of cleaners"),
-                ("🔄", "Switching from another app")
+                (icon: "leaf.fill",             label: "Starting a new cleaning business"),
+                (icon: "gearshape.2.fill",       label: "Already running, need better tools"),
+                (icon: "person.3.fill",          label: "Managing a team of cleaners"),
+                (icon: "arrow.2.circlepath",     label: "Switching from another app")
             ],
             selection: $describesYouIndex,
             onContinue: { advance() }
@@ -353,10 +351,10 @@ struct OnboardingView: View {
         discoveryPage(
             question: "What's your\nmain goal?",
             options: [
-                ("📅", "Stay on top of jobs and schedule"),
-                ("💸", "Get invoices paid faster"),
-                ("📈", "Build a bigger client base"),
-                ("👤", "Manage and pay my team")
+                (icon: "calendar",                      label: "Stay on top of jobs and schedule"),
+                (icon: "banknote.fill",                 label: "Get invoices paid faster"),
+                (icon: "chart.line.uptrend.xyaxis",     label: "Build a bigger client base"),
+                (icon: "person.2.fill",                 label: "Manage and pay my team")
             ],
             selection: $goalIndex,
             onContinue: { advance() }
@@ -369,10 +367,10 @@ struct OnboardingView: View {
         discoveryPage(
             question: "How many clients\ndo you have now?",
             options: [
-                ("🌿", "Just starting — 0 to 5"),
-                ("📊", "Growing — 6 to 20"),
-                ("🏆", "Established — 21 to 50"),
-                ("🚀", "Scaling fast — 50+")
+                (icon: "person.fill",              label: "Just starting — 0 to 5"),
+                (icon: "person.2.fill",            label: "Growing — 6 to 20"),
+                (icon: "person.3.fill",            label: "Established — 21 to 50"),
+                (icon: "chart.bar.fill",           label: "Scaling fast — 50+")
             ],
             selection: $clientCountIndex,
             onContinue: { advance() }
@@ -383,42 +381,20 @@ struct OnboardingView: View {
 
     private func discoveryPage(
         question: String,
-        options: [(String, String)],
+        options: [(icon: String, label: String)],
         selection: Binding<Int?>,
         onContinue: @escaping () -> Void
     ) -> some View {
         VStack(spacing: 0) {
             ScrollView(showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 0) {
-                    // Back button for steps > 0
-                    if step > 0 {
-                        Button {
-                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                            goBack()
-                        } label: {
-                            HStack(spacing: 4) {
-                                Image(systemName: "chevron.left")
-                                    .font(.system(size: 13, weight: .semibold))
-                                Text("Back".translated())
-                                    .font(.system(size: 14, weight: .medium))
-                            }
-                            .foregroundStyle(Color.sweeplyTextSub)
-                        }
-                        .buttonStyle(.plain)
-                        .padding(.horizontal, 24)
-                        .padding(.top, 16)
-                        .padding(.bottom, 8)
-                    } else {
-                        Spacer().frame(height: 32)
-                    }
-
                     Text(question.translated())
                         .font(.system(size: 34, weight: .bold))
                         .foregroundStyle(Color.sweeplyNavy)
                         .lineSpacing(2)
                         .tracking(-0.6)
                         .padding(.horizontal, 24)
-                        .padding(.top, step == 0 ? 40 : 16)
+                        .padding(.top, 16)
                         .padding(.bottom, 32)
 
                     VStack(spacing: 10) {
@@ -429,15 +405,17 @@ struct OnboardingView: View {
                                     selection.wrappedValue = idx
                                 }
                             } label: {
+                                let selected = selection.wrappedValue == idx
                                 HStack(spacing: 14) {
-                                    Text(option.0)
-                                        .font(.system(size: 22))
+                                    Image(systemName: option.icon)
+                                        .font(.system(size: 17, weight: .medium))
+                                        .foregroundStyle(selected ? Color.sweeplyAccent : Color.sweeplyNavy)
                                         .frame(width: 36)
-                                    Text(option.1.translated())
+                                    Text(option.label.translated())
                                         .font(.system(size: 16, weight: .medium))
-                                        .foregroundStyle(selection.wrappedValue == idx ? Color.sweeplyAccent : Color.sweeplyNavy)
+                                        .foregroundStyle(selected ? Color.sweeplyAccent : Color.sweeplyNavy)
                                         .frame(maxWidth: .infinity, alignment: .leading)
-                                    if selection.wrappedValue == idx {
+                                    if selected {
                                         Image(systemName: "checkmark.circle.fill")
                                             .foregroundStyle(Color.sweeplyAccent)
                                             .font(.system(size: 18))
@@ -489,36 +467,7 @@ struct OnboardingView: View {
         VStack(spacing: 0) {
             ScrollView(showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 0) {
-                    HStack {
-                        Button {
-                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                            goBack()
-                        } label: {
-                            HStack(spacing: 4) {
-                                Image(systemName: "chevron.left")
-                                    .font(.system(size: 13, weight: .semibold))
-                                Text("Back".translated())
-                                    .font(.system(size: 14, weight: .medium))
-                            }
-                            .foregroundStyle(Color.sweeplyTextSub)
-                        }
-                        .buttonStyle(.plain)
-
-                        Spacer()
-
-                        Button {
-                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                            advance()
-                        } label: {
-                            Text("Skip".translated())
-                                .font(.system(size: 14, weight: .medium))
-                                .foregroundStyle(Color.sweeplyTextSub)
-                        }
-                        .buttonStyle(.plain)
-                    }
-                    .padding(.horizontal, 24)
-                    .padding(.top, 16)
-                    .padding(.bottom, 8)
+                    Spacer().frame(height: 8)
 
                     VStack(alignment: .leading, spacing: 6) {
                         Text("Who are your regulars?".translated())
@@ -708,93 +657,114 @@ struct OnboardingView: View {
             title: "What's your\nemail?",
             subtitle: nil,
             content: {
-                AnyView(VStack(alignment: .leading, spacing: 20) {
+                AnyView(VStack(alignment: .leading, spacing: 16) {
                     OnboardingField(
                         placeholder: "your@email.com",
                         text: $email,
                         icon: "envelope",
                         keyboardType: .emailAddress,
                         submitLabel: .continue,
-                        onSubmit: {
-                            emailFocused = false
-                            if isValidEmailAddress(email) { advance() }
-                        }
+                        onSubmit: { emailFocused = false }
                     )
                     .focused($emailFocused, equals: true)
                     .autocorrectionDisabled()
                     .textInputAutocapitalization(.never)
 
-                    // Enable Passcode button
+                    // Enable Face ID checkbox
+                    checkboxRow(
+                        isChecked: $usePasscode,
+                        label: "Enable Face ID",
+                        detail: "Sign in without a password"
+                    )
+
+                    // Terms & Privacy checkbox
                     Button {
-                        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-                        usePasscode = true
-                        emailFocused = false
-                        if isValidEmailAddress(email) { advance() }
-                    } label: {
-                        HStack(spacing: 10) {
-                            Image(systemName: "faceid")
-                                .font(.system(size: 18))
-                                .foregroundStyle(Color.sweeplyAccent)
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text("Enable Passcode".translated())
-                                    .font(.system(size: 15, weight: .semibold))
-                                    .foregroundStyle(Color.sweeplyNavy)
-                                Text("Sign in with Face ID instead of a password".translated())
-                                    .font(.system(size: 12))
-                                    .foregroundStyle(Color.sweeplyTextSub)
-                            }
-                            Spacer()
-                            Image(systemName: "chevron.right")
-                                .font(.system(size: 12, weight: .semibold))
-                                .foregroundStyle(Color.sweeplyBorder)
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        withAnimation(.spring(response: 0.25, dampingFraction: 0.7)) {
+                            agreedToTerms.toggle()
                         }
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 14)
-                        .background(Color.sweeplySurface)
-                        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-                        .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous)
-                            .stroke(Color.sweeplyBorder, lineWidth: 1))
+                    } label: {
+                        HStack(alignment: .top, spacing: 12) {
+                            Image(systemName: agreedToTerms ? "checkmark.square.fill" : "square")
+                                .font(.system(size: 20))
+                                .foregroundStyle(agreedToTerms ? Color.sweeplyAccent : Color.sweeplyBorder)
+                                .animation(.spring(response: 0.25, dampingFraction: 0.7), value: agreedToTerms)
+
+                            HStack(spacing: 3) {
+                                Text("I agree to Sweeply's".translated())
+                                    .font(.system(size: 13))
+                                    .foregroundStyle(Color.sweeplyTextSub)
+                                Button {
+                                    if let url = URL(string: "https://sweeplyapp.online/terms") {
+                                        UIApplication.shared.open(url)
+                                    }
+                                } label: {
+                                    Text("Terms of Service".translated())
+                                        .font(.system(size: 13, weight: .medium))
+                                        .foregroundStyle(Color.sweeplyAccent)
+                                        .underline()
+                                }
+                                .buttonStyle(.plain)
+                                Text("and".translated())
+                                    .font(.system(size: 13))
+                                    .foregroundStyle(Color.sweeplyTextSub)
+                                Button {
+                                    if let url = URL(string: "https://sweeplyapp.online/privacy") {
+                                        UIApplication.shared.open(url)
+                                    }
+                                } label: {
+                                    Text("Privacy Policy".translated())
+                                        .font(.system(size: 13, weight: .medium))
+                                        .foregroundStyle(Color.sweeplyAccent)
+                                        .underline()
+                                }
+                                .buttonStyle(.plain)
+                            }
+                            .fixedSize(horizontal: false, vertical: true)
+                        }
                     }
                     .buttonStyle(.plain)
-
-                    // Terms agreement
-                    HStack(spacing: 4) {
-                        Text("I agree to Sweeply's".translated())
-                            .font(.system(size: 12))
-                            .foregroundStyle(Color.sweeplyTextSub)
-                        Button {
-                            if let url = URL(string: "https://sweeplyapp.online/terms") {
-                                UIApplication.shared.open(url)
-                            }
-                        } label: {
-                            Text("Terms of Service".translated())
-                                .font(.system(size: 12, weight: .medium))
-                                .foregroundStyle(Color.sweeplyAccent)
-                                .underline()
-                        }
-                        .buttonStyle(.plain)
-                        Text("and".translated())
-                            .font(.system(size: 12))
-                            .foregroundStyle(Color.sweeplyTextSub)
-                        Button {
-                            if let url = URL(string: "https://sweeplyapp.online/privacy") {
-                                UIApplication.shared.open(url)
-                            }
-                        } label: {
-                            Text("Privacy Policy".translated())
-                                .font(.system(size: 12, weight: .medium))
-                                .foregroundStyle(Color.sweeplyAccent)
-                                .underline()
-                        }
-                        .buttonStyle(.plain)
-                    }
-                    .frame(maxWidth: .infinity, alignment: .center)
-                    .padding(.top, 4)
                 })
             },
-            isEnabled: isValidEmailAddress(email),
+            isEnabled: isValidEmailAddress(email) && agreedToTerms,
             onContinue: { advance() }
         )
+    }
+
+    @ViewBuilder
+    private func checkboxRow(isChecked: Binding<Bool>, label: String, detail: String) -> some View {
+        Button {
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            withAnimation(.spring(response: 0.25, dampingFraction: 0.7)) {
+                isChecked.wrappedValue.toggle()
+            }
+        } label: {
+            HStack(spacing: 12) {
+                Image(systemName: isChecked.wrappedValue ? "checkmark.square.fill" : "square")
+                    .font(.system(size: 20))
+                    .foregroundStyle(isChecked.wrappedValue ? Color.sweeplyAccent : Color.sweeplyBorder)
+                    .animation(.spring(response: 0.25, dampingFraction: 0.7), value: isChecked.wrappedValue)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(label.translated())
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(Color.sweeplyNavy)
+                    Text(detail.translated())
+                        .font(.system(size: 12))
+                        .foregroundStyle(Color.sweeplyTextSub)
+                }
+                Spacer()
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 14)
+            .background(isChecked.wrappedValue ? Color.sweeplyAccent.opacity(0.06) : Color.sweeplySurface)
+            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .stroke(isChecked.wrappedValue ? Color.sweeplyAccent.opacity(0.4) : Color.sweeplyBorder, lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: - Step 7: Password
@@ -895,23 +865,6 @@ struct OnboardingView: View {
         VStack(spacing: 0) {
             ScrollView(showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 0) {
-                    Button {
-                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                        goBack()
-                    } label: {
-                        HStack(spacing: 4) {
-                            Image(systemName: "chevron.left")
-                                .font(.system(size: 13, weight: .semibold))
-                            Text("Back".translated())
-                                .font(.system(size: 14, weight: .medium))
-                        }
-                        .foregroundStyle(Color.sweeplyTextSub)
-                    }
-                    .buttonStyle(.plain)
-                    .padding(.horizontal, 24)
-                    .padding(.top, 16)
-                    .padding(.bottom, 8)
-
                     VStack(alignment: .leading, spacing: subtitle != nil ? 8 : 0) {
                         Text(title.translated())
                             .font(.system(size: 34, weight: .bold))
