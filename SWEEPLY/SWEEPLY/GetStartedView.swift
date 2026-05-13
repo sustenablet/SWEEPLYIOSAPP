@@ -38,7 +38,7 @@ struct GetStartedView: View {
                     .offset(y: appeared ? 0 : 12)
             }
             .padding(.horizontal, 24)
-            .padding(.bottom, 44)
+            .padding(.bottom, 64)
         }
         .onAppear {
             withAnimation(.easeOut(duration: 0.3).delay(0.05)) { appeared = true }

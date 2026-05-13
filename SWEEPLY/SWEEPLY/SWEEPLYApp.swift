@@ -99,6 +99,7 @@ struct SWEEPLYApp: App {
                         async let offeringsLoad: () = subscriptionManager.loadOfferings()
                         _ = await (customerInfoLoad, offeringsLoad)
                         if appSession.isAuthenticated, let uid = appSession.userId {
+                            subscriptionManager.setUserId(uid)
                             await teamStore.load(ownerId: uid)
                             // Identify user in RevenueCat so purchases are tied to their account
                             await subscriptionManager.identify(userId: uid.uuidString)
@@ -125,6 +126,7 @@ struct SWEEPLYApp: App {
                 .onChange(of: appSession.isAuthenticated) { _, isAuth in
                     Task {
                         if isAuth, let uid = appSession.userId {
+                            subscriptionManager.setUserId(uid)
                             await subscriptionManager.identify(userId: uid.uuidString)
                         } else {
                             await subscriptionManager.reset()

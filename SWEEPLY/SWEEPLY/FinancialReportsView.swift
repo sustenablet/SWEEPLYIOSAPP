@@ -303,12 +303,12 @@ struct FinancialReportsView: View {
 
     private func serviceColor(at index: Int) -> Color {
         let palette: [Color] = [
-            Color.sweeplyAccent,
-            Color.sweeplyNavy,
-            Color.sweeplyWarning,
-            Color.sweeplySuccess,
-            Color(hue: 0.08, saturation: 0.75, brightness: 0.80),
-            Color(hue: 0.58, saturation: 0.70, brightness: 0.75),
+            Color.sweeplyAccent.opacity(0.7),
+            Color.sweeplyNavy.opacity(0.6),
+            Color.sweeplyTextSub.opacity(0.6),
+            Color.sweeplySuccess.opacity(0.7),
+            Color.sweeplyWarning.opacity(0.7),
+            Color.sweeplyTextSub.opacity(0.5),
         ]
         return palette[index % palette.count]
     }
@@ -465,7 +465,7 @@ struct FinancialReportsView: View {
             HStack(spacing: 6) {
                 Image(systemName: icon)
                     .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(color)
+                    .foregroundStyle(Color.sweeplyTextSub.opacity(0.7))
                 Text(title)
                     .font(.system(size: 10, weight: .medium))
                     .foregroundStyle(Color.sweeplyTextSub)
@@ -473,7 +473,7 @@ struct FinancialReportsView: View {
             }
             Text(value)
                 .font(.system(size: 15, weight: .bold, design: .rounded))
-                .foregroundStyle(color)
+                .foregroundStyle(Color.sweeplyNavy)
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
         }
@@ -501,7 +501,7 @@ struct FinancialReportsView: View {
                     HStack(spacing: 4) {
                         Text("Collected".translated())
                             .font(.system(size: 11))
-                            .foregroundStyle(Color.sweeplySuccess)
+                            .foregroundStyle(Color.sweeplyNavy.opacity(0.6))
                         Text("·")
                             .font(.system(size: 10))
                             .foregroundStyle(Color.sweeplyTextSub)
@@ -514,7 +514,7 @@ struct FinancialReportsView: View {
                 VStack(alignment: .trailing, spacing: 2) {
                     Text(collected.currency)
                         .font(.system(size: 14, weight: .bold, design: .monospaced))
-                        .foregroundStyle(Color.sweeplySuccess)
+                        .foregroundStyle(Color.sweeplyNavy)
                     Text(total.currency)
                         .font(.system(size: 11, design: .monospaced))
                         .foregroundStyle(Color.sweeplyTextSub)
@@ -530,7 +530,7 @@ struct FinancialReportsView: View {
                     Capsule()
                         .fill(
                             LinearGradient(
-                                colors: [Color.sweeplySuccess, Color.sweeplySuccess.opacity(0.7)],
+                                colors: [Color.sweeplyNavy.opacity(0.6), Color.sweeplyNavy.opacity(0.35)],
                                 startPoint: .leading,
                                 endPoint: .trailing
                             )
@@ -543,12 +543,12 @@ struct FinancialReportsView: View {
             HStack {
                 Text("\(Int(progress * 100))% " + "Collected".translated())
                     .font(.system(size: 11, weight: .medium))
-                    .foregroundStyle(Color.sweeplySuccess)
+                    .foregroundStyle(Color.sweeplyNavy.opacity(0.6))
                 Spacer()
                 if scheduled > 0 {
                     Text("\(scheduled.currency) " + "Estimated".translated())
                         .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(Color.sweeplyWarning)
+                        .foregroundStyle(Color.sweeplyTextSub)
                 }
             }
         }
@@ -622,7 +622,7 @@ struct FinancialReportsView: View {
                                     .foregroundStyle(Color.sweeplyTextSub)
                                 Text(bar.collected.currency)
                                     .font(.system(size: 18, weight: .bold, design: .rounded))
-                                    .foregroundStyle(Color.sweeplyAccent)
+                                    .foregroundStyle(Color.sweeplyNavy)
                                     .monospacedDigit()
                             }
                             Spacer()
@@ -632,7 +632,7 @@ struct FinancialReportsView: View {
                                     .foregroundStyle(Color.sweeplyTextSub)
                                 Text(bar.scheduled.currency)
                                     .font(.system(size: 18, weight: .bold, design: .rounded))
-                                    .foregroundStyle(Color.sweeplyNavy.opacity(0.6))
+                                    .foregroundStyle(Color.sweeplyTextSub)
                                     .monospacedDigit()
                             }
                         }
@@ -641,11 +641,11 @@ struct FinancialReportsView: View {
                         GeometryReader { geo in
                             HStack(spacing: 8) {
                                 RoundedRectangle(cornerRadius: 6)
-                                    .fill(Color.sweeplyAccent)
+                                    .fill(Color.sweeplyNavy.opacity(0.5))
                                     .frame(width: geo.size.width * CGFloat(bar.collected / maxAmount) - 4)
                                     .frame(height: 24)
                                 RoundedRectangle(cornerRadius: 6)
-                                    .fill(Color.sweeplyNavy.opacity(0.3))
+                                    .fill(Color.sweeplyBorder)
                                     .frame(width: geo.size.width * CGFloat(bar.scheduled / maxAmount) - 4)
                                     .frame(height: 24)
                             }
@@ -657,17 +657,17 @@ struct FinancialReportsView: View {
                     Chart {
                         ForEach(overviewBarData) { bar in
                             AreaMark(x: .value("Month", bar.month), y: .value("Collected", bar.collected), series: .value("S", "collected"))
-                                .foregroundStyle(LinearGradient(colors: [Color.sweeplyAccent.opacity(0.22), Color.sweeplyAccent.opacity(0.02)], startPoint: .top, endPoint: .bottom))
+                                .foregroundStyle(LinearGradient(colors: [Color.sweeplyNavy.opacity(0.10), Color.sweeplyNavy.opacity(0.01)], startPoint: .top, endPoint: .bottom))
                                 .interpolationMethod(.catmullRom)
                             LineMark(x: .value("Month", bar.month), y: .value("Collected", bar.collected), series: .value("S", "collected"))
-                                .foregroundStyle(Color.sweeplyAccent)
-                                .lineStyle(StrokeStyle(lineWidth: 2.5))
+                                .foregroundStyle(Color.sweeplyNavy.opacity(0.45))
+                                .lineStyle(StrokeStyle(lineWidth: 2))
                                 .interpolationMethod(.catmullRom)
                             PointMark(x: .value("Month", bar.month), y: .value("Collected", bar.collected))
-                                .foregroundStyle(Color.sweeplyAccent)
-                                .symbolSize(selectedOverviewMonth == bar.month ? 64 : 28)
+                                .foregroundStyle(Color.sweeplyNavy.opacity(0.5))
+                                .symbolSize(selectedOverviewMonth == bar.month ? 48 : 20)
                             LineMark(x: .value("Month", bar.month), y: .value("Outstanding", bar.scheduled), series: .value("S", "outstanding"))
-                                .foregroundStyle(Color.sweeplyNavy.opacity(0.3))
+                                .foregroundStyle(Color.sweeplyBorder)
                                 .lineStyle(StrokeStyle(lineWidth: 1.5, dash: [5, 3]))
                                 .interpolationMethod(.catmullRom)
                         }
@@ -704,11 +704,11 @@ struct FinancialReportsView: View {
                         Spacer()
                         VStack(alignment: .trailing, spacing: 4) {
                             HStack(spacing: 6) {
-                                Circle().fill(Color.sweeplyAccent).frame(width: 6, height: 6)
+                                Circle().fill(Color.sweeplyNavy.opacity(0.45)).frame(width: 6, height: 6)
                                 Text(bar.collected.currency).font(.system(size: 12, weight: .medium, design: .monospaced)).foregroundStyle(Color.sweeplyNavy)
                             }
                             HStack(spacing: 6) {
-                                Circle().fill(Color.sweeplyNavy.opacity(0.3)).frame(width: 6, height: 6)
+                                Circle().fill(Color.sweeplyBorder).frame(width: 6, height: 6)
                                 Text(bar.scheduled.currency).font(.system(size: 12, weight: .medium, design: .monospaced)).foregroundStyle(Color.sweeplyNavy)
                             }
                         }
@@ -721,8 +721,8 @@ struct FinancialReportsView: View {
                 }
 
                 HStack(spacing: 16) {
-                    legendItem(color: Color.sweeplyAccent, label: "Collected")
-                    legendItem(color: Color.sweeplyNavy.opacity(0.3), label: "Outstanding")
+                    legendItem(color: Color.sweeplyNavy.opacity(0.5), label: "Collected")
+                    legendItem(color: Color.sweeplyBorder, label: "Outstanding")
                 }
             }
         }
@@ -783,7 +783,7 @@ struct FinancialReportsView: View {
                         // Highlight strip
                         if isSelected {
                             RectangleMark(x: .value("Week", week.weekLabel))
-                                .foregroundStyle(Color.sweeplyAccent.opacity(0.12))
+                                .foregroundStyle(Color.sweeplyNavy.opacity(0.06))
                                 .cornerRadius(6)
                         }
 
@@ -792,7 +792,7 @@ struct FinancialReportsView: View {
                             y: .value("Jobs", week.jobsAmount),
                             stacking: .standard
                         )
-                        .foregroundStyle(isSelected ? Color.sweeplyNavy : Color.sweeplyNavy.opacity(0.55))
+                        .foregroundStyle(isSelected ? Color.sweeplyNavy.opacity(0.65) : Color.sweeplyNavy.opacity(0.35))
                         .cornerRadius(4)
 
                         BarMark(
@@ -800,7 +800,7 @@ struct FinancialReportsView: View {
                             y: .value("Invoices", week.invoicesAmount),
                             stacking: .standard
                         )
-                        .foregroundStyle(isSelected ? Color.sweeplyAccent : Color.sweeplyAccent.opacity(0.50))
+                        .foregroundStyle(isSelected ? Color.sweeplyNavy.opacity(0.45) : Color.sweeplyBorder)
                         .cornerRadius(4)
                     }
                     .chartOverlay { proxy in
@@ -852,8 +852,8 @@ struct FinancialReportsView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
 
                 HStack(spacing: 16) {
-                    legendDot(color: Color.sweeplyNavy.opacity(0.75), label: "Scheduled jobs")
-                    legendDot(color: Color.sweeplyAccent.opacity(0.65), label: "Outstanding invoices")
+                    legendDot(color: Color.sweeplyNavy.opacity(0.45), label: "Scheduled jobs")
+                    legendDot(color: Color.sweeplyTextSub.opacity(0.5), label: "Outstanding invoices")
                 }
 
                 if forecastTotal == 0 {
@@ -1285,12 +1285,12 @@ struct FinancialReportsView: View {
 
     private func expenseCategoryColor(_ cat: ExpenseCategory) -> Color {
         switch cat {
-        case .supplies:  return Color(hue: 0.58, saturation: 0.70, brightness: 0.75)
-        case .fuel:      return Color.sweeplyWarning
-        case .equipment: return Color(hue: 0.55, saturation: 0.65, brightness: 0.70)
-        case .insurance: return Color.sweeplyAccent
-        case .marketing: return Color(hue: 0.08, saturation: 0.75, brightness: 0.80)
-        case .other:     return Color.sweeplyTextSub
+        case .supplies:  return Color.sweeplyTextSub.opacity(0.5)
+        case .fuel:      return Color.sweeplyTextSub.opacity(0.6)
+        case .equipment: return Color.sweeplyTextSub.opacity(0.5)
+        case .insurance: return Color.sweeplyTextSub.opacity(0.6)
+        case .marketing: return Color.sweeplyTextSub.opacity(0.5)
+        case .other:     return Color.sweeplyTextSub.opacity(0.4)
         }
     }
 
@@ -1377,7 +1377,7 @@ struct FinancialReportsView: View {
                 Spacer()
                 Text("\(revenueByService.count) service\(revenueByService.count == 1 ? "" : "s")")
                     .font(.system(size: 10, weight: .semibold, design: .monospaced))
-                    .foregroundStyle(Color.sweeplyAccent)
+                    .foregroundStyle(Color.sweeplyNavy.opacity(0.6))
             }
             .padding(.bottom, 10)
             
@@ -1432,7 +1432,7 @@ struct FinancialReportsView: View {
                 Spacer()
                 Text("\(customServiceJobs.count) job\(customServiceJobs.count == 1 ? "" : "s")")
                     .font(.system(size: 10, weight: .semibold, design: .monospaced))
-                    .foregroundStyle(Color.sweeplyAccent)
+                    .foregroundStyle(Color.sweeplyNavy.opacity(0.6))
             }
             .padding(.bottom, 10)
 
@@ -1449,11 +1449,11 @@ struct FinancialReportsView: View {
             } else {
                 let addOnTotal = customServiceJobs.reduce(0) { $0 + $1.price }
                 HStack(spacing: 0) {
-                    statChip(label: "Revenue", value: addOnTotal.currency, color: Color.sweeplyAccent)
+                    statChip(label: "Revenue", value: addOnTotal.currency, color: Color.sweeplyNavy.opacity(0.6))
                     Divider().frame(height: 36).padding(.horizontal, 12)
                     statChip(label: "Avg Ticket",
                              value: (addOnTotal / Double(customServiceJobs.count)).currency,
-                             color: Color.sweeplyNavy)
+                             color: Color.sweeplyTextSub)
                 }
                 .padding(.bottom, 10)
 
@@ -1698,10 +1698,10 @@ struct FinancialReportsView: View {
                             .tracking(0.6)
                             .padding(.bottom, 4)
 
-                        agingRow(label: "Not due yet".translated(),      invoices: agingNotDueYet, color: Color.sweeplyAccent)
-                        agingRow(label: "1–7 days overdue".translated(), invoices: aging1to7,      color: Color.sweeplyWarning)
-                        agingRow(label: "8–30 days".translated(),        invoices: aging8to30,     color: Color(hue: 0.07, saturation: 0.75, brightness: 0.78))
-                        agingRow(label: "30+ days".translated(),         invoices: aging30plus,    color: Color.sweeplyDestructive)
+                        agingRow(label: "Not due yet".translated(),      invoices: agingNotDueYet, color: Color.sweeplyAccent.opacity(0.7))
+                        agingRow(label: "1–7 days overdue".translated(), invoices: aging1to7,      color: Color.sweeplyWarning.opacity(0.7))
+                        agingRow(label: "8–30 days".translated(),        invoices: aging8to30,     color: Color.sweeplyWarning.opacity(0.5))
+                        agingRow(label: "30+ days".translated(),         invoices: aging30plus,    color: Color.sweeplyDestructive.opacity(0.7))
                     }
                     .padding(12)
                     .background(Color.sweeplyBackground)
@@ -1746,7 +1746,7 @@ struct FinancialReportsView: View {
                     .foregroundStyle(.white)
                     .padding(.horizontal, 6)
                     .padding(.vertical, 2)
-                    .background(color.opacity(0.75))
+                    .background(color.opacity(0.25))
                     .clipShape(Capsule())
                 Text(invoices.reduce(0) { $0 + $1.total }.currency)
                     .font(.system(size: 12, weight: .semibold, design: .monospaced))
@@ -1800,11 +1800,11 @@ struct FinancialReportsView: View {
         HStack(spacing: 12) {
             ZStack {
                 RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .fill(Color.sweeplyAccent.opacity(0.10))
+                    .fill(Color.sweeplyBorder.opacity(0.5))
                     .frame(width: 34, height: 34)
                 Image(systemName: stat.method.icon)
                     .font(.system(size: 13, weight: .medium))
-                    .foregroundStyle(Color.sweeplyAccent)
+                    .foregroundStyle(Color.sweeplyTextSub)
             }
             Text(stat.method.rawValue)
                 .font(.system(size: 14, weight: .medium))
@@ -1815,7 +1815,7 @@ struct FinancialReportsView: View {
                 .foregroundStyle(.white)
                 .padding(.horizontal, 7)
                 .padding(.vertical, 3)
-                .background(Color.sweeplyNavy.opacity(0.45))
+                .background(Color.sweeplyBorder.opacity(0.6))
                 .clipShape(Capsule())
             Text(stat.total.currency)
                 .font(.system(size: 13, weight: .semibold, design: .monospaced))
@@ -1859,9 +1859,9 @@ struct FinancialReportsView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(12)
-        .background(color.opacity(0.06))
+        .background(color.opacity(0.04))
         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(color.opacity(0.18), lineWidth: 1))
+        .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(color.opacity(0.10), lineWidth: 1))
     }
 
     /// Generic pill-style toggle used across sections.

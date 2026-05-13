@@ -19,8 +19,8 @@ final class SubscriptionManager {
     // MARK: Constants
 
     static let apiKey                = "appl_hoKbHHnURrLVPDKpGKktXmrSsLJ"
-    static let proEntitlementID      = "pro"
-    static let standardEntitlementID = "standard"
+    static let proEntitlementID      = "entl4506c4eec6"
+    static let standardEntitlementID = "entld95b7c9167"
 
     // MARK: State
 
@@ -66,25 +66,37 @@ final class SubscriptionManager {
 
     // MARK: - Trial: Local (users who tapped "I'll decide later")
 
-    private static let localTrialStartKey   = "sweeply_trial_start"
+    private static let localTrialStartKey     = "sweeply_trial_start"
     private static let localTrialDurationDays = 30
+    private var currentUserId: UUID?
+
+    func setUserId(_ userId: UUID?) {
+        self.currentUserId = userId
+    }
+
+    private var perUserTrialKey: String {
+        guard let uid = currentUserId else { return Self.localTrialStartKey }
+        return "\(Self.localTrialStartKey)_\(uid.uuidString)"
+    }
 
     var isInLocalTrial: Bool {
         guard !isStandard, !isPro else { return false }
-        guard let start = UserDefaults.standard.object(forKey: Self.localTrialStartKey) as? Date else { return false }
+        guard let start = UserDefaults.standard.object(forKey: perUserTrialKey) as? Date else { return false }
         let elapsed = Calendar.current.dateComponents([.day], from: start, to: Date()).day ?? 0
         return elapsed < Self.localTrialDurationDays
     }
 
     var localTrialDaysRemaining: Int {
-        guard let start = UserDefaults.standard.object(forKey: Self.localTrialStartKey) as? Date else { return 0 }
+        guard let start = UserDefaults.standard.object(forKey: perUserTrialKey) as? Date else { return 0 }
         let elapsed = Calendar.current.dateComponents([.day], from: start, to: Date()).day ?? 0
         return max(0, Self.localTrialDurationDays - elapsed)
     }
 
-    func startLocalTrial() {
-        guard UserDefaults.standard.object(forKey: Self.localTrialStartKey) == nil else { return }
-        UserDefaults.standard.set(Date(), forKey: Self.localTrialStartKey)
+    func startLocalTrial(userId: UUID? = nil) {
+        let uid = userId ?? currentUserId
+        let key = uid != nil ? "\(Self.localTrialStartKey)_\(uid!.uuidString)" : Self.localTrialStartKey
+        guard UserDefaults.standard.object(forKey: key) == nil else { return }
+        UserDefaults.standard.set(Date(), forKey: key)
     }
 
     // MARK: - Combined

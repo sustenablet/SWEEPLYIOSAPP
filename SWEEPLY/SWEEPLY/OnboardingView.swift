@@ -1456,7 +1456,7 @@ struct OnboardingView: View {
 
                 Button {
                     UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                    subscriptionManager.startLocalTrial()
+                    subscriptionManager.startLocalTrial(userId: session.userId)
                     advance()
                 } label: {
                     Text("I'll decide later".translated())
