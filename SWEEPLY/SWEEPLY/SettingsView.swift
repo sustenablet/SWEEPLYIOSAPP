@@ -6,7 +6,6 @@ struct SettingsView: View {
     @Environment(ProfileStore.self)        private var profileStore
     @Environment(AppSession.self)          private var session
     @Environment(NotificationManager.self) private var notificationManager
-    @Environment(SubscriptionManager.self) private var subscriptionManager
 
     @State private var isSaving = false
     @State private var localProfile: UserProfile = MockData.profile
@@ -20,34 +19,10 @@ struct SettingsView: View {
     @State private var showLogoutConfirmation = false
     @State private var showDeleteConfirmation = false
     @State private var isDeletingAccount = false
-    @State private var showPaywall = false
     @State private var currentTestNotificationIndex = 0
     @AppStorage("hasSeenIntroOnboarding") private var hasSeenIntroOnboarding = true
 
     private var canSave: Bool { !isSaving && validationMessage == nil && hasUnsavedChanges }
-
-    private var subscriptionRowIcon: String {
-        switch subscriptionManager.accessLevel {
-        case .pro:                    return "checkmark.seal.fill"
-        case .standard:               return "star.circle.fill"
-        case .trial(let days) where days > 0: return "gift.fill"
-        default:                      return "creditcard"
-        }
-    }
-    private var subscriptionRowTitle: String {
-        switch subscriptionManager.accessLevel {
-        case .pro:               return "Sweeply Pro"
-        case .standard:          return "Sweeply Standard"
-        case .trial(let days):   return "Free Trial — \(days) days left"
-        case .expired:           return "Subscription"
-        }
-    }
-    private var subscriptionRowColor: Color {
-        switch subscriptionManager.accessLevel {
-        case .pro, .trial:  return Color.sweeplyAccent
-        default:            return Color.sweeplyNavy
-        }
-    }
 
     private var hasUnsavedChanges: Bool {
         profilesMatch(normalizedProfile(localProfile), normalizedProfile(baselineProfile)) == false
@@ -105,15 +80,6 @@ struct SettingsView: View {
                             if let url = URL(string: "https://sweeplyapp.online/terms") {
                                 UIApplication.shared.open(url)
                             }
-                        }
-                        rowDivider()
-                        menuRow(
-                            icon: subscriptionRowIcon,
-                            title: subscriptionRowTitle,
-                            color: subscriptionRowColor
-                        ) {
-                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                            showPaywall = true
                         }
                     }
 
@@ -197,10 +163,6 @@ struct SettingsView: View {
                     hasSeenIntroOnboarding = true
                     showIntroOnboarding = false
                 }
-            }
-            .sheet(isPresented: $showPaywall) {
-                SubscriptionPaywallView()
-                    .environment(subscriptionManager)
             }
             .sheet(isPresented: $showServiceCatalog) { ServiceCatalogView() }
             .sheet(isPresented: $showJobExtras)      { ServiceCatalogView(addonsOnly: true) }

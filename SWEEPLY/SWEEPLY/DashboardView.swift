@@ -14,7 +14,6 @@ struct DashboardView: View {
     @Environment(ProfileStore.self) private var profileStore
     @Environment(NotificationsStore.self) private var notificationsStore
     @Environment(TeamStore.self) private var teamStore
-    @Environment(SubscriptionManager.self) private var subscriptionManager
     @AppStorage("newFeatureDot_revenueBar") private var dotRevenueBar = false
 
     @State private var appeared = false
@@ -223,16 +222,14 @@ private var healthCards: [DashboardHealthCardModel] {
                 .padding(.bottom, 24)
 
                 // ── Pro: Weekly Revenue Progress ─────────────────
-                if subscriptionManager.hasProAccess {
-                    weeklyRevenueProgress
-                        .padding(.horizontal, 20)
-                        .padding(.bottom, 8)
-                        .contentShape(Rectangle())
-                        .onTapGesture {
-                            guard dotRevenueBar else { return }
-                            withAnimation(.easeInOut(duration: 0.2)) { dotRevenueBar = false }
-                        }
-                }
+                weeklyRevenueProgress
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 8)
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        guard dotRevenueBar else { return }
+                        withAnimation(.easeInOut(duration: 0.2)) { dotRevenueBar = false }
+                    }
 
                 // ── Sub-sections with spacing ────────────────────
                 VStack(spacing: 12) {

@@ -6,7 +6,6 @@ struct FinancialReportsView: View {
     @Environment(InvoicesStore.self)       private var invoicesStore
     @Environment(ExpenseStore.self)        private var expenseStore
     @Environment(JobsStore.self)           private var jobsStore
-    @Environment(SubscriptionManager.self) private var subscriptionManager
 
     // ── Persisted state ──
     @AppStorage("financesOverviewPeriod")  private var overviewPeriodRaw: String = OverviewPeriod.sixMonth.rawValue

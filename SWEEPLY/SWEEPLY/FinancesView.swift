@@ -9,7 +9,6 @@ struct FinancesView: View {
     @Environment(AppSession.self) private var session
     @Environment(ExpenseStore.self) private var expenseStore
     @Environment(TeamStore.self)    private var teamStore
-    @Environment(SubscriptionManager.self) private var subscriptionManager
 
     @AppStorage("financesChartPeriod")       private var selectedPeriodRaw: String = ChartPeriod.week.rawValue
     @AppStorage("financesInvoiceFilter")     private var selectedFilterRaw: String = InvoiceFilter.all.rawValue
@@ -24,7 +23,6 @@ struct FinancesView: View {
     @State private var showInvoicesList = false
     @State private var showExpenses = false
     @State private var showReports = false
-    @State private var showReportsPaywall = false
     @State private var showNewInvoice = false
     @State private var selectedInvoiceId: UUID? = nil
     @State private var showInvoiceDetail = false
@@ -241,15 +239,9 @@ struct FinancesView: View {
                 summaryBlock
                 chartSection
                 secondaryMetrics
-                if subscriptionManager.hasProAccess {
-                    expenseSummarySection
-                } else {
-                    proFinanceBanner
-                }
+                expenseSummarySection
                 invoicesBlock
-                if subscriptionManager.hasProAccess {
-                    teamPayrollSection
-                }
+                teamPayrollSection
             }
             .padding(.horizontal, 20)
             .padding(.bottom, 80)
@@ -289,11 +281,6 @@ struct FinancesView: View {
                 .environment(invoicesStore)
                 .environment(expenseStore)
                 .environment(jobsStore)
-                .environment(subscriptionManager)
-        }
-        .sheet(isPresented: $showReportsPaywall) {
-            SubscriptionPaywallView()
-                .environment(subscriptionManager)
         }
         .sheet(isPresented: Binding(
             get: { markPaidInvoice != nil },
@@ -341,12 +328,8 @@ struct FinancesView: View {
                     }
                     Button {
                         UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                        if subscriptionManager.hasProAccess {
-                            withAnimation(.easeInOut(duration: 0.2)) { dotReports = false }
-                            showReports = true
-                        } else {
-                            showReportsPaywall = true
-                        }
+                        withAnimation(.easeInOut(duration: 0.2)) { dotReports = false }
+                        showReports = true
                     } label: {
                         Label("Reports", systemImage: "chart.bar.doc.horizontal.fill")
                     }
@@ -362,7 +345,7 @@ struct FinancesView: View {
                                 RoundedRectangle(cornerRadius: 12, style: .continuous)
                                     .stroke(Color.sweeplyBorder, lineWidth: 1)
                             )
-                        if dotReports && subscriptionManager.hasProAccess {
+                        if dotReports {
                             NewFeatureDot()
                                 .offset(x: 4, y: -4)
                         }

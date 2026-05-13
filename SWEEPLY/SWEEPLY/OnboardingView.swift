@@ -1,6 +1,5 @@
 import SwiftUI
 import UserNotifications
-import RevenueCat
 
 struct OnboardingView: View {
     var isSignUpFlow: Bool = false
@@ -22,15 +21,6 @@ struct OnboardingView: View {
     @Environment(AppSession.self)          private var session
     @Environment(TeamStore.self)           private var teamStore
     @Environment(ClientsStore.self)        private var clientsStore
-    @Environment(SubscriptionManager.self) private var subscriptionManager
-
-    // Paywall step local enums (mirrors private types in SubscriptionPaywallView)
-    private enum OBPlan: String, CaseIterable {
-        case standard = "Standard"; case pro = "Pro"
-    }
-    private enum OBBilling: String, CaseIterable {
-        case monthly = "Monthly"; case yearly = "Yearly"
-    }
 
     @State private var step = 0
     @State private var goingForward = true
@@ -51,8 +41,6 @@ struct OnboardingView: View {
     @State private var showPassword = false
     @State private var isCreatingAccount = false
     @State private var accountError: String? = nil
-    @State private var emailError: String? = nil
-    @State private var isCheckingEmail = false
 
     // Existing identity fields (kept for saveAndFinish compatibility)
     @State private var businessName = ""
@@ -67,12 +55,6 @@ struct OnboardingView: View {
 
     // Step 4: Notifications
     @State private var notificationRequested = false
-
-    // Step 5: Paywall
-    @State private var paywallPlan: OBPlan = .pro
-    @State private var paywallBilling: OBBilling = .monthly
-    @State private var paywallPurchasing = false
-    @State private var paywallError: String?
 
     // Step 6: Location
     @State private var locationRequested = false
@@ -151,9 +133,6 @@ struct OnboardingView: View {
     private var passwordHasLower: Bool { password.range(of: "[a-z]", options: .regularExpression) != nil }
     private var passwordHasNumber: Bool { password.range(of: "[0-9]", options: .regularExpression) != nil }
     private var passwordIsValid: Bool { passwordHas8 && passwordHasUpper && passwordHasLower && passwordHasNumber }
-    private var isEmailStepValid: Bool {
-        isValidEmailAddress(email) && !isCheckingEmail && emailError == nil
-    }
 
     private var isBlueStep: Bool { step == 10 || step == 11 || step == 13 }
 
@@ -201,18 +180,6 @@ struct OnboardingView: View {
         // Page A: "Manage a team" → badge the team section
         if describesYouIndex == 2 {
             UserDefaults.standard.set(true, forKey: "sweeply_team_badge")
-        }
-    }
-
-    private func validateEmail() async {
-        await MainActor.run { isCheckingEmail = true; emailError = nil }
-        let result = await session.checkEmailAvailable(email: email.trimmingCharacters(in: .whitespacesAndNewlines))
-        await MainActor.run {
-            isCheckingEmail = false
-            emailError = result.error
-            if result.available {
-                advance()
-            }
         }
     }
 
@@ -710,53 +677,45 @@ struct OnboardingView: View {
                                     .font(.system(size: 20))
                                     .foregroundStyle(agreedToTerms ? Color.sweeplyAccent : Color.sweeplyBorder)
                                     .animation(.spring(response: 0.25, dampingFraction: 0.7), value: agreedToTerms)
-                                VStack(alignment: .leading, spacing: 2) {
+                                HStack(spacing: 3) {
                                     Text("I agree to Sweeply's".translated())
                                         .font(.system(size: 13))
                                         .foregroundStyle(Color.sweeplyTextSub)
-                                    HStack(spacing: 4) {
-                                        Button {
-                                            if let url = URL(string: "https://sweeplyapp.online/terms") {
-                                                UIApplication.shared.open(url)
-                                            }
-                                        } label: {
-                                            Text("Terms of Service".translated())
-                                                .font(.system(size: 13, weight: .medium))
-                                                .foregroundStyle(Color.sweeplyAccent)
-                                                .underline()
+                                    Button {
+                                        if let url = URL(string: "https://sweeplyapp.online/terms") {
+                                            UIApplication.shared.open(url)
                                         }
-                                        .buttonStyle(.plain)
-                                        Text("·")
-                                            .font(.system(size: 13))
-                                            .foregroundStyle(Color.sweeplyTextSub)
-                                        Button {
-                                            if let url = URL(string: "https://sweeplyapp.online/privacy") {
-                                                UIApplication.shared.open(url)
-                                            }
-                                        } label: {
-                                            Text("Privacy Policy".translated())
-                                                .font(.system(size: 13, weight: .medium))
-                                                .foregroundStyle(Color.sweeplyAccent)
-                                                .underline()
-                                        }
-                                        .buttonStyle(.plain)
+                                    } label: {
+                                        Text("Terms of Service".translated())
+                                            .font(.system(size: 13, weight: .medium))
+                                            .foregroundStyle(Color.sweeplyAccent)
+                                            .underline()
                                     }
+                                    .buttonStyle(.plain)
+                                    Text("and".translated())
+                                        .font(.system(size: 13))
+                                        .foregroundStyle(Color.sweeplyTextSub)
+                                    Button {
+                                        if let url = URL(string: "https://sweeplyapp.online/privacy") {
+                                            UIApplication.shared.open(url)
+                                        }
+                                    } label: {
+                                        Text("Privacy Policy".translated())
+                                            .font(.system(size: 13, weight: .medium))
+                                            .foregroundStyle(Color.sweeplyAccent)
+                                            .underline()
+                                    }
+                                    .buttonStyle(.plain)
                                 }
+                                .fixedSize(horizontal: false, vertical: true)
                             }
-                            .fixedSize(horizontal: false, vertical: true)
                         }
                         .buttonStyle(.plain)
                     }
                 })
             },
-            isEnabled: isEmailStepValid && agreedToTerms,
-            isLoading: isCheckingEmail,
-            emailError: emailError,
-            onContinue: {
-                Task {
-                    await validateEmail()
-                }
-            }
+            isEnabled: isValidEmailAddress(email) && agreedToTerms,
+            onContinue: { advance() }
         )
     }
 
@@ -858,12 +817,12 @@ struct OnboardingView: View {
                 })
             },
             isEnabled: passwordIsValid && !isCreatingAccount,
-            isLoading: isCreatingAccount,
             onContinue: {
                 focusedField = nil
                 passwordFocused = false
                 advance()
-            }
+            },
+            isLoading: isCreatingAccount
         )
     }
 
@@ -888,9 +847,8 @@ struct OnboardingView: View {
         subtitle: String?,
         content: () -> AnyView,
         isEnabled: Bool,
-        isLoading: Bool = false,
-        emailError: String? = nil,
-        onContinue: @escaping () -> Void
+        onContinue: @escaping () -> Void,
+        isLoading: Bool = false
     ) -> some View {
         VStack(spacing: 0) {
             ScrollView(showsIndicators: false) {
@@ -915,21 +873,13 @@ struct OnboardingView: View {
                     content()
                         .padding(.horizontal, 24)
                         .padding(.bottom, 32)
-
-                    if let err = emailError {
-                        Text(err)
-                            .font(.system(size: 13))
-                            .foregroundStyle(Color.sweeplyDestructive)
-                            .padding(.horizontal, 24)
-                            .padding(.bottom, 16)
-                    }
                 }
             }
             .scrollDismissesKeyboard(.interactively)
 
             Divider().opacity(0.5)
             primaryButton(
-                label: isLoading ? "Checking…" : "Continue",
+                label: isLoading ? "Creating account…" : "Continue",
                 isEnabled: isEnabled,
                 action: onContinue
             )
@@ -1395,274 +1345,84 @@ struct OnboardingView: View {
         }
     }
 
-    // MARK: - Step 6: Paywall (trial intro)
+    // MARK: - Step 6: Final Prep
 
     private var stepPaywall: some View {
         ZStack {
             Color.sweeplyBackground.ignoresSafeArea()
 
-            VStack(spacing: 0) {
+            VStack(spacing: 24) {
+                Spacer()
+                Image("MascotSweeply")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 84, height: 84)
 
-                // ── Trial hero ────────────────────────────────────────
-                VStack(spacing: 8) {
-                    Image("MascotSweeply")
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 60, height: 60)
-                        .padding(.top, 20)
-
-                    HStack(spacing: 6) {
-                        Image(systemName: "gift.fill")
-                            .font(.system(size: 11, weight: .semibold))
-                        Text("Your free trial starts today".translated())
-                            .font(.system(size: 12, weight: .semibold))
-                    }
-                    .foregroundStyle(Color.sweeplyAccent)
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 7)
-                    .background(Color.sweeplyAccent.opacity(0.10))
-                    .overlay(Capsule().stroke(Color.sweeplyAccent.opacity(0.3), lineWidth: 1))
-                    .clipShape(Capsule())
-
-                    VStack(spacing: 4) {
-                        Text("30 days free,\nthen choose your plan.".translated())
-                            .font(.system(size: 22, weight: .bold))
-                            .foregroundStyle(Color.sweeplyNavy)
-                            .multilineTextAlignment(.center)
-                            .tracking(-0.4)
-                        Text("No payment needed until your trial ends.".translated())
-                            .font(.system(size: 13))
-                            .foregroundStyle(Color.sweeplyTextSub)
-                            .multilineTextAlignment(.center)
-                    }
-                    .padding(.horizontal, 28)
-                }
-                .padding(.bottom, 16)
-
-                // ── Plan toggle ───────────────────────────────────────
-                obPlanToggle
-                    .padding(.horizontal, 20)
-                    .padding(.bottom, 10)
-
-                // ── Feature box ───────────────────────────────────────
-                obFeatureBox
-                    .padding(.horizontal, 20)
-                    .padding(.bottom, 10)
-
-                // ── Billing cards ─────────────────────────────────────
-                obBillingCards
-                    .padding(.horizontal, 20)
-                    .padding(.bottom, 14)
-
-                if let err = paywallError {
-                    Text(err)
-                        .font(.system(size: 12))
-                        .foregroundStyle(Color.sweeplyDestructive)
+                VStack(spacing: 10) {
+                    Text("Everything is ready".translated())
+                        .font(.system(size: 28, weight: .bold, design: .rounded))
+                        .foregroundStyle(Color.sweeplyNavy)
                         .multilineTextAlignment(.center)
-                        .padding(.horizontal, 20)
-                        .padding(.bottom, 8)
+                    Text("There’s no subscription setup here anymore. Finish onboarding and start using every part of Sweeply.".translated())
+                        .font(.system(size: 15))
+                        .foregroundStyle(Color.sweeplyTextSub)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 28)
                 }
 
-                // ── CTA ───────────────────────────────────────────────
+                VStack(alignment: .leading, spacing: 12) {
+                    onboardingReadyRow(icon: "calendar", text: "Scheduling is ready".translated())
+                    onboardingReadyRow(icon: "doc.text.fill", text: "Invoices and payments are ready".translated())
+                    onboardingReadyRow(icon: "person.2.fill", text: "Clients and team tools are ready".translated())
+                    onboardingReadyRow(icon: "chart.bar.fill", text: "Reports and finances are unlocked".translated())
+                }
+                .padding(.horizontal, 28)
+
                 Button {
                     UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-                    Task { await obStartTrial() }
+                    advance()
                 } label: {
-                    Group {
-                        if paywallPurchasing {
-                            ProgressView().tint(.white)
-                        } else {
-                            Text(paywallBilling == .yearly ? "Subscribe Yearly".translated() : "Start Free Trial".translated())
-                                .font(.system(size: 17, weight: .bold))
-                                .foregroundStyle(.white)
-                        }
-                    }
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 52)
-                    .background(paywallPlan == .pro ? Color.sweeplyAccent : Color.sweeplyNavy)
-                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                    .shadow(color: Color.sweeplyNavy.opacity(0.18), radius: 8, x: 0, y: 4)
+                    Text("Continue".translated())
+                        .font(.system(size: 17, weight: .bold))
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 52)
+                        .background(Color.sweeplyAccent)
+                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        .shadow(color: Color.sweeplyNavy.opacity(0.18), radius: 8, x: 0, y: 4)
                 }
                 .buttonStyle(.plain)
-                .disabled(paywallPurchasing)
-                .padding(.horizontal, 20)
-                .padding(.bottom, 10)
+                .padding(.horizontal, 28)
 
                 Button {
                     UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                    subscriptionManager.startLocalTrial(userId: session.userId)
-                    advance()
+                    saveAndFinish()
                 } label: {
-                    Text("I'll decide later".translated())
-                        .font(.system(size: 13, weight: .medium))
+                    Text("Skip to dashboard".translated())
+                        .font(.system(size: 14, weight: .medium))
                         .foregroundStyle(Color.sweeplyTextSub)
                 }
                 .buttonStyle(.plain)
-                .padding(.bottom, 24)
+                Spacer()
             }
         }
-        .task { await subscriptionManager.loadOfferings() }
     }
 
-    private var obPlanToggle: some View {
-        HStack(spacing: 0) {
-            ForEach(OBPlan.allCases, id: \.self) { plan in
-                Button {
-                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                    withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) { paywallPlan = plan }
-                } label: {
-                    HStack(spacing: 6) {
-                        Text(plan.rawValue)
-                            .font(.system(size: 14, weight: paywallPlan == plan ? .semibold : .regular))
-                            .foregroundStyle(paywallPlan == plan ? .white : Color.sweeplyNavy.opacity(0.5))
-                        if plan == .pro {
-                            Text("Popular".translated())
-                                .font(.system(size: 10, weight: .bold))
-                                .foregroundStyle(paywallPlan == .pro ? .white : Color.sweeplyAccent)
-                                .padding(.horizontal, 7).padding(.vertical, 3)
-                                .background(paywallPlan == .pro ? Color.white.opacity(0.2) : Color.sweeplyAccent.opacity(0.15))
-                                .overlay(Capsule().stroke(paywallPlan == .pro ? Color.white.opacity(0.3) : Color.sweeplyAccent.opacity(0.5), lineWidth: 1))
-                                .clipShape(Capsule())
-                        }
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 7)
-                    .background(paywallPlan == plan ? Color.sweeplyNavy : Color.clear)
-                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-                }
-                .buttonStyle(.plain)
-            }
+    private func onboardingReadyRow(icon: String, text: String) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: icon)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(Color.sweeplyAccent)
+                .frame(width: 20)
+            Text(text)
+                .font(.system(size: 14, weight: .medium))
+                .foregroundStyle(Color.sweeplyNavy.opacity(0.8))
         }
-        .padding(3)
-        .background(Color.sweeplyNavy.opacity(0.06))
-        .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).stroke(Color.sweeplyNavy.opacity(0.1), lineWidth: 1))
-        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-    }
-
-    private var obFeatureBox: some View {
-        let features: [(icon: String, text: String, highlight: Bool)] = paywallPlan == .pro ? [
-            ("checkmark.circle.fill",              "Everything in Standard",           true),
-            ("person.3.fill",                      "Unlimited cleaners & teams",        false),
-            ("chart.bar.xaxis",                    "Revenue analytics dashboard",       false),
-            ("checklist",                          "Custom job checklists & notes",     false),
-            ("waveform.path.ecg",                  "Predictive cash flow",              false),
-            ("envelope.badge.fill",                "Invoice reminders & tracking",      false),
-            ("bubble.left.and.bubble.right.fill",  "Team messaging & job updates",      false),
-            ("folder.badge.plus",                  "Unlimited expense categories",      false),
-        ] : [
-            ("person.fill",           "Unlimited client profiles",        false),
-            ("briefcase.fill",        "Unlimited jobs & invoices",        false),
-            ("person.2.fill",         "Add up to 3 team members",        false),
-            ("calendar",              "Smart calendar & recurring jobs",  false),
-            ("chart.pie.fill",        "Expense categorization",           false),
-            ("square.grid.2x2.fill",  "Home-screen widgets",             false),
-        ]
-        return VStack(alignment: .leading, spacing: 8) {
-            ForEach(features, id: \.text) { f in
-                HStack(spacing: 10) {
-                    Image(systemName: f.icon)
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundStyle(f.highlight ? Color.sweeplyAccent : Color.sweeplyNavy.opacity(0.45))
-                        .frame(width: 18)
-                    Text(f.text)
-                        .font(.system(size: 13, weight: f.highlight ? .semibold : .regular))
-                        .foregroundStyle(f.highlight ? Color.sweeplyNavy : Color.sweeplyNavy.opacity(0.75))
-                }
-            }
-        }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 16)
         .padding(.vertical, 14)
-        .frame(maxWidth: .infinity, alignment: .leading)
         .background(Color.sweeplySurface)
-        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(
-                    paywallPlan == .pro
-                        ? LinearGradient(colors: [Color.sweeplyAccent.opacity(0.5), Color.sweeplyAccent.opacity(0.15)], startPoint: .topLeading, endPoint: .bottomTrailing)
-                        : LinearGradient(colors: [Color.sweeplyNavy.opacity(0.12), Color.sweeplyNavy.opacity(0.06)], startPoint: .topLeading, endPoint: .bottomTrailing),
-                    lineWidth: 1.5
-                )
-        )
-        .animation(.spring(response: 0.4, dampingFraction: 0.8), value: paywallPlan)
-    }
-
-    private var obBillingCards: some View {
-        let monthlyPrice = paywallPlan == .pro
-            ? (subscriptionManager.offerings?.current?.package(identifier: "$rc_custom_pro_monthly")?.storeProduct.localizedPriceString ?? "$19.99")
-            : (subscriptionManager.offerings?.current?.package(identifier: "$rc_monthly")?.storeProduct.localizedPriceString ?? "$8.99")
-        let yearlyPrice = paywallPlan == .pro
-            ? (subscriptionManager.offerings?.current?.package(identifier: "$rc_custom_pro_yearly")?.storeProduct.localizedPriceString ?? "$179.99")
-            : (subscriptionManager.offerings?.current?.package(identifier: "$rc_annual")?.storeProduct.localizedPriceString ?? "$79.99")
-        let yearlyPerMonth = paywallPlan == .pro ? "~$15.00/mo" : "~$6.67/mo"
-
-        return HStack(spacing: 10) {
-            ForEach(OBBilling.allCases, id: \.self) { period in
-                let isSelected = paywallBilling == period
-                Button {
-                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                    withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) { paywallBilling = period }
-                } label: {
-                    VStack(alignment: .leading, spacing: 4) {
-                        HStack {
-                            Text(period.rawValue)
-                                .font(.system(size: 13, weight: .semibold))
-                                .foregroundStyle(isSelected ? Color.sweeplyNavy : Color.sweeplyNavy.opacity(0.5))
-                            Spacer()
-                            if period == .yearly {
-                                Text("Save 26%")
-                                    .font(.system(size: 10, weight: .bold))
-                                    .foregroundStyle(isSelected ? Color.sweeplyAccent : Color.sweeplyNavy.opacity(0.35))
-                                    .padding(.horizontal, 7).padding(.vertical, 3)
-                                    .background(isSelected ? Color.sweeplyAccent.opacity(0.12) : Color.sweeplyNavy.opacity(0.06))
-                                    .clipShape(Capsule())
-                            }
-                        }
-                        Text(period == .monthly ? monthlyPrice : yearlyPrice)
-                            .font(Font.sweeplyDisplay(17, weight: .bold))
-                            .foregroundStyle(isSelected ? Color.sweeplyNavy : Color.sweeplyNavy.opacity(0.45))
-                        Text(period == .monthly ? "/month" : "\(yearlyPerMonth) · billed yearly")
-                            .font(.system(size: 11))
-                            .foregroundStyle(isSelected ? Color.sweeplyNavy.opacity(0.5) : Color.sweeplyNavy.opacity(0.3))
-                    }
-                    .padding(.horizontal, 14).padding(.vertical, 14)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(isSelected ? Color.sweeplySurface : Color.sweeplyNavy.opacity(0.04))
-                    .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(isSelected ? Color.sweeplyAccent : Color.sweeplyNavy.opacity(0.1), lineWidth: isSelected ? 1.5 : 1))
-                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-                    .shadow(color: isSelected ? Color.sweeplyAccent.opacity(0.08) : .clear, radius: 8, x: 0, y: 3)
-                }
-                .buttonStyle(.plain)
-            }
-        }
-    }
-
-    private func obStartTrial() async {
-        // Attempt to purchase the selected plan; if no package is loaded, just advance
-        let package: Package?
-        switch (paywallPlan, paywallBilling) {
-        case (.pro,      .monthly): package = subscriptionManager.offerings?.current?.package(identifier: "$rc_custom_pro_monthly")
-        case (.pro,      .yearly):  package = subscriptionManager.offerings?.current?.package(identifier: "$rc_custom_pro_yearly")
-        case (.standard, .monthly): package = subscriptionManager.offerings?.current?.package(identifier: "$rc_monthly")
-        case (.standard, .yearly):  package = subscriptionManager.offerings?.current?.package(identifier: "$rc_annual")
-        }
-        guard let package else { advance(); return }
-
-        paywallPurchasing = true
-        paywallError = nil
-        do {
-            try await subscriptionManager.purchase(package: package)
-            paywallPurchasing = false
-            advance()
-        } catch {
-            paywallPurchasing = false
-            if (error as NSError).code != 1 {
-                paywallError = "Purchase failed — you can still start your free trial."
-                try? await Task.sleep(nanoseconds: 2_500_000_000)
-                paywallError = nil
-                advance()
-            }
-        }
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 
     // MARK: - Step 5: Location

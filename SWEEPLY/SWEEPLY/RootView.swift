@@ -11,7 +11,6 @@ struct RootView: View {
     @Environment(NotificationsStore.self)   private var notificationsStore
     @Environment(TeamStore.self)            private var teamStore
     @Environment(ExpenseStore.self)         private var expenseStore
-    @Environment(SubscriptionManager.self)  private var subscriptionManager
 
     @State private var selectedTab: Tab = .dashboard
     @State private var deepLinkedJobId: UUID? = nil
@@ -31,7 +30,6 @@ struct RootView: View {
     @State private var lastNotificationRefresh = Date.distantPast
 
     @AppStorage("hasSeenIntroOnboarding") private var hasSeenIntroOnboarding = true
-    @AppStorage("lastKnownIsProPlan")      private var lastKnownIsProPlan = false
     @AppStorage("newFeatureDot_revenueBar")  private var dotRevenueBar  = false
     @AppStorage("newFeatureDot_reports")     private var dotReports     = false
     @AppStorage("newFeatureDot_teamBanner")  private var dotTeamBanner  = false
@@ -100,17 +98,6 @@ struct RootView: View {
                     if isLocked {
                         biometricLockOverlay
                     }
-                }
-                .sheet(isPresented: Binding(
-                    get: {
-                        if case .expired = subscriptionManager.accessLevel,
-                           !subscriptionManager.isLoading { return true }
-                        return false
-                    },
-                    set: { _ in }
-                )) {
-                    SubscriptionPaywallView()
-                        .interactiveDismissDisabled()
                 }
             } else if showLoginFlow {
                 LoginView(onDismiss: { showLoginFlow = false })
@@ -360,15 +347,6 @@ struct RootView: View {
         }
         .onChange(of: session.currentViewMode) { _, _ in
             Task { await jobsStore.load(isAuthenticated: session.isAuthenticated) }
-        }
-        .onChange(of: subscriptionManager.isPro) { wasPro, isPro in
-            if isPro && !wasPro {
-                // User just upgraded to Pro — light up all new-feature dots
-                dotRevenueBar = true
-                dotReports    = true
-                dotTeamBanner = true
-            }
-            lastKnownIsProPlan = isPro
         }
         .onChange(of: session.isAuthenticated) { _, authed in
             if authed {
