@@ -19,8 +19,8 @@ final class SubscriptionManager {
     // MARK: Constants
 
     static let apiKey                = "appl_hoKbHHnURrLVPDKpGKktXmrSsLJ"
-    static let proEntitlementID      = "entl4506c4eec6"
-    static let standardEntitlementID = "entld95b7c9167"
+    static let proEntitlementID      = "pro"
+    static let standardEntitlementID = "standard"
 
     // MARK: State
 

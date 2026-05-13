@@ -32,31 +32,31 @@ struct SubscriptionPaywallView: View {
 
     private var standardPackage: Package? {
         billing == .monthly
-            ? subscriptionManager.offerings?.current?.package(identifier: "sweeply_standard_monthly")
-            : subscriptionManager.offerings?.current?.package(identifier: "sweeply_standard_yearly")
+            ? subscriptionManager.offerings?.current?.package(identifier: "$rc_monthly")
+            : subscriptionManager.offerings?.current?.package(identifier: "$rc_annual")
     }
     private var proPackage: Package? {
         billing == .monthly
-            ? subscriptionManager.offerings?.current?.package(identifier: "sweeply_pro_monthly")
-            : subscriptionManager.offerings?.current?.package(identifier: "sweeply_pro_yearly")
+            ? subscriptionManager.offerings?.current?.package(identifier: "$rc_custom_pro_monthly")
+            : subscriptionManager.offerings?.current?.package(identifier: "$rc_custom_pro_yearly")
     }
 
     private var standardMonthlyPrice: String {
-        subscriptionManager.offerings?.current?.package(identifier: "sweeply_standard_monthly")?.storeProduct.localizedPriceString ?? "$8.99"
+        subscriptionManager.offerings?.current?.package(identifier: "$rc_monthly")?.storeProduct.localizedPriceString ?? "$8.99"
     }
     private var standardYearlyPrice: String {
-        subscriptionManager.offerings?.current?.package(identifier: "sweeply_standard_yearly")?.storeProduct.localizedPriceString ?? "$79.99"
+        subscriptionManager.offerings?.current?.package(identifier: "$rc_annual")?.storeProduct.localizedPriceString ?? "$79.99"
     }
     private var proMonthlyPrice: String {
-        subscriptionManager.offerings?.current?.package(identifier: "sweeply_pro_monthly")?.storeProduct.localizedPriceString ?? "$19.99"
+        subscriptionManager.offerings?.current?.package(identifier: "$rc_custom_pro_monthly")?.storeProduct.localizedPriceString ?? "$19.99"
     }
     private var proYearlyPrice: String {
-        subscriptionManager.offerings?.current?.package(identifier: "sweeply_pro_yearly")?.storeProduct.localizedPriceString ?? "$179.99"
+        subscriptionManager.offerings?.current?.package(identifier: "$rc_custom_pro_yearly")?.storeProduct.localizedPriceString ?? "$179.99"
     }
 
     private var currencyFooterText: String {
-        let pkg = subscriptionManager.offerings?.current?.package(identifier: "sweeply_standard_monthly")
-            ?? subscriptionManager.offerings?.current?.package(identifier: "sweeply_pro_monthly")
+        let pkg = subscriptionManager.offerings?.current?.package(identifier: "$rc_monthly")
+            ?? subscriptionManager.offerings?.current?.package(identifier: "$rc_custom_pro_monthly")
         let code = pkg?.storeProduct.currencyCode ?? "USD"
         return "Cancel anytime · Auto-renews · Prices in %@".translated(with: code)
     }
@@ -64,7 +64,7 @@ struct SubscriptionPaywallView: View {
     private var currentMonthlyPrice: String { selectedPlan == .pro ? proMonthlyPrice : standardMonthlyPrice }
     private var currentYearlyPrice: String  { selectedPlan == .pro ? proYearlyPrice  : standardYearlyPrice }
     private var currentYearlyPerMonth: String {
-        let yearlyID = selectedPlan == .pro ? "sweeply_pro_yearly" : "sweeply_standard_yearly"
+        let yearlyID = selectedPlan == .pro ? "$rc_custom_pro_yearly" : "$rc_annual"
         if let pkg = subscriptionManager.offerings?.current?.package(identifier: yearlyID) {
             let monthly = pkg.storeProduct.price / 12
             let formatter = NumberFormatter()
@@ -505,10 +505,10 @@ struct SubscriptionPaywallView: View {
     private func fetchOfferings() async {
         await subscriptionManager.loadOfferings()
         let current = subscriptionManager.offerings?.current
-        let hasPackages = current?.package(identifier: "sweeply_standard_monthly") != nil
-            || current?.package(identifier: "sweeply_standard_yearly") != nil
-            || current?.package(identifier: "sweeply_pro_monthly") != nil
-            || current?.package(identifier: "sweeply_pro_yearly") != nil
+        let hasPackages = current?.package(identifier: "$rc_monthly") != nil
+            || current?.package(identifier: "$rc_annual") != nil
+            || current?.package(identifier: "$rc_custom_pro_monthly") != nil
+            || current?.package(identifier: "$rc_custom_pro_yearly") != nil
         if hasPackages {
             purchaseError = nil
         } else {
