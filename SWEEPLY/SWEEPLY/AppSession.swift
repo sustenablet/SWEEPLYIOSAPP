@@ -141,6 +141,23 @@ final class AppSession {
         }
     }
 
+    func checkEmailAvailable(email: String) async -> (available: Bool, error: String?) {
+        guard let client = SupabaseManager.shared else { return (false, "Not connected to server.") }
+        do {
+            _ = try await client.auth.signUp(email: email, password: "__temp_placeholder__")
+            return (true, nil)
+        } catch let error as NSError {
+            let msg = error.localizedDescription
+            if msg.contains("already registered") || msg.contains("User already registered") {
+                return (false, "An account with this email already exists. Please sign in instead.")
+            }
+            if msg.contains("Invalid input") || msg.contains("email") {
+                return (false, "Please enter a valid email address.")
+            }
+            return (false, "Could not verify email. Check your connection and try again.")
+        }
+    }
+
     func cancelConfirmation() {
         confirmationTask?.cancel()
         resendCooldownTask?.cancel()

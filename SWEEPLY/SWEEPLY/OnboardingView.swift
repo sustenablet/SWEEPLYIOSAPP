@@ -51,6 +51,8 @@ struct OnboardingView: View {
     @State private var showPassword = false
     @State private var isCreatingAccount = false
     @State private var accountError: String? = nil
+    @State private var emailError: String? = nil
+    @State private var isCheckingEmail = false
 
     // Existing identity fields (kept for saveAndFinish compatibility)
     @State private var businessName = ""
@@ -149,6 +151,9 @@ struct OnboardingView: View {
     private var passwordHasLower: Bool { password.range(of: "[a-z]", options: .regularExpression) != nil }
     private var passwordHasNumber: Bool { password.range(of: "[0-9]", options: .regularExpression) != nil }
     private var passwordIsValid: Bool { passwordHas8 && passwordHasUpper && passwordHasLower && passwordHasNumber }
+    private var isEmailStepValid: Bool {
+        isValidEmailAddress(email) && !isCheckingEmail && emailError == nil
+    }
 
     private var isBlueStep: Bool { step == 10 || step == 11 || step == 13 }
 
@@ -196,6 +201,18 @@ struct OnboardingView: View {
         // Page A: "Manage a team" → badge the team section
         if describesYouIndex == 2 {
             UserDefaults.standard.set(true, forKey: "sweeply_team_badge")
+        }
+    }
+
+    private func validateEmail() async {
+        await MainActor.run { isCheckingEmail = true; emailError = nil }
+        let result = await session.checkEmailAvailable(email: email.trimmingCharacters(in: .whitespacesAndNewlines))
+        await MainActor.run {
+            isCheckingEmail = false
+            emailError = result.error
+            if result.available {
+                advance()
+            }
         }
     }
 
@@ -693,45 +710,53 @@ struct OnboardingView: View {
                                     .font(.system(size: 20))
                                     .foregroundStyle(agreedToTerms ? Color.sweeplyAccent : Color.sweeplyBorder)
                                     .animation(.spring(response: 0.25, dampingFraction: 0.7), value: agreedToTerms)
-                                HStack(spacing: 3) {
+                                VStack(alignment: .leading, spacing: 2) {
                                     Text("I agree to Sweeply's".translated())
                                         .font(.system(size: 13))
                                         .foregroundStyle(Color.sweeplyTextSub)
-                                    Button {
-                                        if let url = URL(string: "https://sweeplyapp.online/terms") {
-                                            UIApplication.shared.open(url)
+                                    HStack(spacing: 4) {
+                                        Button {
+                                            if let url = URL(string: "https://sweeplyapp.online/terms") {
+                                                UIApplication.shared.open(url)
+                                            }
+                                        } label: {
+                                            Text("Terms of Service".translated())
+                                                .font(.system(size: 13, weight: .medium))
+                                                .foregroundStyle(Color.sweeplyAccent)
+                                                .underline()
                                         }
-                                    } label: {
-                                        Text("Terms of Service".translated())
-                                            .font(.system(size: 13, weight: .medium))
-                                            .foregroundStyle(Color.sweeplyAccent)
-                                            .underline()
-                                    }
-                                    .buttonStyle(.plain)
-                                    Text("and".translated())
-                                        .font(.system(size: 13))
-                                        .foregroundStyle(Color.sweeplyTextSub)
-                                    Button {
-                                        if let url = URL(string: "https://sweeplyapp.online/privacy") {
-                                            UIApplication.shared.open(url)
+                                        .buttonStyle(.plain)
+                                        Text("·")
+                                            .font(.system(size: 13))
+                                            .foregroundStyle(Color.sweeplyTextSub)
+                                        Button {
+                                            if let url = URL(string: "https://sweeplyapp.online/privacy") {
+                                                UIApplication.shared.open(url)
+                                            }
+                                        } label: {
+                                            Text("Privacy Policy".translated())
+                                                .font(.system(size: 13, weight: .medium))
+                                                .foregroundStyle(Color.sweeplyAccent)
+                                                .underline()
                                         }
-                                    } label: {
-                                        Text("Privacy Policy".translated())
-                                            .font(.system(size: 13, weight: .medium))
-                                            .foregroundStyle(Color.sweeplyAccent)
-                                            .underline()
+                                        .buttonStyle(.plain)
                                     }
-                                    .buttonStyle(.plain)
                                 }
-                                .fixedSize(horizontal: false, vertical: true)
                             }
+                            .fixedSize(horizontal: false, vertical: true)
                         }
                         .buttonStyle(.plain)
                     }
                 })
             },
-            isEnabled: isValidEmailAddress(email) && agreedToTerms,
-            onContinue: { advance() }
+            isEnabled: isEmailStepValid && agreedToTerms,
+            isLoading: isCheckingEmail,
+            emailError: emailError,
+            onContinue: {
+                Task {
+                    await validateEmail()
+                }
+            }
         )
     }
 
@@ -833,12 +858,12 @@ struct OnboardingView: View {
                 })
             },
             isEnabled: passwordIsValid && !isCreatingAccount,
+            isLoading: isCreatingAccount,
             onContinue: {
                 focusedField = nil
                 passwordFocused = false
                 advance()
-            },
-            isLoading: isCreatingAccount
+            }
         )
     }
 
@@ -863,8 +888,9 @@ struct OnboardingView: View {
         subtitle: String?,
         content: () -> AnyView,
         isEnabled: Bool,
-        onContinue: @escaping () -> Void,
-        isLoading: Bool = false
+        isLoading: Bool = false,
+        emailError: String? = nil,
+        onContinue: @escaping () -> Void
     ) -> some View {
         VStack(spacing: 0) {
             ScrollView(showsIndicators: false) {
@@ -889,13 +915,21 @@ struct OnboardingView: View {
                     content()
                         .padding(.horizontal, 24)
                         .padding(.bottom, 32)
+
+                    if let err = emailError {
+                        Text(err)
+                            .font(.system(size: 13))
+                            .foregroundStyle(Color.sweeplyDestructive)
+                            .padding(.horizontal, 24)
+                            .padding(.bottom, 16)
+                    }
                 }
             }
             .scrollDismissesKeyboard(.interactively)
 
             Divider().opacity(0.5)
             primaryButton(
-                label: isLoading ? "Creating account…" : "Continue",
+                label: isLoading ? "Checking…" : "Continue",
                 isEnabled: isEnabled,
                 action: onContinue
             )
