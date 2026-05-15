@@ -1,5 +1,4 @@
 import SwiftUI
-import Charts
 
 private let inProgressColor = Color(red: 0.4, green: 0.45, blue: 0.95)
 
@@ -154,7 +153,7 @@ private var healthCards: [DashboardHealthCardModel] {
         [
             DashboardHealthCardModel(
                 title: "Avg Job Value".translated(),
-                subtitle: "Average revenue per completed job".translated(),
+                subtitle: "",
                 value: avgJobValue > 0 ? avgJobValue.currency : "—",
                 trend: avgJobValue > 0 ? "\(ownJobs.filter { $0.status == .completed }.count) jobs done" : "No data yet",
                 isPositive: avgJobValue > 0,
@@ -165,7 +164,7 @@ private var healthCards: [DashboardHealthCardModel] {
             ),
             DashboardHealthCardModel(
                 title: "Weekly Jobs".translated(),
-                subtitle: "Jobs scheduled and completed this week".translated(),
+                subtitle: "Jobs scheduled this week".translated(),
                 value: "\(healthStats?.job_count ?? currentWeekJobs.count)",
                 trend: healthStats?.job_trend ?? "+5%",
                 isPositive: healthStats?.is_job_positive ?? true,
@@ -183,7 +182,7 @@ private var healthCards: [DashboardHealthCardModel] {
                 icon: "creditcard",
                 iconColor: overdueInvoicesCount == 0 ? .sweeplyAccent : .sweeplyDestructive,
                 footnote: "\(ongoingInvoices.count) open invoice\(ongoingInvoices.count == 1 ? "" : "s")",
-                showTrendBadge: true
+                showTrendBadge: false
             ),
             DashboardHealthCardModel(
                 title: "Active Clients",
@@ -194,7 +193,7 @@ private var healthCards: [DashboardHealthCardModel] {
                 icon: "person.2",
                 iconColor: .sweeplyNavy,
                 footnote: "\(clientsStore.clients.count) total client\(clientsStore.clients.count == 1 ? "" : "s") on your roster",
-                showTrendBadge: true
+                showTrendBadge: false
             )
         ]
     }
@@ -386,20 +385,6 @@ private var healthCards: [DashboardHealthCardModel] {
         }
     }
 
-    // 8 weeks of paid invoice revenue grouped by week start
-    private var weeklyRevenueData: [(week: Date, amount: Double)] {
-        let cal = Calendar.current
-        let today = Date()
-        return (0..<8).reversed().compactMap { weeksAgo -> (Date, Double)? in
-            guard let weekStart = cal.date(byAdding: .weekOfYear, value: -weeksAgo, to: cal.startOfDay(for: today)),
-                  let weekEnd = cal.date(byAdding: .day, value: 7, to: weekStart) else { return nil }
-            let total = invoicesStore.invoices
-                .filter { $0.status == .paid && $0.createdAt >= weekStart && $0.createdAt < weekEnd }
-                .reduce(0.0) { $0 + $1.subtotal }
-            return (weekStart, total)
-        }
-    }
-
     private var revenueHero: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text("REVENUE THIS WEEK".translated())
@@ -420,34 +405,6 @@ private var healthCards: [DashboardHealthCardModel] {
                 Text("No completed jobs yet this week".translated())
                     .font(.system(size: 13))
                     .foregroundStyle(Color.sweeplyTextSub)
-            }
-
-            // Mini area sparkline — last 8 weeks
-            if !weeklyRevenueData.isEmpty {
-                Chart(weeklyRevenueData, id: \.week) { point in
-                    AreaMark(
-                        x: .value("Week", point.week),
-                        y: .value("Revenue", point.amount)
-                    )
-                    .foregroundStyle(
-                        LinearGradient(
-                            colors: [Color.sweeplyAccent.opacity(0.3), Color.sweeplyAccent.opacity(0.0)],
-                            startPoint: .top,
-                            endPoint: .bottom
-                        )
-                    )
-                    LineMark(
-                        x: .value("Week", point.week),
-                        y: .value("Revenue", point.amount)
-                    )
-                    .foregroundStyle(Color.sweeplyAccent)
-                    .lineStyle(StrokeStyle(lineWidth: 2))
-                }
-                .chartXAxis(.hidden)
-                .chartYAxis(.hidden)
-                .frame(height: 36)
-                .animation(.easeOut(duration: 0.6), value: weeklyRevenueData.map(\.amount))
-                .padding(.top, 4)
             }
         }
     }
@@ -566,6 +523,7 @@ private var healthCards: [DashboardHealthCardModel] {
         SectionCard {
             VStack(alignment: .leading, spacing: 16) {
                 CardHeader(title: "Business Health".translated(), subtitle: "Swipe through your operating metrics".translated(), action: nil)
+                Divider()
 
                 TabView(selection: $selectedHealthSlide) {
                     ForEach(Array(healthCards.enumerated()), id: \.offset) { index, card in
