@@ -323,14 +323,21 @@ struct LoginView: View {
             case .success(let auth):
                 guard let credential = auth.credential as? ASAuthorizationAppleIDCredential,
                       let tokenData = credential.identityToken,
-                      let idToken = String(data: tokenData, encoding: .utf8) else { return }
+                      let idToken = String(data: tokenData, encoding: .utf8) else {
+                    session.lastAuthError = "Apple Sign In failed. Please try again."
+                    return
+                }
                 isSocialSubmitting = true
                 Task {
                     await session.signInWithApple(idToken: idToken, nonce: appleSignInNonce)
                     isSocialSubmitting = false
                 }
-            case .failure:
-                break
+            case .failure(let error):
+                if let authError = error as? ASAuthorizationError, authError.code == .canceled {
+                    session.lastAuthError = nil
+                } else {
+                    session.lastAuthError = "Apple Sign In failed: \(error.localizedDescription)"
+                }
             }
         }
         .signInWithAppleButtonStyle(.black)
