@@ -65,6 +65,8 @@
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
+				"SubscriptionManager 2.swift",
+				"SubscriptionPaywallView 2.swift",
 			);
 			target = E9D0783C2F7E357300E31AC7 /* SWEEPLY */;
 		};

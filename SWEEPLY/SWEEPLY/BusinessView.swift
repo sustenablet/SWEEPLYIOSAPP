@@ -1,5 +1,6 @@
 import SwiftUI
 import Combine
+import Charts
 
 struct BusinessView: View {
     @Environment(AppSession.self)    private var session
@@ -181,6 +182,39 @@ struct BusinessView: View {
             }
             return lhs.jobs > rhs.jobs
         }
+    }
+
+    private var clientMix: [(label: String, count: Int, color: Color)] {
+        let monthClientJobs = Dictionary(grouping: monthlyJobs, by: \.clientId)
+        let priorClientIds = Set(
+            businessJobs
+                .filter { job in
+                    !Calendar.current.isDate(job.date, equalTo: Date(), toGranularity: .month)
+                }
+                .map(\.clientId)
+        )
+
+        var returning = 0
+        var oneTime = 0
+        var newClients = 0
+
+        for (clientId, jobs) in monthClientJobs {
+            let monthlyCount = jobs.count
+            if !priorClientIds.contains(clientId) {
+                newClients += 1
+            } else if monthlyCount >= 2 {
+                returning += 1
+            } else {
+                oneTime += 1
+            }
+        }
+
+        return [
+            ("Returning", returning, .sweeplyAccent),
+            ("One-Time", oneTime, .sweeplyNavy),
+            ("New", newClients, .sweeplyWarning)
+        ]
+        .filter { $0.count > 0 }
     }
 
     private var catalogServices: [BusinessService] {
@@ -387,49 +421,64 @@ struct BusinessView: View {
                                 snapshotRow(
                                     title: "Earned This Month",
                                     value: monthlyEarned.currency,
-                                    detail: "From completed jobs",
+                                    detail: "Completed jobs",
                                     accent: .sweeplyAccent
                                 )
                                 Divider()
                                 snapshotRow(
                                     title: "Scheduled Revenue",
                                     value: upcomingPipelineValue.currency,
-                                    detail: "Upcoming jobs value",
+                                    detail: "Upcoming value",
                                     accent: .sweeplyNavy
                                 )
                                 Divider()
                                 snapshotRow(
                                     title: "Collected All-Time",
                                     value: totalRevenue.currency,
-                                    detail: "Paid invoices total",
+                                    detail: "All-time paid",
                                     accent: .sweeplyAccent
                                 )
                             }
                             .tag(1)
 
-                            // Slide 3 — Clients
+                            // Slide 3 — Client Mix
                             VStack(alignment: .leading, spacing: 14) {
-                                Divider()
-                                snapshotRow(
-                                    title: "Active This Month",
-                                    value: "\(activeClientsCount)",
-                                    detail: "Unique clients with visits",
-                                    accent: .sweeplyNavy
-                                )
-                                Divider()
-                                snapshotRow(
-                                    title: "Total Clients",
-                                    value: "\(totalActiveClients)",
-                                    detail: "In your client base",
-                                    accent: .sweeplyAccent
-                                )
-                                Divider()
-                                snapshotRow(
-                                    title: "Recurring Jobs",
-                                    value: "\(recurringJobsThisMonth)",
-                                    detail: "Repeating bookings this month",
-                                    accent: .sweeplyWarning
-                                )
+                                if clientMix.isEmpty {
+                                    VStack(spacing: 10) {
+                                        Image(systemName: "person.3.sequence")
+                                            .font(.system(size: 28))
+                                            .foregroundStyle(Color.sweeplyTextSub.opacity(0.3))
+                                        Text("Schedule jobs to see\nclient mix")
+                                            .font(.system(size: 13))
+                                            .foregroundStyle(Color.sweeplyTextSub)
+                                            .multilineTextAlignment(.center)
+                                    }
+                                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                                } else {
+                                    Chart(clientMix, id: \.label) { segment in
+                                        SectorMark(
+                                            angle: .value("Clients", segment.count),
+                                            innerRadius: .ratio(0.58),
+                                            angularInset: 1.5
+                                        )
+                                        .foregroundStyle(segment.color)
+                                    }
+                                    .frame(height: 130)
+
+                                    HStack(spacing: 12) {
+                                        ForEach(clientMix, id: \.label) { segment in
+                                            HStack(spacing: 6) {
+                                                Circle()
+                                                    .fill(segment.color)
+                                                    .frame(width: 8, height: 8)
+                                                Text("\(segment.label): \(segment.count)")
+                                                    .font(.system(size: 12, weight: .semibold))
+                                                    .foregroundStyle(Color.sweeplyNavy)
+                                            }
+                                        }
+                                    }
+                                    .frame(maxWidth: .infinity, alignment: .center)
+                                }
                             }
                             .tag(2)
 

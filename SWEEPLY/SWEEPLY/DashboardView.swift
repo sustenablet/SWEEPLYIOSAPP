@@ -210,12 +210,14 @@ private var healthCards: [DashboardHealthCardModel] {
                 Divider()
 
                 // ── Dashboard Hero (Revenue + Stats Grid) ───────────
-                HStack(alignment: .center, spacing: 20) {
+                HStack(alignment: .top, spacing: 20) {
                     revenueHero
                     
                     statsGrid
-                        .frame(width: 140)
+                        .frame(maxWidth: .infinity)
                 }
+                heroBottomMetrics
+                    .padding(.top, 8)
                 .padding(.horizontal, 20)
                 .padding(.vertical, 12)
                 .padding(.bottom, 24)
@@ -397,15 +399,6 @@ private var healthCards: [DashboardHealthCardModel] {
                 .foregroundStyle(Color.sweeplyNavy)
                 .tracking(-1.5)
 
-            if completedCount > 0 {
-                Text("\(completedCount) job\(completedCount == 1 ? "" : "s") completed")
-                    .font(.system(size: 13))
-                    .foregroundStyle(Color.sweeplyTextSub)
-            } else {
-                Text("No completed jobs yet this week".translated())
-                    .font(.system(size: 13))
-                    .foregroundStyle(Color.sweeplyTextSub)
-            }
         }
     }
 
@@ -413,9 +406,31 @@ private var healthCards: [DashboardHealthCardModel] {
         LazyVGrid(columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)], spacing: 8) {
             DashStatBox(value: "\(clientsStore.clients.count)", label: "Clients".translated())
             DashStatBox(value: "\(jobsStore.jobs.filter { $0.status == .scheduled }.count)", label: "Scheduled".translated())
-            DashStatBox(value: "\(todayJobs.filter { $0.status == .scheduled || $0.status == .inProgress}.count)", label: "Left".translated())
-            DashStatBox(value: outstandingTotal.currency, label: "Due".translated())
         }
+    }
+
+    private var heroBottomMetrics: some View {
+        HStack(spacing: 10) {
+            DashInlineMetric(
+                value: "\(completedCount)",
+                label: "Completed".translated()
+            )
+            Rectangle()
+                .fill(Color.sweeplyBorder.opacity(0.9))
+                .frame(width: 1, height: 28)
+            DashInlineMetric(
+                value: "\(todayJobs.filter { $0.status == .scheduled || $0.status == .inProgress }.count)",
+                label: "Left".translated()
+            )
+            Rectangle()
+                .fill(Color.sweeplyBorder.opacity(0.9))
+                .frame(width: 1, height: 28)
+            DashInlineMetric(
+                value: outstandingTotal.currency,
+                label: "Due".translated()
+            )
+        }
+        .frame(height: 64)
     }
 
     private var stripDivider: some View {
@@ -593,20 +608,42 @@ private struct DashStatBox: View {
     var body: some View {
         VStack(spacing: 4) {
             Text(value)
+                .font(.system(size: 15, weight: .bold, design: .monospaced))
+                .foregroundStyle(Color.sweeplyNavy)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+            Text(label)
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundStyle(Color.sweeplyTextSub)
+                .tracking(0.3)
+        }
+        .frame(maxWidth: .infinity)
+        .frame(height: 64)
+        .background(Color.sweeplySurface)
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.sweeplyBorder, lineWidth: 1))
+    }
+}
+
+private struct DashInlineMetric: View {
+    let value: String
+    let label: String
+
+    var body: some View {
+        VStack(spacing: 4) {
+            Text(value)
                 .font(.system(size: 14, weight: .bold, design: .monospaced))
                 .foregroundStyle(Color.sweeplyNavy)
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
             Text(label)
-                .font(.system(size: 9, weight: .semibold))
+                .font(.system(size: 10, weight: .semibold))
                 .foregroundStyle(Color.sweeplyTextSub)
                 .tracking(0.3)
         }
         .frame(maxWidth: .infinity)
-        .frame(height: 54)
-        .background(Color.sweeplySurface)
-        .clipShape(RoundedRectangle(cornerRadius: 10))
-        .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.sweeplyBorder, lineWidth: 1))
+        .frame(maxHeight: .infinity)
+        .multilineTextAlignment(.center)
     }
 }
 

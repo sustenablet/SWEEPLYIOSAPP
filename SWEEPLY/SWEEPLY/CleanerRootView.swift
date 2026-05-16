@@ -31,6 +31,9 @@ struct CleanerRootView: View {
                 .tag(Tab.finance)
         }
         .tint(Color.sweeplyAccent)
+        .toolbarBackground(Color.sweeplyNavy, for: .tabBar)
+        .toolbarBackground(.visible, for: .tabBar)
+        .toolbarColorScheme(.dark, for: .tabBar)
         .onChange(of: selectedTab) { _, _ in
             UIImpactFeedbackGenerator(style: .light).impactOccurred()
         }

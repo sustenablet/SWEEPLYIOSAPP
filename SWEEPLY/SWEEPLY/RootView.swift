@@ -40,8 +40,6 @@ struct RootView: View {
     @AppStorage("pendingShortcut") private var pendingShortcut: String = ""
     @AppStorage("pendingSpotlightLink") private var pendingSpotlightLink: String = ""
     @AppStorage("pendingScheduleDate") private var pendingScheduleDate: String = ""
-    @State private var lastTabBarApplyTime: Date = .distantPast
-    private let tabBarApplyCooldown: TimeInterval = 0.5
 
     enum Tab {
         case dashboard, schedule, clients, finances, business
@@ -220,14 +218,10 @@ struct RootView: View {
             Color.sweeplyBackground.ignoresSafeArea()
             VStack(spacing: 32) {
                 Spacer()
-                ZStack {
-                    Circle()
-                        .fill(Color.sweeplyAccent)
-                        .frame(width: 100, height: 100)
-                    Text("S")
-                        .font(.system(size: 44, weight: .black, design: .rounded))
-                        .foregroundStyle(.white)
-                }
+                Image("LockMascot")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 130, height: 130)
                 VStack(spacing: 10) {
                     Text("Sweeply is Locked".translated())
                         .font(.system(size: 22, weight: .bold))
@@ -287,6 +281,9 @@ struct RootView: View {
                     .tag(Tab.business)
             }
             .tint(Color.sweeplyAccent)
+            .toolbarBackground(Color.sweeplyNavy, for: .tabBar)
+            .toolbarBackground(.visible, for: .tabBar)
+            .toolbarColorScheme(.dark, for: .tabBar)
         .onChange(of: selectedTab) { _, _ in
             UIImpactFeedbackGenerator(style: .light).impactOccurred()
             applyTabBarAppearance()
@@ -418,11 +415,7 @@ struct RootView: View {
     }
 
     private func applyTabBarAppearance() {
-        // Debounce rapid calls to prevent race conditions
-        let now = Date()
-        guard now.timeIntervalSince(lastTabBarApplyTime) > tabBarApplyCooldown else { return }
-        lastTabBarApplyTime = now
-        
+        // Keep reapplication deterministic across sheet/presentation transitions.
         DispatchQueue.main.async {
             applyTabBarAppearanceInternal()
         }
