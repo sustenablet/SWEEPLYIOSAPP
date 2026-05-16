@@ -334,7 +334,6 @@ struct FinancialReportsView: View {
                     ytdSummarySection
                     sixMonthChartSection
                     cashflowSectionWithPopup
-                    profitAndLossWithExpensesSection
                     revenueByServiceSection
                     jobsSummarySection
                     invoiceHealthSection
@@ -729,8 +728,7 @@ struct FinancialReportsView: View {
     // MARK: - Cash-Flow Forecast
 
     private var cashflowForecastSection: some View {
-        SectionCard {
-            VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: 16) {
 
                 HStack(alignment: .top) {
                     VStack(alignment: .leading, spacing: 2) {
@@ -864,12 +862,23 @@ struct FinancialReportsView: View {
                     }
                     .padding(.top, 4)
                 }
-            }
         }
     }
 
     private var cashflowSectionWithPopup: some View {
-        cashflowForecastSection
+        SectionCard {
+            VStack(spacing: 0) {
+                cashflowForecastSection
+                    .padding(16)
+
+                Rectangle()
+                    .fill(Color.sweeplyBorder)
+                    .frame(height: 1)
+
+                profitAndLossWithExpensesSection
+                    .padding(16)
+            }
+        }
     }
 
     // MARK: - Forecast Popup
@@ -1184,9 +1193,6 @@ struct FinancialReportsView: View {
             }
             .padding(16)
         }
-        .background(Color.sweeplySurface)
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(Color.sweeplyBorder, lineWidth: 1))
     }
 
     // MARK: - Expenses by Category
