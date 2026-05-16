@@ -207,17 +207,18 @@ private var healthCards: [DashboardHealthCardModel] {
                     .padding(.top, 16)
                     .padding(.bottom, 20)
 
-                Divider()
-
                 // ── Dashboard Hero (Revenue + Stats Grid) ───────────
-                HStack(alignment: .top, spacing: 20) {
-                    revenueHero
-                    
-                    statsGrid
-                        .frame(maxWidth: .infinity)
+                VStack(spacing: 8) {
+                    HStack(alignment: .top, spacing: 20) {
+                        revenueHero
+                            .layoutPriority(1)
+
+                        statsGrid
+                            .frame(width: 170)
+                    }
+
+                    heroBottomMetrics
                 }
-                heroBottomMetrics
-                    .padding(.top, 8)
                 .padding(.horizontal, 20)
                 .padding(.vertical, 12)
                 .padding(.bottom, 24)
