@@ -122,7 +122,7 @@ struct ScheduleView: View {
             }
             .sheet(isPresented: $showMonthPicker) {
                 ScheduleMonthPicker(selectedDay: $selectedDay, jobs: ownJobs)
-                    .presentationDetents([.fraction(0.65)])
+                    .presentationDetents([.fraction(0.72)])
                     .presentationDragIndicator(.visible)
             }
             .sheet(isPresented: $showJobDetail) {
@@ -1572,4 +1572,3 @@ struct MapActionButton: View {
         .environment(AppSession())
         .environment(JobsStore())
 }
-

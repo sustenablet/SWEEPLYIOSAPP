@@ -332,7 +332,6 @@ struct FinancialReportsView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
                     ytdSummarySection
-                    revenueProgressSection
                     sixMonthChartSection
                     cashflowSectionWithPopup
                     profitAndLossWithExpensesSection
@@ -1298,6 +1297,7 @@ struct FinancialReportsView: View {
     private var revenueByServiceSection: some View {
         SectionCard {
             VStack(alignment: .leading, spacing: 14) {
+                revenueProgressSection
 
                 // Header + View button
                 HStack(alignment: .firstTextBaseline) {

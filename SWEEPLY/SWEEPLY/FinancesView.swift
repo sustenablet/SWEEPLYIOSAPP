@@ -1214,15 +1214,21 @@ struct InvoicesListView: View {
     private enum InvoiceSortOrder: String, CaseIterable {
         case newestFirst = "Newest First"
         case oldestFirst = "Oldest First"
+        case dueSoonest = "Due Date (Soonest)"
+        case dueLatest = "Due Date (Latest)"
         case highestAmount = "Highest Amount"
         case lowestAmount = "Lowest Amount"
+        case clientAZ = "Client A-Z"
 
         var icon: String {
             switch self {
             case .newestFirst:   return "arrow.down.circle"
             case .oldestFirst:   return "arrow.up.circle"
+            case .dueSoonest:    return "calendar.badge.clock"
+            case .dueLatest:     return "calendar.badge.exclamationmark"
             case .highestAmount: return "dollarsign.arrow.up"
             case .lowestAmount:  return "dollarsign.arrow.down"
+            case .clientAZ:      return "textformat.abc"
             }
         }
     }
@@ -1253,8 +1259,11 @@ struct InvoicesListView: View {
         switch sortOrder {
         case .newestFirst:   return result.sorted { $0.createdAt > $1.createdAt }
         case .oldestFirst:   return result.sorted { $0.createdAt < $1.createdAt }
+        case .dueSoonest:    return result.sorted { $0.dueDate < $1.dueDate }
+        case .dueLatest:     return result.sorted { $0.dueDate > $1.dueDate }
         case .highestAmount: return result.sorted { $0.total > $1.total }
         case .lowestAmount:  return result.sorted { $0.total < $1.total }
+        case .clientAZ:      return result.sorted { $0.clientName.localizedCaseInsensitiveCompare($1.clientName) == .orderedAscending }
         }
     }
 
@@ -1273,65 +1282,66 @@ struct InvoicesListView: View {
                 VStack(alignment: .leading, spacing: 16) {
                     summaryStrip
 
-                    // Status filter pills
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 8) {
-                            ForEach(InvoiceFilter.allCases, id: \.self) { filter in
-                                filterPill(filter)
-                            }
-                        }
-                        .padding(.horizontal, 20)
-                    }
-                    .padding(.horizontal, -20)
-
-                    // Sort filter
-                    HStack(spacing: 12) {
+                    // Unified filter control + selected chips
+                    VStack(alignment: .leading, spacing: 10) {
                         Menu {
-                            ForEach(InvoiceSortOrder.allCases, id: \.self) { order in
-                                Button {
-                                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                                    withAnimation { sortOrder = order }
-                                } label: {
-                                    HStack {
-                                        Image(systemName: order.icon)
-                                            .font(.system(size: 12))
-                                        Text(order.rawValue)
-                                        if sortOrder == order {
-                                            Image(systemName: "checkmark")
+                            Section("Status".translated()) {
+                                ForEach(InvoiceFilter.allCases, id: \.self) { filter in
+                                    Button {
+                                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                        withAnimation(.easeInOut(duration: 0.15)) { selectedFilter = filter }
+                                    } label: {
+                                        HStack {
+                                            Text(filter.rawValue)
+                                            Spacer()
+                                            Text("\(count(for: filter))")
+                                                .foregroundStyle(Color.sweeplyTextSub)
+                                            if selectedFilter == filter {
+                                                Image(systemName: "checkmark")
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            Section("Sort".translated()) {
+                                ForEach(InvoiceSortOrder.allCases, id: \.self) { order in
+                                    Button {
+                                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                        withAnimation(.easeInOut(duration: 0.15)) { sortOrder = order }
+                                    } label: {
+                                        HStack {
+                                            Image(systemName: order.icon)
+                                                .font(.system(size: 12))
+                                            Text(order.rawValue)
+                                            if sortOrder == order {
+                                                Image(systemName: "checkmark")
+                                            }
                                         }
                                     }
                                 }
                             }
                         } label: {
-                            HStack(spacing: 4) {
-                                Image(systemName: sortOrder.icon)
-                                    .font(.system(size: 11, weight: .semibold))
-                                Text(sortOrder.rawValue)
-                                    .font(.system(size: 12, weight: .medium))
+                            HStack(spacing: 8) {
+                                Image(systemName: "line.3.horizontal.decrease.circle")
+                                    .font(.system(size: 13, weight: .semibold))
+                                Text("Filter".translated())
+                                    .font(.system(size: 13, weight: .semibold))
                                 Image(systemName: "chevron.down")
-                                    .font(.system(size: 9, weight: .semibold))
+                                    .font(.system(size: 10, weight: .semibold))
                             }
                             .foregroundStyle(Color.sweeplyNavy)
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 6)
+                            .padding(.horizontal, 12)
+                            .frame(height: 32)
                             .background(Color.sweeplySurface)
                             .clipShape(Capsule())
                             .overlay(Capsule().stroke(Color.sweeplyBorder, lineWidth: 1))
                         }
 
-                        Spacer()
-
-                        // Clear filters
-                        if hasActiveFilters {
-                            Button {
-                                UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                                withAnimation { sortOrder = .newestFirst }
-                            } label: {
-                                Text("Clear".translated())
-                                    .font(.system(size: 12, weight: .medium))
-                                    .foregroundStyle(Color.sweeplyTextSub)
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 8) {
+                                activeFilterChip(icon: "line.3.horizontal.decrease.circle", text: selectedFilter.rawValue)
+                                activeFilterChip(icon: sortOrder.icon, text: sortOrder.rawValue)
                             }
-                            .buttonStyle(.plain)
                         }
                     }
 
@@ -1460,27 +1470,19 @@ struct InvoicesListView: View {
         .frame(maxWidth: .infinity)
     }
 
-    private func filterPill(_ filter: InvoiceFilter) -> some View {
-        let selected = selectedFilter == filter
-        return Button {
-            UIImpactFeedbackGenerator(style: .light).impactOccurred()
-            withAnimation(.easeInOut(duration: 0.15)) { selectedFilter = filter }
-        } label: {
-            HStack(spacing: 5) {
-                Text(filter.rawValue)
-                    .font(.system(size: 13, weight: selected ? .bold : .medium))
-                Text("\(count(for: filter))")
-                    .font(.system(size: 11, weight: .semibold, design: .monospaced))
-                    .opacity(0.7)
-            }
-            .foregroundStyle(selected ? .white : Color.sweeplyNavy)
-            .padding(.horizontal, 14)
-            .padding(.vertical, 8)
-            .background(selected ? Color.sweeplyNavy : Color.sweeplySurface)
-            .clipShape(Capsule())
-            .overlay(Capsule().stroke(selected ? Color.clear : Color.sweeplyBorder, lineWidth: 1))
+    private func activeFilterChip(icon: String, text: String) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: icon)
+                .font(.system(size: 11, weight: .semibold))
+            Text(text)
+                .font(.system(size: 12, weight: .medium))
         }
-        .buttonStyle(.plain)
+        .foregroundStyle(Color.sweeplyNavy)
+        .padding(.horizontal, 10)
+        .frame(height: 32)
+        .background(Color.sweeplySurface)
+        .clipShape(Capsule())
+        .overlay(Capsule().stroke(Color.sweeplyBorder, lineWidth: 1))
     }
 }
 
