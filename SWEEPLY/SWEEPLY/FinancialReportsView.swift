@@ -332,7 +332,6 @@ struct FinancialReportsView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
                     revenueProgressSection
-                    ytdSummarySection
                     sixMonthChartSection
                     cashflowSectionWithPopup
                     revenueByServiceSection
@@ -548,6 +547,24 @@ struct FinancialReportsView: View {
                         .font(.system(size: 11, weight: .medium))
                         .foregroundStyle(Color.sweeplyTextSub)
                 }
+            }
+
+            Divider()
+                .overlay(Color.sweeplyBorder)
+                .padding(.top, 4)
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 12) {
+                    kpiBox(icon: "dollarsign.circle.fill", title: "Revenue".translated(), value: ytdRevenue.currency, color: Color.sweeplySuccess)
+                    kpiBox(icon: "minus.circle.fill", title: "Expenses".translated(), value: ytdExpenses.currency, color: Color.sweeplyDestructive)
+                    kpiBox(icon: "checkmark.circle.fill", title: "Net Profit".translated(), value: ytdNet.currency, color: ytdNet >= 0 ? Color.sweeplySuccess : Color.sweeplyDestructive)
+                    kpiBox(icon: "doc.text.fill", title: "Invoices Paid".translated(), value: "\(ytdInvoiceCount)", color: Color.sweeplyAccent)
+                    kpiBox(icon: "person.2.fill", title: "Active Clients".translated(), value: "\(activeClientsCount)", color: Color.sweeplyNavy)
+                    kpiBox(icon: "briefcase.fill", title: "Jobs This Month".translated(), value: "\(jobsThisMonthCount)", color: Color.sweeplyWarning)
+                    kpiBox(icon: "exclamationmark.triangle.fill", title: "Outstanding".translated(), value: unpaidTotal.currency, color: Color.sweeplyDestructive)
+                    kpiBox(icon: "calendar", title: "Scheduled".translated(), value: "\(scheduledJobsCount)", color: Color.sweeplySuccess)
+                }
+                .padding(.vertical, 4)
             }
         }
         .padding(16)
@@ -870,14 +887,16 @@ struct FinancialReportsView: View {
         SectionCard {
             VStack(spacing: 0) {
                 cashflowForecastSection
-                    .padding(16)
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 18)
 
                 Rectangle()
                     .fill(Color.sweeplyBorder)
                     .frame(height: 1)
 
                 profitAndLossWithExpensesSection
-                    .padding(16)
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 18)
             }
         }
     }
