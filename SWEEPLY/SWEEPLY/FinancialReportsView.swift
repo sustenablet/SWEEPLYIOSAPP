@@ -335,7 +335,7 @@ struct FinancialReportsView: View {
                     sixMonthChartSection
                     cashflowSectionWithPopup
                     profitAndLossWithExpensesSection
-                    revenueByServiceSection
+                    revenueProgressSection
                     jobsSummarySection
                     invoiceHealthSection
                     paymentMethodsSection
@@ -490,7 +490,7 @@ struct FinancialReportsView: View {
         let total = collected + scheduled
         let progress = total > 0 ? collected / total : 0
 
-        return VStack(spacing: 12) {
+        return VStack(spacing: 14) {
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Revenue Progress".translated())
@@ -546,6 +546,71 @@ struct FinancialReportsView: View {
                 if scheduled > 0 {
                     Text("\(scheduled.currency) " + "Estimated".translated())
                         .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(Color.sweeplyTextSub)
+                }
+            }
+
+            Divider()
+                .overlay(Color.sweeplyBorder)
+                .padding(.top, 2)
+
+            HStack(alignment: .firstTextBaseline) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("REVENUE BY SERVICE".translated())
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundStyle(Color.sweeplyTextSub)
+                        .tracking(0.8)
+                    Text("All completed jobs".translated())
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(Color.sweeplyNavy)
+                }
+                Spacer()
+                NavigationLink {
+                    RevenueDetailView(
+                        revenueByService: revenueByService,
+                        completedJobs: completedJobsAll,
+                        customJobs: customServiceJobs,
+                        serviceColorAt: serviceColor
+                    )
+                } label: {
+                    HStack(spacing: 3) {
+                        Text("View".translated())
+                        Image(systemName: "chevron.right")
+                    }
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(Color.sweeplyTextSub)
+                }
+                .buttonStyle(.plain)
+            }
+
+            if revenueByService.isEmpty {
+                HStack(spacing: 10) {
+                    Image(systemName: "briefcase")
+                        .foregroundStyle(Color.sweeplyTextSub.opacity(0.5))
+                    Text("Complete jobs to see revenue by service.".translated())
+                        .font(.system(size: 13))
+                        .foregroundStyle(Color.sweeplyTextSub)
+                }
+                .padding(.vertical, 8)
+            } else {
+                TabView(selection: $revenueSlide) {
+                    revenueServiceBarsSlide.tag(0)
+                    revenueAddOnsSlide.tag(1)
+                    revenuePieSlide.tag(2)
+                }
+                .tabViewStyle(.page(indexDisplayMode: .never))
+                .frame(height: 210)
+
+                HStack(spacing: 8) {
+                    ForEach(0..<3, id: \.self) { idx in
+                        Capsule()
+                            .fill(idx == revenueSlide ? Color.sweeplyNavy : Color.sweeplyBorder.opacity(0.8))
+                            .frame(width: idx == revenueSlide ? 18 : 8, height: 8)
+                            .animation(.easeInOut(duration: 0.2), value: revenueSlide)
+                    }
+                    Spacer()
+                    Text("\(revenueSlide + 1) / 3")
+                        .font(.system(size: 11, weight: .semibold, design: .monospaced))
                         .foregroundStyle(Color.sweeplyTextSub)
                 }
             }
@@ -1297,8 +1362,6 @@ struct FinancialReportsView: View {
     private var revenueByServiceSection: some View {
         SectionCard {
             VStack(alignment: .leading, spacing: 14) {
-                revenueProgressSection
-
                 // Header + View button
                 HStack(alignment: .firstTextBaseline) {
                     VStack(alignment: .leading, spacing: 2) {
