@@ -331,6 +331,7 @@ struct FinancialReportsView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
+                    revenueProgressSection
                     ytdSummarySection
                     sixMonthChartSection
                     cashflowSectionWithPopup
