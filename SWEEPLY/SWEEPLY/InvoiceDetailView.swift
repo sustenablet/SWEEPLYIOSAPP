@@ -26,6 +26,12 @@ struct InvoiceDetailView: View {
     @State private var showPDFShare = false
     @State private var showPDFPreview = false
 
+    private enum DuePillStyle {
+        case neutral
+        case warning
+        case overdue
+    }
+
     var body: some View {
         Group {
             if let invoice {
@@ -116,6 +122,65 @@ struct InvoiceDetailView: View {
 
     // MARK: - Header
 
+    private func duePillStyle(for invoice: Invoice) -> DuePillStyle {
+        if invoice.status == .paid { return .neutral }
+
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+        let dueDate = calendar.startOfDay(for: invoice.dueDate)
+        let daysUntilDue = calendar.dateComponents([.day], from: today, to: dueDate).day ?? 0
+
+        if invoice.status == .overdue || daysUntilDue < 0 {
+            return .overdue
+        }
+        if daysUntilDue < 7 {
+            return .warning
+        }
+        return .neutral
+    }
+
+    private func duePillTint(for invoice: Invoice) -> Color {
+        switch duePillStyle(for: invoice) {
+        case .neutral:
+            return Color.sweeplyAccent
+        case .warning:
+            return Color.sweeplyWarning
+        case .overdue:
+            return Color.sweeplyDestructive
+        }
+    }
+
+    @ViewBuilder
+    private func duePillLabel(for invoice: Invoice) -> some View {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+        let dueDate = calendar.startOfDay(for: invoice.dueDate)
+        let daysUntilDue = calendar.dateComponents([.day], from: today, to: dueDate).day ?? 0
+
+        switch duePillStyle(for: invoice) {
+        case .overdue:
+            Text(daysUntilDue == -1
+                 ? "%d day overdue".translated(with: 1)
+                 : "%d days overdue".translated(with: abs(daysUntilDue)))
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(Color.sweeplyDestructive)
+
+        case .warning:
+            Text(daysUntilDue == 0
+                 ? "Due today".translated()
+                 : daysUntilDue == 1
+                     ? "Due in 1 day".translated()
+                     : "Due in %d days".translated(with: daysUntilDue))
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(Color.sweeplyWarning)
+
+        case .neutral:
+            Text("Due \(invoice.dueDate.formatted(date: .abbreviated, time: .omitted))")
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(Color.sweeplyNavy)
+        }
+    }
+
     private func invoiceHeader(invoice: Invoice) -> some View {
         VStack(spacing: 12) {
             HStack(alignment: .top) {
@@ -133,10 +198,8 @@ struct InvoiceDetailView: View {
 
             HStack(spacing: 8) {
                 Image(systemName: "calendar")
-                    .foregroundStyle(Color.sweeplyAccent)
-                Text("Due \(invoice.dueDate.formatted(date: .abbreviated, time: .omitted))")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(Color.sweeplyNavy)
+                    .foregroundStyle(duePillTint(for: invoice))
+                duePillLabel(for: invoice)
                 Spacer()
                 if invoice.status == .overdue {
                     HStack(spacing: 4) {
