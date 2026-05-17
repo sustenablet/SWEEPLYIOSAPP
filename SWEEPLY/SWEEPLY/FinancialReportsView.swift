@@ -695,6 +695,26 @@ struct FinancialReportsView: View {
                         }
                     }
                     .chartXSelection(value: $selectedOverviewMonth)
+                    .chartOverlay { proxy in
+                        GeometryReader { _ in
+                            Rectangle()
+                                .fill(.clear)
+                                .contentShape(Rectangle())
+                                .gesture(
+                                    DragGesture(minimumDistance: 0)
+                                        .onEnded { value in
+                                            guard let tappedMonth: String = proxy.value(atX: value.location.x) else { return }
+                                            withAnimation(.easeInOut(duration: 0.15)) {
+                                                if selectedOverviewMonth == tappedMonth {
+                                                    selectedOverviewMonth = nil
+                                                } else {
+                                                    selectedOverviewMonth = tappedMonth
+                                                }
+                                            }
+                                        }
+                                )
+                        }
+                    }
                     .frame(height: 160)
                     .animation(.easeInOut(duration: 0.3), value: overviewPeriodRaw)
                 }
