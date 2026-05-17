@@ -324,7 +324,6 @@ struct FinancialReportsView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
                     revenueProgressSection
-                    ytdSummarySection
                     sixMonthChartSection
                     cashflowSectionWithPopup
                     revenueByServiceSection
@@ -418,7 +417,7 @@ struct FinancialReportsView: View {
 
     // MARK: - Quick Stats
 
-    private var ytdSummarySection: some View {
+    private func ytdSummarySection(horizontalPadding: CGFloat = 20) -> some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 12) {
                 kpiBox(icon: "dollarsign.circle.fill", title: "Revenue".translated(), value: ytdRevenue.currency, color: Color.sweeplySuccess)
@@ -430,7 +429,7 @@ struct FinancialReportsView: View {
                 kpiBox(icon: "exclamationmark.triangle.fill", title: "Outstanding".translated(), value: unpaidTotal.currency, color: Color.sweeplyDestructive)
                 kpiBox(icon: "calendar", title: "Scheduled".translated(), value: "\(scheduledJobsCount)", color: Color.sweeplySuccess)
             }
-            .padding(.horizontal, 20)
+            .padding(.horizontal, horizontalPadding)
             .padding(.vertical, 4)
         }
     }
@@ -541,6 +540,8 @@ struct FinancialReportsView: View {
                         .foregroundStyle(Color.sweeplyTextSub)
                 }
             }
+
+            ytdSummarySection(horizontalPadding: 0)
         }
         .padding(16)
         .background(Color.sweeplySurface)
