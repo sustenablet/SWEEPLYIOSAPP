@@ -2,26 +2,53 @@ import SwiftUI
 import Charts
 
 struct RevenueDetailView: View {
+    @Environment(ProfileStore.self) private var profileStore
+
     let revenueByService: [(service: String, revenue: Double, jobCount: Int)]
     let completedJobs: [Job]
     let customJobs: [Job]
     let serviceColorAt: (Int) -> Color
 
+    private var profile: UserProfile { profileStore.profile ?? MockData.profile }
+    private var serviceCatalog: [BusinessService] { profile.settings.hydratedServiceCatalog }
+    private var primaryServiceCatalog: [BusinessService] {
+        serviceCatalog.filter { !$0.isAddon && ServiceType(rawValue: $0.name) != nil }
+    }
+    private var extraServiceCatalog: [BusinessService] {
+        serviceCatalog.filter { $0.isAddon || ServiceType(rawValue: $0.name) == nil }
+    }
+    private var revenueLookup: [String: (revenue: Double, jobCount: Int)] {
+        Dictionary(uniqueKeysWithValues: revenueByService.map {
+            (normalizedServiceName($0.service), (revenue: $0.revenue, jobCount: $0.jobCount))
+        })
+    }
+    private var breakdownEntries: [(service: BusinessService, revenue: Double, jobCount: Int)] {
+        serviceCatalog.map { service in
+            let metrics = revenueLookup[normalizedServiceName(service.name)]
+            return (service: service, revenue: metrics?.revenue ?? 0, jobCount: metrics?.jobCount ?? 0)
+        }
+    }
+    private var avgTicketEntries: [(service: BusinessService, avg: Double)] {
+        primaryServiceCatalog.map { service in
+            let metrics = revenueLookup[normalizedServiceName(service.name)]
+            let revenue = metrics?.revenue ?? 0
+            let jobCount = metrics?.jobCount ?? 0
+            let avg = jobCount > 0 ? revenue / Double(jobCount) : service.price
+            return (service: service, avg: avg)
+        }
+        .sorted { $0.avg > $1.avg }
+    }
+
     private var totalRevenue: Double { revenueByService.reduce(0) { $0 + $1.revenue } }
     private var totalJobs: Int      { revenueByService.reduce(0) { $0 + $1.jobCount } }
     private var avgTicket: Double   { totalJobs > 0 ? totalRevenue / Double(totalJobs) : 0 }
 
-    private var maxRevenue: Double { revenueByService.map { $0.revenue }.max() ?? 1 }
+    private var maxRevenue: Double {
+        max(breakdownEntries.map { max($0.revenue, $0.service.price) }.max() ?? 0, 1)
+    }
 
-    private func serviceIcon(_ service: String) -> String {
-        switch service {
-        case "Standard Clean":    return "house.fill"
-        case "Deep Clean":        return "sparkles"
-        case "Move In/Out":       return "shippingbox.fill"
-        case "Post Construction": return "hammer.fill"
-        case "Office Clean":      return "building.2.fill"
-        default:                  return "wrench.and.screwdriver.fill"
-        }
+    private func normalizedServiceName(_ name: String) -> String {
+        name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
     }
 
     var body: some View {
@@ -30,7 +57,7 @@ struct RevenueDetailView: View {
                 summaryStrip
                 revenueBreakdownSection
                 serviceMixSection
-                if !customJobs.isEmpty { addOnsSection }
+                if !extraServiceCatalog.isEmpty { addOnsSection }
                 avgTicketSection
             }
             .padding(.horizontal, 20)
@@ -76,19 +103,12 @@ struct RevenueDetailView: View {
                 sectionHeader(label: "REVENUE BREAKDOWN".translated(), title: "By service type".translated())
 
                 VStack(spacing: 14) {
-                    ForEach(Array(revenueByService.enumerated()), id: \.element.service) { idx, item in
+                    ForEach(Array(breakdownEntries.enumerated()), id: \.element.service.id) { idx, item in
+                        let displayValue = item.revenue > 0 ? item.revenue : item.service.price
                         VStack(spacing: 5) {
                             HStack(spacing: 10) {
-                                ZStack {
-                                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                                        .fill(serviceColorAt(idx).opacity(0.12))
-                                        .frame(width: 34, height: 34)
-                                    Image(systemName: serviceIcon(item.service))
-                                        .font(.system(size: 13, weight: .medium))
-                                        .foregroundStyle(serviceColorAt(idx))
-                                }
                                 VStack(alignment: .leading, spacing: 2) {
-                                    Text(item.service)
+                                    Text(item.service.name)
                                         .font(.system(size: 13, weight: .semibold))
                                         .foregroundStyle(Color.sweeplyNavy)
                                         .lineLimit(1)
@@ -96,7 +116,7 @@ struct RevenueDetailView: View {
                                         Text("\(item.jobCount) \(item.jobCount == 1 ? "job".translated() : "jobs".translated())")
                                             .font(.system(size: 11))
                                             .foregroundStyle(Color.sweeplyTextSub)
-                                        let avg = item.jobCount > 0 ? item.revenue / Double(item.jobCount) : 0
+                                        let avg = item.jobCount > 0 ? item.revenue / Double(item.jobCount) : item.service.price
                                         Text("avg %@".translated(with: avg.currency))
                                             .font(.system(size: 11, weight: .medium))
                                             .foregroundStyle(Color.sweeplyTextSub)
@@ -104,7 +124,7 @@ struct RevenueDetailView: View {
                                 }
                                 Spacer()
                                 VStack(alignment: .trailing, spacing: 2) {
-                                    Text(item.revenue.currency)
+                                    Text(displayValue.currency)
                                         .font(.system(size: 14, weight: .bold, design: .monospaced))
                                         .foregroundStyle(Color.sweeplyNavy)
                                     let pct = totalRevenue > 0 ? Int(item.revenue / totalRevenue * 100) : 0
@@ -117,7 +137,7 @@ struct RevenueDetailView: View {
                                 ZStack(alignment: .leading) {
                                     Capsule().fill(Color.sweeplyBorder.opacity(0.5)).frame(height: 6)
                                     Capsule().fill(serviceColorAt(idx))
-                                        .frame(width: geo.size.width * CGFloat(item.revenue / maxRevenue), height: 6)
+                                        .frame(width: geo.size.width * CGFloat(displayValue / maxRevenue), height: 6)
                                 }
                             }
                             .frame(height: 6)
@@ -133,12 +153,14 @@ struct RevenueDetailView: View {
     @ViewBuilder
     private var serviceMixSection: some View {
         if #available(iOS 17.0, *) {
+            let chartEntries = Array(revenueByService.enumerated())
+            let listEntries = Array(primaryServiceCatalog.enumerated())
             SectionCard {
                 VStack(alignment: .leading, spacing: 16) {
                     sectionHeader(label: "SERVICE MIX".translated(), title: "Jobs by type".translated())
 
                     HStack(alignment: .center, spacing: 20) {
-                        Chart(Array(revenueByService.enumerated()), id: \.element.service) { idx, item in
+                        Chart(chartEntries, id: \.element.service) { idx, item in
                             SectorMark(
                                 angle: .value("Jobs", item.jobCount),
                                 innerRadius: .ratio(0.52),
@@ -160,13 +182,14 @@ struct RevenueDetailView: View {
                         )
 
                         VStack(alignment: .leading, spacing: 9) {
-                            ForEach(Array(revenueByService.enumerated()), id: \.element.service) { idx, item in
-                                let pct = totalJobs > 0 ? Int(Double(item.jobCount) / Double(totalJobs) * 100) : 0
+                            ForEach(listEntries, id: \.element.id) { idx, service in
+                                let metrics = revenueLookup[normalizedServiceName(service.name)]
+                                let pct = totalJobs > 0 ? Int(Double(metrics?.jobCount ?? 0) / Double(totalJobs) * 100) : 0
                                 HStack(spacing: 8) {
                                     RoundedRectangle(cornerRadius: 2, style: .continuous)
                                         .fill(serviceColorAt(idx))
                                         .frame(width: 10, height: 10)
-                                    Text(item.service)
+                                    Text(service.name)
                                         .font(.system(size: 12, weight: .medium))
                                         .foregroundStyle(Color.sweeplyNavy)
                                         .lineLimit(1)
@@ -190,18 +213,26 @@ struct RevenueDetailView: View {
         SectionCard {
             VStack(alignment: .leading, spacing: 14) {
                 sectionHeader(label: "EXTRAS & ADD-ONS".translated(),
-                              title: "Custom services".translated(),
-                              badge: "\(customJobs.count)")
+                              title: customJobs.isEmpty ? "Catalog services".translated() : "Custom services".translated(),
+                              badge: "\(extraServiceCatalog.count)")
 
                 let addOnTotal = customJobs.reduce(0) { $0 + $1.price }
-                let addOnAvg   = customJobs.isEmpty ? 0 : addOnTotal / Double(customJobs.count)
+                let addOnAvg = customJobs.isEmpty
+                    ? (extraServiceCatalog.isEmpty ? 0 : extraServiceCatalog.reduce(0) { $0 + $1.price } / Double(extraServiceCatalog.count))
+                    : addOnTotal / Double(customJobs.count)
 
                 HStack(spacing: 0) {
-                    addonStat(label: "Total".translated(), value: addOnTotal.currency, color: .sweeplyAccent)
+                    addonStat(label: customJobs.isEmpty ? "Add-Ons".translated() : "Total".translated(),
+                              value: customJobs.isEmpty ? "\(extraServiceCatalog.count)" : addOnTotal.currency,
+                              color: .sweeplyAccent)
                     Divider().frame(height: 38).padding(.horizontal, 14)
-                    addonStat(label: "Avg Ticket".translated(), value: addOnAvg.currency, color: .sweeplyNavy)
+                    addonStat(label: customJobs.isEmpty ? "Avg Price".translated() : "Avg Ticket".translated(),
+                              value: addOnAvg.currency,
+                              color: .sweeplyNavy)
                     Divider().frame(height: 38).padding(.horizontal, 14)
-                    addonStat(label: "Jobs".translated(), value: "\(customJobs.count)", color: .sweeplyWarning)
+                    addonStat(label: "Jobs".translated(),
+                              value: "\(customJobs.count)",
+                              color: .sweeplyWarning)
                 }
                 .padding(12)
                 .background(Color.sweeplyAccent.opacity(0.05))
@@ -209,10 +240,19 @@ struct RevenueDetailView: View {
                 .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).stroke(Color.sweeplyAccent.opacity(0.15), lineWidth: 1))
 
                 VStack(spacing: 0) {
-                    ForEach(Array(customJobs.sorted { $0.price > $1.price }.enumerated()), id: \.element.id) { idx, job in
-                        AddOnJobRow(job: job)
-                        if idx < customJobs.count - 1 {
-                            Divider().padding(.leading, 44)
+                    if customJobs.isEmpty {
+                        ForEach(Array(extraServiceCatalog.sorted { $0.price > $1.price }.enumerated()), id: \.element.id) { idx, service in
+                            AddOnCatalogRow(service: service)
+                            if idx < extraServiceCatalog.count - 1 {
+                                Divider().padding(.leading, 12)
+                            }
+                        }
+                    } else {
+                        ForEach(Array(customJobs.sorted { $0.price > $1.price }.enumerated()), id: \.element.id) { idx, job in
+                            AddOnJobRow(job: job)
+                            if idx < customJobs.count - 1 {
+                                Divider().padding(.leading, 44)
+                            }
                         }
                     }
                 }
@@ -245,38 +285,25 @@ struct RevenueDetailView: View {
                 sectionHeader(label: "AVG TICKET".translated(), title: "Per service type".translated())
 
                 VStack(spacing: 0) {
-                    ForEach(Array(revenueByService.sorted {
-                        let a = $0.jobCount > 0 ? $0.revenue / Double($0.jobCount) : 0
-                        let b = $1.jobCount > 0 ? $1.revenue / Double($1.jobCount) : 0
-                        return a > b
-                    }.enumerated()), id: \.element.service) { idx, item in
-                        let avg = item.jobCount > 0 ? item.revenue / Double(item.jobCount) : 0
+                    ForEach(Array(avgTicketEntries.enumerated()), id: \.element.service.id) { idx, item in
                         HStack(spacing: 12) {
                             Text("\(idx + 1)")
                                 .font(.system(size: 12, weight: .bold, design: .monospaced))
                                 .foregroundStyle(Color.sweeplyTextSub)
                                 .frame(width: 18, alignment: .center)
-                            ZStack {
-                                RoundedRectangle(cornerRadius: 7, style: .continuous)
-                                    .fill(serviceColorAt(idx).opacity(0.10))
-                                    .frame(width: 30, height: 30)
-                                Image(systemName: serviceIcon(item.service))
-                                    .font(.system(size: 11, weight: .medium))
-                                    .foregroundStyle(serviceColorAt(idx))
-                            }
-                            Text(item.service)
+                            Text(item.service.name)
                                 .font(.system(size: 13, weight: .medium))
                                 .foregroundStyle(Color.sweeplyNavy)
                                 .lineLimit(1)
                             Spacer()
-                            Text(avg.currency)
+                            Text(item.avg.currency)
                                 .font(.system(size: 13, weight: .bold, design: .monospaced))
                                 .foregroundStyle(serviceColorAt(idx))
                         }
                         .padding(.horizontal, 12)
                         .padding(.vertical, 11)
-                        if idx < revenueByService.count - 1 {
-                            Divider().padding(.leading, 60)
+                        if idx < avgTicketEntries.count - 1 {
+                            Divider().padding(.leading, 30)
                         }
                     }
                 }
@@ -353,6 +380,25 @@ private struct AddOnJobRow: View {
                     .font(.system(size: 10, weight: .medium, design: .monospaced))
                     .foregroundStyle(Color.sweeplyTextSub)
             }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 12)
+    }
+}
+
+private struct AddOnCatalogRow: View {
+    let service: BusinessService
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Text(service.name)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(Color.sweeplyNavy)
+                .lineLimit(1)
+            Spacer()
+            Text(service.price.currency)
+                .font(.system(size: 14, weight: .bold, design: .monospaced))
+                .foregroundStyle(Color.sweeplyNavy)
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 12)
