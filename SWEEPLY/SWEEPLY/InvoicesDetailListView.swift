@@ -40,7 +40,12 @@ struct InvoicesDetailListView: View {
                 } else {
                     VStack(spacing: 0) {
                         ForEach(Array(sortedInvoices.enumerated()), id: \.element.id) { idx, invoice in
-                            InvoiceDetailRow(invoice: invoice, status: status, accentColor: accentColor)
+                            NavigationLink {
+                                InvoiceDetailView(invoiceId: invoice.id)
+                            } label: {
+                                InvoiceDetailRow(invoice: invoice, status: status, accentColor: accentColor)
+                            }
+                            .buttonStyle(.plain)
                             if idx < sortedInvoices.count - 1 {
                                 Divider().padding(.leading, 16)
                             }

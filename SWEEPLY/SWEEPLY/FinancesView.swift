@@ -281,7 +281,10 @@ struct FinancesView: View {
                 .environment(invoicesStore)
                 .environment(expenseStore)
                 .environment(jobsStore)
+                .environment(clientsStore)
                 .environment(profileStore)
+                .environment(session)
+                .environment(teamStore)
         }
         .sheet(isPresented: Binding(
             get: { markPaidInvoice != nil },

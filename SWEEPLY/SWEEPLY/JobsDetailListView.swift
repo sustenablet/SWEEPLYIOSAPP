@@ -39,7 +39,12 @@ struct JobsDetailListView: View {
                 } else {
                     VStack(spacing: 0) {
                         ForEach(Array(sortedJobs.enumerated()), id: \.element.id) { idx, job in
-                            JobDetailRow(job: job, accentColor: accentColor)
+                            NavigationLink {
+                                JobDetailView(jobId: job.id)
+                            } label: {
+                                JobDetailRow(job: job, accentColor: accentColor)
+                            }
+                            .buttonStyle(.plain)
                             if idx < sortedJobs.count - 1 {
                                 Divider().padding(.leading, 60)
                             }
