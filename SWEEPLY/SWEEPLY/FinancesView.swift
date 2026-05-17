@@ -1136,19 +1136,49 @@ struct MinimalInvoiceRow: View {
     let invoicesStore: InvoicesStore
     var onTap: (() -> Void)? = nil
 
-    private var dueDateLabel: String {
+    private var shortDate: String {
         let f = DateFormatter()
         f.dateFormat = "MMM d"
-        let ds = f.string(from: invoice.dueDate)
+        return f.string(from: invoice.paidAt ?? invoice.dueDate)
+    }
+
+    private var overdueDays: Int {
+        max(1, Calendar.current.dateComponents([.day], from: Calendar.current.startOfDay(for: invoice.dueDate), to: Calendar.current.startOfDay(for: Date())).day ?? 1)
+    }
+
+    private var statusPillText: String {
         switch invoice.status {
-        case .paid:    return "Paid \(ds)"
-        case .unpaid:  return "Due \(ds)"
-        case .overdue: return "Overdue since \(ds)"
+        case .paid:
+            return "Paid \(shortDate)"
+        case .unpaid:
+            return "Unpaid".translated()
+        case .overdue:
+            return overdueDays == 1
+                ? "Overdue 1 day".translated()
+                : "Overdue %d days".translated(with: overdueDays)
         }
     }
 
-    private var dueDateColor: Color {
-        invoice.status == .overdue ? Color.sweeplyDestructive : Color.sweeplyTextSub
+    private var statusPillForeground: Color {
+        switch invoice.status {
+        case .paid:
+            return Color.sweeplyAccent
+        case .unpaid:
+            return Color.sweeplyNavy
+        case .overdue:
+            return Color.sweeplyDestructive
+        }
+    }
+
+    private var statusPillBackground: Color {
+        switch invoice.status {
+        case .paid:
+            return Color.sweeplyAccent.opacity(0.12)
+        case .unpaid:
+            return Color.sweeplyNavy.opacity(0.10)
+        case .overdue:
+            return Color.sweeplyDestructive.opacity(0.12)
+        }
     }
 
     var body: some View {
@@ -1169,13 +1199,14 @@ struct MinimalInvoiceRow: View {
                     Text(invoice.invoiceNumber)
                         .font(.system(size: 11, weight: .regular, design: .monospaced))
                         .foregroundStyle(Color.sweeplyTextSub)
-                    Text("·".translated())
-                        .foregroundStyle(Color.sweeplyBorder)
-                    Text(dueDateLabel)
-                        .font(.system(size: 11, weight: .regular))
-                        .foregroundStyle(dueDateColor)
                     Spacer(minLength: 8)
-                    InvoiceStatusBadge(status: invoice.status)
+                    Text(statusPillText)
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundStyle(statusPillForeground)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 5)
+                        .background(statusPillBackground)
+                        .clipShape(Capsule())
                 }
             }
         }
