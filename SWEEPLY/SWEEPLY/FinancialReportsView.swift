@@ -6,6 +6,7 @@ struct FinancialReportsView: View {
     @Environment(InvoicesStore.self)       private var invoicesStore
     @Environment(ExpenseStore.self)        private var expenseStore
     @Environment(JobsStore.self)           private var jobsStore
+    @Environment(ProfileStore.self)        private var profileStore
 
     // ── Persisted state ──
     @AppStorage("financesOverviewPeriod")  private var overviewPeriodRaw: String = OverviewPeriod.sixMonth.rawValue
@@ -21,6 +22,7 @@ struct FinancialReportsView: View {
     @State private var showForecastPopup: Bool = false
     @State private var popupWeek: ForecastWeek? = nil
     @State private var showOverviewPeriodFilter: Bool = false
+    @State private var showPLPeriodFilter: Bool = false
 
     // MARK: - Enums
 
@@ -263,6 +265,26 @@ struct FinancialReportsView: View {
 
     // MARK: - Revenue by service
 
+    private var profile: UserProfile { profileStore.profile ?? MockData.profile }
+
+    private var serviceCatalog: [BusinessService] {
+        profile.settings.hydratedServiceCatalog
+    }
+
+    private var primaryServiceCatalog: [BusinessService] {
+        serviceCatalog.filter { !$0.isAddon && ServiceType(rawValue: $0.name) != nil }
+    }
+
+    private var extrasServiceCatalog: [BusinessService] {
+        serviceCatalog.filter { $0.isAddon || ServiceType(rawValue: $0.name) == nil }
+    }
+
+    private var revenueByServiceLookup: [String: (revenue: Double, jobCount: Int)] {
+        Dictionary(uniqueKeysWithValues: revenueByService.map {
+            (normalizedServiceName($0.service), (revenue: $0.revenue, jobCount: $0.jobCount))
+        })
+    }
+
     private var revenueByService: [(service: String, revenue: Double, jobCount: Int)] {
         let completed = jobsStore.jobs.filter { $0.status == .completed }
         var dict: [String: (Double, Int)] = [:]
@@ -290,6 +312,14 @@ struct FinancialReportsView: View {
         let count = revenueByService.reduce(0) { $0 + $1.jobCount }
         guard count > 0 else { return 0 }
         return totalRevenueAllTime / Double(count)
+    }
+
+    private var totalCompletedServiceJobs: Int {
+        revenueByService.reduce(0) { $0 + $1.jobCount }
+    }
+
+    private func normalizedServiceName(_ name: String) -> String {
+        name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
     }
 
     private func serviceColor(at index: Int) -> Color {
@@ -325,7 +355,7 @@ struct FinancialReportsView: View {
                 VStack(alignment: .leading, spacing: 24) {
                     revenueProgressSection
                     sixMonthChartSection
-                    cashflowSectionWithPopup
+                    profitAndLossSection
                     revenueByServiceSection
                     jobsSummarySection
                     invoiceHealthSection
@@ -334,16 +364,15 @@ struct FinancialReportsView: View {
                 .padding(.horizontal, 20)
                 .padding(.bottom, 80)
             }
-            .scrollDisabled(showForecastPopup)
             .background(Color.sweeplyBackground.ignoresSafeArea())
-            .overlay {
-                if showForecastPopup, let week = popupWeek {
-                    forecastPopupOverlay(week: week)
-                }
-            }
             .sheet(isPresented: $showOverviewPeriodFilter) {
                 overviewPeriodFilterSheet
                     .presentationDetents([.height(280)])
+                    .presentationDragIndicator(.visible)
+            }
+            .sheet(isPresented: $showPLPeriodFilter) {
+                plPeriodFilterSheet
+                    .presentationDetents([.height(240)])
                     .presentationDragIndicator(.visible)
             }
             .navigationTitle("Reports".translated())
@@ -412,6 +441,59 @@ struct FinancialReportsView: View {
         case .threeMonth: return "Last 3 Months".translated()
         case .sixMonth: return "Last 6 Months".translated()
         case .twelveMonth: return "Last 12 Months".translated()
+        }
+    }
+
+    // MARK: - P&L Period Filter Sheet
+
+    private var plPeriodFilterSheet: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            HStack {
+                Text("Select Time Range".translated())
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundStyle(Color.sweeplyNavy)
+                Spacer()
+            }
+            .padding(.top, 8)
+
+            VStack(spacing: 8) {
+                ForEach(PLPeriod.allCases, id: \.self) { period in
+                    Button {
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        plPeriod = period
+                        showPLPeriodFilter = false
+                    } label: {
+                        HStack {
+                            Text(plPeriodLabel(for: period))
+                                .font(.system(size: 15, weight: .medium))
+                                .foregroundStyle(Color.sweeplyNavy)
+                            Spacer()
+                            if period == plPeriod {
+                                Image(systemName: "checkmark")
+                                    .font(.system(size: 14, weight: .bold))
+                                    .foregroundStyle(Color.sweeplyAccent)
+                            }
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 14)
+                        .background(period == plPeriod ? Color.sweeplyAccent.opacity(0.08) : Color.sweeplySurface)
+                        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                        .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).stroke(period == plPeriod ? Color.sweeplyAccent : Color.sweeplyBorder, lineWidth: 1))
+                    }
+                }
+            }
+
+            Spacer()
+        }
+        .padding(.horizontal, 20)
+        .background(Color.sweeplyBackground.ignoresSafeArea())
+    }
+
+    private func plPeriodLabel(for period: PLPeriod) -> String {
+        switch period {
+        case .thisMonth: return "This Month".translated()
+        case .lastMonth: return "Last Month".translated()
+        case .ytd: return "This Year".translated()
         }
     }
 
@@ -1058,8 +1140,21 @@ struct FinancialReportsView: View {
                             .tracking(0.8)
                     }
                     Spacer()
-                    periodToggle(options: PLPeriod.allCases.map { $0.rawValue }, selected: plPeriod.rawValue) { raw in
-                        if let p = PLPeriod(rawValue: raw) { plPeriod = p }
+                    Button {
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        showPLPeriodFilter = true
+                    } label: {
+                        HStack(spacing: 4) {
+                            Text(plPeriodLabel(for: plPeriod))
+                                .font(.system(size: 12, weight: .semibold))
+                            Image(systemName: "chevron.down")
+                                .font(.system(size: 9, weight: .bold))
+                        }
+                        .foregroundStyle(Color.sweeplyAccent)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(Color.sweeplyAccent.opacity(0.10))
+                        .clipShape(Capsule())
                     }
                 }
 
@@ -1323,11 +1418,11 @@ struct FinancialReportsView: View {
                     .buttonStyle(.plain)
                 }
 
-                if revenueByService.isEmpty {
+                if primaryServiceCatalog.isEmpty && extrasServiceCatalog.isEmpty && revenueByService.isEmpty {
                     HStack(spacing: 10) {
                         Image(systemName: "briefcase")
                             .foregroundStyle(Color.sweeplyTextSub.opacity(0.5))
-                        Text("Complete jobs to see revenue by service.".translated())
+                        Text("Add services to your catalog to see revenue by service.".translated())
                             .font(.system(size: 13))
                             .foregroundStyle(Color.sweeplyTextSub)
                     }
@@ -1360,7 +1455,14 @@ struct FinancialReportsView: View {
 
     // Slide 1 — Revenue bars
     private var revenueServiceBarsSlide: some View {
-        let maxRev = revenueByService.map { $0.revenue }.max() ?? 1
+        let maxValue = max(
+            primaryServiceCatalog.map { service in
+                let metrics = revenueByServiceLookup[normalizedServiceName(service.name)]
+                return max(metrics?.revenue ?? 0, service.price)
+            }.max() ?? 0,
+            1
+        )
+
         return VStack(alignment: .leading, spacing: 0) {
             HStack {
                 Text("MAIN SERVICES".translated())
@@ -1368,53 +1470,67 @@ struct FinancialReportsView: View {
                     .foregroundStyle(Color.sweeplyTextSub)
                     .tracking(0.6)
                 Spacer()
-                Text("\(revenueByService.count) service\(revenueByService.count == 1 ? "" : "s")")
+                Text("\(primaryServiceCatalog.count) service\(primaryServiceCatalog.count == 1 ? "" : "s")")
                     .font(.system(size: 10, weight: .semibold, design: .monospaced))
                     .foregroundStyle(Color.sweeplyNavy.opacity(0.6))
             }
             .padding(.bottom, 10)
-            
-            VStack(spacing: 10) {
-            ForEach(Array(revenueByService.prefix(4).enumerated()), id: \.element.service) { idx, item in
-                HStack(spacing: 10) {
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 7, style: .continuous)
-                            .fill(serviceColor(at: idx).opacity(0.12))
-                            .frame(width: 30, height: 30)
-                        Image(systemName: serviceIconFor(item.service))
-                            .font(.system(size: 11, weight: .medium))
-                            .foregroundStyle(serviceColor(at: idx))
-                    }
-                    VStack(alignment: .leading, spacing: 3) {
-                        HStack {
-                            Text(item.service)
-                                .font(.system(size: 12, weight: .medium))
-                                .foregroundStyle(Color.sweeplyNavy)
-                                .lineLimit(1)
-                            Spacer()
-                            Text("\(item.jobCount)")
-                                .font(.system(size: 10, weight: .semibold, design: .monospaced))
-                                .foregroundStyle(Color.sweeplyTextSub)
-                            Text(item.revenue.currency)
-                                .font(.system(size: 12, weight: .bold, design: .monospaced))
+
+            HStack(spacing: 0) {
+                statChip(label: "Revenue", value: totalRevenueAllTime.currency, color: Color.sweeplyNavy.opacity(0.7))
+                Divider().frame(height: 36).padding(.horizontal, 12)
+                statChip(label: "Completed Jobs", value: "\(totalCompletedServiceJobs)", color: Color.sweeplyTextSub)
+            }
+            .padding(.bottom, 10)
+
+            VStack(spacing: 6) {
+                ForEach(Array(primaryServiceCatalog.prefix(4).enumerated()), id: \.element.id) { idx, service in
+                    let metrics = revenueByServiceLookup[normalizedServiceName(service.name)]
+                    let revenue = metrics?.revenue ?? 0
+                    let jobCount = metrics?.jobCount ?? 0
+                    let displayValue = revenue > 0 ? revenue : service.price
+
+                    HStack(spacing: 10) {
+                        ZStack {
+                            Circle().fill(serviceColor(at: idx).opacity(0.10)).frame(width: 28, height: 28)
+                            Image(systemName: serviceIconFor(service.name))
+                                .font(.system(size: 11))
                                 .foregroundStyle(serviceColor(at: idx))
                         }
-                        GeometryReader { geo in
-                            ZStack(alignment: .leading) {
-                                Capsule().fill(Color.sweeplyBorder.opacity(0.5)).frame(height: 5)
-                                Capsule().fill(serviceColor(at: idx))
-                                    .frame(width: geo.size.width * CGFloat(item.revenue / maxRev), height: 5)
-                            }
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text(service.name)
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundStyle(Color.sweeplyNavy)
+                                .lineLimit(1)
+                            Text(jobCount > 0
+                                 ? "\(jobCount) completed job\(jobCount == 1 ? "" : "s")"
+                                 : "Base price".translated())
+                                .font(.system(size: 11))
+                                .foregroundStyle(Color.sweeplyTextSub)
+                                .lineLimit(1)
                         }
-                        .frame(height: 5)
+                        Spacer()
+                        VStack(alignment: .trailing, spacing: 4) {
+                            Text(displayValue.currency)
+                                .font(.system(size: 13, weight: .bold, design: .monospaced))
+                                .foregroundStyle(revenue > 0 ? Color.sweeplyNavy : Color.sweeplyTextSub)
+                            GeometryReader { geo in
+                                ZStack(alignment: .leading) {
+                                    Capsule().fill(Color.sweeplyBorder.opacity(0.5)).frame(height: 5)
+                                    Capsule().fill(serviceColor(at: idx))
+                                        .frame(width: geo.size.width * CGFloat(displayValue / maxValue), height: 5)
+                                }
+                            }
+                            .frame(width: 72, height: 5)
+                        }
                     }
                 }
             }
-            }
         }
+        .padding(.top, 4)
     }
 
-    // Slide 2 — Add-ons & extras (custom service jobs)
+    // Slide 2 — Add-ons & extras
     private var revenueAddOnsSlide: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack {
@@ -1423,56 +1539,53 @@ struct FinancialReportsView: View {
                     .foregroundStyle(Color.sweeplyTextSub)
                     .tracking(0.6)
                 Spacer()
-                Text("\(customServiceJobs.count) job\(customServiceJobs.count == 1 ? "" : "s")")
+                Text("\(extrasServiceCatalog.count) item\(extrasServiceCatalog.count == 1 ? "" : "s")")
                     .font(.system(size: 10, weight: .semibold, design: .monospaced))
                     .foregroundStyle(Color.sweeplyNavy.opacity(0.6))
             }
             .padding(.bottom, 10)
 
-            if customServiceJobs.isEmpty {
-                VStack(spacing: 8) {
+            if extrasServiceCatalog.isEmpty {
+                HStack(spacing: 10) {
                     Image(systemName: "plus.circle.dashed")
-                        .font(.system(size: 28))
-                        .foregroundStyle(Color.sweeplyTextSub.opacity(0.3))
-                    Text("No custom or add-on services yet".translated())
+                        .foregroundStyle(Color.sweeplyTextSub.opacity(0.5))
+                    Text("Add add-ons or custom services to your catalog.".translated())
                         .font(.system(size: 13))
                         .foregroundStyle(Color.sweeplyTextSub)
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .padding(.vertical, 8)
             } else {
-                let addOnTotal = customServiceJobs.reduce(0) { $0 + $1.price }
+                let averagePrice = extrasServiceCatalog.reduce(0) { $0 + $1.price } / Double(extrasServiceCatalog.count)
                 HStack(spacing: 0) {
-                    statChip(label: "Revenue", value: addOnTotal.currency, color: Color.sweeplyNavy.opacity(0.6))
+                    statChip(label: "Add-Ons", value: "\(extrasServiceCatalog.count)", color: Color.sweeplyNavy.opacity(0.6))
                     Divider().frame(height: 36).padding(.horizontal, 12)
-                    statChip(label: "Avg Ticket",
-                             value: (addOnTotal / Double(customServiceJobs.count)).currency,
-                             color: Color.sweeplyTextSub)
+                    statChip(label: "Avg Price", value: averagePrice.currency, color: Color.sweeplyTextSub)
                 }
                 .padding(.bottom, 10)
 
                 VStack(spacing: 6) {
-                    ForEach(customServiceJobs.sorted { $0.price > $1.price }.prefix(3)) { job in
+                    ForEach(Array(extrasServiceCatalog.sorted { $0.price > $1.price }.prefix(3).enumerated()), id: \.element.id) { idx, service in
                         HStack(spacing: 10) {
                             ZStack {
                                 Circle().fill(Color.sweeplyAccent.opacity(0.10)).frame(width: 28, height: 28)
-                                Image(systemName: "plus.circle.fill")
+                                Image(systemName: extraServiceIconFor(service))
                                     .font(.system(size: 11))
                                     .foregroundStyle(Color.sweeplyAccent)
                             }
                             VStack(alignment: .leading, spacing: 1) {
-                                Text(job.serviceType.rawValue)
+                                Text(service.name)
                                     .font(.system(size: 12, weight: .semibold))
                                     .foregroundStyle(Color.sweeplyNavy)
                                     .lineLimit(1)
-                                Text(job.clientName)
+                                Text(service.isAddon ? "Add-on service".translated() : "Custom service".translated())
                                     .font(.system(size: 11))
                                     .foregroundStyle(Color.sweeplyTextSub)
                                     .lineLimit(1)
                             }
                             Spacer()
-                            Text(job.price.currency)
+                            Text(service.price.currency)
                                 .font(.system(size: 13, weight: .bold, design: .monospaced))
-                                .foregroundStyle(Color.sweeplyNavy)
+                                .foregroundStyle(idx == 0 ? Color.sweeplyNavy : Color.sweeplyTextSub)
                         }
                     }
                 }
@@ -1553,6 +1666,10 @@ struct FinancialReportsView: View {
         case "Office Clean":  return "building.2.fill"
         default:               return "wrench.and.screwdriver.fill"
         }
+    }
+
+    private func extraServiceIconFor(_ service: BusinessService) -> String {
+        service.isAddon ? "plus.circle.fill" : "slider.horizontal.3"
     }
 
     // MARK: - Jobs Summary
