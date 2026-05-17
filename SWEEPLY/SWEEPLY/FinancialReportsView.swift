@@ -1390,12 +1390,9 @@ struct FinancialReportsView: View {
             VStack(alignment: .leading, spacing: 14) {
                 // Header + View button
                 HStack(alignment: .firstTextBaseline) {
-                    VStack(alignment: .leading, spacing: 0) {
-                        Text("REVENUE BY SERVICE".translated())
-                            .font(.system(size: 11, weight: .bold))
-                            .foregroundStyle(Color.sweeplyTextSub)
-                            .tracking(0.8)
-                    }
+                    Text("Revenue by Service".translated())
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(Color.sweeplyNavy)
                     Spacer()
                     NavigationLink {
                         RevenueDetailView(
@@ -1667,15 +1664,9 @@ struct FinancialReportsView: View {
     private var jobsSummarySection: some View {
         SectionCard {
             VStack(alignment: .leading, spacing: 16) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("JOBS".translated())
-                        .font(.system(size: 11, weight: .bold))
-                        .foregroundStyle(Color.sweeplyTextSub)
-                        .tracking(0.8)
-                    Text("This month".translated())
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(Color.sweeplyNavy)
-                }
+                Text("Jobs".translated())
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(Color.sweeplyNavy)
 
                 HStack(spacing: 10) {
                     NavigationLink {
@@ -1742,10 +1733,9 @@ struct FinancialReportsView: View {
     private var invoiceHealthSection: some View {
         SectionCard {
             VStack(alignment: .leading, spacing: 16) {
-                Text("INVOICE HEALTH".translated())
-                    .font(.system(size: 11, weight: .bold))
-                    .foregroundStyle(Color.sweeplyTextSub)
-                    .tracking(0.8)
+                Text("Invoice Health".translated())
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(Color.sweeplyNavy)
 
                 HStack(spacing: 10) {
                     NavigationLink {
