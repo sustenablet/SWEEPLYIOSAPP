@@ -1390,14 +1390,11 @@ struct FinancialReportsView: View {
             VStack(alignment: .leading, spacing: 14) {
                 // Header + View button
                 HStack(alignment: .firstTextBaseline) {
-                    VStack(alignment: .leading, spacing: 2) {
+                    VStack(alignment: .leading, spacing: 0) {
                         Text("REVENUE BY SERVICE".translated())
                             .font(.system(size: 11, weight: .bold))
                             .foregroundStyle(Color.sweeplyTextSub)
                             .tracking(0.8)
-                        Text("All completed jobs".translated())
-                            .font(.system(size: 15, weight: .semibold))
-                            .foregroundStyle(Color.sweeplyNavy)
                     }
                     Spacer()
                     NavigationLink {
