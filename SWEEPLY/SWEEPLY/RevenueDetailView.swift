@@ -3,11 +3,18 @@ import Charts
 
 struct RevenueDetailView: View {
     @Environment(ProfileStore.self) private var profileStore
+    @State private var selectedRange: RangeFilter = .all
 
     let revenueByService: [(service: String, revenue: Double, jobCount: Int)]
     let completedJobs: [Job]
     let customJobs: [Job]
     let serviceColorAt: (Int) -> Color
+
+    private enum RangeFilter: String, CaseIterable {
+        case month = "Month"
+        case sixMonths = "6 Months"
+        case all = "All"
+    }
 
     private var profile: UserProfile { profileStore.profile ?? MockData.profile }
     private var serviceCatalog: [BusinessService] { profile.settings.hydratedServiceCatalog }
@@ -17,8 +24,39 @@ struct RevenueDetailView: View {
     private var extraServiceCatalog: [BusinessService] {
         serviceCatalog.filter { $0.isAddon || ServiceType(rawValue: $0.name) == nil }
     }
+    private var filteredCompletedJobs: [Job] {
+        let calendar = Calendar.current
+        let now = Date()
+
+        switch selectedRange {
+        case .all:
+            return completedJobs
+        case .month:
+            guard let start = calendar.date(byAdding: .month, value: -1, to: now) else { return completedJobs }
+            return completedJobs.filter { $0.date >= start && $0.date <= now }
+        case .sixMonths:
+            guard let start = calendar.date(byAdding: .month, value: -6, to: now) else { return completedJobs }
+            return completedJobs.filter { $0.date >= start && $0.date <= now }
+        }
+    }
+    private var filteredCustomJobs: [Job] {
+        filteredCompletedJobs.filter {
+            if case .custom = $0.serviceType { return true }
+            return false
+        }
+    }
+    private var filteredRevenueByService: [(service: String, revenue: Double, jobCount: Int)] {
+        var grouped: [String: (Double, Int)] = [:]
+        for job in filteredCompletedJobs {
+            let key = job.serviceType.rawValue
+            let current = grouped[key] ?? (0, 0)
+            grouped[key] = (current.0 + job.price, current.1 + 1)
+        }
+        return grouped.map { (service: $0.key, revenue: $0.value.0, jobCount: $0.value.1) }
+            .sorted { $0.revenue > $1.revenue }
+    }
     private var revenueLookup: [String: (revenue: Double, jobCount: Int)] {
-        Dictionary(uniqueKeysWithValues: revenueByService.map {
+        Dictionary(uniqueKeysWithValues: filteredRevenueByService.map {
             (normalizedServiceName($0.service), (revenue: $0.revenue, jobCount: $0.jobCount))
         })
     }
@@ -39,8 +77,8 @@ struct RevenueDetailView: View {
         .sorted { $0.avg > $1.avg }
     }
 
-    private var totalRevenue: Double { revenueByService.reduce(0) { $0 + $1.revenue } }
-    private var totalJobs: Int      { revenueByService.reduce(0) { $0 + $1.jobCount } }
+    private var totalRevenue: Double { filteredRevenueByService.reduce(0) { $0 + $1.revenue } }
+    private var totalJobs: Int      { filteredRevenueByService.reduce(0) { $0 + $1.jobCount } }
     private var avgTicket: Double   { totalJobs > 0 ? totalRevenue / Double(totalJobs) : 0 }
 
     private var maxRevenue: Double {
@@ -66,6 +104,31 @@ struct RevenueDetailView: View {
         .background(Color.sweeplyBackground.ignoresSafeArea())
         .navigationTitle("Revenue by Service".translated())
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Menu {
+                    ForEach(RangeFilter.allCases, id: \.self) { range in
+                        Button {
+                            selectedRange = range
+                        } label: {
+                            if selectedRange == range {
+                                Label(range.rawValue.translated(), systemImage: "checkmark")
+                            } else {
+                                Text(range.rawValue.translated())
+                            }
+                        }
+                    }
+                } label: {
+                    HStack(spacing: 4) {
+                        Text(selectedRange.rawValue.translated())
+                            .font(.system(size: 12, weight: .semibold))
+                        Image(systemName: "chevron.down")
+                            .font(.system(size: 10, weight: .bold))
+                    }
+                    .foregroundStyle(Color.sweeplyAccent)
+                }
+            }
+        }
     }
 
     // MARK: - Summary strip
@@ -153,7 +216,7 @@ struct RevenueDetailView: View {
     @ViewBuilder
     private var serviceMixSection: some View {
         if #available(iOS 17.0, *) {
-            let chartEntries = Array(revenueByService.enumerated())
+            let chartEntries = Array(filteredRevenueByService.enumerated())
             let listEntries = Array(primaryServiceCatalog.enumerated())
             SectionCard {
                 VStack(alignment: .leading, spacing: 16) {
@@ -213,25 +276,25 @@ struct RevenueDetailView: View {
         SectionCard {
             VStack(alignment: .leading, spacing: 14) {
                 sectionHeader(label: "EXTRAS & ADD-ONS".translated(),
-                              title: customJobs.isEmpty ? "Catalog services".translated() : "Custom services".translated(),
+                              title: filteredCustomJobs.isEmpty ? "Catalog services".translated() : "Custom services".translated(),
                               badge: "\(extraServiceCatalog.count)")
 
-                let addOnTotal = customJobs.reduce(0) { $0 + $1.price }
-                let addOnAvg = customJobs.isEmpty
+                let addOnTotal = filteredCustomJobs.reduce(0) { $0 + $1.price }
+                let addOnAvg = filteredCustomJobs.isEmpty
                     ? (extraServiceCatalog.isEmpty ? 0 : extraServiceCatalog.reduce(0) { $0 + $1.price } / Double(extraServiceCatalog.count))
-                    : addOnTotal / Double(customJobs.count)
+                    : addOnTotal / Double(filteredCustomJobs.count)
 
                 HStack(spacing: 0) {
-                    addonStat(label: customJobs.isEmpty ? "Add-Ons".translated() : "Total".translated(),
-                              value: customJobs.isEmpty ? "\(extraServiceCatalog.count)" : addOnTotal.currency,
+                    addonStat(label: filteredCustomJobs.isEmpty ? "Add-Ons".translated() : "Total".translated(),
+                              value: filteredCustomJobs.isEmpty ? "\(extraServiceCatalog.count)" : addOnTotal.currency,
                               color: .sweeplyAccent)
                     Divider().frame(height: 38).padding(.horizontal, 14)
-                    addonStat(label: customJobs.isEmpty ? "Avg Price".translated() : "Avg Ticket".translated(),
+                    addonStat(label: filteredCustomJobs.isEmpty ? "Avg Price".translated() : "Avg Ticket".translated(),
                               value: addOnAvg.currency,
                               color: .sweeplyNavy)
                     Divider().frame(height: 38).padding(.horizontal, 14)
                     addonStat(label: "Jobs".translated(),
-                              value: "\(customJobs.count)",
+                              value: "\(filteredCustomJobs.count)",
                               color: .sweeplyWarning)
                 }
                 .padding(12)
@@ -240,7 +303,7 @@ struct RevenueDetailView: View {
                 .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).stroke(Color.sweeplyAccent.opacity(0.15), lineWidth: 1))
 
                 VStack(spacing: 0) {
-                    if customJobs.isEmpty {
+                    if filteredCustomJobs.isEmpty {
                         ForEach(Array(extraServiceCatalog.sorted { $0.price > $1.price }.enumerated()), id: \.element.id) { idx, service in
                             AddOnCatalogRow(service: service)
                             if idx < extraServiceCatalog.count - 1 {
@@ -248,9 +311,9 @@ struct RevenueDetailView: View {
                             }
                         }
                     } else {
-                        ForEach(Array(customJobs.sorted { $0.price > $1.price }.enumerated()), id: \.element.id) { idx, job in
+                        ForEach(Array(filteredCustomJobs.sorted { $0.price > $1.price }.enumerated()), id: \.element.id) { idx, job in
                             AddOnJobRow(job: job)
-                            if idx < customJobs.count - 1 {
+                            if idx < filteredCustomJobs.count - 1 {
                                 Divider().padding(.leading, 44)
                             }
                         }
