@@ -9,6 +9,15 @@ enum ScheduleViewMode: String, CaseIterable {
     case list = "List"
     case month = "Month"
     case map = "Map"
+
+    var iconName: String {
+        switch self {
+        case .day: return "calendar.day.timeline.left"
+        case .list: return "list.bullet.rectangle"
+        case .month: return "calendar"
+        case .map: return "map"
+        }
+    }
 }
 
 private let inProgressColor = Color(red: 0.4, green: 0.45, blue: 0.95)
@@ -64,6 +73,7 @@ struct ScheduleView: View {
     @State private var mapCenteredOnUser = false
     @State private var locationManager = LocationManager.shared
     @Namespace private var mapSelectionNamespace
+    @State private var viewTransitionForward = true
     
     private var visibleViewModes: [ScheduleViewMode] {
         ScheduleViewMode.allCases.filter { enabledViewModes.contains($0) }
@@ -79,23 +89,23 @@ struct ScheduleView: View {
         NavigationStack {
             VStack(spacing: 0) {
                 topToolbar
-                modeSegment
-                    .padding(.horizontal, 16)
-                    .padding(.top, 12)
 
                 if viewMode != .month {
                     WeekStripView(selectedDay: $selectedDay, jobs: ownJobs)
                         .padding(.top, 12)
                 }
 
-                Group {
-                    switch viewMode {
-                    case .day:   dayView
-                    case .list:  listView
-                    case .month: monthView
-                    case .map:   mapView
-                    }
+                ZStack {
+                    scheduleContent
                 }
+                .id(viewMode)
+                .transition(
+                    .asymmetric(
+                        insertion: .move(edge: viewTransitionForward ? .trailing : .leading).combined(with: .opacity),
+                        removal: .move(edge: viewTransitionForward ? .leading : .trailing).combined(with: .opacity)
+                    )
+                )
+                .animation(.easeInOut(duration: 0.28), value: viewMode)
             }
             .background(Color.sweeplyBackground.ignoresSafeArea())
             .navigationBarHidden(true)
@@ -103,8 +113,8 @@ struct ScheduleView: View {
                 if let date = notification.userInfo?["date"] as? Date {
                     withAnimation(.easeInOut(duration: 0.25)) {
                         selectedDay = Calendar.current.startOfDay(for: date)
-                        viewModeRaw = ScheduleViewMode.day.rawValue
                     }
+                    changeViewMode(to: .day)
                 }
             }
             .onChange(of: viewMode) { _, newMode in
@@ -164,8 +174,11 @@ struct ScheduleView: View {
 
             Spacer(minLength: 12)
 
-            HeaderIconButton(systemName: "line.3.horizontal.decrease.circle") {
-                showFilters = true
+            HStack(spacing: 10) {
+                viewMenuButton
+                HeaderIconButton(systemName: "line.3.horizontal.decrease.circle") {
+                    showFilters = true
+                }
             }
         }
         .frame(minHeight: 76, alignment: .center)
@@ -179,48 +192,57 @@ struct ScheduleView: View {
         return f.string(from: selectedDay)
     }
 
+    private var viewMenuButton: some View {
+        Menu {
+            ForEach(visibleViewModes, id: \.self) { mode in
+                Button {
+                    changeViewMode(to: mode)
+                } label: {
+                    Label(mode.rawValue.translated(), systemImage: mode == viewMode ? "checkmark" : mode.iconName)
+                }
+            }
+        } label: {
+            HStack(spacing: 6) {
+                Image(systemName: viewMode.iconName)
+                    .font(.system(size: 13, weight: .semibold))
+                Text("View".translated())
+                    .font(.system(size: 13, weight: .semibold))
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundStyle(Color.sweeplyTextSub.opacity(0.7))
+            }
+            .foregroundStyle(Color.sweeplyNavy)
+            .padding(.horizontal, 12)
+            .frame(height: 40)
+            .background(Color.sweeplySurface)
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .stroke(Color.sweeplyBorder, lineWidth: 1)
+            )
+        }
+        .menuStyle(.button)
+    }
+
     @ViewBuilder
-    private func modeTabBackground(isSelected: Bool) -> some View {
-        if isSelected {
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .fill(Color.sweeplySurface)
-                .shadow(color: .black.opacity(0.06), radius: 4, x: 0, y: 1)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .stroke(Color.sweeplyAccent.opacity(0.3), lineWidth: 1)
-                )
+    private var scheduleContent: some View {
+        switch viewMode {
+        case .day:   dayView
+        case .list:  listView
+        case .month: monthView
+        case .map:   mapView
         }
     }
 
-    // MARK: Day / List / Map segment
-
-    private var modeSegment: some View {
-        HStack(spacing: 4) {
-            ForEach(visibleViewModes, id: \.self) { mode in
-                Button {
-                    withAnimation(.easeInOut(duration: 0.2)) { viewModeRaw = mode.rawValue }
-                } label: {
-                    let isSelected = viewMode == mode
-                    Text(mode.rawValue.translated())
-                        .font(.system(size: 14, weight: isSelected ? .semibold : .medium))
-                        .foregroundStyle(isSelected ? Color.sweeplyNavy : Color.sweeplyTextSub)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 10)
-                        .background(modeTabBackground(isSelected: isSelected))
-                }
-                .buttonStyle(.plain)
-            }
+    private func changeViewMode(to mode: ScheduleViewMode) {
+        guard mode != viewMode else { return }
+        let allModes = ScheduleViewMode.allCases
+        let currentIndex = allModes.firstIndex(of: viewMode) ?? 0
+        let newIndex = allModes.firstIndex(of: mode) ?? currentIndex
+        viewTransitionForward = newIndex >= currentIndex
+        withAnimation(.easeInOut(duration: 0.28)) {
+            viewModeRaw = mode.rawValue
         }
-        .padding(4)
-        .background(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(Color.sweeplySurface)
-                .shadow(color: .black.opacity(0.05), radius: 2, x: 0, y: 1)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .stroke(Color.sweeplyBorder, lineWidth: 1)
-        )
     }
 
     // MARK: - Map View
