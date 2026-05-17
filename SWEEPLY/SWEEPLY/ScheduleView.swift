@@ -153,7 +153,7 @@ struct ScheduleView: View {
         HStack(alignment: .center, spacing: 16) {
             VStack(alignment: .leading, spacing: 4) {
                 Text("Schedule".translated())
-                    .font(.system(size: 28, weight: .semibold))
+                    .font(.system(size: 24, weight: .semibold))
                     .foregroundStyle(Color.sweeplyNavy)
                     .lineLimit(1)
 
@@ -183,7 +183,7 @@ struct ScheduleView: View {
         }
         .frame(minHeight: 76, alignment: .center)
         .padding(.horizontal, 16)
-        .padding(.top, 16)
+        .padding(.top, 8)
     }
 
     private var monthTitle: String {
