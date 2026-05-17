@@ -822,7 +822,7 @@ private struct EditInvoiceSheet: View {
             }
             .navigationTitle("Edit Invoice".translated())
             .navigationBarTitleDisplayMode(.inline)
-            .navigationBarHidden(false)
+            .toolbar(.visible, for: .navigationBar)
         }
     }
 

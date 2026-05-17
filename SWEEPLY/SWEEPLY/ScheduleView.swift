@@ -108,7 +108,7 @@ struct ScheduleView: View {
                 .animation(.easeInOut(duration: 0.28), value: viewMode)
             }
             .background(Color.sweeplyBackground.ignoresSafeArea())
-            .navigationBarHidden(true)
+            .toolbar(.hidden, for: .navigationBar)
             .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("NavigateToScheduleDate"))) { notification in
                 if let date = notification.userInfo?["date"] as? Date {
                     withAnimation(.easeInOut(duration: 0.25)) {

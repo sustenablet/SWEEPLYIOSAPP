@@ -151,7 +151,7 @@ struct CleanerUpcomingView: View {
                 }
             }
             .background(Color.sweeplyBackground.ignoresSafeArea())
-            .navigationBarHidden(true)
+            .toolbar(.hidden, for: .navigationBar)
             .navigationDestination(item: $selectedJobId) { jobId in
                 CleanerJobDetailView(jobId: jobId, ownerId: membership.ownerId)
             }

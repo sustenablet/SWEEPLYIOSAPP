@@ -159,7 +159,7 @@ struct ClientsView: View {
                 .frame(maxWidth: .infinity)
             }
             .background(Color.sweeplyBackground.ignoresSafeArea())
-            .navigationBarHidden(true)
+            .toolbar(.hidden, for: .navigationBar)
             .navigationDestination(item: $viewingClientId) { id in
                 ClientDetailView(clientId: id)
             }
