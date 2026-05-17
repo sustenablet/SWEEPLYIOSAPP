@@ -324,6 +324,7 @@ struct FinancialReportsView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
                     revenueProgressSection
+                    ytdSummarySection
                     sixMonthChartSection
                     cashflowSectionWithPopup
                     revenueByServiceSection
@@ -476,8 +477,8 @@ struct FinancialReportsView: View {
     // MARK: - Revenue Progress
 
     private var revenueProgressSection: some View {
-        let collected = overviewBarData.map { $0.collected }.reduce(0, +)
-        let scheduled = overviewBarData.map { $0.scheduled }.reduce(0, +)
+        let collected = overviewBarData.reduce(0) { $0 + $1.collected }
+        let scheduled = overviewBarData.reduce(0) { $0 + $1.scheduled }
         let total = collected + scheduled
         let progress = total > 0 ? collected / total : 0
 
@@ -539,24 +540,6 @@ struct FinancialReportsView: View {
                         .font(.system(size: 11, weight: .medium))
                         .foregroundStyle(Color.sweeplyTextSub)
                 }
-            }
-
-            Divider()
-                .overlay(Color.sweeplyBorder)
-                .padding(.top, 4)
-
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 12) {
-                    kpiBox(icon: "dollarsign.circle.fill", title: "Revenue".translated(), value: ytdRevenue.currency, color: Color.sweeplySuccess)
-                    kpiBox(icon: "minus.circle.fill", title: "Expenses".translated(), value: ytdExpenses.currency, color: Color.sweeplyDestructive)
-                    kpiBox(icon: "checkmark.circle.fill", title: "Net Profit".translated(), value: ytdNet.currency, color: ytdNet >= 0 ? Color.sweeplySuccess : Color.sweeplyDestructive)
-                    kpiBox(icon: "doc.text.fill", title: "Invoices Paid".translated(), value: "\(ytdInvoiceCount)", color: Color.sweeplyAccent)
-                    kpiBox(icon: "person.2.fill", title: "Active Clients".translated(), value: "\(activeClientsCount)", color: Color.sweeplyNavy)
-                    kpiBox(icon: "briefcase.fill", title: "Jobs This Month".translated(), value: "\(jobsThisMonthCount)", color: Color.sweeplyWarning)
-                    kpiBox(icon: "exclamationmark.triangle.fill", title: "Outstanding".translated(), value: unpaidTotal.currency, color: Color.sweeplyDestructive)
-                    kpiBox(icon: "calendar", title: "Scheduled".translated(), value: "\(scheduledJobsCount)", color: Color.sweeplySuccess)
-                }
-                .padding(.vertical, 4)
             }
         }
         .padding(16)
@@ -764,7 +747,7 @@ struct FinancialReportsView: View {
                         Text("Cash-Flow Forecast".translated())
                             .font(.system(size: 15, weight: .semibold))
                             .foregroundStyle(Color.sweeplyNavy)
-                        Text("Based on scheduled jobs & invoices".translated())
+                        Text("Scheduled jobs & invoices".translated())
                             .font(.system(size: 11))
                             .foregroundStyle(Color.sweeplyTextSub)
                     }
@@ -799,82 +782,14 @@ struct FinancialReportsView: View {
                     }
                 }
 
-                // Scrollable chart — 52pt per bar so bars are never squeezed
-                let chartWidth = max(CGFloat(forecastWeekCount) * 52, 320)
                 ScrollView(.horizontal, showsIndicators: false) {
-                    Chart(cashflowForecast) { week in
-                        let isSelected = selectedForecastWeekLabel == week.weekLabel
-
-                        // Highlight strip
-                        if isSelected {
-                            RectangleMark(x: .value("Week", week.weekLabel))
-                                .foregroundStyle(Color.sweeplyNavy.opacity(0.06))
-                                .cornerRadius(6)
-                        }
-
-                        BarMark(
-                            x: .value("Week", week.weekLabel),
-                            y: .value("Jobs", week.jobsAmount),
-                            stacking: .standard
-                        )
-                        .foregroundStyle(isSelected ? Color.sweeplyNavy.opacity(0.65) : Color.sweeplyNavy.opacity(0.35))
-                        .cornerRadius(4)
-
-                        BarMark(
-                            x: .value("Week", week.weekLabel),
-                            y: .value("Invoices", week.invoicesAmount),
-                            stacking: .standard
-                        )
-                        .foregroundStyle(isSelected ? Color.sweeplyNavy.opacity(0.45) : Color.sweeplyBorder)
-                        .cornerRadius(4)
-                    }
-                    .chartOverlay { proxy in
-                        GeometryReader { _ in
-                            Rectangle()
-                                .fill(.clear)
-                                .contentShape(Rectangle())
-                                .gesture(
-                                    DragGesture(minimumDistance: 0)
-                                        .onEnded { value in
-                                            if let weekLabel: String = proxy.value(atX: value.location.x) {
-                                                withAnimation(.easeInOut(duration: 0.15)) {
-                                                    selectedForecastWeekLabel = weekLabel
-                                                }
-                                            }
-                                        }
-                                )
-                                .simultaneousGesture(
-                                    LongPressGesture(minimumDuration: 0.4)
-                                        .onEnded { _ in
-                                            if let selectedLabel = selectedForecastWeekLabel,
-                                               let week = cashflowForecast.first(where: { $0.weekLabel == selectedLabel }) {
-                                                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-                                                popupWeek = week
-                                                showForecastPopup = true
-                                            }
-                                        }
-                                )
+                    HStack(alignment: .bottom, spacing: 14) {
+                        ForEach(cashflowForecast, id: \.weekLabel) { week in
+                            cashflowWeekColumn(week)
                         }
                     }
-                    .chartXAxis {
-                        AxisMarks(values: .automatic) {
-                            AxisValueLabel()
-                                .font(.system(size: 10, weight: .medium))
-                                .foregroundStyle(Color.sweeplyTextSub)
-                        }
-                    }
-                    .chartYAxis {
-                        AxisMarks(values: .automatic(desiredCount: 3)) {
-                            AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5))
-                                .foregroundStyle(Color.sweeplyBorder.opacity(0.7))
-                            AxisValueLabel()
-                                .font(.system(size: 9))
-                                .foregroundStyle(Color.sweeplyTextSub)
-                        }
-                    }
-                    .frame(width: chartWidth, height: 180)
+                    .padding(.vertical, 4)
                 }
-                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
 
                 HStack(spacing: 16) {
                     legendDot(color: Color.sweeplyNavy.opacity(0.45), label: "Scheduled jobs")
@@ -892,6 +807,60 @@ struct FinancialReportsView: View {
                     .padding(.top, 4)
                 }
         }
+    }
+
+    private func cashflowWeekColumn(_ week: ForecastWeek) -> some View {
+        let isSelected = selectedForecastWeekLabel == week.weekLabel
+        let totalHeight: CGFloat = 128
+        let jobsRatio = week.jobsAmount / forecastMax
+        let invoicesRatio = week.invoicesAmount / forecastMax
+
+        return Button {
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            withAnimation(.easeInOut(duration: 0.2)) {
+                selectedForecastWeekLabel = isSelected ? nil : week.weekLabel
+            }
+        } label: {
+            VStack(spacing: 10) {
+                ZStack(alignment: .bottom) {
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(isSelected ? Color.sweeplyAccent.opacity(0.08) : Color.sweeplyBackground)
+                        .frame(width: 54, height: totalHeight + 16)
+
+                    VStack(spacing: 0) {
+                        if week.invoicesAmount > 0 {
+                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                .fill(Color.sweeplyTextSub.opacity(0.18))
+                                .frame(width: 38, height: max(CGFloat(invoicesRatio) * totalHeight, 14))
+                        }
+                        if week.jobsAmount > 0 {
+                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                .fill(Color.sweeplyNavy.opacity(0.55))
+                                .frame(width: 38, height: max(CGFloat(jobsRatio) * totalHeight, 14))
+                        }
+                    }
+                    .padding(.bottom, 8)
+                }
+
+                Text(week.weekLabel)
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(Color.sweeplyTextSub)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+            }
+            .frame(width: 58)
+        }
+        .buttonStyle(.plain)
+        .simultaneousGesture(
+            LongPressGesture(minimumDuration: 0.35).onEnded { _ in
+                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                popupWeek = week
+                selectedForecastWeekLabel = week.weekLabel
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    showForecastPopup = true
+                }
+            }
+        )
     }
 
     private var cashflowSectionWithPopup: some View {
@@ -1086,9 +1055,6 @@ struct FinancialReportsView: View {
                             .font(.system(size: 11, weight: .bold))
                             .foregroundStyle(Color.sweeplyTextSub)
                             .tracking(0.8)
-                        Text(plPeriod.rawValue.translated())
-                            .font(.system(size: 15, weight: .semibold))
-                            .foregroundStyle(Color.sweeplyNavy)
                     }
                     Spacer()
                     periodToggle(options: PLPeriod.allCases.map { $0.rawValue }, selected: plPeriod.rawValue) { raw in
@@ -1134,16 +1100,12 @@ struct FinancialReportsView: View {
         VStack(spacing: 0) {
             // Profit & Loss - top part
             VStack(alignment: .leading, spacing: 16) {
+                Text("Profit & Loss".translated().uppercased())
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(Color.sweeplyTextSub)
+                    .tracking(0.8)
+
                 HStack {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Profit & Loss".translated().uppercased())
-                            .font(.system(size: 11, weight: .bold))
-                            .foregroundStyle(Color.sweeplyTextSub)
-                            .tracking(0.8)
-                        Text(plPeriod.rawValue.translated())
-                            .font(.system(size: 15, weight: .semibold))
-                            .foregroundStyle(Color.sweeplyNavy)
-                    }
                     Spacer()
                     periodToggle(options: PLPeriod.allCases.map { $0.rawValue }, selected: plPeriod.rawValue) { raw in
                         if let p = PLPeriod(rawValue: raw) { plPeriod = p }
@@ -1167,16 +1129,12 @@ struct FinancialReportsView: View {
 
             // Expenses by Category - connected bottom part
             VStack(alignment: .leading, spacing: 16) {
+                Text("EXPENSES BY CATEGORY".translated())
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(Color.sweeplyTextSub)
+                    .tracking(0.8)
+
                 HStack {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("EXPENSES BY CATEGORY".translated())
-                            .font(.system(size: 11, weight: .bold))
-                            .foregroundStyle(Color.sweeplyTextSub)
-                            .tracking(0.8)
-                        Text(plPeriod.rawValue.translated())
-                            .font(.system(size: 15, weight: .semibold))
-                            .foregroundStyle(Color.sweeplyNavy)
-                    }
                     Spacer()
                     periodToggle(options: PLPeriod.allCases.map { $0.rawValue }, selected: plPeriod.rawValue) { raw in
                         if let p = PLPeriod(rawValue: raw) { plPeriod = p }
@@ -1334,8 +1292,6 @@ struct FinancialReportsView: View {
     private var revenueByServiceSection: some View {
         SectionCard {
             VStack(alignment: .leading, spacing: 14) {
-                revenueProgressSection
-
                 // Header + View button
                 HStack(alignment: .firstTextBaseline) {
                     VStack(alignment: .leading, spacing: 2) {
