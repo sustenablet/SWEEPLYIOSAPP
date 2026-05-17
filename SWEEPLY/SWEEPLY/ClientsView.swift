@@ -232,7 +232,7 @@ struct ClientsView: View {
             }
         }
         .padding(.horizontal, 20)
-        .padding(.top, 20)
+        .padding(.top, 8)
     }
 
     // MARK: - Search Bar
