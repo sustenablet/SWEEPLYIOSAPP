@@ -1,8 +1,17 @@
 import SwiftUI
 
 struct JobsDetailListView: View {
+    @State private var selectedRange: RangeFilter = .month
+
     let status: JobStatus
     let jobs: [Job]
+
+    private enum RangeFilter: String, CaseIterable {
+        case week = "Week"
+        case month = "Month"
+        case sixMonths = "6 Months"
+        case all = "All"
+    }
 
     private var accentColor: Color {
         switch status {
@@ -20,14 +29,33 @@ struct JobsDetailListView: View {
         }
     }
 
-    private var sortedJobs: [Job] {
-        switch status {
-        case .scheduled, .inProgress: return jobs.sorted { $0.date < $1.date }
-        default:                       return jobs.sorted { $0.date > $1.date }
+    private var filteredJobs: [Job] {
+        let calendar = Calendar.current
+        let now = Date()
+
+        switch selectedRange {
+        case .all:
+            return jobs
+        case .week:
+            guard let start = calendar.date(byAdding: .day, value: -7, to: now) else { return jobs }
+            return jobs.filter { $0.date >= start && $0.date <= now }
+        case .month:
+            guard let start = calendar.date(byAdding: .month, value: -1, to: now) else { return jobs }
+            return jobs.filter { $0.date >= start && $0.date <= now }
+        case .sixMonths:
+            guard let start = calendar.date(byAdding: .month, value: -6, to: now) else { return jobs }
+            return jobs.filter { $0.date >= start && $0.date <= now }
         }
     }
 
-    private var totalValue: Double { jobs.reduce(0) { $0 + $1.price } }
+    private var sortedJobs: [Job] {
+        switch status {
+        case .scheduled, .inProgress: return filteredJobs.sorted { $0.date < $1.date }
+        default:                       return filteredJobs.sorted { $0.date > $1.date }
+        }
+    }
+
+    private var totalValue: Double { filteredJobs.reduce(0) { $0 + $1.price } }
 
     var body: some View {
         ScrollView {
@@ -65,16 +93,41 @@ struct JobsDetailListView: View {
         .background(Color.sweeplyBackground.ignoresSafeArea())
         .navigationTitle(navTitle)
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Menu {
+                    ForEach(RangeFilter.allCases, id: \.self) { range in
+                        Button {
+                            selectedRange = range
+                        } label: {
+                            if selectedRange == range {
+                                Label(range.rawValue.translated(), systemImage: "checkmark")
+                            } else {
+                                Text(range.rawValue.translated())
+                            }
+                        }
+                    }
+                } label: {
+                    HStack(spacing: 4) {
+                        Text(selectedRange.rawValue.translated())
+                            .font(.system(size: 12, weight: .semibold))
+                        Image(systemName: "chevron.down")
+                            .font(.system(size: 10, weight: .bold))
+                    }
+                    .foregroundStyle(Color.sweeplyAccent)
+                }
+            }
+        }
     }
 
     private var summaryStrip: some View {
         HStack(alignment: .bottom) {
             VStack(alignment: .leading, spacing: 2) {
-                Text("\(jobs.count)")
+                Text("\(filteredJobs.count)")
                     .font(.system(size: 48, weight: .bold, design: .rounded))
                     .foregroundStyle(accentColor)
                     .monospacedDigit()
-                Text(jobs.count == 1 ? "job this month".translated() : "jobs this month".translated())
+                Text(summaryLabel)
                     .font(.system(size: 13))
                     .foregroundStyle(Color.sweeplyTextSub)
             }
@@ -95,11 +148,37 @@ struct JobsDetailListView: View {
         .padding(.bottom, 20)
     }
 
+    private var summaryLabel: String {
+        switch selectedRange {
+        case .week:
+            return filteredJobs.count == 1 ? "job this week".translated() : "jobs this week".translated()
+        case .month:
+            return filteredJobs.count == 1 ? "job this month".translated() : "jobs this month".translated()
+        case .sixMonths:
+            return filteredJobs.count == 1 ? "job in last 6 months".translated() : "jobs in last 6 months".translated()
+        case .all:
+            return filteredJobs.count == 1 ? "job all time".translated() : "jobs all time".translated()
+        }
+    }
+
     private var emptyStateText: String {
         switch status {
-        case .completed:              return "No completed jobs this month".translated()
-        case .scheduled, .inProgress: return "No upcoming jobs this month".translated()
-        case .cancelled:              return "No cancelled jobs this month".translated()
+        case .completed:              return emptyStateText(prefix: "completed")
+        case .scheduled, .inProgress: return emptyStateText(prefix: "upcoming")
+        case .cancelled:              return emptyStateText(prefix: "cancelled")
+        }
+    }
+
+    private func emptyStateText(prefix: String) -> String {
+        switch selectedRange {
+        case .week:
+            return "No \(prefix) jobs this week".translated()
+        case .month:
+            return "No \(prefix) jobs this month".translated()
+        case .sixMonths:
+            return "No \(prefix) jobs in the last 6 months".translated()
+        case .all:
+            return "No \(prefix) jobs".translated()
         }
     }
 
