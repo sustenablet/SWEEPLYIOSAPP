@@ -1487,28 +1487,13 @@ struct FinancialReportsView: View {
                 ForEach(Array(primaryServiceCatalog.prefix(4).enumerated()), id: \.element.id) { idx, service in
                     let metrics = revenueByServiceLookup[normalizedServiceName(service.name)]
                     let revenue = metrics?.revenue ?? 0
-                    let jobCount = metrics?.jobCount ?? 0
                     let displayValue = revenue > 0 ? revenue : service.price
 
                     HStack(spacing: 10) {
-                        ZStack {
-                            Circle().fill(serviceColor(at: idx).opacity(0.10)).frame(width: 28, height: 28)
-                            Image(systemName: serviceIconFor(service.name))
-                                .font(.system(size: 11))
-                                .foregroundStyle(serviceColor(at: idx))
-                        }
-                        VStack(alignment: .leading, spacing: 1) {
-                            Text(service.name)
-                                .font(.system(size: 12, weight: .semibold))
-                                .foregroundStyle(Color.sweeplyNavy)
-                                .lineLimit(1)
-                            Text(jobCount > 0
-                                 ? "\(jobCount) completed job\(jobCount == 1 ? "" : "s")"
-                                 : "Base price".translated())
-                                .font(.system(size: 11))
-                                .foregroundStyle(Color.sweeplyTextSub)
-                                .lineLimit(1)
-                        }
+                        Text(service.name)
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(Color.sweeplyNavy)
+                            .lineLimit(1)
                         Spacer()
                         VStack(alignment: .trailing, spacing: 4) {
                             Text(displayValue.currency)
@@ -1524,6 +1509,7 @@ struct FinancialReportsView: View {
                             .frame(width: 72, height: 5)
                         }
                     }
+                    .frame(minHeight: 28)
                 }
             }
         }
@@ -1564,29 +1550,18 @@ struct FinancialReportsView: View {
                 .padding(.bottom, 10)
 
                 VStack(spacing: 6) {
-                    ForEach(Array(extrasServiceCatalog.sorted { $0.price > $1.price }.prefix(3).enumerated()), id: \.element.id) { idx, service in
+                    ForEach(Array(extrasServiceCatalog.sorted { $0.price > $1.price }.prefix(4).enumerated()), id: \.element.id) { idx, service in
                         HStack(spacing: 10) {
-                            ZStack {
-                                Circle().fill(Color.sweeplyAccent.opacity(0.10)).frame(width: 28, height: 28)
-                                Image(systemName: extraServiceIconFor(service))
-                                    .font(.system(size: 11))
-                                    .foregroundStyle(Color.sweeplyAccent)
-                            }
-                            VStack(alignment: .leading, spacing: 1) {
-                                Text(service.name)
-                                    .font(.system(size: 12, weight: .semibold))
-                                    .foregroundStyle(Color.sweeplyNavy)
-                                    .lineLimit(1)
-                                Text(service.isAddon ? "Add-on service".translated() : "Custom service".translated())
-                                    .font(.system(size: 11))
-                                    .foregroundStyle(Color.sweeplyTextSub)
-                                    .lineLimit(1)
-                            }
+                            Text(service.name)
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundStyle(Color.sweeplyNavy)
+                                .lineLimit(1)
                             Spacer()
                             Text(service.price.currency)
                                 .font(.system(size: 13, weight: .bold, design: .monospaced))
                                 .foregroundStyle(idx == 0 ? Color.sweeplyNavy : Color.sweeplyTextSub)
                         }
+                        .frame(minHeight: 28)
                     }
                 }
             }
@@ -1655,21 +1630,6 @@ struct FinancialReportsView: View {
                 .font(.system(size: 14, weight: .bold, design: .monospaced))
                 .foregroundStyle(color)
         }
-    }
-
-    private func serviceIconFor(_ service: String) -> String {
-        switch service {
-        case "Standard Clean": return "house.fill"
-        case "Deep Clean":     return "sparkles"
-        case "Move In/Out":    return "shippingbox.fill"
-        case "Post Construction": return "hammer.fill"
-        case "Office Clean":  return "building.2.fill"
-        default:               return "wrench.and.screwdriver.fill"
-        }
-    }
-
-    private func extraServiceIconFor(_ service: BusinessService) -> String {
-        service.isAddon ? "plus.circle.fill" : "slider.horizontal.3"
     }
 
     // MARK: - Jobs Summary
