@@ -1455,6 +1455,7 @@ struct FinancialReportsView: View {
 
     // Slide 1 — Revenue bars
     private var revenueServiceBarsSlide: some View {
+        let visibleServices = Array(primaryServiceCatalog.prefix(4).enumerated())
         let maxValue = max(
             primaryServiceCatalog.map { service in
                 let metrics = revenueByServiceLookup[normalizedServiceName(service.name)]
@@ -1484,32 +1485,39 @@ struct FinancialReportsView: View {
             .padding(.bottom, 10)
 
             VStack(spacing: 6) {
-                ForEach(Array(primaryServiceCatalog.prefix(4).enumerated()), id: \.element.id) { idx, service in
+                ForEach(visibleServices, id: \.element.id) { idx, service in
                     let metrics = revenueByServiceLookup[normalizedServiceName(service.name)]
                     let revenue = metrics?.revenue ?? 0
                     let displayValue = revenue > 0 ? revenue : service.price
 
-                    HStack(spacing: 10) {
-                        Text(service.name)
-                            .font(.system(size: 12, weight: .semibold))
-                            .foregroundStyle(Color.sweeplyNavy)
-                            .lineLimit(1)
-                        Spacer()
-                        VStack(alignment: .trailing, spacing: 4) {
-                            Text(displayValue.currency)
-                                .font(.system(size: 13, weight: .bold, design: .monospaced))
-                                .foregroundStyle(revenue > 0 ? Color.sweeplyNavy : Color.sweeplyTextSub)
-                            GeometryReader { geo in
-                                ZStack(alignment: .leading) {
-                                    Capsule().fill(Color.sweeplyBorder.opacity(0.5)).frame(height: 5)
-                                    Capsule().fill(serviceColor(at: idx))
-                                        .frame(width: geo.size.width * CGFloat(displayValue / maxValue), height: 5)
+                    VStack(spacing: 6) {
+                        HStack(spacing: 10) {
+                            Text(service.name)
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundStyle(Color.sweeplyNavy)
+                                .lineLimit(1)
+                            Spacer()
+                            VStack(alignment: .trailing, spacing: 4) {
+                                Text(displayValue.currency)
+                                    .font(.system(size: 13, weight: .bold, design: .monospaced))
+                                    .foregroundStyle(revenue > 0 ? Color.sweeplyNavy : Color.sweeplyTextSub)
+                                GeometryReader { geo in
+                                    ZStack(alignment: .leading) {
+                                        Capsule().fill(Color.sweeplyBorder.opacity(0.5)).frame(height: 5)
+                                        Capsule().fill(serviceColor(at: idx))
+                                            .frame(width: geo.size.width * CGFloat(displayValue / maxValue), height: 5)
+                                    }
                                 }
+                                .frame(width: 72, height: 5)
                             }
-                            .frame(width: 72, height: 5)
+                        }
+                        .frame(minHeight: 28)
+
+                        if idx < visibleServices.count - 1 {
+                            Divider()
+                                .overlay(Color.sweeplyBorder.opacity(0.7))
                         }
                     }
-                    .frame(minHeight: 28)
                 }
             }
         }
@@ -1518,7 +1526,8 @@ struct FinancialReportsView: View {
 
     // Slide 2 — Add-ons & extras
     private var revenueAddOnsSlide: some View {
-        VStack(alignment: .leading, spacing: 0) {
+        let visibleExtras = Array(extrasServiceCatalog.sorted { $0.price > $1.price }.prefix(4).enumerated())
+        return VStack(alignment: .leading, spacing: 0) {
             HStack {
                 Text("EXTRAS & ADD-ONS".translated())
                     .font(.system(size: 10, weight: .bold))
@@ -1550,18 +1559,25 @@ struct FinancialReportsView: View {
                 .padding(.bottom, 10)
 
                 VStack(spacing: 6) {
-                    ForEach(Array(extrasServiceCatalog.sorted { $0.price > $1.price }.prefix(4).enumerated()), id: \.element.id) { idx, service in
-                        HStack(spacing: 10) {
-                            Text(service.name)
-                                .font(.system(size: 12, weight: .semibold))
-                                .foregroundStyle(Color.sweeplyNavy)
-                                .lineLimit(1)
-                            Spacer()
-                            Text(service.price.currency)
-                                .font(.system(size: 13, weight: .bold, design: .monospaced))
-                                .foregroundStyle(idx == 0 ? Color.sweeplyNavy : Color.sweeplyTextSub)
+                    ForEach(visibleExtras, id: \.element.id) { idx, service in
+                        VStack(spacing: 6) {
+                            HStack(spacing: 10) {
+                                Text(service.name)
+                                    .font(.system(size: 12, weight: .semibold))
+                                    .foregroundStyle(Color.sweeplyNavy)
+                                    .lineLimit(1)
+                                Spacer()
+                                Text(service.price.currency)
+                                    .font(.system(size: 13, weight: .bold, design: .monospaced))
+                                    .foregroundStyle(idx == 0 ? Color.sweeplyNavy : Color.sweeplyTextSub)
+                            }
+                            .frame(minHeight: 28)
+
+                            if idx < visibleExtras.count - 1 {
+                                Divider()
+                                    .overlay(Color.sweeplyBorder.opacity(0.7))
+                            }
                         }
-                        .frame(minHeight: 28)
                     }
                 }
             }
