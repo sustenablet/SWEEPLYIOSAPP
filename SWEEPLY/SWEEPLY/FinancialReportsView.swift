@@ -1589,6 +1589,8 @@ struct FinancialReportsView: View {
     @ViewBuilder
     private var revenuePieSlide: some View {
         if #available(iOS 17.0, *) {
+            let visibleBreakdown = Array(revenueByService.prefix(4).enumerated())
+            let totalJobs = revenueByService.reduce(0) { $0 + $1.jobCount }
             VStack(alignment: .leading, spacing: 0) {
                 HStack {
                     Text("SERVICE BREAKDOWN".translated())
@@ -1598,40 +1600,55 @@ struct FinancialReportsView: View {
                     Spacer()
                 }
                 .padding(.bottom, 10)
-                
-                HStack(alignment: .center, spacing: 16) {
-                Chart(Array(revenueByService.prefix(6).enumerated()), id: \.element.service) { idx, item in
-                    SectorMark(
-                        angle: .value("Jobs", item.jobCount),
-                        innerRadius: .ratio(0.54),
-                        angularInset: 1.5
-                    )
-                    .foregroundStyle(serviceColor(at: idx))
-                    .cornerRadius(3)
-                }
-                .frame(width: 120, height: 120)
 
-                VStack(alignment: .leading, spacing: 7) {
-                    ForEach(Array(revenueByService.prefix(5).enumerated()), id: \.element.service) { idx, item in
-                        let total = revenueByService.reduce(0) { $0 + $1.jobCount }
-                        let pct = total > 0 ? Int(Double(item.jobCount) / Double(total) * 100) : 0
-                        HStack(spacing: 6) {
-                            Circle().fill(serviceColor(at: idx)).frame(width: 7, height: 7)
-                            Text(item.service)
-                                .font(.system(size: 11, weight: .medium))
-                                .foregroundStyle(Color.sweeplyNavy)
-                                .lineLimit(1)
-                            Spacer()
-                            Text("\(pct)%")
-                                .font(.system(size: 10, weight: .semibold, design: .monospaced))
-                                .foregroundStyle(Color.sweeplyTextSub)
+                HStack(spacing: 0) {
+                    statChip(label: "Services", value: "\(revenueByService.count)", color: Color.sweeplyNavy.opacity(0.7))
+                    Divider().frame(height: 36).padding(.horizontal, 12)
+                    statChip(label: "Completed Jobs", value: "\(totalJobs)", color: Color.sweeplyTextSub)
+                }
+                .padding(.bottom, 10)
+
+                HStack(alignment: .top, spacing: 16) {
+                    Chart(Array(revenueByService.prefix(6).enumerated()), id: \.element.service) { idx, item in
+                        SectorMark(
+                            angle: .value("Jobs", item.jobCount),
+                            innerRadius: .ratio(0.54),
+                            angularInset: 1.5
+                        )
+                        .foregroundStyle(serviceColor(at: idx))
+                        .cornerRadius(3)
+                    }
+                    .frame(width: 110, height: 110)
+
+                    VStack(spacing: 6) {
+                        ForEach(visibleBreakdown, id: \.element.service) { idx, item in
+                            let pct = totalJobs > 0 ? Int(Double(item.jobCount) / Double(totalJobs) * 100) : 0
+                            VStack(spacing: 6) {
+                                HStack(spacing: 6) {
+                                    Circle().fill(serviceColor(at: idx)).frame(width: 7, height: 7)
+                                    Text(item.service)
+                                        .font(.system(size: 12, weight: .semibold))
+                                        .foregroundStyle(Color.sweeplyNavy)
+                                        .lineLimit(1)
+                                    Spacer()
+                                    Text("\(pct)%")
+                                        .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                                        .foregroundStyle(Color.sweeplyTextSub)
+                                }
+                                .frame(minHeight: 28)
+
+                                if idx < visibleBreakdown.count - 1 {
+                                    Divider()
+                                        .overlay(Color.sweeplyBorder.opacity(0.7))
+                                }
+                            }
                         }
                     }
+                    .frame(maxWidth: .infinity, alignment: .top)
                 }
-                .frame(maxWidth: .infinity)
-                }
-                .padding(.top, 8)
+                .padding(.top, 4)
             }
+            .padding(.top, 4)
         } else {
             revenueServiceBarsSlide
         }
