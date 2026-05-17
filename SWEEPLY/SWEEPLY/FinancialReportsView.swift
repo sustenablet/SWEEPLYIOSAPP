@@ -1683,7 +1683,10 @@ struct FinancialReportsView: View {
                     } label: {
                         invoiceStatBox(label: "Completed", count: jobsCompleted.count,
                                        total: jobsCompleted.reduce(0) { $0 + $1.price },
-                                       color: Color.sweeplySuccess, showChevron: true)
+                                       color: Color.sweeplyTextSub,
+                                       boxTint: Color.sweeplyBorder.opacity(0.35),
+                                       borderTint: Color.sweeplyBorder.opacity(0.8),
+                                       showChevron: true)
                     }
                     .buttonStyle(.plain)
 
@@ -1692,7 +1695,10 @@ struct FinancialReportsView: View {
                     } label: {
                         invoiceStatBox(label: "Scheduled", count: jobsScheduled.count,
                                        total: jobsScheduled.reduce(0) { $0 + $1.price },
-                                       color: Color.sweeplyAccent, showChevron: true)
+                                       color: Color.sweeplyTextSub,
+                                       boxTint: Color.sweeplyBorder.opacity(0.35),
+                                       borderTint: Color.sweeplyBorder.opacity(0.8),
+                                       showChevron: true)
                     }
                     .buttonStyle(.plain)
 
@@ -1746,7 +1752,11 @@ struct FinancialReportsView: View {
                         InvoicesDetailListView(status: .paid, invoices: paidInvoices)
                     } label: {
                         invoiceStatBox(label: "Paid", count: paidInvoices.count,
-                                       total: paidTotal, color: Color.sweeplySuccess, showChevron: true)
+                                       total: paidTotal,
+                                       color: Color.sweeplyTextSub,
+                                       boxTint: Color.sweeplyBorder.opacity(0.35),
+                                       borderTint: Color.sweeplyBorder.opacity(0.8),
+                                       showChevron: true)
                     }
                     .buttonStyle(.plain)
 
@@ -1754,7 +1764,11 @@ struct FinancialReportsView: View {
                         InvoicesDetailListView(status: .unpaid, invoices: unpaidInvoices)
                     } label: {
                         invoiceStatBox(label: "Outstanding", count: unpaidInvoices.count,
-                                       total: unpaidTotal, color: Color.sweeplyWarning, showChevron: true)
+                                       total: unpaidTotal,
+                                       color: Color.sweeplyTextSub,
+                                       boxTint: Color.sweeplyBorder.opacity(0.35),
+                                       borderTint: Color.sweeplyBorder.opacity(0.8),
+                                       showChevron: true)
                     }
                     .buttonStyle(.plain)
 
@@ -1927,7 +1941,15 @@ struct FinancialReportsView: View {
 
     // MARK: - Shared Helpers
 
-    private func invoiceStatBox(label: String, count: Int, total: Double?, color: Color, showChevron: Bool = false) -> some View {
+    private func invoiceStatBox(
+        label: String,
+        count: Int,
+        total: Double?,
+        color: Color,
+        boxTint: Color? = nil,
+        borderTint: Color? = nil,
+        showChevron: Bool = false
+    ) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(alignment: .center, spacing: 4) {
                 Circle().fill(color).frame(width: 6, height: 6)
@@ -1959,9 +1981,9 @@ struct FinancialReportsView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(12)
-        .background(color.opacity(0.04))
+        .background((boxTint ?? color.opacity(0.04)))
         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(color.opacity(0.10), lineWidth: 1))
+        .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(borderTint ?? color.opacity(0.10), lineWidth: 1))
     }
 
     /// Generic pill-style toggle used across sections.
