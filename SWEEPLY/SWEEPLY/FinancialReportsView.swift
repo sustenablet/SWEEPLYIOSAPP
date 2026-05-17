@@ -163,14 +163,6 @@ struct FinancialReportsView: View {
         }
     }
 
-    private var overviewTrend: Double? {
-        guard overviewBarData.count >= 2 else { return nil }
-        let last = overviewBarData[overviewBarData.count - 1].collected
-        let prev = overviewBarData[overviewBarData.count - 2].collected
-        guard prev > 0 else { return nil }
-        return (last - prev) / prev
-    }
-
     // MARK: - Forecast data
 
     private var cashflowForecast: [ForecastWeek] {
@@ -624,7 +616,6 @@ struct FinancialReportsView: View {
                         }
                     }
                     Spacer()
-                    if overviewPeriod != .oneMonth, let trend = overviewTrend { overviewTrendBadge(trend: trend) }
                 }
 
                 if overviewPeriod == .oneMonth, let bar = overviewBarData.first {
@@ -1929,19 +1920,6 @@ struct FinancialReportsView: View {
             .padding(.vertical, 2)
             .background(color.opacity(0.10))
             .clipShape(Capsule())
-    }
-
-    private func overviewTrendBadge(trend: Double) -> some View {
-        let isUp = trend >= 0
-        let color: Color = isUp ? Color.sweeplySuccess : Color.sweeplyDestructive
-        return HStack(spacing: 3) {
-            Image(systemName: isUp ? "arrow.up.right" : "arrow.down.right").font(.system(size: 9, weight: .bold))
-            Text(String(format: "%.0f%%", abs(trend * 100))).font(.system(size: 10, weight: .semibold))
-        }
-        .foregroundStyle(color)
-        .padding(.horizontal, 6).padding(.vertical, 3)
-        .background(color.opacity(0.12))
-        .clipShape(Capsule())
     }
 
     private func legendItem(color: Color, label: String) -> some View {
