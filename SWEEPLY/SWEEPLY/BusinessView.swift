@@ -230,14 +230,14 @@ struct BusinessView: View {
     // MARK: - KPI Customization
 
     private let allKPIItems: [KPIItem] = [
-        KPIItem(id: "activeClients",  title: "Active Clients",   icon: "person.2.fill",                   isDefault: true),
-        KPIItem(id: "jobsThisMonth",  title: "Jobs This Month",  icon: "briefcase.fill",                  isDefault: true),
-        KPIItem(id: "collected",      title: "Collected",        icon: "dollarsign.circle.fill",           isDefault: true),
-        KPIItem(id: "scheduled",      title: "Scheduled",        icon: "calendar",                        isDefault: true),
-        KPIItem(id: "outstanding",    title: "Outstanding",      icon: "exclamationmark.triangle.fill",   isDefault: true),
-        KPIItem(id: "avgTicket",      title: "Avg Ticket",       icon: "chart.bar.fill",                  isDefault: false),
-        KPIItem(id: "pipelineValue",  title: "Scheduled Revenue", icon: "arrow.up.right.circle.fill",      isDefault: false),
-        KPIItem(id: "recurringJobs",  title: "Recurring Jobs",   icon: "repeat",                          isDefault: false),
+        KPIItem(id: "activeClients",  title: "Active Clients".translated(),   icon: "person.2.fill",                   isDefault: true),
+        KPIItem(id: "jobsThisMonth",  title: "Jobs This Month".translated(),  icon: "briefcase.fill",                  isDefault: true),
+        KPIItem(id: "collected",      title: "Collected".translated(),        icon: "dollarsign.circle.fill",           isDefault: true),
+        KPIItem(id: "scheduled",      title: "Scheduled".translated(),        icon: "calendar",                        isDefault: true),
+        KPIItem(id: "outstanding",    title: "Outstanding".translated(),      icon: "exclamationmark.triangle.fill",   isDefault: true),
+        KPIItem(id: "avgTicket",      title: "Avg Ticket".translated(),       icon: "chart.bar.fill",                  isDefault: false),
+        KPIItem(id: "pipelineValue",  title: "Scheduled Revenue".translated(), icon: "arrow.up.right.circle.fill",      isDefault: false),
+        KPIItem(id: "recurringJobs",  title: "Recurring Jobs".translated(),   icon: "repeat",                          isDefault: false),
     ]
 
     private var enabledKPIIds: Set<String> {
@@ -393,23 +393,23 @@ struct BusinessView: View {
                             VStack(alignment: .leading, spacing: 14) {
                                 Divider()
                                 snapshotRow(
-                                    title: "Completed Jobs",
+                                    title: "Completed Jobs".translated(),
                                     value: "\(completedJobsThisMonth)",
-                                    detail: "\(max(0, monthlyJobs.count - completedJobsThisMonth)) still in flight",
+                                    detail: "%d still in flight".translated(with: max(0, monthlyJobs.count - completedJobsThisMonth)),
                                     accent: .sweeplyAccent
                                 )
                                 Divider()
                                 snapshotRow(
-                                    title: "Average Ticket",
+                                    title: "Average Ticket".translated(),
                                     value: averageTicket.currency,
-                                    detail: "Based on completed visits this month",
+                                    detail: "Based on completed visits this month".translated(),
                                     accent: .sweeplyNavy
                                 )
                                 Divider()
                                 snapshotRow(
-                                    title: "Outstanding",
+                                    title: "Outstanding".translated(),
                                     value: outstandingRevenue.currency,
-                                    detail: "Open invoices waiting to be collected",
+                                    detail: "Open invoices waiting to be collected".translated(),
                                     accent: .sweeplyWarning
                                 )
                             }
@@ -501,8 +501,10 @@ struct BusinessView: View {
                                     ForEach(Array(topServices.enumerated()), id: \.offset) { i, svc in
                                         snapshotRow(
                                             title: svc.label,
-                                            value: "\(svc.count) job\(svc.count == 1 ? "" : "s")",
-                                            detail: String(format: "%.0f%% of this month's bookings", svc.percentage * 100),
+                                            value: svc.count == 1
+                                                ? "%d job".translated(with: svc.count)
+                                                : "%d jobs".translated(with: svc.count),
+                                            detail: "%d%% of this month's bookings".translated(with: Int((svc.percentage * 100).rounded())),
                                             accent: [Color.sweeplyAccent, Color.sweeplyNavy, Color.sweeplyWarning][i % 3]
                                         )
                                         if i < topServices.count - 1 { Divider() }
@@ -559,14 +561,14 @@ struct BusinessView: View {
 
                                 HStack(spacing: 12) {
                                     overviewChip(title: "Value", value: nextJob.price.currency)
-                                    overviewChip(title: "Duration", value: durationLabel(for: nextJob.duration))
+                                    overviewChip(title: "Duration".translated(), value: durationLabel(for: nextJob.duration))
                                 }
                             }
                         } else {
                             overviewEmptyState(
                                 icon: "calendar.badge.checkmark",
-                                title: "No upcoming jobs",
-                                message: "When new visits are scheduled, the next one will appear here."
+                                title: "No upcoming jobs".translated(),
+                                message: "When new visits are scheduled, the next one will appear here.".translated()
                             )
                         }
                     }
@@ -580,8 +582,8 @@ struct BusinessView: View {
                         if serviceMix.isEmpty {
                             overviewEmptyState(
                                 icon: "chart.bar.xaxis",
-                                title: "No service mix yet",
-                                message: "Once jobs are scheduled this month, the service split will show here."
+                                title: "No service mix yet".translated(),
+                                message: "Once jobs are scheduled this month, the service split will show here.".translated()
                             )
                         } else {
                             VStack(spacing: 14) {
@@ -601,8 +603,8 @@ struct BusinessView: View {
                         if topClients.isEmpty {
                             overviewEmptyState(
                                 icon: "person.3.sequence",
-                                title: "No client activity yet",
-                                message: "Client rankings will update as jobs are completed."
+                                title: "No client activity yet".translated(),
+                                message: "Client rankings will update as jobs are completed.".translated()
                             )
                         } else {
                             Divider()
@@ -754,8 +756,8 @@ struct BusinessView: View {
                 }
 
                 HStack(spacing: 4) {
-                    serviceTabButton(.services, label: "Services", count: catalogServices.count)
-                    serviceTabButton(.extras, label: "Extras", count: catalogExtras.count)
+                    serviceTabButton(.services, label: "Services".translated(), count: catalogServices.count)
+                    serviceTabButton(.extras, label: "Extras".translated(), count: catalogExtras.count)
                 }
 
                 let displayServices = serviceTab == .services ? catalogServices : catalogExtras

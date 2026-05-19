@@ -175,7 +175,7 @@ struct InvoiceDetailView: View {
                 .foregroundStyle(Color.sweeplyWarning)
 
         case .neutral:
-            Text("Due \(invoice.dueDate.formatted(date: .abbreviated, time: .omitted))")
+            Text("Due %@".translated(with: invoice.dueDate.formatted(date: .abbreviated, time: .omitted)))
                 .font(.system(size: 14, weight: .semibold))
                 .foregroundStyle(Color.sweeplyNavy)
         }
@@ -370,15 +370,15 @@ struct InvoiceDetailView: View {
 
             SectionCard {
                 VStack(alignment: .leading, spacing: 14) {
-                    InvoiceInfoRow(icon: "doc.text.fill", title: "Invoice No.", value: invoice.invoiceNumber)
+                    InvoiceInfoRow(icon: "doc.text.fill", title: "Invoice No.".translated(), value: invoice.invoiceNumber)
                     Divider()
-                    InvoiceInfoRow(icon: "plus.circle.fill", title: "Issued", value: invoice.createdAt.formatted(date: .abbreviated, time: .omitted))
+                    InvoiceInfoRow(icon: "plus.circle.fill", title: "Issued".translated(), value: invoice.createdAt.formatted(date: .abbreviated, time: .omitted))
                     Divider()
-                    InvoiceInfoRow(icon: "exclamationmark.square.fill", title: "Due Date", value: invoice.dueDate.formatted(date: .abbreviated, time: .omitted))
+                    InvoiceInfoRow(icon: "exclamationmark.square.fill", title: "Due Date".translated(), value: invoice.dueDate.formatted(date: .abbreviated, time: .omitted))
 
                     if !invoice.notes.isEmpty {
                         Divider()
-                        InvoiceInfoRow(icon: "note.text", title: "Notes", value: invoice.notes)
+                        InvoiceInfoRow(icon: "note.text", title: "Notes".translated(), value: invoice.notes)
                     }
                 }
             }

@@ -1311,6 +1311,23 @@ enum Localization {
     "Completed jobs": ["pt-BR": "Jobs concluídos"],
     "Upcoming value": ["pt-BR": "Valor futuro"],
     "All-time paid": ["pt-BR": "Pago no total"],
+    "%d still in flight": ["pt-BR": "%d ainda em andamento"],
+    "Based on completed visits this month": ["pt-BR": "Com base nas visitas concluídas este mês"],
+    "Open invoices waiting to be collected": ["pt-BR": "Faturas em aberto aguardando recebimento"],
+    "%d%% of this month's bookings": ["pt-BR": "%d%% dos agendamentos deste mês"],
+    "When new visits are scheduled, the next one will appear here.": ["pt-BR": "Quando novas visitas forem agendadas, a próxima aparecerá aqui."],
+    "No service mix yet": ["pt-BR": "Ainda sem mix de serviços"],
+    "Once jobs are scheduled this month, the service split will show here.": ["pt-BR": "Quando jobs forem agendados este mês, a divisão de serviços aparecerá aqui."],
+    "No client activity yet": ["pt-BR": "Ainda sem atividade de clientes"],
+    "Client rankings will update as jobs are completed.": ["pt-BR": "O ranking de clientes será atualizado conforme os jobs forem concluídos."],
+    "Add your first client": ["pt-BR": "Adicione seu primeiro cliente"],
+    "Schedule your first job": ["pt-BR": "Agende seu primeiro job"],
+    "Create your first invoice": ["pt-BR": "Crie sua primeira fatura"],
+    "Set up business profile": ["pt-BR": "Configure o perfil do negócio"],
+    "All Statuses": ["pt-BR": "Todos os status"],
+    "Invoice No.": ["pt-BR": "Fatura Nº"],
+    "Issued": ["pt-BR": "Emitida"],
+    "Due Date": ["pt-BR": "Data de vencimento"],
     ]
 
     static func translate(_ key: String) -> String {

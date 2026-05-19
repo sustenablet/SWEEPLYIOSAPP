@@ -876,16 +876,16 @@ struct DashboardPlaybook: View {
                 .frame(height: 4)
 
                 VStack(spacing: 10) {
-                    PlaybookRow(title: "Add your first client", icon: "person.badge.plus", isDone: playbookDone[0]) {
+                    PlaybookRow(title: "Add your first client".translated(), icon: "person.badge.plus", isDone: playbookDone[0]) {
                         if !playbookDone[0] { showClientForm = true }
                     }
-                    PlaybookRow(title: "Schedule your first job", icon: "calendar.badge.plus", isDone: playbookDone[1]) {
+                    PlaybookRow(title: "Schedule your first job".translated(), icon: "calendar.badge.plus", isDone: playbookDone[1]) {
                         if !playbookDone[1] { showJobForm = true }
                     }
-                    PlaybookRow(title: "Create your first invoice", icon: "doc.badge.plus", isDone: playbookDone[2]) {
+                    PlaybookRow(title: "Create your first invoice".translated(), icon: "doc.badge.plus", isDone: playbookDone[2]) {
                         if !playbookDone[2] { showInvoiceForm = true }
                     }
-                    PlaybookRow(title: "Set up business profile", icon: "building.2", isDone: playbookDone[3]) {
+                    PlaybookRow(title: "Set up business profile".translated(), icon: "building.2", isDone: playbookDone[3]) {
                         if !playbookDone[3] { showSettings = true }
                     }
                 }
@@ -1059,7 +1059,7 @@ struct ProfileMenuView: View {
             profileMenuRow(
                 icon: "gearshape.fill",
                 iconColor: Color.sweeplyNavy,
-                label: "Settings"
+                label: "Settings".translated()
             ) {
                 dismiss()
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) { showSettings = true }
@@ -1070,7 +1070,7 @@ struct ProfileMenuView: View {
             profileMenuRow(
                 icon: "person.2.fill",
                 iconColor: Color.sweeplyAccent,
-                label: "My Team"
+                label: "My Team".translated()
             ) {
                 dismiss()
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { showTeam = true }

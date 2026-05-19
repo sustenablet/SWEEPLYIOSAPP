@@ -79,8 +79,8 @@ struct ServiceCatalogView: View {
 
     private var tabPicker: some View {
         HStack(spacing: 4) {
-            tabButton(.services, label: "Services", count: servicesCount)
-            tabButton(.extras, label: "Extras", count: extrasCount)
+            tabButton(.services, label: "Services".translated(), count: servicesCount)
+            tabButton(.extras, label: "Extras".translated(), count: extrasCount)
         }
     }
 
