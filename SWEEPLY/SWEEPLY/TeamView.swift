@@ -1682,7 +1682,7 @@ struct RecordPaymentSheet: View {
                         .foregroundStyle(Color.sweeplyTextSub)
                         .tracking(0.8)
 
-                    TextField("e.g. Week of Apr 21", text: $notes)
+                    TextField("e.g. Week of Apr 21".translated(), text: $notes)
                         .font(.system(size: 15))
                         .padding(.horizontal, 14)
                         .padding(.vertical, 13)

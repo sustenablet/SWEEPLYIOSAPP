@@ -367,7 +367,7 @@ struct NewInvoiceView: View {
                         let dueDateDay = Calendar.current.startOfDay(for: dueDate)
                         let isSelected = dueDateDay == target
 
-                        Button("Net \(days)") {
+                        Button("Net %d".translated(with: days)) {
                             dueDate = target
                         }
                         .font(.system(size: 13, weight: .semibold))

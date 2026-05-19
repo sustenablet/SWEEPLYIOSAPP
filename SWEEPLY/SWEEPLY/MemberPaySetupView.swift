@@ -370,7 +370,7 @@ struct MemberPaySetupView: View {
         case .perDay:  return "How much per day?".translated()
         case .perWeek: return "How much per week?".translated()
         case .custom:  return "What's the amount for %@?".translated(with: firstName)
-        default:       return "How much?"
+        default:       return "How much?".translated()
         }
     }
 

@@ -171,7 +171,7 @@ struct CleanerDashboardView: View {
 
     private func timeUntil(_ date: Date) -> String {
         let diff = date.timeIntervalSince(Date())
-        if diff <= 0 { return "Now" }
+        if diff <= 0 { return "Now".translated() }
         let h = Int(diff / 3600)
         let m = Int(diff.truncatingRemainder(dividingBy: 3600) / 60)
         if h >= 24 { return "\(h / 24)d away" }

@@ -1465,6 +1465,10 @@ enum Localization {
     "Move In/Out": ["pt-BR": "Mudança Entrada/Saída"],
     "Post Construction": ["pt-BR": "Pós-obra"],
     "Office Clean": ["pt-BR": "Limpeza de Escritório"],
+    "Net %d": ["pt-BR": "%d dias"],
+    "e.g. Week of Apr 21": ["pt-BR": "ex.: Semana de 21 de abr."],
+    "Now": ["pt-BR": "Agora"],
+    "How much?": ["pt-BR": "Quanto?"],
     ]
 
     static func translate(_ key: String) -> String {
