@@ -81,9 +81,9 @@ struct TeamView: View {
                                 .padding(.horizontal, 20)
                         }
 
-                        memberSection(title: "Owner") { ownerRow }
+                        memberSection(title: "Owner".translated()) { ownerRow }
 
-                        memberSection(title: "Cleaners") {
+                        memberSection(title: "Cleaners".translated()) {
                             if cleaners.isEmpty {
                                 emptyCleanersState
                             } else {
@@ -309,13 +309,13 @@ struct TeamView: View {
 
     private var statsStrip: some View {
         HStack(spacing: 0) {
-            statCell(value: "\(teamStore.members.count + 1)", label: "Total")
+            statCell(value: "\(teamStore.members.count + 1)", label: "Total".translated())
             statDivider
-            statCell(value: "\(activeCount)", label: "Active")
+            statCell(value: "\(activeCount)", label: "Active".translated())
             statDivider
-            statCell(value: "\(invitedCount)", label: "Invited")
+            statCell(value: "\(invitedCount)", label: "Invited".translated())
             statDivider
-            statCell(value: "\(inactiveCount)", label: "Inactive")
+            statCell(value: "\(inactiveCount)", label: "Inactive".translated())
         }
         .padding(.vertical, 14)
         .background(Color.sweeplySurface, in: RoundedRectangle(cornerRadius: 14))

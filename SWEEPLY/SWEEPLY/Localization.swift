@@ -1328,6 +1328,13 @@ enum Localization {
     "Invoice No.": ["pt-BR": "Fatura Nº"],
     "Issued": ["pt-BR": "Emitida"],
     "Due Date": ["pt-BR": "Data de vencimento"],
+    "%d total clients": ["pt-BR": "%d clientes no total"],
+    "%d active clients": ["pt-BR": "%d clientes ativos"],
+    "First name is required": ["pt-BR": "O nome é obrigatório"],
+    "Enter a valid email address": ["pt-BR": "Digite um e-mail válido"],
+    "Phone number must be at least 10 digits": ["pt-BR": "O número de telefone deve ter pelo menos 10 dígitos"],
+    "Gate code #1234...": ["pt-BR": "Código do portão #1234..."],
+    "Team Update": ["pt-BR": "Atualização da equipe"],
     ]
 
     static func translate(_ key: String) -> String {

@@ -101,26 +101,26 @@ struct NewClientForm: View {
                         Text("CONTACT INFO".translated()).font(.system(size: 10, weight: .bold)).foregroundStyle(Color.sweeplyTextSub).tracking(1.0)
                         HStack(spacing: 12) {
                             FormTextField(
-                                label: "First Name *",
+                                label: "First Name *".translated(),
                                 text: $firstName,
-                                placeholder: "John",
-                                errorMessage: showValidationErrors && firstName.isEmpty ? "First name is required" : nil
+                                placeholder: "John".translated(),
+                                errorMessage: showValidationErrors && firstName.isEmpty ? "First name is required".translated() : nil
                             )
-                            FormTextField(label: "Last Name", text: $lastName, placeholder: "Doe")
+                            FormTextField(label: "Last Name".translated(), text: $lastName, placeholder: "Doe".translated())
                         }
                         FormTextField(
-                            label: "Email",
+                            label: "Email".translated(),
                             text: $email,
-                            placeholder: "john@example.com",
+                            placeholder: "john@example.com".translated(),
                             keyboard: .emailAddress,
-                            errorMessage: showValidationErrors && !isEmailValid ? "Enter a valid email address" : nil
+                            errorMessage: showValidationErrors && !isEmailValid ? "Enter a valid email address".translated() : nil
                         )
                         FormTextField(
-                            label: "Phone",
+                            label: "Phone".translated(),
                             text: $phone,
-                            placeholder: "(555) 000-0000",
+                            placeholder: "(555) 000-0000".translated(),
                             keyboard: .phonePad,
-                            errorMessage: showValidationErrors && !isPhoneValid ? "Phone number must be at least 10 digits" : nil
+                            errorMessage: showValidationErrors && !isPhoneValid ? "Phone number must be at least 10 digits".translated() : nil
                         )
                     }
 
@@ -158,23 +158,23 @@ struct NewClientForm: View {
                     VStack(alignment: .leading, spacing: 14) {
                         Text("SERVICE ADDRESS".translated()).font(.system(size: 10, weight: .bold)).foregroundStyle(Color.sweeplyTextSub).tracking(1.0)
                         AddressAutocompleteTF(
-                            label: "Street Address",
+                            label: "Street Address".translated(),
                             street: $street,
                             city: $city,
                             state: $state,
                             zip: $zip
                         )
 HStack(spacing: 12) {
-                             FormTextField(label: "City", text: $city, placeholder: "Miami")
-                             StatePickerField(label: "State", state: $state).frame(width: 90)
-                             FormTextField(label: "ZIP", text: $zip, placeholder: "33101", keyboard: .numberPad).frame(width: 90)
+                             FormTextField(label: "City".translated(), text: $city, placeholder: "Miami".translated())
+                             StatePickerField(label: "State".translated(), state: $state).frame(width: 90)
+                             FormTextField(label: "ZIP".translated(), text: $zip, placeholder: "33101".translated(), keyboard: .numberPad).frame(width: 90)
                          }
                     }
 
                     // Notes
                     VStack(alignment: .leading, spacing: 14) {
                         Text("OPERATIONAL NOTES".translated()).font(.system(size: 10, weight: .bold)).foregroundStyle(Color.sweeplyTextSub).tracking(1.0)
-                        FormTextField(label: "Entry Instructions", text: $entryInstructions, placeholder: "Gate code #1234...")
+                        FormTextField(label: "Entry Instructions".translated(), text: $entryInstructions, placeholder: "Gate code #1234...".translated())
                         
                         VStack(alignment: .leading, spacing: 6) {
                             Text("Notes".translated()).font(.system(size: 12)).foregroundStyle(Color.sweeplyTextSub)

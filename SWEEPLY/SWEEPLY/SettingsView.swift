@@ -420,16 +420,16 @@ struct SettingsView: View {
             sectionLabel("PERSONAL INFO".translated())
             SectionCard {
                 VStack(spacing: 14) {
-                    SettingsField(label: "Full Name", text: $localProfile.fullName)
+                    SettingsField(label: "Full Name".translated(), text: $localProfile.fullName)
                     Divider()
-                    SettingsField(label: "Email Address", text: $localProfile.email, keyboard: .emailAddress)
+                    SettingsField(label: "Email Address".translated(), text: $localProfile.email, keyboard: .emailAddress)
                     Divider()
-                    SettingsField(label: "Phone Number", text: $localProfile.phone, keyboard: .phonePad)
+                    SettingsField(label: "Phone Number".translated(), text: $localProfile.phone, keyboard: .phonePad)
                 }
             }
             sectionLabel("BUSINESS".translated()).padding(.top, 16)
             SectionCard {
-                SettingsField(label: "Business Name", text: $localProfile.businessName)
+                SettingsField(label: "Business Name".translated(), text: $localProfile.businessName)
             }
         }
     }
@@ -440,7 +440,7 @@ struct SettingsView: View {
             SectionCard {
                 VStack(spacing: 14) {
                     SettingsAddressField(
-                        label: "Street",
+                        label: "Street".translated(),
                         street: $localProfile.settings.street,
                         city: $localProfile.settings.city,
                         state: $localProfile.settings.state,
@@ -448,9 +448,9 @@ struct SettingsView: View {
                     )
                     Divider()
                     HStack(spacing: 12) {
-                        SettingsField(label: "City", text: $localProfile.settings.city)
-                        SettingsStatePickerField(label: "State", state: $localProfile.settings.state).frame(width: 90)
-                        SettingsField(label: "ZIP", text: $localProfile.settings.zip).frame(width: 90)
+                        SettingsField(label: "City".translated(), text: $localProfile.settings.city)
+                        SettingsStatePickerField(label: "State".translated(), state: $localProfile.settings.state).frame(width: 90)
+                        SettingsField(label: "ZIP".translated(), text: $localProfile.settings.zip).frame(width: 90)
                     }
                 }
             }

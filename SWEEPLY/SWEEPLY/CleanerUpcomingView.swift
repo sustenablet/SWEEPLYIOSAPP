@@ -819,7 +819,7 @@ private struct CleanerJobFiltersView: View {
                     VStack(alignment: .leading, spacing: 16) {
                         FilterHeader(title: "JOB STATUS", subtitle: "Filter by current job progress".translated())
                         ChipGroup(spacing: 8) {
-                            FilterChip(label: "All Statuses", isSelected: localStatus == nil) {
+                            FilterChip(label: "All Statuses".translated(), isSelected: localStatus == nil) {
                                 localStatus = nil
                             }
                             ForEach(JobStatus.allCases, id: \.self) { status in
@@ -836,13 +836,13 @@ private struct CleanerJobFiltersView: View {
                     VStack(alignment: .leading, spacing: 16) {
                         FilterHeader(title: "SCHEDULE TYPE", subtitle: "One-time or recurring jobs".translated())
                         HStack(spacing: 12) {
-                            TypeCard(label: "All", icon: "square.grid.2x2.fill", isSelected: localType == "All") {
+                            TypeCard(label: "All".translated(), icon: "square.grid.2x2.fill", isSelected: localType == "All") {
                                 localType = "All"
                             }
-                            TypeCard(label: "Recurring", icon: "arrow.triangle.2.circlepath", isSelected: localType == "Recurring") {
+                            TypeCard(label: "Recurring".translated(), icon: "arrow.triangle.2.circlepath", isSelected: localType == "Recurring") {
                                 localType = "Recurring"
                             }
-                            TypeCard(label: "One-time", icon: "calendar", isSelected: localType == "One-time") {
+                            TypeCard(label: "One-time".translated(), icon: "calendar", isSelected: localType == "One-time") {
                                 localType = "One-time"
                             }
                         }

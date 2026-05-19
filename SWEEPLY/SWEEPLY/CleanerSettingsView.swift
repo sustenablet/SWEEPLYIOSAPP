@@ -300,11 +300,11 @@ struct CleanerSettingsView: View {
             sectionLabel("PERSONAL INFO".translated())
             SectionCard {
                 VStack(spacing: 14) {
-                    SettingsField(label: "Full Name", text: $localProfile.fullName)
+                    SettingsField(label: "Full Name".translated(), text: $localProfile.fullName)
                     Divider()
-                    SettingsField(label: "Email Address", text: $localProfile.email, keyboard: .emailAddress)
+                    SettingsField(label: "Email Address".translated(), text: $localProfile.email, keyboard: .emailAddress)
                     Divider()
-                    SettingsField(label: "Phone Number", text: $localProfile.phone, keyboard: .phonePad)
+                    SettingsField(label: "Phone Number".translated(), text: $localProfile.phone, keyboard: .phonePad)
                 }
             }
             sectionLabel("TEAM".translated()).padding(.top, 16)
@@ -618,7 +618,7 @@ struct CleanerSettingsView: View {
             let memberName = profileStore.profile?.fullName.trimmingCharacters(in: .whitespaces) ?? "A team member"
             await NotificationHelper.insert(
                 userId: membership.ownerId,
-                title: "Team Update",
+                title: "Team Update".translated(),
                 message: "\(memberName) left your team and no longer has access to \(membership.businessName).",
                 kind: "team"
             )

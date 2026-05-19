@@ -212,8 +212,10 @@ struct ClientsView: View {
         VStack(alignment: .leading, spacing: 10) {
             PageHeader(
                 eyebrow: nil,
-                title: "Clients",
-                subtitle: "\(displayClients.count) \(showArchived ? "total" : "active") clients"
+                title: "Clients".translated(),
+                subtitle: showArchived
+                    ? "%d total clients".translated(with: displayClients.count)
+                    : "%d active clients".translated(with: displayClients.count)
             ) {
                 HStack(spacing: 8) {
                     HeaderIconButton(systemName: "line.3.horizontal.decrease.circle") {
