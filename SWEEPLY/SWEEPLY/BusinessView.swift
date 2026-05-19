@@ -1049,8 +1049,8 @@ enum KPITimeRange: String, CaseIterable, Codable {
         switch self {
         case .week: return "Week".translated()
         case .month: return "Month".translated()
-        case .threeMonths: return "3 Months"
-        case .all: return "All"
+        case .threeMonths: return "3 Months".translated()
+        case .all: return "All".translated()
         }
     }
 }

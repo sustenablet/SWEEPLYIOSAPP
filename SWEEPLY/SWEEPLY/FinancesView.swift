@@ -1575,7 +1575,7 @@ private struct PaymentSheet: View {
                             .font(.system(size: 12, weight: .medium))
                             .foregroundStyle(Color.sweeplyTextSub)
                         
-                        TextField("Payment for this week...", text: $notes, axis: .vertical)
+                        TextField("Payment for this week...".translated(), text: $notes, axis: .vertical)
                             .font(.system(size: 15))
                             .lineLimit(3)
                             .padding(12)

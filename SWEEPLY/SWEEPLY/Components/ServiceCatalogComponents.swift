@@ -108,7 +108,7 @@ struct ServiceCatalogEditorSheet: View {
                     Text("Service Name".translated())
                         .font(.system(size: 12, weight: .semibold))
                         .foregroundStyle(Color.sweeplyTextSub)
-                    TextField("Deep Clean", text: $draft.name)
+                    TextField("Deep Clean".translated(), text: $draft.name)
                         .font(.system(size: 16, weight: .medium))
                         .padding(.horizontal, 14)
                         .padding(.vertical, 12)

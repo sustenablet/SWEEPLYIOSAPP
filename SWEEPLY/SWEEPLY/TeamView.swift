@@ -551,7 +551,7 @@ struct MemberDetailView: View {
 
     private var paySetupSummary: String {
         let m = currentMember
-        guard m.payRateEnabled else { return "Not configured" }
+        guard m.payRateEnabled else { return "Not configured".translated() }
         let key = "memberPayMethod_\(m.id.uuidString)"
         let methodRaw = UserDefaults.standard.string(forKey: key) ?? ""
         let via = PaymentMethod(rawValue: methodRaw)?.rawValue ?? ""
@@ -559,10 +559,10 @@ struct MemberDetailView: View {
         switch m.payRateType {
         case .perJob:
             let count = m.serviceRates.filter { $0.value > 0 }.count
-            return count > 0 ? "\(count) service rate\(count == 1 ? "" : "s") · Per Job\(viaSuffix)" : "Per Job\(viaSuffix)"
-        case .perDay:   return "\(m.payRateAmount.currency) per day\(viaSuffix)"
-        case .perWeek:  return "\(m.payRateAmount.currency) per week\(viaSuffix)"
-        case .custom:   return "Custom\(viaSuffix)"
+            return count > 0 ? "%d service rates · %@%@".translated(with: count, "Per Job".translated(), viaSuffix) : "%@%@".translated(with: "Per Job".translated(), viaSuffix)
+        case .perDay:   return "%@ %@%@".translated(with: m.payRateAmount.currency, "per day".translated(), viaSuffix)
+        case .perWeek:  return "%@ %@%@".translated(with: m.payRateAmount.currency, "per week".translated(), viaSuffix)
+        case .custom:   return "%@%@".translated(with: "Custom".translated(), viaSuffix)
         }
     }
 
@@ -1573,10 +1573,10 @@ private extension PayRateType {
 
     var perLabel: String {
         switch self {
-        case .perJob:  return "job"
-        case .perDay:  return "day"
-        case .perWeek: return "week"
-        case .custom:  return "arrangement"
+        case .perJob:  return "job".translated()
+        case .perDay:  return "day".translated()
+        case .perWeek: return "week".translated()
+        case .custom:  return "arrangement".translated()
         }
     }
 }

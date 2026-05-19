@@ -252,8 +252,8 @@ final class AppSession {
             if let info {
                 await NotificationHelper.insert(
                     userId: info.ownerId,
-                    title: "Team Update",
-                    message: "\(info.name) accepted your invite and joined the team — you can now assign them jobs.",
+                    title: "Team Update".translated(),
+                    message: "%@ accepted your invite and joined the team — you can now assign them jobs.".translated(with: info.name),
                     kind: "team"
                 )
             }
@@ -283,22 +283,22 @@ final class AppSession {
     private func humanizedAuthError(_ error: Error) -> String {
         let msg = error.localizedDescription
         if msg.contains("Invalid login credentials") || msg.contains("invalid_grant") {
-            return "Wrong email or password. Please try again."
+            return "Wrong email or password. Please try again.".translated()
         }
         if msg.contains("Email not confirmed") || msg.contains("email_not_confirmed") {
-            return "Check your email and confirm your account first."
+            return "Check your email and confirm your account first.".translated()
         }
         if msg.contains("User already registered") || msg.contains("already registered") {
-            return "An account with this email already exists. Try signing in."
+            return "An account with this email already exists. Try signing in.".translated()
         }
         if msg.contains("Password should be at least") {
-            return "Password must be at least 6 characters."
+            return "Password must be at least 6 characters.".translated()
         }
         if msg.lowercased().contains("network") || msg.contains("The Internet connection") {
-            return "No internet connection. Check your network and try again."
+            return "No internet connection. Check your network and try again.".translated()
         }
         if msg.lowercased().contains("rate limit") || msg.lowercased().contains("too many requests") {
-            return "Too many attempts. Please wait a moment and try again."
+            return "Too many attempts. Please wait a moment and try again.".translated()
         }
         return msg
     }
@@ -459,4 +459,3 @@ final class AppSession {
         }
     }
 }
-

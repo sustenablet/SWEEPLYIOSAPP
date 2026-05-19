@@ -880,7 +880,7 @@ struct AddExpenseSheet: View {
                                         .font(.system(size: 13, weight: .medium))
                                         .foregroundStyle(Color.sweeplyTextSub)
                                         .frame(width: 60, alignment: .leading)
-                                    TextField("Optional", text: $notes)
+                                    TextField("Optional".translated(), text: $notes)
                                         .font(.system(size: 15))
                                 }
                                 .padding(.vertical, 14)

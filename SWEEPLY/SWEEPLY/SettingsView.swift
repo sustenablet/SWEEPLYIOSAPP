@@ -764,19 +764,19 @@ private var preferencesSection: some View {
         let email = localProfile.email.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !email.isEmpty else {
             feedbackStyle = .warning
-            feedbackMessage = "Add your email address before requesting a password reset."
+            feedbackMessage = "Add your email address before requesting a password reset.".translated()
             return
         }
         guard let client = SupabaseManager.shared else {
             feedbackStyle = .warning
-            feedbackMessage = "Password reset is not available in this mode."
+            feedbackMessage = "Password reset is not available in this mode.".translated()
             return
         }
         Task {
             do {
                 try await client.auth.resetPasswordForEmail(email)
                 feedbackStyle = .success
-                feedbackMessage = "Password reset email sent to \(email)."
+                feedbackMessage = "Password reset email sent to %@.".translated(with: email)
             } catch {
                 feedbackStyle = .error
                 feedbackMessage = error.localizedDescription

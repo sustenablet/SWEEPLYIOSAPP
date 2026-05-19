@@ -97,7 +97,7 @@ struct InvoiceDetailView: View {
                             }
                     }
                 }
-                .alert("Delete Invoice?", isPresented: $showingDeleteConfirm) {
+                .alert("Delete Invoice?".translated(), isPresented: $showingDeleteConfirm) {
                     Button("Delete".translated(), role: .destructive) { deleteInvoice(invoice) }
                     Button("Cancel".translated(), role: .cancel) {}
                 } message: {
@@ -775,7 +775,7 @@ private struct EditInvoiceSheet: View {
                         // Notes
                         VStack(alignment: .leading, spacing: 12) {
                             editSectionHeader("NOTES")
-                            TextField("Notes (optional)", text: $notes, axis: .vertical)
+                            TextField("Notes (optional)".translated(), text: $notes, axis: .vertical)
                                 .font(.system(size: 15))
                                 .lineLimit(3...6)
                                 .padding(16)
@@ -828,7 +828,7 @@ private struct EditInvoiceSheet: View {
 
     private func editSectionHeader(_ title: String) -> some View {
         HStack(spacing: 12) {
-            Text(title)
+            Text(title.translated())
                 .font(.system(size: 11, weight: .bold))
                 .foregroundStyle(Color.sweeplyTextSub)
                 .tracking(1.0)
@@ -852,7 +852,7 @@ private struct EditInvoiceSheet: View {
             await MainActor.run {
                 isSubmitting = false
                 if success { dismiss() }
-                else { errorMessage = invoicesStore.lastError ?? "Failed to save changes." }
+                else { errorMessage = invoicesStore.lastError ?? "Failed to save changes.".translated() }
             }
         }
     }
@@ -868,7 +868,7 @@ private struct EditLineItemRow: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            TextField("Description", text: $item.description)
+            TextField("Description".translated(), text: $item.description)
                 .font(.system(size: 14, weight: .medium))
                 .foregroundStyle(Color.sweeplyNavy)
 

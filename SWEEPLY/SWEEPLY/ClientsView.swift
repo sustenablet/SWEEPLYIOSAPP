@@ -243,7 +243,7 @@ struct ClientsView: View {
             Image(systemName: "magnifyingglass")
                 .font(.system(size: 15))
                 .foregroundStyle(Color.sweeplyTextSub)
-            TextField("Search by name or address...", text: $search)
+            TextField("Search by name or address...".translated(), text: $search)
                 .font(.system(size: 15))
             if !search.isEmpty {
                 Button { search = "" } label: {

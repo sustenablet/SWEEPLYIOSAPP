@@ -66,7 +66,7 @@ struct ServiceCatalogView: View {
         if addonsOnly || selectedTab == .extras {
             return "Add small add-ons like laundry, dishes, or window cleaning — these appear as extras when booking a job.".translated()
         }
-        return "Create your service catalog — these appear\nin new job and invoice pickers."
+        return "Create your service catalog — these appear\nin new job and invoice pickers.".translated()
     }
     private var emptyButtonLabel: String {
         if addonsOnly || selectedTab == .extras {

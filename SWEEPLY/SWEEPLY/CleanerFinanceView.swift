@@ -88,9 +88,9 @@ struct CleanerFinanceView: View {
 
     private var payRateDisplay: String {
         guard membership.payRateEnabled && membership.payRateAmount > 0 else {
-            return "Rate not set"
+            return "Rate not set".translated()
         }
-        return "\(Int(membership.payRateAmount))/\(membership.payRateType == .perDay ? "day" : membership.payRateType == .perJob ? "job" : "week")"
+        return "\(Int(membership.payRateAmount))/\(membership.payRateType == .perDay ? "day".translated() : membership.payRateType == .perJob ? "job".translated() : "week".translated())"
     }
 
     private var weeklyEarningsData: [(week: Date, amount: Double)] {
@@ -646,7 +646,7 @@ struct CompletedJobsListView: View {
                 Image(systemName: "magnifyingglass")
                     .font(.system(size: 14))
                     .foregroundStyle(Color.sweeplyTextSub)
-                TextField("Search clients or services...", text: $searchText)
+                TextField("Search clients or services...".translated(), text: $searchText)
                     .font(.system(size: 15))
                     .autocorrectionDisabled()
                 if !searchText.isEmpty {

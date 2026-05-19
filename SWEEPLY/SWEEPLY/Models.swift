@@ -246,11 +246,11 @@ enum RecurrenceFrequency: String, Codable, CaseIterable {
 
     var displayName: String {
         switch self {
-        case .once:     return "Does not repeat"
-        case .weekly:   return "Every week"
-        case .biweekly: return "Every 2 weeks"
-        case .monthly:  return "Every month"
-        case .custom:   return "Custom"
+        case .once:     return "Does not repeat".translated()
+        case .weekly:   return "Every week".translated()
+        case .biweekly: return "Every 2 weeks".translated()
+        case .monthly:  return "Every month".translated()
+        case .custom:   return "Custom".translated()
         }
     }
 
@@ -320,12 +320,12 @@ enum ExpenseCategory: String, CaseIterable, Codable {
 
     var displayName: String {
         switch self {
-        case .supplies:  return "Supplies"
-        case .fuel:      return "Fuel"
-        case .equipment: return "Equipment"
-        case .insurance: return "Insurance"
-        case .marketing: return "Marketing"
-        case .other:     return "Other"
+        case .supplies:  return "Supplies".translated()
+        case .fuel:      return "Fuel".translated()
+        case .equipment: return "Equipment".translated()
+        case .insurance: return "Insurance".translated()
+        case .marketing: return "Marketing".translated()
+        case .other:     return "Other".translated()
         }
     }
 
@@ -358,8 +358,8 @@ enum TeamRole: String, CaseIterable, Codable {
 
     var displayName: String {
         switch self {
-        case .owner:  return "Owner"
-        case .member: return "Cleaner"
+        case .owner:  return "Owner".translated()
+        case .member: return "Cleaner".translated()
         }
     }
 }
@@ -371,9 +371,9 @@ enum TeamMemberStatus: String, Codable {
 
     var displayName: String {
         switch self {
-        case .invited:  return "Invited"
-        case .active:   return "Active"
-        case .inactive: return "Inactive"
+        case .invited:  return "Invited".translated()
+        case .active:   return "Active".translated()
+        case .inactive: return "Inactive".translated()
         }
     }
 }
@@ -386,19 +386,19 @@ enum PayRateType: String, CaseIterable, Codable {
 
     var displayName: String {
         switch self {
-        case .perJob:   return "Per Job"
-        case .perDay:   return "Per Day"
-        case .perWeek:  return "Per Week"
-        case .custom:   return "Custom"
+        case .perJob:   return "Per Job".translated()
+        case .perDay:   return "Per Day".translated()
+        case .perWeek:  return "Per Week".translated()
+        case .custom:   return "Custom".translated()
         }
     }
     
     var description: String {
         switch self {
-        case .perJob:   return "Different rate per service type"
-        case .perDay:  return "$X for all jobs done that day"
-        case .perWeek: return "$X for all jobs done that week"
-        case .custom:  return "Owner enters custom amount"
+        case .perJob:   return "Different rate per service type".translated()
+        case .perDay:  return "$X for all jobs done that day".translated()
+        case .perWeek: return "$X for all jobs done that week".translated()
+        case .custom:  return "Owner enters custom amount".translated()
         }
     }
 }
@@ -433,12 +433,12 @@ struct TeamMember: Identifiable, Codable {
     }
     
     var payRateDescription: String {
-        guard payRateEnabled else { return "Not set" }
+        guard payRateEnabled else { return "Not set".translated() }
         if payRateType == .perJob {
             let count = serviceRates.filter { $0.value > 0 }.count
-            return count > 0 ? "\(count) service rate\(count == 1 ? "" : "s") · Per Job" : "Per Job"
+            return count > 0 ? "%d service rates · %@".translated(with: count, "Per Job".translated()) : "Per Job".translated()
         }
-        guard payRateAmount > 0 else { return "Not set" }
+        guard payRateAmount > 0 else { return "Not set".translated() }
         return "\(payRateAmount.currency) \(payRateType.displayName.lowercased())"
     }
 }

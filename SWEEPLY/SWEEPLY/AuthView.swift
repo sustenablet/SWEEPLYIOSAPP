@@ -280,7 +280,7 @@ struct AuthView: View {
                     .foregroundStyle(Color.sweeplyTextSub)
                     .frame(width: 20)
 
-                TextField("Enter your email address", text: $email)
+                TextField("Enter your email address".translated(), text: $email)
                     .textContentType(.emailAddress)
                     .keyboardType(.emailAddress)
                     .textInputAutocapitalization(.never)
@@ -403,10 +403,10 @@ struct AuthView: View {
 
     private var passwordStrengthLabel: String {
         switch passwordStrength {
-        case 0: return "Too short"
-        case 1: return "Weak"
-        case 2: return "Good"
-        case 3: return "Strong"
+        case 0: return "Too short".translated()
+        case 1: return "Weak".translated()
+        case 2: return "Good".translated()
+        case 3: return "Strong".translated()
         default: return ""
         }
     }
@@ -758,7 +758,7 @@ private struct ForgotPasswordSheet: View {
             VStack(alignment: .leading, spacing: 6) {
                 Text("Email".translated())
                     .font(.system(size: 12, weight: .semibold)).foregroundStyle(Color.sweeplyTextSub)
-                TextField("you@example.com", text: $resetEmail)
+                TextField("you@example.com".translated(), text: $resetEmail)
                     .textContentType(.emailAddress).keyboardType(.emailAddress)
                     .textInputAutocapitalization(.never).autocorrectionDisabled()
                     .padding(.horizontal, 14).padding(.vertical, 13)
