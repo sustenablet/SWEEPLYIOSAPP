@@ -168,13 +168,13 @@ struct JobsDetailListView: View {
     private func emptyStateText(prefix: String) -> String {
         switch selectedRange {
         case .week:
-            return "No \(prefix) jobs this week".translated()
+            return "No %@ jobs this week".translated(with: prefix)
         case .month:
-            return "No \(prefix) jobs this month".translated()
+            return "No %@ jobs this month".translated(with: prefix)
         case .sixMonths:
-            return "No \(prefix) jobs in the last 6 months".translated()
+            return "No %@ jobs in the last 6 months".translated(with: prefix)
         case .all:
-            return "No \(prefix) jobs".translated()
+            return "No %@ jobs".translated(with: prefix)
         }
     }
 

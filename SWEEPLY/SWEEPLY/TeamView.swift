@@ -1618,7 +1618,7 @@ struct RecordPaymentSheet: View {
                 Text("Record Payment".translated())
                     .font(.system(size: 20, weight: .bold))
                     .foregroundStyle(Color.sweeplyNavy)
-                Text("To \(member.name)".translated())
+                Text("To %@".translated(with: member.name))
                     .font(.system(size: 14))
                     .foregroundStyle(Color.sweeplyTextSub)
             }
@@ -1712,7 +1712,7 @@ struct RecordPaymentSheet: View {
                     if isRecording {
                         ProgressView().tint(.white).scaleEffect(0.85)
                     } else {
-                        Text(amount > 0 ? "Record \(amount.currency)".translated() : "Record Payment".translated())
+                        Text(amount > 0 ? "Record %@".translated(with: amount.currency) : "Record Payment".translated())
                             .font(.system(size: 16, weight: .bold))
                     }
                 }
