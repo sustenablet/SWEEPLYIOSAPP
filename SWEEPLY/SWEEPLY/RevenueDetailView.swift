@@ -135,11 +135,11 @@ struct RevenueDetailView: View {
 
     private var summaryStrip: some View {
         HStack(spacing: 0) {
-            summaryCell(label: "Total Revenue", value: totalRevenue.currency, color: .sweeplyAccent)
+            summaryCell(label: "Total Revenue".translated(), value: totalRevenue.currency, color: .sweeplyAccent)
             Divider().frame(height: 44).padding(.horizontal, 16)
-            summaryCell(label: "Jobs Completed", value: "\(totalJobs)", color: .sweeplyNavy)
+            summaryCell(label: "Jobs Completed".translated(), value: "\(totalJobs)", color: .sweeplyNavy)
             Divider().frame(height: 44).padding(.horizontal, 16)
-            summaryCell(label: "Avg Ticket", value: avgTicket.currency, color: .sweeplySuccess)
+            summaryCell(label: "Avg Ticket".translated(), value: avgTicket.currency, color: .sweeplySuccess)
         }
         .padding(.vertical, 20)
     }

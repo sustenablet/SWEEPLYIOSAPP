@@ -314,8 +314,8 @@ struct FinancesView: View {
         VStack(alignment: .leading, spacing: 20) {
             PageHeader(
                 eyebrow: nil,
-                title: "Finances",
-                subtitle: invoicesStore.lastError?.isEmpty == false ? "Invoice sync issue" : "Overview"
+                title: "Finances".translated(),
+                subtitle: invoicesStore.lastError?.isEmpty == false ? "Invoice sync issue".translated() : "Overview".translated()
             ) {
                 Menu {
                     Button {
@@ -1470,19 +1470,19 @@ struct InvoicesListView: View {
     private var summaryStrip: some View {
         HStack(spacing: 0) {
             summaryCell(
-                label: "Outstanding",
+                label: "Outstanding".translated(),
                 value: invoicesStore.invoices.filter { $0.status == .unpaid }.reduce(0) { $0 + $1.total }.currency,
                 color: .sweeplyWarning
             )
             Divider().padding(.vertical, 10)
             summaryCell(
-                label: "Overdue",
+                label: "Overdue".translated(),
                 value: invoicesStore.invoices.filter { $0.status == .overdue }.reduce(0) { $0 + $1.total }.currency,
                 color: .sweeplyDestructive
             )
             Divider().padding(.vertical, 10)
             summaryCell(
-                label: "Collected",
+                label: "Collected".translated(),
                 value: invoicesStore.invoices.filter { $0.status == .paid }.reduce(0) { $0 + $1.total }.currency,
                 color: .sweeplySuccess
             )

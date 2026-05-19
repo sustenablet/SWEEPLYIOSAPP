@@ -138,7 +138,7 @@ struct NewJobForm: View {
 
                     // 1. Job Details
                     VStack(alignment: .leading, spacing: 20) {
-                        SectionHeader(title: "JOB DETAILS")
+                        SectionHeader(title: "JOB DETAILS".translated())
                         
                         // Client Selector
                         VStack(alignment: .leading, spacing: 8) {
@@ -152,7 +152,7 @@ struct NewJobForm: View {
                                 }
                             } label: {
                                 PickerButton(
-                                    label: selectedClient?.name ?? "Select client",
+                                    label: selectedClient?.name ?? "Select client".translated(),
                                     isSelected: selectedClientId != nil
                                 )
                             }
@@ -190,7 +190,7 @@ struct NewJobForm: View {
                     
                     // 2. Schedule
                     VStack(alignment: .leading, spacing: 20) {
-                        SectionHeader(title: "SCHEDULE")
+                        SectionHeader(title: "SCHEDULE".translated())
                         
                         HStack(spacing: 16) {
                             // Date
@@ -239,7 +239,7 @@ struct NewJobForm: View {
                                     .foregroundStyle(Color.sweeplyWarning)
                                     .padding(.top, 1)
                                 VStack(alignment: .leading, spacing: 3) {
-                                    Text("Time overlap with \(conflict.clientName)'s job (\(fmt.string(from: conflict.date)) – \(fmt.string(from: conflictEnd)))")
+                                    Text("Time overlap with %@'s job (%@ – %@)".translated(with: conflict.clientName, fmt.string(from: conflict.date), fmt.string(from: conflictEnd)))
                                         .font(.system(size: 12, weight: .medium))
                                         .foregroundStyle(Color.sweeplyNavy)
                                         .fixedSize(horizontal: false, vertical: true)
@@ -263,7 +263,7 @@ struct NewJobForm: View {
                     
                     // 3. Pricing
                     VStack(alignment: .leading, spacing: 20) {
-                        SectionHeader(title: "PRICING")
+                        SectionHeader(title: "PRICING".translated())
                         
                         HStack(spacing: 16) {
                             // Duration
@@ -300,7 +300,7 @@ struct NewJobForm: View {
                     
                     // 4. Recurrence
                     VStack(alignment: .leading, spacing: 20) {
-                        SectionHeader(title: "RECURRENCE")
+                        SectionHeader(title: "RECURRENCE".translated())
 
                         // Chip-style frequency picker
                         ScrollView(.horizontal, showsIndicators: false) {
@@ -790,4 +790,3 @@ private struct PickerButton: View {
         .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.sweeplyBorder, lineWidth: 1))
     }
 }
-

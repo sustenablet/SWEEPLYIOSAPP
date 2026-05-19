@@ -183,7 +183,7 @@ struct CleanerFinanceView: View {
     // MARK: - Header
 
     private var headerRow: some View {
-        PageHeader(eyebrow: "EARNINGS", title: "Finance", subtitle: selectedPeriod.rawValue) {
+        PageHeader(eyebrow: "EARNINGS".translated(), title: "Finance".translated(), subtitle: selectedPeriod.rawValue) {
             periodPicker
         }
     }
@@ -720,8 +720,8 @@ struct CompletedJobsListView: View {
     
     private var statsSummary: some View {
         HStack(spacing: 16) {
-            statBox(title: "Jobs", value: "\(jobs.count)", icon: "briefcase.fill", color: Color.sweeplyNavy)
-            statBox(title: "Avg/Job", value: (jobs.isEmpty ? 0 : totalEarnings / Double(jobs.count)).currency, icon: "chart.bar.fill", color: Color.sweeplyAccent)
+            statBox(title: "Jobs".translated(), value: "\(jobs.count)", icon: "briefcase.fill", color: Color.sweeplyNavy)
+            statBox(title: "Avg/Job".translated(), value: (jobs.isEmpty ? 0 : totalEarnings / Double(jobs.count)).currency, icon: "chart.bar.fill", color: Color.sweeplyAccent)
         }
         .padding(.vertical, 4)
     }
@@ -895,9 +895,9 @@ struct UpcomingJobsListView: View {
     
     private var statsSummary: some View {
         HStack(spacing: 16) {
-            statBox(title: "Jobs", value: "\(jobs.count)", icon: "calendar.badge.clock", color: Color.sweeplyNavy)
-            statBox(title: "Scheduled", value: "\(scheduledCount)", icon: "clock.fill", color: Color.sweeplyAccent)
-            statBox(title: "In Progress", value: "\(inProgressCount)", icon: "play.circle.fill", color: .orange)
+            statBox(title: "Jobs".translated(), value: "\(jobs.count)", icon: "calendar.badge.clock", color: Color.sweeplyNavy)
+            statBox(title: "Scheduled".translated(), value: "\(scheduledCount)", icon: "clock.fill", color: Color.sweeplyAccent)
+            statBox(title: "In Progress".translated(), value: "\(inProgressCount)", icon: "play.circle.fill", color: .orange)
         }
         .padding(.vertical, 4)
     }

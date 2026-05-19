@@ -1335,6 +1335,21 @@ enum Localization {
     "Phone number must be at least 10 digits": ["pt-BR": "O número de telefone deve ter pelo menos 10 dígitos"],
     "Gate code #1234...": ["pt-BR": "Código do portão #1234..."],
     "Team Update": ["pt-BR": "Atualização da equipe"],
+    "EARNINGS": ["pt-BR": "GANHOS"],
+    "Finance": ["pt-BR": "Finanças"],
+    "Scheduled jobs": ["pt-BR": "Jobs agendados"],
+    "Outstanding invoices": ["pt-BR": "Faturas em aberto"],
+    "Invoice sync issue": ["pt-BR": "Problema de sincronização de faturas"],
+    "Overview": ["pt-BR": "Visão geral"],
+    "Full name": ["pt-BR": "Nome completo"],
+    "email@example.com": ["pt-BR": "email@exemplo.com"],
+    "Not set": ["pt-BR": "Não definido"],
+    "%d total": ["pt-BR": "%d total"],
+    "Resend Invite": ["pt-BR": "Reenviar convite"],
+    "Mark as Active": ["pt-BR": "Marcar como ativo"],
+    "Mark as Inactive": ["pt-BR": "Marcar como inativo"],
+    "Select client": ["pt-BR": "Selecionar cliente"],
+    "Time overlap with %@'s job (%@ – %@)": ["pt-BR": "Conflito de horário com o job de %@ (%@ – %@)"],
     ]
 
     static func translate(_ key: String) -> String {

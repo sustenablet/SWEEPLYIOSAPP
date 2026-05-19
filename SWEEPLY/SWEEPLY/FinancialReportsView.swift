@@ -813,8 +813,8 @@ struct FinancialReportsView: View {
                 }
 
                 HStack(spacing: 16) {
-                    legendItem(color: Color.sweeplyNavy.opacity(0.5), label: "Collected")
-                    legendItem(color: Color.sweeplyBorder, label: "Outstanding")
+                    legendItem(color: Color.sweeplyNavy.opacity(0.5), label: "Collected".translated())
+                    legendItem(color: Color.sweeplyBorder, label: "Outstanding".translated())
                 }
             }
         }
@@ -875,8 +875,8 @@ struct FinancialReportsView: View {
                 }
 
                 HStack(spacing: 16) {
-                    legendDot(color: Color.sweeplyNavy.opacity(0.45), label: "Scheduled jobs")
-                    legendDot(color: Color.sweeplyTextSub.opacity(0.5), label: "Outstanding invoices")
+                    legendDot(color: Color.sweeplyNavy.opacity(0.45), label: "Scheduled jobs".translated())
+                    legendDot(color: Color.sweeplyTextSub.opacity(0.5), label: "Outstanding invoices".translated())
                 }
 
                 if forecastTotal == 0 {
@@ -1478,9 +1478,9 @@ struct FinancialReportsView: View {
             .padding(.bottom, 10)
 
             HStack(spacing: 0) {
-                statChip(label: "Revenue", value: totalRevenueAllTime.currency, color: Color.sweeplyNavy.opacity(0.7))
+                statChip(label: "Revenue".translated(), value: totalRevenueAllTime.currency, color: Color.sweeplyNavy.opacity(0.7))
                 Divider().frame(height: 36).padding(.horizontal, 12)
-                statChip(label: "Completed Jobs", value: "\(totalCompletedServiceJobs)", color: Color.sweeplyTextSub)
+                statChip(label: "Completed Jobs".translated(), value: "\(totalCompletedServiceJobs)", color: Color.sweeplyTextSub)
             }
             .padding(.bottom, 10)
 
@@ -1554,9 +1554,9 @@ struct FinancialReportsView: View {
             } else {
                 let averagePrice = extrasServiceCatalog.reduce(0) { $0 + $1.price } / Double(extrasServiceCatalog.count)
                 HStack(spacing: 0) {
-                    statChip(label: "Add-Ons", value: "\(extrasServiceCatalog.count)", color: Color.sweeplyNavy.opacity(0.6))
+                    statChip(label: "Add-Ons".translated(), value: "\(extrasServiceCatalog.count)", color: Color.sweeplyNavy.opacity(0.6))
                     Divider().frame(height: 36).padding(.horizontal, 12)
-                    statChip(label: "Avg Price", value: averagePrice.currency, color: Color.sweeplyTextSub)
+                    statChip(label: "Avg Price".translated(), value: averagePrice.currency, color: Color.sweeplyTextSub)
                 }
                 .padding(.bottom, 10)
 
@@ -1604,9 +1604,9 @@ struct FinancialReportsView: View {
                 .padding(.bottom, 10)
 
                 HStack(spacing: 0) {
-                    statChip(label: "Services", value: "\(revenueByService.count)", color: Color.sweeplyNavy.opacity(0.7))
+                    statChip(label: "Services".translated(), value: "\(revenueByService.count)", color: Color.sweeplyNavy.opacity(0.7))
                     Divider().frame(height: 36).padding(.horizontal, 12)
-                    statChip(label: "Completed Jobs", value: "\(totalJobs)", color: Color.sweeplyTextSub)
+                    statChip(label: "Completed Jobs".translated(), value: "\(totalJobs)", color: Color.sweeplyTextSub)
                 }
                 .padding(.bottom, 10)
 
@@ -1680,7 +1680,7 @@ struct FinancialReportsView: View {
                     NavigationLink {
                         JobsDetailListView(status: .completed, jobs: jobsCompleted)
                     } label: {
-                        invoiceStatBox(label: "Completed", count: jobsCompleted.count,
+                        invoiceStatBox(label: "Completed".translated(), count: jobsCompleted.count,
                                        total: jobsCompleted.reduce(0) { $0 + $1.price },
                                        color: Color.sweeplyTextSub,
                                        boxTint: Color.sweeplyBorder.opacity(0.35),
@@ -1692,7 +1692,7 @@ struct FinancialReportsView: View {
                     NavigationLink {
                         JobsDetailListView(status: .scheduled, jobs: jobsScheduled)
                     } label: {
-                        invoiceStatBox(label: "Scheduled", count: jobsScheduled.count,
+                        invoiceStatBox(label: "Scheduled".translated(), count: jobsScheduled.count,
                                        total: jobsScheduled.reduce(0) { $0 + $1.price },
                                        color: Color.sweeplyTextSub,
                                        boxTint: Color.sweeplyBorder.opacity(0.35),
@@ -1704,7 +1704,7 @@ struct FinancialReportsView: View {
                     NavigationLink {
                         JobsDetailListView(status: .cancelled, jobs: jobsCancelled)
                     } label: {
-                        invoiceStatBox(label: "Cancelled", count: jobsCancelled.count,
+                        invoiceStatBox(label: "Cancelled".translated(), count: jobsCancelled.count,
                                        total: nil,
                                        color: Color.sweeplyDestructive, showChevron: true)
                     }
@@ -1749,7 +1749,7 @@ struct FinancialReportsView: View {
                     NavigationLink {
                         InvoicesDetailListView(status: .paid, invoices: paidInvoices)
                     } label: {
-                        invoiceStatBox(label: "Paid", count: paidInvoices.count,
+                        invoiceStatBox(label: "Paid".translated(), count: paidInvoices.count,
                                        total: paidTotal,
                                        color: Color.sweeplyTextSub,
                                        boxTint: Color.sweeplyBorder.opacity(0.35),
@@ -1761,7 +1761,7 @@ struct FinancialReportsView: View {
                     NavigationLink {
                         InvoicesDetailListView(status: .unpaid, invoices: unpaidInvoices)
                     } label: {
-                        invoiceStatBox(label: "Outstanding", count: unpaidInvoices.count,
+                        invoiceStatBox(label: "Outstanding".translated(), count: unpaidInvoices.count,
                                        total: unpaidTotal,
                                        color: Color.sweeplyTextSub,
                                        boxTint: Color.sweeplyBorder.opacity(0.35),
@@ -1773,7 +1773,7 @@ struct FinancialReportsView: View {
                     NavigationLink {
                         InvoicesDetailListView(status: .overdue, invoices: overdueInvoices)
                     } label: {
-                        invoiceStatBox(label: "Overdue", count: overdueInvoices.count,
+                        invoiceStatBox(label: "Overdue".translated(), count: overdueInvoices.count,
                                        total: overdueTotal, color: Color.sweeplyDestructive, showChevron: true)
                     }
                     .buttonStyle(.plain)

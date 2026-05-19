@@ -729,23 +729,23 @@ struct MemberDetailView: View {
         VStack(spacing: 0) {
             // Name (only shown in edit mode — normally in header)
             if isEditing {
-                contactEditRow(label: "Name", systemImage: "person") {
-                    TextField("Full name", text: $localName)
+                contactEditRow(label: "Name".translated(), systemImage: "person") {
+                    TextField("Full name".translated(), text: $localName)
                         .font(.system(size: 15))
                         .autocorrectionDisabled()
                 }
                 Divider().padding(.leading, 52)
             }
 
-            contactRow(label: "Email", value: member.email, systemImage: "envelope") {
+            contactRow(label: "Email".translated(), value: member.email, systemImage: "envelope") {
                 if isEditing {
-                    TextField("email@example.com", text: $localEmail)
+                    TextField("email@example.com".translated(), text: $localEmail)
                         .font(.system(size: 15))
                         .keyboardType(.emailAddress)
                         .autocapitalization(.none)
                         .autocorrectionDisabled()
                 } else {
-                    Text(member.email.isEmpty ? "Not set" : member.email)
+                    Text(member.email.isEmpty ? "Not set".translated() : member.email)
                         .font(.system(size: 15))
                         .foregroundStyle(member.email.isEmpty ? Color.sweeplyTextSub : Color.primary)
                         .lineLimit(1)
@@ -754,13 +754,13 @@ struct MemberDetailView: View {
 
             Divider().padding(.leading, 52)
 
-            contactRow(label: "Phone", value: member.phone, systemImage: "phone") {
+            contactRow(label: "Phone".translated(), value: member.phone, systemImage: "phone") {
                 if isEditing {
-                    TextField("(555) 000-0000", text: $localPhone)
+                    TextField("(555) 000-0000".translated(), text: $localPhone)
                         .font(.system(size: 15))
                         .keyboardType(.phonePad)
                 } else {
-                    Text(member.phone.isEmpty ? "Not set" : member.phone)
+                    Text(member.phone.isEmpty ? "Not set".translated() : member.phone)
                         .font(.system(size: 15))
                         .foregroundStyle(member.phone.isEmpty ? Color.sweeplyTextSub : Color.primary)
                 }
@@ -1189,7 +1189,7 @@ struct MemberDetailView: View {
                         .foregroundStyle(Color.sweeplyNavy)
                 }
                 Spacer()
-                Text("\(memberJobHistory.count) total")
+                Text("%d total".translated(with: memberJobHistory.count))
                     .font(.system(size: 12, weight: .medium))
                     .foregroundStyle(Color.sweeplyTextSub)
             }
@@ -1396,13 +1396,13 @@ struct MemberDetailView: View {
     private var statusActionsCard: some View {
         VStack(spacing: 0) {
             if member.status == .invited {
-                actionRow(title: "Resend Invite", icon: "paperplane", color: Color.sweeplyAccent) {
+                actionRow(title: "Resend Invite".translated(), icon: "paperplane", color: Color.sweeplyAccent) {
                     let biz = (profileStore.profile?.businessName ?? "").isEmpty ? "Your team" : (profileStore.profile?.businessName ?? "")
                     inviteMessage = "Hi \(member.name), \(biz) has invited you to join their Sweeply team. Download the Sweeply app and you're all set!"
                     showShareSheet = true
                 }
                 Divider().padding(.leading, 52)
-                actionRow(title: "Mark as Active", icon: "checkmark.circle", color: Color.sweeplySuccess) {
+                actionRow(title: "Mark as Active".translated(), icon: "checkmark.circle", color: Color.sweeplySuccess) {
                     Task {
                         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                         let ok = await teamStore.updateStatus(id: member.id, status: .active)
@@ -1413,7 +1413,7 @@ struct MemberDetailView: View {
                     }
                 }
             } else if member.status == .inactive {
-                actionRow(title: "Mark as Active", icon: "checkmark.circle", color: Color.sweeplySuccess) {
+                actionRow(title: "Mark as Active".translated(), icon: "checkmark.circle", color: Color.sweeplySuccess) {
                     Task {
                         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                         let ok = await teamStore.updateStatus(id: member.id, status: .active)
@@ -1424,7 +1424,7 @@ struct MemberDetailView: View {
                     }
                 }
             } else if member.status == .active {
-                actionRow(title: "Mark as Inactive", icon: "moon.circle", color: Color.sweeplyTextSub) {
+                actionRow(title: "Mark as Inactive".translated(), icon: "moon.circle", color: Color.sweeplyTextSub) {
                     Task {
                         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                         let ok = await teamStore.updateStatus(id: member.id, status: .inactive)
@@ -1757,15 +1757,15 @@ struct InviteMemberSheet: View {
                 ScrollView {
                     VStack(spacing: 20) {
                         VStack(spacing: 0) {
-                            fieldRow(label: "Name") {
-                                TextField("Full name", text: $name)
+                            fieldRow(label: "Name".translated()) {
+                                TextField("Full name".translated(), text: $name)
                                     .font(.system(size: 15))
                             }
 
                             Divider().padding(.leading, 80)
 
-                            fieldRow(label: "Email") {
-                                TextField("email@example.com", text: $email)
+                            fieldRow(label: "Email".translated()) {
+                                TextField("email@example.com".translated(), text: $email)
                                     .font(.system(size: 15))
                                     .keyboardType(.emailAddress)
                                     .autocapitalization(.none)
@@ -1774,16 +1774,16 @@ struct InviteMemberSheet: View {
 
                             Divider().padding(.leading, 80)
 
-                            fieldRow(label: "Phone") {
-                                TextField("(555) 000-0000", text: $phone)
+                            fieldRow(label: "Phone".translated()) {
+                                TextField("(555) 000-0000".translated(), text: $phone)
                                     .font(.system(size: 15))
                                     .keyboardType(.phonePad)
                             }
 
                             Divider().padding(.leading, 80)
 
-                            fieldRow(label: "Role") {
-                                Picker("Role", selection: $role) {
+                            fieldRow(label: "Role".translated()) {
+                                Picker("Role".translated(), selection: $role) {
                                     ForEach(TeamRole.allCases.filter { $0 != .owner }, id: \.self) { r in
                                         Text(r.displayName).tag(r)
                                     }
