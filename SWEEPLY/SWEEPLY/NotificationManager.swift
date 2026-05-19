@@ -47,12 +47,12 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
     func registerNotificationCategories() {
         let markCompleteAction = UNNotificationAction(
             identifier: "MARK_JOB_COMPLETE",
-            title: "Mark Complete",
+            title: "Mark Complete".translated(),
             options: [.authenticationRequired]
         )
         let viewJobAction = UNNotificationAction(
             identifier: "VIEW_JOB",
-            title: "View Job",
+            title: "View Job".translated(),
             options: [.foreground]
         )
         let jobCategory = UNNotificationCategory(
@@ -109,8 +109,8 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
 
     func sendTestNotification() {
         let content = UNMutableNotificationContent()
-        content.title = "Sweeply Notifications"
-        content.body = "Everything is working — you'll get reminders for jobs and invoices here."
+        content.title = "Sweeply Notifications".translated()
+        content.body = "Everything is working — you'll get reminders for jobs and invoices here.".translated()
         content.sound = .default
         let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 3, repeats: false)
         let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: trigger)
@@ -129,8 +129,8 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
         guard fireDate > Date() else { return }
 
         let content = UNMutableNotificationContent()
-        content.title = "Starting in 1 Hour"
-        var body = "\(job.serviceType.rawValue) for \(job.clientName) at \(shortTime(job.date))"
+        content.title = "Starting in 1 Hour".translated()
+        var body = "%@ for %@ at %@".translated(with: job.serviceType.rawValue.translated(), job.clientName, shortTime(job.date))
         if !job.address.isEmpty { body += " — \(cityFromAddress(job.address))" }
         content.body = body
         content.sound = .default
@@ -143,8 +143,8 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
 
         Task {
             await NotificationHelper.insert(
-                title: "Job Reminder",
-                message: "\(job.serviceType.rawValue) for \(job.clientName) starts at \(shortTime(job.date))",
+                title: "Job Reminder".translated(),
+                message: "%@ for %@ starts at %@".translated(with: job.serviceType.rawValue.translated(), job.clientName, shortTime(job.date)),
                 kind: "schedule"
             )
         }
@@ -204,8 +204,8 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
               nextMonday9am > now else { return }
 
         let content = UNMutableNotificationContent()
-        content.title = "Quiet Week Ahead"
-        content.body = "Nenhum job agendado esta semana. Um ótimo momento para entrar em contato com clientes!"
+        content.title = "Quiet Week Ahead".translated()
+        content.body = "No jobs scheduled this week. Great time to reach out to clients!".translated()
         content.sound = .default
 
         let trigger = UNTimeIntervalNotificationTrigger(
@@ -230,17 +230,17 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
         switch jobs.count {
         case 1:
             let job = jobs[0]
-            content.title = "Job Today"
-            content.body = "\(job.serviceType.rawValue) for \(job.clientName) at \(shortTime(job.date))"
+            content.title = "Job Today".translated()
+            content.body = "%@ for %@ at %@".translated(with: job.serviceType.rawValue.translated(), job.clientName, shortTime(job.date))
             if !job.address.isEmpty { content.body += " — \(cityFromAddress(job.address))" }
             content.userInfo = ["jobId": job.id.uuidString]
         case 2:
-            content.title = "2 Jobs Today"
-            content.body = "\(jobs[0].clientName) at \(shortTime(jobs[0].date)), then \(jobs[1].clientName) at \(shortTime(jobs[1].date))"
+            content.title = "2 Jobs Today".translated()
+            content.body = "%@ at %@, then %@ at %@".translated(with: jobs[0].clientName, shortTime(jobs[0].date), jobs[1].clientName, shortTime(jobs[1].date))
         default:
             let first = jobs[0]
-            content.title = "\(jobs.count) Jobs Today"
-            content.body = "Starting at \(shortTime(first.date)) with \(first.clientName) — tap to see your full schedule"
+            content.title = "%d Jobs Today".translated(with: jobs.count)
+            content.body = "Starting at %@ with %@ — tap to see your full schedule".translated(with: shortTime(first.date), first.clientName)
         }
 
         var comp = Calendar.current.dateComponents([.year, .month, .day], from: day)
@@ -267,17 +267,17 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
         switch jobs.count {
         case 1:
             let job = jobs[0]
-            content.title = "Amanhã: 1 Job"
-            content.body = "\(job.serviceType.rawValue) for \(job.clientName) at \(shortTime(job.date))"
+            content.title = "Tomorrow: 1 Job".translated()
+            content.body = "%@ for %@ at %@".translated(with: job.serviceType.rawValue.translated(), job.clientName, shortTime(job.date))
             content.userInfo = ["jobId": job.id.uuidString]
         case 2:
-            content.title = "Amanhã: 2 Jobs"
-            content.body = "\(jobs[0].clientName) at \(shortTime(jobs[0].date)) and \(jobs[1].clientName) at \(shortTime(jobs[1].date))"
+            content.title = "Tomorrow: 2 Jobs".translated()
+            content.body = "%@ at %@ and %@ at %@".translated(with: jobs[0].clientName, shortTime(jobs[0].date), jobs[1].clientName, shortTime(jobs[1].date))
         default:
             let first = jobs[0]
             let last = jobs[jobs.count - 1]
-            content.title = "Amanhã: \(jobs.count) Jobs"
-            content.body = "\(shortTime(first.date))–\(shortTime(last.date)) — starting with \(first.clientName)"
+            content.title = "Tomorrow: %d Jobs".translated(with: jobs.count)
+            content.body = "%@–%@ — starting with %@".translated(with: shortTime(first.date), shortTime(last.date), first.clientName)
         }
 
         var comp = Calendar.current.dateComponents([.year, .month, .day], from: dayBefore)
@@ -295,10 +295,10 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
             withIdentifiers: ["weekly-earnings-summary"]
         )
         let content = UNMutableNotificationContent()
-        content.title = "Resumo de Ganhos Semanal"
+        content.title = "Weekly Earnings Summary".translated()
         content.body = weeklyRevenue > 0
-            ? "You earned \(weeklyRevenue.currency) last week. Open Finance for your full breakdown."
-            : "No earnings recorded last week. Open Finance to review your invoices."
+            ? "You earned %@ last week. Open Finance for your full breakdown.".translated(with: weeklyRevenue.currency)
+            : "No earnings recorded last week. Open Finance to review your invoices.".translated()
         content.sound = .default
 
         var comp = DateComponents()
@@ -358,8 +358,8 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
 
                 for member in payDueMembers {
                     let content = UNMutableNotificationContent()
-                    content.title = "Time to Pay \(member.name)"
-                    content.body = "\(member.name) is owed \(member.payRateAmount.currency) today. Open Sweeply to record the payment."
+                    content.title = "Time to Pay %@".translated(with: member.name)
+                    content.body = "%@ is owed %@ today. Open Sweeply to record the payment.".translated(with: member.name, member.payRateAmount.currency)
                     content.sound = .default
 
                     let trigger = UNTimeIntervalNotificationTrigger(
@@ -388,8 +388,8 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
         guard membership.payRateEnabled && membership.payRateAmount > 0 else { return }
 
         let content = UNMutableNotificationContent()
-        content.title = "It's Pay Day!"
-        content.body = "Your \(membership.payRateAmount.currency) from \(membership.businessName) should be processed today."
+        content.title = "It's Pay Day!".translated()
+        content.body = "Your %@ from %@ should be processed today.".translated(with: membership.payRateAmount.currency, membership.businessName)
         content.sound = .default
 
         switch membership.payRateType {

@@ -699,7 +699,7 @@ private var preferencesSection: some View {
 
     @ViewBuilder
     private func sectionLabel(_ title: String) -> some View {
-        Text(title)
+        Text(title.translated())
             .font(.system(size: 11, weight: .bold))
             .foregroundStyle(Color.sweeplyTextSub)
             .tracking(0.8)

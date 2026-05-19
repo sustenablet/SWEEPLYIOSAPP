@@ -58,8 +58,8 @@ final class NotificationsStore {
             if notifications.isEmpty {
                 await NotificationHelper.insert(
                     userId: userId,
-                    title: "Welcome to Sweeply",
-                    message: "You're all set — job reminders and schedule updates will appear here.",
+                    title: "Welcome to Sweeply".translated(),
+                    message: "You're all set — job reminders and schedule updates will appear here.".translated(),
                     kind: "system"
                 )
                 // Reload to show the persisted welcome notification
@@ -82,7 +82,7 @@ final class NotificationsStore {
             }
         } catch {
             print("Failed to fetch notifications: \(error)")
-            self.lastError = "Failed to synchronize notifications."
+            self.lastError = "Failed to synchronize notifications.".translated()
             if !isLoaded {
                 notifications = MockData.notifications
             }
@@ -146,7 +146,7 @@ final class NotificationsStore {
     /// 5 paid invoices, and any overdue invoices, then reloads from Supabase.
     func seedIfNeeded(jobs: [Job], invoices: [Invoice], userId: UUID) async {
         let isEmptyOrWelcome = notifications.isEmpty ||
-            (notifications.count == 1 && notifications[0].title == "Welcome to Sweeply")
+            (notifications.count == 1 && notifications[0].title == "Welcome to Sweeply".translated())
         guard isEmptyOrWelcome else { return }
 
         var seeded = false
@@ -159,8 +159,8 @@ final class NotificationsStore {
         for job in recentCompleted {
             await NotificationHelper.insert(
                 userId: userId,
-                title: "Job Completed",
-                message: "\(job.serviceType.rawValue) for \(job.clientName) — marked complete",
+                title: "Job Completed".translated(),
+                message: "%@ for %@ — marked complete".translated(with: job.serviceType.rawValue.translated(), job.clientName),
                 kind: "jobs",
                 isRead: true
             )
@@ -174,8 +174,8 @@ final class NotificationsStore {
         for invoice in recentPaid {
             await NotificationHelper.insert(
                 userId: userId,
-                title: "Invoice Paid",
-                message: "\(invoice.invoiceNumber) for \(invoice.clientName) — \(invoice.total.currency) received",
+                title: "Invoice Paid".translated(),
+                message: "%@ for %@ — %@ received".translated(with: invoice.invoiceNumber, invoice.clientName, invoice.total.currency),
                 kind: "billing",
                 isRead: true
             )
@@ -186,8 +186,8 @@ final class NotificationsStore {
         for invoice in overdue {
             await NotificationHelper.insert(
                 userId: userId,
-                title: "Invoice Overdue",
-                message: "\(invoice.invoiceNumber) for \(invoice.clientName) — \(invoice.total.currency) overdue",
+                title: "Invoice Overdue".translated(),
+                message: "%@ for %@ — %@ overdue".translated(with: invoice.invoiceNumber, invoice.clientName, invoice.total.currency),
                 kind: "billing",
                 isRead: true
             )
