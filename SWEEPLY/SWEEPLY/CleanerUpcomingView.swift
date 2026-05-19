@@ -297,7 +297,7 @@ struct CleanerUpcomingView: View {
                     .font(.system(size: 9, weight: .bold))
                     .foregroundStyle(Color.sweeplySuccess)
                     .tracking(0.8)
-                Text("From \(membership.businessName)")
+                Text("From %@".translated(with: membership.businessName))
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(Color.sweeplyNavy)
             }
@@ -321,7 +321,7 @@ struct CleanerUpcomingView: View {
                 Text("\(jobs.count)")
                     .font(.system(size: 13, weight: .bold, design: .monospaced))
                     .foregroundStyle(Color.sweeplyAccent)
-                Text(jobs.count == 1 ? "job" : "jobs")
+                Text(jobs.count == 1 ? "job".translated() : "jobs".translated())
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(Color.sweeplyTextSub)
             }
@@ -686,7 +686,7 @@ struct CleanerUpcomingView: View {
                     .padding(.horizontal, 20)
                     .padding(.top, 12)
 
-                Text("Jobs for \(selectedDay.formatted(.dateTime.day().month(.wide)))")
+                Text("Jobs for %@".translated(with: selectedDay.formatted(.dateTime.day().month(.wide))))
                     .font(.system(size: 14, weight: .bold))
                     .foregroundStyle(Color.sweeplyNavy)
                     .padding(.horizontal, 24)
@@ -738,8 +738,8 @@ struct CleanerUpcomingView: View {
                     .font(.system(size: 18, weight: .bold))
                     .foregroundStyle(Color.sweeplyNavy)
                 Text(calendar.isDateInToday(selectedDay)
-                     ? "Great work — you've wrapped up everything on your schedule."
-                     : "Every job on this day was completed.")
+                     ? "Great work — you've wrapped up everything on your schedule.".translated()
+                     : "Every job on this day was completed.".translated())
                     .font(.system(size: 13))
                     .foregroundStyle(Color.sweeplyTextSub)
                     .multilineTextAlignment(.center)
@@ -748,7 +748,9 @@ struct CleanerUpcomingView: View {
             // Show a summary of what was completed
             let completedCount = filteredJobsForDay.filter { $0.status == .completed }.count
             if completedCount > 0 {
-                Text("\(completedCount) job\(completedCount == 1 ? "" : "s") completed")
+                Text(completedCount == 1
+                     ? "%d job completed".translated(with: completedCount)
+                     : "%d jobs completed".translated(with: completedCount))
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundStyle(Color.sweeplyAccent)
                     .padding(.horizontal, 14)

@@ -1382,7 +1382,7 @@ private struct ScheduleInvoiceRow: View {
                             Image(systemName: "calendar.badge.exclamationmark")
                                 .font(.system(size: 10))
                                 .foregroundStyle(statusAccentColor.opacity(0.7))
-                            Text("Due \(invoice.dueDate.formatted(.dateTime.month(.abbreviated).day()))")
+                            Text("Due %@".translated(with: invoice.dueDate.formatted(.dateTime.month(.abbreviated).day())))
                                 .font(.system(size: 12))
                                 .foregroundStyle(Color.sweeplyTextSub)
                         }

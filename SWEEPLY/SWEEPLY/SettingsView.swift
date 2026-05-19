@@ -495,13 +495,18 @@ struct SettingsView: View {
     private var catalogServiceCountLabel: String {
         let count = (profileStore.profile ?? MockData.profile).settings.hydratedServiceCatalog
             .filter { !$0.isAddon }.count
-        return "\(count) service\(count == 1 ? "" : "s") configured"
+        return count == 1
+            ? "%d service configured".translated(with: count)
+            : "%d services configured".translated(with: count)
     }
 
     private var extrasCountLabel: String {
         let count = (profileStore.profile ?? MockData.profile).settings.hydratedServiceCatalog
             .filter { $0.isAddon }.count
-        return count == 0 ? "No extras yet" : "\(count) extra\(count == 1 ? "" : "s") configured"
+        if count == 0 { return "No extras yet".translated() }
+        return count == 1
+            ? "%d extra configured".translated(with: count)
+            : "%d extras configured".translated(with: count)
     }
 
 private var preferencesSection: some View {

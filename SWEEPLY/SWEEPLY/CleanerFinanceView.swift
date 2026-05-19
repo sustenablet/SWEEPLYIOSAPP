@@ -452,7 +452,7 @@ statCell(value: totalEarned.currency, label: "Gross Earned".translated(), change
                 Text(payment.notes.isEmpty ? "Payment received" : payment.notes)
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(Color.primary)
-                Text("Paid \(payment.paidAt.formatted(.dateTime.month(.abbreviated).day()))")
+                Text("Paid %@".translated(with: payment.paidAt.formatted(.dateTime.month(.abbreviated).day())))
                     .font(.system(size: 12))
                     .foregroundStyle(Color.sweeplyTextSub)
             }

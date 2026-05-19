@@ -155,11 +155,13 @@ private var healthCards: [DashboardHealthCardModel] {
                 title: "Avg Job Value".translated(),
                 subtitle: "",
                 value: avgJobValue > 0 ? avgJobValue.currency : "—",
-                trend: avgJobValue > 0 ? "\(ownJobs.filter { $0.status == .completed }.count) jobs done" : "No data yet",
+                trend: avgJobValue > 0
+                    ? "%d jobs done".translated(with: ownJobs.filter { $0.status == .completed }.count)
+                    : "No data yet".translated(),
                 isPositive: avgJobValue > 0,
                 icon: "chart.bar.fill",
                 iconColor: .sweeplyAccent,
-                footnote: "Based on all \(ownJobs.filter { $0.status == .completed }.count) completed jobs",
+                footnote: "Based on all %d completed jobs".translated(with: ownJobs.filter { $0.status == .completed }.count),
                 showTrendBadge: false
             ),
             DashboardHealthCardModel(
@@ -174,25 +176,29 @@ private var healthCards: [DashboardHealthCardModel] {
                 showTrendBadge: true
             ),
             DashboardHealthCardModel(
-                title: "Outstanding Balance",
+                title: "Outstanding Balance".translated(),
                 subtitle: "Invoices sent that haven't been paid yet".translated(),
                 value: outstandingTotal.currency,
-                trend: overdueInvoicesCount == 0 ? "All on track" : "\(overdueInvoicesCount) overdue",
+                trend: overdueInvoicesCount == 0 ? "All on track".translated() : "%d overdue".translated(with: overdueInvoicesCount),
                 isPositive: overdueInvoicesCount == 0,
                 icon: "creditcard",
                 iconColor: overdueInvoicesCount == 0 ? .sweeplyAccent : .sweeplyDestructive,
-                footnote: "\(ongoingInvoices.count) open invoice\(ongoingInvoices.count == 1 ? "" : "s")",
+                footnote: ongoingInvoices.count == 1
+                    ? "%d open invoice".translated(with: ongoingInvoices.count)
+                    : "%d open invoices".translated(with: ongoingInvoices.count),
                 showTrendBadge: false
             ),
             DashboardHealthCardModel(
-                title: "Active Clients",
+                title: "Active Clients".translated(),
                 subtitle: "Clients with visits scheduled this week".translated(),
                 value: "\(activeClientsThisWeek)",
-                trend: activeClientsThisWeek > 0 ? "Active week" : "Quiet week",
+                trend: activeClientsThisWeek > 0 ? "Active week".translated() : "Quiet week".translated(),
                 isPositive: activeClientsThisWeek > 0,
                 icon: "person.2",
                 iconColor: .sweeplyNavy,
-                footnote: "\(clientsStore.clients.count) total client\(clientsStore.clients.count == 1 ? "" : "s") on your roster",
+                footnote: clientsStore.clients.count == 1
+                    ? "%d total client on your roster".translated(with: clientsStore.clients.count)
+                    : "%d total clients on your roster".translated(with: clientsStore.clients.count),
                 showTrendBadge: false
             )
         ]
@@ -486,7 +492,7 @@ private var healthCards: [DashboardHealthCardModel] {
                     Circle()
                         .fill(Color.sweeplyAccent)
                         .frame(width: 6, height: 6)
-                    Text("\(weekEarned.currency) collected")
+                    Text("%@ collected".translated(with: weekEarned.currency))
                         .font(.system(size: 12, weight: .medium))
                         .foregroundStyle(Color.sweeplyNavy.opacity(0.6))
                 }
@@ -495,7 +501,7 @@ private var healthCards: [DashboardHealthCardModel] {
                     Circle()
                         .fill(Color.sweeplyNavy.opacity(0.18))
                         .frame(width: 6, height: 6)
-                    Text("\(weekEstimated.currency) estimated")
+                    Text("%@ estimated".translated(with: weekEstimated.currency))
                         .font(.system(size: 12, weight: .medium))
                         .foregroundStyle(Color.sweeplyNavy.opacity(0.4))
                 }
@@ -833,7 +839,7 @@ struct DashboardPlaybook: View {
                         Text("Get started".translated())
                             .font(.system(size: 15, weight: .semibold))
                             .foregroundStyle(Color.sweeplyNavy)
-                        Text("\(doneCount) of 4 complete")
+                        Text("%d of 4 complete".translated(with: doneCount))
                             .font(.system(size: 12))
                             .foregroundStyle(Color.sweeplyTextSub)
                     }
@@ -846,7 +852,7 @@ struct DashboardPlaybook: View {
                             .foregroundStyle(Color.sweeplyTextSub)
                             .frame(width: 28, height: 28)
                     }
-                    .accessibilityLabel("Collapse get started")
+                    .accessibilityLabel("Collapse get started".translated())
                 }
 
                 Text("Finish every step before you can remove this section.".translated())
@@ -899,7 +905,7 @@ struct DashboardPlaybook: View {
                     Text("Get started".translated())
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundStyle(Color.primary)
-                    Text("\(doneCount) of 4 complete")
+                        Text("%d of 4 complete".translated(with: doneCount))
                         .font(.system(size: 12, weight: .medium))
                         .foregroundStyle(Color.sweeplyTextSub)
                 }
@@ -918,7 +924,7 @@ struct DashboardPlaybook: View {
             )
         }
         .buttonStyle(.plain)
-        .accessibilityLabel("Expand get started")
+        .accessibilityLabel("Expand get started".translated())
     }
 
     private var completionCard: some View {
@@ -944,7 +950,7 @@ struct DashboardPlaybook: View {
                             .foregroundStyle(Color.sweeplyTextSub)
                             .frame(width: 28, height: 28)
                     }
-                    .accessibilityLabel("Hide get started")
+                    .accessibilityLabel("Hide get started".translated())
                 }
 
                 HStack(spacing: 8) {

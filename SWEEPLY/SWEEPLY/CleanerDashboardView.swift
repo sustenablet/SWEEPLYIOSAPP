@@ -134,32 +134,36 @@ struct CleanerDashboardView: View {
                 title: "This Month".translated(),
                 subtitle: "Earnings from completed jobs this month".translated(),
                 value: monthEarned.currency,
-                trend: "\(monthJobCount) completed",
+                trend: "%d completed".translated(with: monthJobCount),
                 isPositive: monthJobCount > 0,
                 icon: "calendar",
                 iconColor: .sweeplyNavy,
-                footnote: "\(monthJobCount) job\(monthJobCount == 1 ? "" : "s") done this month"
+                footnote: monthJobCount == 1
+                    ? "%d job done this month".translated(with: monthJobCount)
+                    : "%d jobs done this month".translated(with: monthJobCount)
             ),
             DashboardHealthCardModel(
-                title: "Jobs Done",
+                title: "Jobs Done".translated(),
                 subtitle: "Total jobs you've completed".translated(),
                 value: "\(totalCompleted)",
                 trend: totalCompleted > 0 ? "Great work!" : "No jobs yet".translated(),
                 isPositive: totalCompleted > 0,
                 icon: "checkmark.circle.fill",
                 iconColor: .sweeplyAccent,
-                footnote: "All time completed jobs",
+                footnote: "All time completed jobs".translated(),
                 showTrendBadge: true
             ),
             DashboardHealthCardModel(
-                title: "Upcoming",
+                title: "Upcoming".translated(),
                 subtitle: "Jobs scheduled for the next 7 days".translated(),
                 value: "\(upcomingCount)",
-                trend: upcomingCount > 0 ? "Coming up" : "Clear schedule",
+                trend: upcomingCount > 0 ? "Coming up".translated() : "Clear schedule".translated(),
                 isPositive: upcomingCount > 0,
                 icon: "calendar.badge.clock",
                 iconColor: .sweeplyNavy,
-                footnote: "\(upcomingCount) job\(upcomingCount == 1 ? "" : "s") in next 7 days",
+                footnote: upcomingCount == 1
+                    ? "%d job in next 7 days".translated(with: upcomingCount)
+                    : "%d jobs in next 7 days".translated(with: upcomingCount),
                 showTrendBadge: true
             )
         ]
@@ -302,7 +306,9 @@ struct CleanerDashboardView: View {
                 .lineLimit(1)
 
             if weekCompleted > 0 {
-                Text("\(weekCompleted) job\(weekCompleted == 1 ? "" : "s") completed")
+                Text(weekCompleted == 1
+                     ? "%d job completed".translated(with: weekCompleted)
+                     : "%d jobs completed".translated(with: weekCompleted))
                     .font(.system(size: 13))
                     .foregroundStyle(Color.sweeplyTextSub)
             } else {

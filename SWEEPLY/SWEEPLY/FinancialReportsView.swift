@@ -1006,8 +1006,10 @@ struct FinancialReportsView: View {
                         icon: "calendar.badge.clock",
                         iconColor: Color.sweeplyNavy,
                         iconBg: Color.sweeplyNavy.opacity(0.10),
-                        title: "Scheduled Jobs",
-                        subtitle: "\(week.jobCount) job\(week.jobCount == 1 ? "" : "s")",
+                        title: "Scheduled Jobs".translated(),
+                        subtitle: week.jobCount == 1
+                            ? "%d job".translated(with: week.jobCount)
+                            : "%d jobs".translated(with: week.jobCount),
                         amount: week.jobsAmount,
                         amountColor: Color.sweeplyNavy
                     )
@@ -1017,8 +1019,10 @@ struct FinancialReportsView: View {
                         icon: "doc.text.fill",
                         iconColor: Color.sweeplyAccent,
                         iconBg: Color.sweeplyAccent.opacity(0.10),
-                        title: "Outstanding Invoices",
-                        subtitle: "\(week.invoiceCount) invoice\(week.invoiceCount == 1 ? "" : "s")",
+                        title: "Outstanding Invoices".translated(),
+                        subtitle: week.invoiceCount == 1
+                            ? "%d invoice".translated(with: week.invoiceCount)
+                            : "%d invoices".translated(with: week.invoiceCount),
                         amount: week.invoicesAmount,
                         amountColor: Color.sweeplyAccent
                     )
@@ -1045,9 +1049,9 @@ struct FinancialReportsView: View {
                     HStack {
                         Image(systemName: diff >= 0 ? "arrow.up.right" : "arrow.down.right")
                             .font(.system(size: 10, weight: .bold))
-                        Text("\(abs(Int(percentChange)))% vs avg")
+                        Text("%d%% vs avg".translated(with: abs(Int(percentChange))))
                             .font(.system(size: 11, weight: .medium))
-                        Text("(\(avg.currency)/wk)")
+                        Text("(%@/wk)".translated(with: avg.currency))
                             .font(.system(size: 10))
                             .foregroundStyle(Color.sweeplyTextSub)
                     }
@@ -1061,11 +1065,11 @@ struct FinancialReportsView: View {
                     Image(systemName: "chart.line.uptrend.xyaxis")
                         .font(.system(size: 11))
                         .foregroundStyle(Color.sweeplyTextSub)
-                    Text("\(forecastWeekCount) week forecast")
+                    Text("%d week forecast".translated(with: forecastWeekCount))
                         .font(.system(size: 11))
                         .foregroundStyle(Color.sweeplyTextSub)
                     Spacer()
-                    Text("\(cashflowForecast.count) weeks shown")
+                    Text("%d weeks shown".translated(with: cashflowForecast.count))
                         .font(.system(size: 10))
                         .foregroundStyle(Color.sweeplyTextSub.opacity(0.7))
                 }
@@ -1465,7 +1469,9 @@ struct FinancialReportsView: View {
                     .foregroundStyle(Color.sweeplyTextSub)
                     .tracking(0.6)
                 Spacer()
-                Text("\(primaryServiceCatalog.count) service\(primaryServiceCatalog.count == 1 ? "" : "s")")
+                Text(primaryServiceCatalog.count == 1
+                     ? "%d service".translated(with: primaryServiceCatalog.count)
+                     : "%d services".translated(with: primaryServiceCatalog.count))
                     .font(.system(size: 10, weight: .semibold, design: .monospaced))
                     .foregroundStyle(Color.sweeplyNavy.opacity(0.6))
             }
@@ -1528,7 +1534,9 @@ struct FinancialReportsView: View {
                     .foregroundStyle(Color.sweeplyTextSub)
                     .tracking(0.6)
                 Spacer()
-                Text("\(extrasServiceCatalog.count) item\(extrasServiceCatalog.count == 1 ? "" : "s")")
+                Text(extrasServiceCatalog.count == 1
+                     ? "%d item".translated(with: extrasServiceCatalog.count)
+                     : "%d items".translated(with: extrasServiceCatalog.count))
                     .font(.system(size: 10, weight: .semibold, design: .monospaced))
                     .foregroundStyle(Color.sweeplyNavy.opacity(0.6))
             }

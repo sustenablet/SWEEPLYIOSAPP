@@ -183,11 +183,15 @@ struct ExpensesView: View {
     @ViewBuilder
     private var expenseCountLabel: some View {
         if selectedDay != nil {
-            Text("\(filteredExpenses.count) expense\(filteredExpenses.count == 1 ? "" : "s") in \(shortMonthLabel)")
+            Text(filteredExpenses.count == 1
+                 ? "%d expense in %@".translated(with: filteredExpenses.count, shortMonthLabel)
+                 : "%d expenses in %@".translated(with: filteredExpenses.count, shortMonthLabel))
                 .font(.system(size: 13))
                 .foregroundStyle(Color.sweeplyTextSub)
         } else {
-            Text("\(monthExpenses.count) expense\(monthExpenses.count == 1 ? "" : "s") in \(shortMonthLabel)")
+            Text(monthExpenses.count == 1
+                 ? "%d expense in %@".translated(with: monthExpenses.count, shortMonthLabel)
+                 : "%d expenses in %@".translated(with: monthExpenses.count, shortMonthLabel))
                 .font(.system(size: 13))
                 .foregroundStyle(Color.sweeplyTextSub)
         }
@@ -740,7 +744,7 @@ struct ExpensesView: View {
                     .foregroundStyle(Color.sweeplyTextSub.opacity(0.5))
             }
             VStack(spacing: 6) {
-                Text("No expenses in \(shortMonthLabel)")
+                Text("No expenses in %@".translated(with: shortMonthLabel))
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundStyle(Color.sweeplyNavy)
                 Text("Track supplies, fuel, equipment,\nand every business cost here.".translated())

@@ -714,7 +714,7 @@ compactMetric(title: "Avg. invoice".translated(), value: avgInvoiceValue.currenc
                     .foregroundStyle(Color.sweeplyNavy)
                 Spacer()
                 if selectedFilter != .all {
-                    Text("\(filteredInvoices.count) shown")
+                    Text("%d shown".translated(with: filteredInvoices.count))
                         .font(.system(size: 12))
                         .foregroundStyle(Color.sweeplyTextSub)
                 }
@@ -799,10 +799,12 @@ compactMetric(title: "Avg. invoice".translated(), value: avgInvoiceValue.currenc
     private var emptyState: some View {
         EmptyStateView(
             icon: selectedFilter == .all ? "doc.text.fill" : "line.3.horizontal.decrease.circle",
-            title: selectedFilter == .all ? "No invoices yet" : "No \(selectedFilter.rawValue.lowercased()) invoices",
+            title: selectedFilter == .all
+                ? "No invoices yet".translated()
+                : "No %@ invoices".translated(with: selectedFilter.rawValue.lowercased()),
             subtitle: selectedFilter == .all
-                ? "Your first invoice will appear here once created."
-                : "Try a different filter to see more invoices."
+                ? "Your first invoice will appear here once created.".translated()
+                : "Try a different filter to see more invoices.".translated()
         )
     }
 
@@ -835,7 +837,7 @@ compactMetric(title: "Avg. invoice".translated(), value: avgInvoiceValue.currenc
                             Text(totalPayrollLiability.currency)
                                 .font(.system(size: 18, weight: .bold, design: .monospaced))
                                 .foregroundStyle(Color.sweeplyNavy)
-                            Text("\(teamStore.members.count) member\(teamStore.members.count == 1 ? "" : "s")")
+                            Text(teamStore.members.count == 1 ? "%d member".translated(with: teamStore.members.count) : "%d members".translated(with: teamStore.members.count))
                                 .font(.system(size: 11))
                                 .foregroundStyle(Color.sweeplyTextSub)
                         }
@@ -944,7 +946,7 @@ compactMetric(title: "Avg. invoice".translated(), value: avgInvoiceValue.currenc
                             .font(.system(size: 15, weight: .bold, design: .monospaced))
                             .foregroundStyle(Color.sweeplyNavy)
                     }
-                    Text("\(jobs.count) job\(jobs.count == 1 ? "" : "s")")
+                    Text(jobs.count == 1 ? "%d job".translated(with: jobs.count) : "%d jobs".translated(with: jobs.count))
                         .font(.system(size: 11))
                         .foregroundStyle(Color.sweeplyTextSub)
                 }
@@ -1149,7 +1151,7 @@ struct MinimalInvoiceRow: View {
     private var statusPillText: String {
         switch invoice.status {
         case .paid:
-            return "Paid \(shortDate)"
+            return "Paid %@".translated(with: shortDate)
         case .unpaid:
             return "Unpaid".translated()
         case .overdue:
@@ -1386,7 +1388,9 @@ struct InvoicesListView: View {
                             Image(systemName: selectedFilter == .all ? "doc.text" : "line.3.horizontal.decrease.circle")
                                 .font(.system(size: 32))
                                 .foregroundStyle(Color.sweeplyTextSub.opacity(0.35))
-                            Text(selectedFilter == .all ? "No invoices yet" : "No \(selectedFilter.rawValue.lowercased()) invoices")
+                            Text(selectedFilter == .all
+                                 ? "No invoices yet".translated()
+                                 : "No %@ invoices".translated(with: selectedFilter.rawValue.lowercased()))
                                 .font(.system(size: 15, weight: .medium))
                                 .foregroundStyle(Color.sweeplyTextSub)
                         }

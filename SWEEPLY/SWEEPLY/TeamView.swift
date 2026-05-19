@@ -880,13 +880,13 @@ struct MemberDetailView: View {
             Divider()
 
             HStack(spacing: 0) {
-                perfStatCell(value: "\(monthJobCount)", label: "Assigned")
+                perfStatCell(value: "\(monthJobCount)", label: "Assigned".translated())
                 perfDivider
-                perfStatCell(value: "\(monthDoneCount)", label: "Completed")
+                perfStatCell(value: "\(monthDoneCount)", label: "Completed".translated())
                 perfDivider
-                perfStatCell(value: "\(upcomingCount)", label: "Upcoming")
+                perfStatCell(value: "\(upcomingCount)", label: "Upcoming".translated())
                 perfDivider
-                perfStatCell(value: monthEarned.currencyWithoutTrailingZeros, label: "Earned")
+                perfStatCell(value: monthEarned.currencyWithoutTrailingZeros, label: "Earned".translated())
             }
             .padding(.vertical, 14)
         }

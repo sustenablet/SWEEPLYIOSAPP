@@ -419,23 +419,23 @@ struct BusinessView: View {
                             VStack(alignment: .leading, spacing: 14) {
                                 Divider()
                                 snapshotRow(
-                                    title: "Earned This Month",
+                                    title: "Earned This Month".translated(),
                                     value: monthlyEarned.currency,
-                                    detail: "Completed jobs",
+                                    detail: "Completed jobs".translated(),
                                     accent: .sweeplyAccent
                                 )
                                 Divider()
                                 snapshotRow(
-                                    title: "Scheduled Revenue",
+                                    title: "Scheduled Revenue".translated(),
                                     value: upcomingPipelineValue.currency,
-                                    detail: "Upcoming value",
+                                    detail: "Upcoming value".translated(),
                                     accent: .sweeplyNavy
                                 )
                                 Divider()
                                 snapshotRow(
-                                    title: "Collected All-Time",
+                                    title: "Collected All-Time".translated(),
                                     value: totalRevenue.currency,
-                                    detail: "All-time paid",
+                                    detail: "All-time paid".translated(),
                                     accent: .sweeplyAccent
                                 )
                             }
@@ -616,7 +616,9 @@ struct BusinessView: View {
                                     VStack(alignment: .leading, spacing: 3) {
                                         Text(client.name)
                                             .font(.system(size: 15, weight: .semibold))
-                                        Text("\(client.jobs) visits this month")
+                                        Text(client.jobs == 1
+                                             ? "%d visit this month".translated(with: client.jobs)
+                                             : "%d visits this month".translated(with: client.jobs))
                                             .font(.system(size: 12))
                                             .foregroundStyle(Color.sweeplyTextSub)
                                     }
@@ -758,11 +760,11 @@ struct BusinessView: View {
 
                 let displayServices = serviceTab == .services ? catalogServices : catalogExtras
                 let emptyMessage = serviceTab == .services 
-                    ? "No services configured" 
-                    : "No extras configured"
+                    ? "No services configured".translated()
+                    : "No extras configured".translated()
                 let emptySubMessage = serviceTab == .services
-                    ? "Add services to speed up job and invoice creation."
-                    : "Add extras like laundry, dishes, or window cleaning."
+                    ? "Add services to speed up job and invoice creation.".translated()
+                    : "Add extras like laundry, dishes, or window cleaning.".translated()
 
                 if displayServices.isEmpty {
                     overviewEmptyState(
@@ -802,7 +804,7 @@ struct BusinessView: View {
                             }
                         } label: {
                             let extra = displayServices.count - 3
-                            Text("+ \(extra) more")
+                            Text("+ %d more".translated(with: extra))
                                 .font(.system(size: 12, weight: .medium))
                                 .foregroundStyle(Color.sweeplyAccent)
                                 .frame(maxWidth: .infinity)
@@ -895,7 +897,7 @@ private struct ServiceMixRow: View {
             HStack {
                 Text(label).font(.system(size: 13, weight: .medium))
                 Spacer()
-                Text("\(count) jobs").font(.system(size: 11)).foregroundStyle(Color.sweeplyTextSub)
+                Text(count == 1 ? "%d job".translated(with: count) : "%d jobs".translated(with: count)).font(.system(size: 11)).foregroundStyle(Color.sweeplyTextSub)
             }
             GeometryReader { geo in
                 ZStack(alignment: .leading) {

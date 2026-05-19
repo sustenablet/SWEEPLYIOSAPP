@@ -521,7 +521,7 @@ struct AuthView: View {
                         .font(.system(size: 13, weight: .bold))
                         .foregroundStyle(Color(red: 66/255, green: 133/255, blue: 244/255))
                 }
-                Text("Google")
+                Text("Google".translated())
                     .font(.system(size: 15, weight: .medium))
                     .foregroundStyle(Color.primary)
             }
@@ -639,12 +639,12 @@ private struct WaitingForConfirmationView: View {
                         HStack(spacing: 4) {
                             Image(systemName: "clock")
                                 .font(.system(size: 11))
-                            Text("Link expires in \(formatTime(remainingSeconds))")
+                            Text("Link expires in %@".translated(with: formatTime(remainingSeconds)))
                                 .font(.system(size: 12, weight: .medium))
                         }
                         .foregroundStyle(Color.sweeplyTextSub)
                     }
-                    Text("Waiting for verification\(dotAnimation)")
+                    Text("Waiting for verification%@".translated(with: dotAnimation))
                         .font(.system(size: 12, weight: .medium))
                         .foregroundStyle(Color.sweeplyTextSub.opacity(0.7))
                         .animation(.none)
@@ -731,7 +731,7 @@ private struct ForgotPasswordSheet: View {
             VStack(spacing: 8) {
                 Text("Check your email".translated())
                     .font(.system(size: 22, weight: .bold)).foregroundStyle(Color.sweeplyNavy)
-                Text("We sent a reset link to \(resetEmail). Check your inbox and follow the instructions.")
+                Text("We sent a reset link to %@. Check your inbox and follow the instructions.".translated(with: resetEmail))
                     .font(.system(size: 14)).foregroundStyle(Color.sweeplyTextSub)
                     .multilineTextAlignment(.center).padding(.horizontal, 8)
             }
