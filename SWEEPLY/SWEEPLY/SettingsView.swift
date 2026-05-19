@@ -196,7 +196,7 @@ struct SettingsView: View {
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 if hasUnsavedChanges {
-                    Button(isSaving ? "Saving..." : "Save") {
+                    Button(isSaving ? "Saving...".translated() : "Save".translated()) {
                         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                         Task { await saveChanges() }
                     }
@@ -226,7 +226,7 @@ struct SettingsView: View {
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 if hasUnsavedChanges {
-                    Button(isSaving ? "Saving..." : "Save") {
+                    Button(isSaving ? "Saving...".translated() : "Save".translated()) {
                         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                         Task { await saveChanges() }
                     }
@@ -535,9 +535,9 @@ private var preferencesSection: some View {
                         let types = ["Job Reminder".translated(), "Invoice Due".translated(), "Test".translated()]
                         switch types[currentTestNotificationIndex] {
                         case "Job Reminder".translated():
-                            notificationManager.fireInstantBanner(title: "Job in 1 Hour".translated(), body: "Standard Clean at Sarah M. — 123 Main St".translated())
+                            notificationManager.fireInstantBanner(title: "Job in 1 Hour".translated(), body: "%@ at %@ — %@".translated(with: "Standard Clean".translated(), "Sarah M.", "123 Main St"))
                         case "Invoice Due".translated():
-                            notificationManager.fireInstantBanner(title: "Invoice Due Soon".translated(), body: "INV-0042 for Sarah M. is due in 3 days — $320.00".translated())
+                            notificationManager.fireInstantBanner(title: "Invoice Due Soon".translated(), body: "%@ for %@ is due in %d days — %@".translated(with: "INV-0042", "Sarah M.", 3, "$320.00"))
                         default:
                             notificationManager.sendTestNotification()
                         }
@@ -786,7 +786,7 @@ private var preferencesSection: some View {
 
     private func saveChanges() async {
         guard let uid = session.userId else {
-            feedbackStyle = .error; feedbackMessage = "No authenticated session was found."; return
+            feedbackStyle = .error; feedbackMessage = "No authenticated session was found.".translated(); return
         }
         guard validationMessage == nil else {
             feedbackStyle = .warning; feedbackMessage = validationMessage; return
@@ -796,11 +796,11 @@ private var preferencesSection: some View {
         isSaving = false
         if success {
             baselineProfile = normalizedProfile(localProfile)
-            feedbackStyle = .success; feedbackMessage = "Settings saved."
+            feedbackStyle = .success; feedbackMessage = "Settings saved.".translated()
             UINotificationFeedbackGenerator().notificationOccurred(.success)
         } else {
             feedbackStyle = .error
-            feedbackMessage = profileStore.lastError ?? "Unable to save your settings right now."
+            feedbackMessage = profileStore.lastError ?? "Unable to save your settings right now.".translated()
             UINotificationFeedbackGenerator().notificationOccurred(.error)
         }
     }

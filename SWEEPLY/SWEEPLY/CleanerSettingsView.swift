@@ -262,7 +262,7 @@ struct CleanerSettingsView: View {
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 if hasUnsavedChanges {
-                    Button(isSaving ? "Saving..." : "Save") {
+                    Button(isSaving ? "Saving...".translated() : "Save".translated()) {
                         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                         Task { await saveChanges() }
                     }
@@ -400,9 +400,9 @@ struct CleanerSettingsView: View {
                         let types = ["Job Reminder".translated(), "Invoice Due".translated(), "Test".translated()]
                         switch types[currentTestNotificationIndex] {
                         case "Job Reminder".translated():
-                            notificationManager.fireInstantBanner(title: "Job in 1 Hour".translated(), body: "Standard Clean at Sarah M. — 123 Main St".translated())
+                            notificationManager.fireInstantBanner(title: "Job in 1 Hour".translated(), body: "%@ at %@ — %@".translated(with: "Standard Clean".translated(), "Sarah M.", "123 Main St"))
                         case "Invoice Due".translated():
-                            notificationManager.fireInstantBanner(title: "Invoice Due Soon".translated(), body: "INV-0042 for Sarah M. is due in 3 days — $320.00".translated())
+                            notificationManager.fireInstantBanner(title: "Invoice Due Soon".translated(), body: "%@ for %@ is due in %d days — %@".translated(with: "INV-0042", "Sarah M.", 3, "$320.00"))
                         default:
                             notificationManager.sendTestNotification()
                         }
@@ -534,7 +534,7 @@ struct CleanerSettingsView: View {
                     }
 
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(isLeavingTeam ? "Leaving team…" : "Leave Team")
+                        Text(isLeavingTeam ? "Leaving team…".translated() : "Leave Team".translated())
                             .font(.system(size: 15, weight: .semibold))
                             .foregroundStyle(Color.sweeplyDestructive)
                         if leaveError {
@@ -543,8 +543,8 @@ struct CleanerSettingsView: View {
                                 .foregroundStyle(Color.sweeplyDestructive.opacity(0.8))
                         } else {
                             Text(leaveHoldProgress > 0
-                                 ? "Keep holding…"
-                                 : "Hold to leave this team")
+                                 ? "Keep holding…".translated()
+                                 : "Hold to leave this team".translated())
                                 .font(.system(size: 11))
                                 .foregroundStyle(Color.sweeplyDestructive.opacity(0.65))
                         }
@@ -637,7 +637,7 @@ struct CleanerSettingsView: View {
     private func saveChanges() async {
         guard let uid = session.userId else {
             feedbackStyle = .error
-            feedbackMessage = "No authenticated session was found."
+            feedbackMessage = "No authenticated session was found.".translated()
             return
         }
         guard validationMessage == nil else {
@@ -652,11 +652,11 @@ struct CleanerSettingsView: View {
         if success {
             baselineProfile = localProfile
             feedbackStyle = .success
-            feedbackMessage = "Settings saved."
+            feedbackMessage = "Settings saved.".translated()
             UINotificationFeedbackGenerator().notificationOccurred(.success)
         } else {
             feedbackStyle = .error
-            feedbackMessage = profileStore.lastError ?? "Unable to save your settings right now."
+            feedbackMessage = profileStore.lastError ?? "Unable to save your settings right now.".translated()
             UINotificationFeedbackGenerator().notificationOccurred(.error)
         }
     }

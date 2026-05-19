@@ -1406,6 +1406,12 @@ enum Localization {
     "%@ is owed %@ today. Open Sweeply to record the payment.": ["pt-BR": "%@ deve receber %@ hoje. Abra o Sweeply para registrar o pagamento."],
     "It's Pay Day!": ["pt-BR": "É dia de pagamento!"],
     "Your %@ from %@ should be processed today.": ["pt-BR": "Seu %@ de %@ deve ser processado hoje."],
+    "Saving...": ["pt-BR": "Salvando..."],
+    "Leave Team": ["pt-BR": "Sair da equipe"],
+    "Leaving team…": ["pt-BR": "Saindo da equipe…"],
+    "Keep holding…": ["pt-BR": "Continue segurando…"],
+    "Hold to leave this team": ["pt-BR": "Segure para sair desta equipe"],
+    "%@ for %@ is due in %d days — %@": ["pt-BR": "%@ para %@ vence em %d dias — %@"],
     ]
 
     static func translate(_ key: String) -> String {
