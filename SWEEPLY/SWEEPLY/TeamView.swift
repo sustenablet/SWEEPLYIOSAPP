@@ -379,7 +379,7 @@ struct TeamView: View {
 
     private var ownerInitials: String {
         let name = profileStore.profile?.businessName ?? ""
-        if name.isEmpty { return "ME" }
+        if name.isEmpty { return "ME".translated() }
         return name.split(separator: " ")
             .compactMap { $0.first }
             .prefix(2)

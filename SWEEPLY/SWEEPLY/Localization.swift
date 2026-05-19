@@ -1469,6 +1469,7 @@ enum Localization {
     "e.g. Week of Apr 21": ["pt-BR": "ex.: Semana de 21 de abr."],
     "Now": ["pt-BR": "Agora"],
     "How much?": ["pt-BR": "Quanto?"],
+    "ME": ["pt-BR": "EU"],
     ]
 
     static func translate(_ key: String) -> String {
