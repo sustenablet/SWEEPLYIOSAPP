@@ -64,7 +64,7 @@ struct LoginView: View {
                 HStack(spacing: 4) {
                     Image(systemName: "chevron.left")
                         .font(.system(size: 13, weight: .semibold))
-                    Text("Back")
+                    Text("Back".translated())
                         .font(.system(size: 14, weight: .medium))
                 }
                 .foregroundStyle(Color.sweeplyNavy)
@@ -83,11 +83,11 @@ struct LoginView: View {
             ScrollView(showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 0) {
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("Log In")
+                        Text("Log In".translated())
                             .font(.system(size: 34, weight: .bold))
                             .foregroundStyle(Color.sweeplyNavy)
                             .tracking(-0.6)
-                        Text("Your business, right where you left it.")
+                        Text("Your business, right where you left it.".translated())
                             .font(.system(size: 15))
                             .foregroundStyle(Color.sweeplyTextSub)
                     }
@@ -97,7 +97,7 @@ struct LoginView: View {
 
                     VStack(spacing: 16) {
                         loginField(
-                            placeholder: "your@email.com",
+                            placeholder: "your@email.com".translated(),
                             text: $email,
                             icon: "envelope",
                             keyboardType: .emailAddress
@@ -123,7 +123,7 @@ struct LoginView: View {
             VStack(spacing: 12) {
                 HStack(spacing: 12) {
                     Rectangle().fill(Color.sweeplyBorder).frame(height: 1)
-                    Text("or")
+                    Text("or".translated())
                         .font(.system(size: 12))
                         .foregroundStyle(Color.sweeplyTextSub)
                     Rectangle().fill(Color.sweeplyBorder).frame(height: 1)
@@ -136,7 +136,7 @@ struct LoginView: View {
                 Divider().opacity(0.5).padding(.top, 4)
 
                 primaryButton(
-                    label: "Continue",
+                    label: "Continue".translated(),
                     isEnabled: isValidEmail(email)
                 ) {
                     UIImpactFeedbackGenerator(style: .medium).impactOccurred()
@@ -156,7 +156,7 @@ struct LoginView: View {
             ScrollView(showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 0) {
                     VStack(alignment: .leading, spacing: 6) {
-                        Text("Enter your\npassword")
+                        Text("Enter your\npassword".translated())
                             .font(.system(size: 34, weight: .bold))
                             .foregroundStyle(Color.sweeplyNavy)
                             .tracking(-0.6)
@@ -233,7 +233,7 @@ struct LoginView: View {
                         // Forgot password
                         HStack {
                             Spacer()
-                            Button("Forgot password?") {
+                            Button("Forgot password?".translated()) {
                                 // TODO: forgot password
                             }
                             .font(.system(size: 13, weight: .medium))
@@ -249,7 +249,7 @@ struct LoginView: View {
             Divider().opacity(0.5)
 
             primaryButton(
-                label: isSubmitting ? "Signing in…" : "Log In",
+                label: isSubmitting ? "Signing in…".translated() : "Log In".translated(),
                 isEnabled: password.count >= 6 && !isSubmitting
             ) {
                 UIImpactFeedbackGenerator(style: .medium).impactOccurred()

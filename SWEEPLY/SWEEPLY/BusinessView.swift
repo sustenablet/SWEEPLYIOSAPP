@@ -448,7 +448,7 @@ struct BusinessView: View {
                                         Image(systemName: "person.3.sequence")
                                             .font(.system(size: 28))
                                             .foregroundStyle(Color.sweeplyTextSub.opacity(0.3))
-                                        Text("Schedule jobs to see\nclient mix")
+                            Text("Schedule jobs to see\nclient mix".translated())
                                             .font(.system(size: 13))
                                             .foregroundStyle(Color.sweeplyTextSub)
                                             .multilineTextAlignment(.center)
@@ -490,7 +490,7 @@ struct BusinessView: View {
                                         Image(systemName: "chart.bar.xaxis")
                                             .font(.system(size: 28))
                                             .foregroundStyle(Color.sweeplyTextSub.opacity(0.3))
-                                        Text("Schedule jobs to see\nservice breakdown")
+                            Text("Schedule jobs to see\nservice breakdown".translated())
                                             .font(.system(size: 13))
                                             .foregroundStyle(Color.sweeplyTextSub)
                                             .multilineTextAlignment(.center)
@@ -987,7 +987,7 @@ private struct KPICustomizerSheet: View {
                 Divider()
 
                 List {
-                    Section("Showing on your dashboard") {
+            Section("Showing on your dashboard".translated()) {
                         ForEach(visibleItems) { item in
                             KPIToggleRow(item: item, isEnabled: true) {
                                 localEnabled.remove(item.id)
@@ -1001,7 +1001,7 @@ private struct KPICustomizerSheet: View {
                         }
                     }
                     if !hiddenItems.isEmpty {
-                        Section("Hidden — tap to show") {
+            Section("Hidden — tap to show".translated()) {
                             ForEach(hiddenItems) { item in
                                 KPIToggleRow(item: item, isEnabled: false) {
                                     localEnabled.insert(item.id)

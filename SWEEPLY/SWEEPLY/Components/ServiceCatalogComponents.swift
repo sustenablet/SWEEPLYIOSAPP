@@ -30,7 +30,7 @@ struct ServiceCatalogRow: View {
 
             Spacer()
 
-            Button("Edit", action: onEdit)
+        Button("Edit".translated(), action: onEdit)
                 .font(.system(size: 12, weight: .semibold))
                 .foregroundStyle(Color.sweeplyNavy)
                 .padding(.horizontal, 10)

@@ -335,7 +335,7 @@ struct FinancesView: View {
                         withAnimation(.easeInOut(duration: 0.2)) { dotReports = false }
                         showReports = true
                     } label: {
-                        Label("Reports", systemImage: "chart.bar.doc.horizontal.fill")
+                    Label("Reports".translated(), systemImage: "chart.bar.doc.horizontal.fill")
                     }
                 } label: {
                     ZStack(alignment: .topTrailing) {
@@ -508,7 +508,7 @@ compactMetric(title: "Avg. invoice".translated(), value: avgInvoiceValue.currenc
                     Text("Advanced Finance".translated())
                         .font(.system(size: 15, weight: .semibold))
                         .foregroundStyle(Color.primary)
-                    Text("P&L reports, cash-flow forecasting, and team payroll are available on Pro.")
+                        Text("P&L reports, cash-flow forecasting, and team payroll are available on Pro.".translated())
                         .font(.system(size: 13))
                         .foregroundStyle(Color.sweeplyTextSub)
                         .fixedSize(horizontal: false, vertical: true)
@@ -1604,7 +1604,7 @@ private struct PaymentSheet: View {
                 }
                 .padding(20)
             }
-            .navigationTitle("Pay \(member.name)")
+            .navigationTitle("Pay %@".translated(with: member.name))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {

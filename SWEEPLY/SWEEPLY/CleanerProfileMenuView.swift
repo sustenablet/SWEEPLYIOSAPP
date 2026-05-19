@@ -8,8 +8,10 @@ struct CleanerProfileMenuView: View {
     let membership: TeamMembership
     @Binding var showSettings: Bool
 
+    private let fallbackDisplayName = "Team Member"
+
     private var displayName: String {
-        guard let name = profileStore.profile?.fullName, !name.isEmpty else { return "Team Member".translated() }
+        guard let name = profileStore.profile?.fullName, !name.isEmpty else { return fallbackDisplayName.translated() }
         return name
     }
 
@@ -18,7 +20,7 @@ struct CleanerProfileMenuView: View {
     }
 
     private var initials: String {
-        displayName == "Team Member" ? "?" :
+        displayName == fallbackDisplayName.translated() ? "?" :
         displayName.split(separator: " ").compactMap { $0.first }.map { String($0) }.joined()
     }
 
@@ -72,14 +74,14 @@ struct CleanerProfileMenuView: View {
 
             Divider()
 
-            menuRow(icon: "gearshape.fill", iconColor: Color.sweeplyNavy, label: "Settings") {
+            menuRow(icon: "gearshape.fill", iconColor: Color.sweeplyNavy, label: "Settings".translated()) {
                 dismiss()
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) { showSettings = true }
             }
 
             Divider().padding(.leading, 54)
 
-            menuRow(icon: "arrow.left.arrow.right", iconColor: Color.sweeplyAccent, label: "Switch to My Business") {
+            menuRow(icon: "arrow.left.arrow.right", iconColor: Color.sweeplyAccent, label: "Switch to My Business".translated()) {
                 dismiss()
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
                     session.switchToOwnBusiness()
@@ -105,7 +107,7 @@ struct CleanerProfileMenuView: View {
                         .font(.system(size: 14, weight: .medium))
                         .foregroundStyle(iconColor)
                 }
-                Text(label.translated())
+                Text(label)
                     .font(.system(size: 15))
                     .foregroundStyle(Color.primary)
                 Spacer()

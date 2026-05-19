@@ -8,8 +8,8 @@ enum AppLanguage: String, CaseIterable, Identifiable {
     
     var displayName: String {
         switch self {
-        case .english: return "English"
-        case .portuguese: return "Português (Brasil)"
+        case .english: return "English".translated()
+        case .portuguese: return "Português (Brasil)".translated()
         }
     }
     
@@ -85,7 +85,7 @@ struct LanguageToggle: View {
                 if let current = AppLanguage(rawValue: language) {
                     Text(current.flag)
                 }
-                Text("Language")
+                Text("Language".translated())
                     .font(.system(size: 15))
                 Spacer()
                 if let current = AppLanguage(rawValue: language) {
