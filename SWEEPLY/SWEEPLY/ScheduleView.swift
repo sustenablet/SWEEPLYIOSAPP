@@ -461,7 +461,7 @@ struct ScheduleView: View {
                     Text("\(jobs.count)")
                         .font(.system(size: 13, weight: .bold, design: .monospaced))
                         .foregroundStyle(Color.sweeplyAccent)
-                    Text(jobs.count == 1 ? "job" : "jobs")
+                    Text(jobs.count == 1 ? "job".translated() : "jobs".translated())
                         .font(.system(size: 13, weight: .semibold))
                         .foregroundStyle(Color.sweeplyTextSub)
                 }
@@ -584,9 +584,7 @@ struct ScheduleView: View {
     }
 
     private func timelineHourLabel(_ hour: Int) -> String {
-        let h = hour % 12 == 0 ? 12 : hour % 12
-        let suffix = hour < 12 ? "am" : "pm"
-        return "\(h)\(suffix)"
+        String(format: "%02d", hour)
     }
 
     private func dayRevenue(_ date: Date) -> Double {
@@ -622,7 +620,7 @@ struct ScheduleView: View {
                     Text("\(listJobsForSelectedDay.count)")
                         .font(.system(size: 13, weight: .bold, design: .monospaced))
                         .foregroundStyle(Color.sweeplyAccent)
-                    Text(listJobsForSelectedDay.count == 1 ? "job" : "jobs")
+                    Text(listJobsForSelectedDay.count == 1 ? "job".translated() : "jobs".translated())
                         .font(.system(size: 13, weight: .semibold))
                         .foregroundStyle(Color.sweeplyTextSub)
                     Text("on".translated())
@@ -965,7 +963,7 @@ private extension ScheduleView {
             }
 
             VStack(alignment: .leading, spacing: 2) {
-                Text(isWeekly ? "WEEKLY PAYDAY" : "DAILY PAY")
+                Text(isWeekly ? "WEEKLY PAYDAY".translated() : "DAILY PAY".translated())
                     .font(.system(size: 9, weight: .bold))
                     .foregroundStyle(Color.sweeplySuccess)
                     .tracking(0.8)
@@ -1301,7 +1299,7 @@ private struct ScheduleJobRow: View {
             }
             Button("Delete".translated(), role: .destructive) { showDeleteConfirm = true }
         }
-        .alert("Delete Job?", isPresented: $showDeleteConfirm) {
+        .alert("Delete Job?".translated(), isPresented: $showDeleteConfirm) {
             Button("Cancel".translated(), role: .cancel) {}
             Button("Delete".translated(), role: .destructive) {
                 UIImpactFeedbackGenerator(style: .heavy).impactOccurred()
@@ -1310,7 +1308,7 @@ private struct ScheduleJobRow: View {
         } message: {
             Text("Are you sure you want to delete this job?".translated())
         }
-        .alert("Create Invoice?", isPresented: $showInvoicePrompt) {
+        .alert("Create Invoice?".translated(), isPresented: $showInvoicePrompt) {
             Button("Not Now".translated(), role: .cancel) {}
             Button("Create Invoice".translated()) { showInvoiceSheet = true }
         } message: {

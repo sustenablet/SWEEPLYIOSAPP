@@ -183,7 +183,7 @@ struct NewInvoiceView: View {
                 } label: {
                     InvoicePickerButton(
                         title: "Bill to",
-                        value: selectedClient?.name ?? "Select client",
+                        value: selectedClient?.name ?? "Select client".translated(),
                         icon: "person.fill",
                         isValueEmpty: selectedClientId == nil
                     )
@@ -327,7 +327,7 @@ struct NewInvoiceView: View {
                         .font(.system(size: 13, weight: .semibold))
                         .foregroundStyle(Color.sweeplyTextSub)
 
-                    TextField("e.g. April monthly clean + oven detail", text: $notes, axis: .vertical)
+                    TextField("e.g. April monthly clean + oven detail".translated(), text: $notes, axis: .vertical)
                         .font(.system(size: 15))
                         .foregroundStyle(Color.sweeplyNavy)
                         .lineLimit(3...6)
@@ -428,7 +428,7 @@ struct NewInvoiceView: View {
         errorMessage = nil
 
         Task {
-            let clientName = selectedClient?.name ?? "Unknown Client"
+            let clientName = selectedClient?.name ?? "Unknown Client".translated()
             let newInvoice = Invoice(
                 id: UUID(),
                 clientId: clientId,
@@ -451,7 +451,7 @@ struct NewInvoiceView: View {
                     dismiss()
                 } else {
                     UINotificationFeedbackGenerator().notificationOccurred(.error)
-                    errorMessage = invoicesStore.lastError ?? "Failed to create invoice."
+                    errorMessage = invoicesStore.lastError ?? "Failed to create invoice.".translated()
                 }
             }
         }
@@ -471,7 +471,7 @@ private struct LineItemRow: View {
         VStack(spacing: 0) {
             // Description row
             HStack {
-                TextField("Service description", text: $item.description)
+                TextField("Service description".translated(), text: $item.description)
                     .font(.system(size: 15, weight: .medium))
                     .foregroundStyle(Color.sweeplyNavy)
 
@@ -596,7 +596,7 @@ private struct CustomLineItemSheet: View {
                         .font(.system(size: 13, weight: .medium))
                         .foregroundStyle(Color.sweeplyTextSub)
                     
-                    TextField("e.g. Extra hours, Supplies, etc.", text: $description)
+                    TextField("e.g. Extra hours, Supplies, etc.".translated(), text: $description)
                         .font(.system(size: 17))
                         .padding(16)
                         .background(Color.sweeplySurface)
@@ -770,7 +770,7 @@ private struct InvoiceFormSectionHeader: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            Text(title)
+            Text(title.translated())
                 .font(.system(size: 11, weight: .bold))
                 .foregroundStyle(Color.sweeplyTextSub)
                 .tracking(1.0)
@@ -793,7 +793,7 @@ private struct InvoicePickerButton: View {
                 .font(.system(size: 15))
                 .foregroundStyle(Color.sweeplyTextSub)
                 .frame(width: 20)
-            Text(title)
+            Text(title.translated())
                 .font(.system(size: 15))
                 .foregroundStyle(Color.sweeplyTextSub)
             Spacer()

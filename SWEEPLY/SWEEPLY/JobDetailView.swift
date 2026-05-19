@@ -245,7 +245,7 @@ struct JobDetailView: View {
                             HStack(spacing: 4) {
                                 Image(systemName: "phone.fill")
                                     .font(.system(size: 10))
-                                Text(client.phone.isEmpty ? "No phone listed" : client.phone)
+                                Text(client.phone.isEmpty ? "No phone listed".translated() : client.phone)
                                     .font(.system(size: 13))
                             }
                             .foregroundStyle(Color.sweeplyTextSub)
@@ -296,17 +296,17 @@ struct JobDetailView: View {
             
             SectionCard {
                 VStack(alignment: .leading, spacing: 14) {
-                    JobInfoRow(icon: "mappin.and.ellipse", title: "Location", value: job.address.isEmpty ? "No address provided" : job.address)
+                    JobInfoRow(icon: "mappin.and.ellipse", title: "Location", value: job.address.isEmpty ? "No address provided".translated() : job.address)
                     if job.isRecurring {
                         Divider()
                         JobInfoRow(
                             icon: "arrow.triangle.2.circlepath",
                             title: "Recurring",
-                            value: job.recurrenceFrequency?.displayName ?? "Recurring"
+                            value: job.recurrenceFrequency?.displayName.translated() ?? "Recurring".translated()
                         )
                     }
                     Divider()
-                    JobInfoRow(icon: "clock.fill", title: "Est. Duration", value: "\(Int(job.duration)) Hours")
+                    JobInfoRow(icon: "clock.fill", title: "Est. Duration", value: "%d hours".translated(with: Int(job.duration)))
                     Divider()
                     JobInfoRow(icon: "tag.fill", title: "Price", value: job.price.currency)
                     Divider()
@@ -325,7 +325,7 @@ struct JobDetailView: View {
                             Text("Assigned To".translated())
                                 .font(.system(size: 11, weight: .semibold))
                                 .foregroundStyle(Color.sweeplyTextSub)
-                            Text(job.assignedMemberName ?? "Unassigned")
+                            Text(job.assignedMemberName ?? "Unassigned".translated())
                                 .font(.system(size: 14, weight: .medium))
                                 .foregroundStyle(job.assignedMemberName != nil ? Color.sweeplyNavy : Color.sweeplyTextSub)
                         }
@@ -488,7 +488,7 @@ private struct JobInfoRow: View {
                 .padding(.top, 2)
 
             VStack(alignment: .leading, spacing: 4) {
-                Text(title)
+                Text(title.translated())
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundStyle(Color.sweeplyTextSub)
                 Text(value)
@@ -528,7 +528,7 @@ struct ReassignCleanerSheet: View {
                 ScrollView {
                     VStack(spacing: 8) {
                         // Unassigned option
-                        cleanerRow(name: "Unassigned", initials: nil, isSelected: selectedId == nil) {
+                        cleanerRow(name: "Unassigned".translated(), initials: nil, isSelected: selectedId == nil) {
                             selectedId = nil
                         }
                         Divider().padding(.leading, 54)
@@ -614,8 +614,8 @@ struct ReassignCleanerSheet: View {
         if ok {
             if let cleanerUserId = activeCleaners.first(where: { $0.id == selectedId })?.cleanerUserId {
                 let dateStr = updated.date.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day().hour().minute())
-                let body = "\(updated.serviceType.rawValue) at \(updated.clientName) — \(dateStr)"
-                NotificationManager.shared.fireInstantBanner(title: "New Job Assigned", body: body)
+                let body = "%@ at %@ — %@".translated(with: updated.serviceType.rawValue.translated(), updated.clientName, dateStr)
+                NotificationManager.shared.fireInstantBanner(title: "New Job Assigned".translated(), body: body)
             }
             dismiss()
         }

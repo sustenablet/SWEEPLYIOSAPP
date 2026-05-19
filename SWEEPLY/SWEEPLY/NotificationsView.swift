@@ -208,8 +208,8 @@ struct NotificationsView: View {
 
 private func tabLabel(_ tab: NotificationTab) -> String {
     switch tab {
-    case .all:      return "All"
-    case .unread:   return unreadCount > 0 ? "Unread (\(unreadCount))" : "Unread"
+    case .all:      return "All".translated()
+    case .unread:   return unreadCount > 0 ? "Unread (%d)".translated(with: unreadCount) : "Unread".translated()
     case .jobs:     return "Jobs".translated()
     case .billing:  return "Billing".translated()
     case .team:     return "Team".translated()
