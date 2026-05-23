@@ -72,7 +72,6 @@ struct ClientsView: View {
     }
     @State private var archiveHaptic = false
     @State private var newJobForClient: Client? = nil
-    @State private var viewingClientId: UUID? = nil
 
     private var filterIsActive: Bool {
         showArchived || sortOrder != .nameAZ
@@ -177,9 +176,6 @@ struct ClientsView: View {
             }
             .background(Color.sweeplyBackground.ignoresSafeArea())
             .toolbar(.hidden, for: .navigationBar)
-            .navigationDestination(item: $viewingClientId) { id in
-                ClientDetailView(clientId: id)
-            }
             .refreshable {
                 await clientsStore.load(isAuthenticated: session.isAuthenticated)
             }
@@ -343,7 +339,6 @@ struct ClientsView: View {
                                 client: item.client,
                                 jobCount: item.jobCount,
                                 frequency: item.frequency,
-                                onView: { viewingClientId = item.client.id },
                                 onEdit: { editSheetClient = item.client },
                                 onDelete: { deleteTarget = item.client },
                                 onToggleArchive: {
@@ -472,7 +467,6 @@ private struct ClientCard: View {
     let client: Client
     let jobCount: Int
     let frequency: ClientFrequency
-    let onView: () -> Void
     let onEdit: () -> Void
     let onDelete: () -> Void
     let onToggleArchive: () -> Void
@@ -587,32 +581,7 @@ private struct ClientCard: View {
                 }
             }
 
-            // Overflow menu
-            Menu {
-                Button { onView() } label: {
-                    Label("View Profile".translated(), systemImage: "person.fill")
-                }
-                Divider()
-                Button { onEdit() } label: {
-                    Label("Edit Client".translated(), systemImage: "pencil")
-                }
-                Button { onToggleArchive() } label: {
-                    Label(
-                        client.isActive ? "Archive Client".translated() : "Unarchive Client".translated(),
-                        systemImage: client.isActive ? "archivebox" : "archivebox.fill"
-                    )
-                }
-                Divider()
-                Button(role: .destructive) { onDelete() } label: {
-                    Label("Delete Client".translated(), systemImage: "trash")
-                }
-            } label: {
-                Image(systemName: "ellipsis")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(Color.sweeplyTextSub.opacity(0.55))
-                    .frame(width: 28, height: 44)
-                    .contentShape(Rectangle())
-            }
+            Spacer(minLength: 0)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 18)
@@ -623,9 +592,20 @@ private struct ClientCard: View {
             RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .stroke(Color.sweeplyBorder, lineWidth: 1)
         )
-        .onLongPressGesture(minimumDuration: 0.45) {
-            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-            onView()
+        .contextMenu {
+            Button { onEdit() } label: {
+                Label("Edit Client".translated(), systemImage: "pencil")
+            }
+            Button { onToggleArchive() } label: {
+                Label(
+                    client.isActive ? "Archive Client".translated() : "Unarchive Client".translated(),
+                    systemImage: client.isActive ? "archivebox" : "archivebox.fill"
+                )
+            }
+            Divider()
+            Button(role: .destructive) { onDelete() } label: {
+                Label("Delete Client".translated(), systemImage: "trash")
+            }
         }
     }
 }
