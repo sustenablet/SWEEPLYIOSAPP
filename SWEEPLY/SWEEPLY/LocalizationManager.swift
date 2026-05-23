@@ -118,8 +118,16 @@ extension String {
     }
 
     /// Use for strings with interpolation: "You have %d jobs".translated(with: count)
+    /// Falls back to the English template if the translated template has a
+    /// different number/type of format specifiers — guards against crashes
+    /// from `String(format:)` when a translation accidentally drops a %@/%d.
     func translated(with args: CVarArg...) -> String {
-        let template = translated()
+        let englishTemplate = self
+        let translatedTemplate = translated()
+        let template = Localization.formatSpecifiers(in: translatedTemplate)
+            == Localization.formatSpecifiers(in: englishTemplate)
+            ? translatedTemplate
+            : englishTemplate
         return String(format: template, arguments: args)
     }
 }
