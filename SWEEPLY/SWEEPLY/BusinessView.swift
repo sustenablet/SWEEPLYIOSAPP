@@ -288,7 +288,7 @@ struct BusinessView: View {
                         showTeam = true
                     }
                 }
-                .padding(.top, 12)
+                .padding(.top, 4)
 
                 // Team membership switcher — hidden, redesign pending
                 if false && !session.activeMemberships.isEmpty {
