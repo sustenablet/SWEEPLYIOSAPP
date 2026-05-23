@@ -211,7 +211,7 @@ private var healthCards: [DashboardHealthCardModel] {
                 headerRow
                     .padding(.horizontal, 20)
                     .padding(.top, 4)
-                    .padding(.bottom, 20)
+                    .padding(.bottom, 15)
 
                 // ── Dashboard Hero (Revenue + Stats Grid) ───────────
                 VStack(spacing: 8) {
