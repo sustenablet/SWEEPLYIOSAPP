@@ -1290,61 +1290,9 @@ struct InvoicesListView: View {
                 VStack(alignment: .leading, spacing: 16) {
                     summaryStrip
 
-                    // Unified filter control + selected chips
-                    VStack(alignment: .leading, spacing: 10) {
-                        Menu {
-                            Section("Status".translated()) {
-                                ForEach(InvoiceFilter.allCases, id: \.self) { filter in
-                                    Button {
-                                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                                        withAnimation(.easeInOut(duration: 0.15)) { selectedFilter = filter }
-                                    } label: {
-                                        HStack {
-                                            Text(filter.rawValue.translated())
-                                            Spacer()
-                                            Text("\(count(for: filter))")
-                                                .foregroundStyle(Color.sweeplyTextSub)
-                                            if selectedFilter == filter {
-                                                Image(systemName: "checkmark")
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                            Section("Sort".translated()) {
-                                ForEach(InvoiceSortOrder.allCases, id: \.self) { order in
-                                    Button {
-                                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                                        withAnimation(.easeInOut(duration: 0.15)) { sortOrder = order }
-                                    } label: {
-                                        HStack {
-                                            Image(systemName: order.icon)
-                                                .font(.system(size: 12))
-                                            Text(order.rawValue.translated())
-                                            if sortOrder == order {
-                                                Image(systemName: "checkmark")
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        } label: {
-                            HStack(spacing: 8) {
-                                Image(systemName: "line.3.horizontal.decrease.circle")
-                                    .font(.system(size: 13, weight: .semibold))
-                                Text("Filter".translated())
-                                    .font(.system(size: 13, weight: .semibold))
-                                Image(systemName: "chevron.down")
-                                    .font(.system(size: 10, weight: .semibold))
-                            }
-                            .foregroundStyle(Color.sweeplyNavy)
-                            .padding(.horizontal, 12)
-                            .frame(height: 32)
-                            .background(Color.sweeplySurface)
-                            .clipShape(Capsule())
-                            .overlay(Capsule().stroke(Color.sweeplyBorder, lineWidth: 1))
-                        }
+                    searchControlsRow
 
+                    VStack(alignment: .leading, spacing: 10) {
                         ScrollView(.horizontal, showsIndicators: false) {
                             HStack(spacing: 8) {
                                 activeFilterChip(icon: "line.3.horizontal.decrease.circle", text: selectedFilter.rawValue)
@@ -1387,7 +1335,6 @@ struct InvoicesListView: View {
                 .padding(.horizontal, 20)
                 .padding(.bottom, 32)
             }
-            .searchable(text: $searchText, placement: .navigationBarDrawer(displayMode: .always), prompt: "Search invoices…".translated())
             .background(Color.sweeplyBackground.ignoresSafeArea())
             .navigationTitle("Invoices".translated())
             .navigationBarTitleDisplayMode(.inline)
@@ -1405,8 +1352,100 @@ struct InvoicesListView: View {
                             .font(.system(size: 16, weight: .semibold))
                     }
                     .foregroundStyle(Color.sweeplyNavy)
+            }
+    }
+
+    private var searchControlsRow: some View {
+        HStack(spacing: 10) {
+            HStack(spacing: 10) {
+                Image(systemName: "magnifyingglass")
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundStyle(Color.sweeplyTextSub)
+
+                TextField("Search invoices…".translated(), text: $searchText)
+                    .font(.system(size: 15))
+                    .tint(Color.sweeplyAccent)
+
+                if !searchText.isEmpty {
+                    Button { searchText = "" } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.system(size: 16))
+                            .foregroundStyle(Color.sweeplyTextSub.opacity(0.6))
+                    }
+                    .buttonStyle(.plain)
                 }
             }
+            .padding(.horizontal, 14)
+            .frame(height: 44)
+            .background(Color.sweeplySurface)
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .stroke(Color.sweeplyBorder, lineWidth: 1)
+            )
+
+            statusFilterMenuButton
+            sortMenuButton
+        }
+    }
+
+    private var statusFilterMenuButton: some View {
+        Menu {
+            ForEach(InvoiceFilter.allCases, id: \.self) { filter in
+                Button {
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    withAnimation(.easeInOut(duration: 0.15)) { selectedFilter = filter }
+                } label: {
+                    HStack {
+                        Text(filter.rawValue.translated())
+                        Spacer()
+                        Text("\(count(for: filter))")
+                            .foregroundStyle(Color.sweeplyTextSub)
+                        if selectedFilter == filter {
+                            Image(systemName: "checkmark")
+                        }
+                    }
+                }
+            }
+        } label: {
+            searchBarIconButton(systemName: "line.3.horizontal.decrease.circle")
+        }
+    }
+
+    private var sortMenuButton: some View {
+        Menu {
+            ForEach(InvoiceSortOrder.allCases, id: \.self) { order in
+                Button {
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    withAnimation(.easeInOut(duration: 0.15)) { sortOrder = order }
+                } label: {
+                    HStack {
+                        Image(systemName: order.icon)
+                            .font(.system(size: 12))
+                        Text(order.rawValue.translated())
+                        if sortOrder == order {
+                            Image(systemName: "checkmark")
+                        }
+                    }
+                }
+            }
+        } label: {
+            searchBarIconButton(systemName: "arrow.up.arrow.down.circle")
+        }
+    }
+
+    private func searchBarIconButton(systemName: String) -> some View {
+        Image(systemName: systemName)
+            .font(.system(size: 17, weight: .semibold))
+            .foregroundStyle(Color.sweeplyNavy)
+            .frame(width: 44, height: 44)
+            .background(Color.sweeplySurface)
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .stroke(Color.sweeplyBorder, lineWidth: 1)
+            )
+    }
             .sheet(isPresented: $showNewInvoice) {
                 NewInvoiceView()
                     .environment(invoicesStore)
