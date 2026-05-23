@@ -1352,7 +1352,37 @@ struct InvoicesListView: View {
                             .font(.system(size: 16, weight: .semibold))
                     }
                     .foregroundStyle(Color.sweeplyNavy)
+                }
             }
+            .sheet(isPresented: $showNewInvoice) {
+                NewInvoiceView()
+                    .environment(invoicesStore)
+                    .environment(clientsStore)
+                    .environment(jobsStore)
+                    .environment(session)
+                    .environment(profileStore)
+            }
+            .sheet(isPresented: $showInvoiceDetail) {
+                if let id = selectedInvoiceId {
+                    NavigationStack {
+                        InvoiceDetailView(invoiceId: id)
+                    }
+                    .environment(invoicesStore)
+                    .environment(clientsStore)
+                    .environment(profileStore)
+                    .environment(session)
+                }
+            }
+            .sheet(isPresented: Binding(
+                get: { markPaidInvoice != nil },
+                set: { if !$0 { markPaidInvoice = nil } }
+            )) {
+                if let invoice = markPaidInvoice {
+                    MarkPaidSheet(invoice: invoice)
+                        .environment(invoicesStore)
+                }
+            }
+        }
     }
 
     private var searchControlsRow: some View {
@@ -1445,36 +1475,6 @@ struct InvoicesListView: View {
                 RoundedRectangle(cornerRadius: 12, style: .continuous)
                     .stroke(Color.sweeplyBorder, lineWidth: 1)
             )
-    }
-            .sheet(isPresented: $showNewInvoice) {
-                NewInvoiceView()
-                    .environment(invoicesStore)
-                    .environment(clientsStore)
-                    .environment(jobsStore)
-                    .environment(session)
-                    .environment(profileStore)
-            }
-            .sheet(isPresented: $showInvoiceDetail) {
-                if let id = selectedInvoiceId {
-                    NavigationStack {
-                        InvoiceDetailView(invoiceId: id)
-                    }
-                    .environment(invoicesStore)
-                    .environment(clientsStore)
-                    .environment(profileStore)
-                    .environment(session)
-                }
-            }
-            .sheet(isPresented: Binding(
-                get: { markPaidInvoice != nil },
-                set: { if !$0 { markPaidInvoice = nil } }
-            )) {
-                if let invoice = markPaidInvoice {
-                    MarkPaidSheet(invoice: invoice)
-                        .environment(invoicesStore)
-                }
-            }
-        }
     }
 
     private var summaryStrip: some View {
