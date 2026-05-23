@@ -238,7 +238,6 @@ struct FinancesView: View {
             VStack(alignment: .leading, spacing: 28) {
                 summaryBlock
                 chartSection
-                secondaryMetrics
                 expenseSummarySection
                 invoicesBlock
                 teamPayrollSection
@@ -460,20 +459,6 @@ struct FinancesView: View {
         }
     }
 
-    // MARK: - Secondary metrics
-
-    private var secondaryMetrics: some View {
-        SectionCard {
-            HStack(spacing: 0) {
-compactMetric(title: "Avg. invoice".translated(), value: avgInvoiceValue.currency)
-                        compactMetric(title: "Collection".translated(), value: "\(collectionRate)%")
-                        compactMetric(title: "Invoices".translated(), value: "\(invoices.count)", isCount: true)
-            }
-            .padding(.vertical, 0)
-            .padding(.horizontal, 0)
-        }
-    }
-
     // MARK: - Expense Summary
 
     private var currentMonthInterval: DateInterval {
@@ -680,20 +665,6 @@ compactMetric(title: "Avg. invoice".translated(), value: avgInvoiceValue.currenc
             .fill(Color.sweeplyBorder)
             .frame(width: 1)
             .padding(.vertical, 4)
-    }
-
-    private func compactMetric(title: String, value: String, isCount: Bool = false) -> some View {
-        VStack(spacing: 4) {
-            Text(title)
-                .font(.system(size: 10, weight: .medium))
-                .foregroundStyle(Color.sweeplyTextSub)
-                .multilineTextAlignment(.center)
-            Text(value)
-                .font(.system(size: isCount ? 17 : 15, weight: .semibold, design: isCount ? .default : .rounded))
-                .foregroundStyle(Color.sweeplyNavy)
-                .monospacedDigit()
-        }
-        .frame(maxWidth: .infinity)
     }
 
     // MARK: - Invoices

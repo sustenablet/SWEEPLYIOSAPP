@@ -201,38 +201,6 @@ struct FinancialReportsView: View {
         return cashflowForecast.first { $0.weekLabel == label }
     }
 
-    // MARK: - Invoice aging (unpaid + overdue only)
-
-    private var today: Date { Calendar.current.startOfDay(for: Date()) }
-
-    private var agingNotDueYet: [Invoice] {
-        (unpaidInvoices + overdueInvoices).filter { $0.dueDate > today }
-    }
-    private var aging1to7: [Invoice] {
-        let cutoff = Calendar.current.date(byAdding: .day, value: -7, to: today)!
-        return (unpaidInvoices + overdueInvoices).filter { $0.dueDate <= today && $0.dueDate > cutoff }
-    }
-    private var aging8to30: [Invoice] {
-        let a = Calendar.current.date(byAdding: .day, value: -7,  to: today)!
-        let b = Calendar.current.date(byAdding: .day, value: -30, to: today)!
-        return (unpaidInvoices + overdueInvoices).filter { $0.dueDate <= a && $0.dueDate > b }
-    }
-    private var aging30plus: [Invoice] {
-        let cutoff = Calendar.current.date(byAdding: .day, value: -30, to: today)!
-        return (unpaidInvoices + overdueInvoices).filter { $0.dueDate <= cutoff }
-    }
-
-    private var avgDaysToPayment: Double? {
-        let paid = invoices.filter { $0.status == .paid && $0.paidAt != nil }
-        guard !paid.isEmpty else { return nil }
-        let days = paid.compactMap { inv -> Double? in
-            guard let paidAt = inv.paidAt else { return nil }
-            return paidAt.timeIntervalSince(inv.createdAt) / 86400
-        }
-        guard !days.isEmpty else { return nil }
-        return days.reduce(0, +) / Double(days.count)
-    }
-
     // MARK: - Navigation helpers
 
     private func jobsForStatus(_ status: JobStatus) -> [Job] {
@@ -1752,10 +1720,10 @@ struct FinancialReportsView: View {
 
     private var invoiceHealthSection: some View {
         SectionCard {
-            VStack(alignment: .leading, spacing: 16) {
-                Text("Invoice Health".translated())
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(Color.sweeplyNavy)
+                VStack(alignment: .leading, spacing: 16) {
+                    Text("Invoice Health".translated())
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(Color.sweeplyNavy)
 
                 HStack(spacing: 10) {
                     NavigationLink {
@@ -1812,72 +1780,27 @@ struct FinancialReportsView: View {
                     .frame(height: 8)
                 }
 
-                // Aging breakdown (only shown if there are outstanding/overdue)
-                let hasAging = !unpaidInvoices.isEmpty || !overdueInvoices.isEmpty
-                if hasAging {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("INVOICE AGING".translated())
-                            .font(.system(size: 10, weight: .bold))
-                            .foregroundStyle(Color.sweeplyTextSub)
-                            .tracking(0.6)
-                            .padding(.bottom, 4)
-
-                        agingRow(label: "Not due yet".translated(),      invoices: agingNotDueYet, color: Color.sweeplyAccent.opacity(0.7))
-                        agingRow(label: "1–7 days overdue".translated(), invoices: aging1to7,      color: Color.sweeplyWarning.opacity(0.7))
-                        agingRow(label: "8–30 days".translated(),        invoices: aging8to30,     color: Color.sweeplyWarning.opacity(0.5))
-                        agingRow(label: "30+ days".translated(),         invoices: aging30plus,    color: Color.sweeplyDestructive.opacity(0.7))
-                    }
-                    .padding(12)
-                    .background(Color.sweeplyBackground)
-                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-                    .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).stroke(Color.sweeplyBorder, lineWidth: 1))
-                }
-
-                // Avg days to payment
-                if let avg = avgDaysToPayment {
-                    HStack(spacing: 8) {
-                        Image(systemName: "clock")
-                            .font(.system(size: 13))
-                            .foregroundStyle(Color.sweeplyTextSub)
-                        Text("Avg. time to payment".translated())
-                            .font(.system(size: 13))
-                            .foregroundStyle(Color.sweeplyTextSub)
-                        Spacer()
-                        Text(String(format: "%.0f days", avg))
-                            .font(.system(size: 13, weight: .bold, design: .monospaced))
-                            .foregroundStyle(Color.sweeplyNavy)
-                    }
-                    .padding(12)
-                    .background(Color.sweeplyBackground)
-                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-                    .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).stroke(Color.sweeplyBorder, lineWidth: 1))
+                HStack(spacing: 0) {
+                    invoiceHealthMetric(title: "Avg. invoice".translated(), value: avgInvoiceValue.currency)
+                    invoiceHealthMetric(title: "Collection".translated(), value: "\(Int(collectionRate * 100))%")
+                    invoiceHealthMetric(title: "Invoices".translated(), value: "\(invoices.count)", isCount: true)
                 }
             }
         }
     }
 
-    @ViewBuilder
-    private func agingRow(label: String, invoices: [Invoice], color: Color) -> some View {
-        if !invoices.isEmpty {
-            HStack(spacing: 10) {
-                Circle().fill(color).frame(width: 8, height: 8)
-                Text(label)
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(Color.sweeplyNavy)
-                Spacer()
-                Text("\(invoices.count)")
-                    .font(.system(size: 11, weight: .semibold, design: .monospaced))
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
-                    .background(color.opacity(0.25))
-                    .clipShape(Capsule())
-                Text(invoices.reduce(0) { $0 + $1.total }.currency)
-                    .font(.system(size: 12, weight: .semibold, design: .monospaced))
-                    .foregroundStyle(color)
-                    .frame(width: 72, alignment: .trailing)
-            }
+    private func invoiceHealthMetric(title: String, value: String, isCount: Bool = false) -> some View {
+        VStack(spacing: 4) {
+            Text(title)
+                .font(.system(size: 10, weight: .medium))
+                .foregroundStyle(Color.sweeplyTextSub)
+                .multilineTextAlignment(.center)
+            Text(value)
+                .font(.system(size: isCount ? 17 : 15, weight: .semibold, design: isCount ? .default : .rounded))
+                .foregroundStyle(Color.sweeplyNavy)
+                .monospacedDigit()
         }
+        .frame(maxWidth: .infinity)
     }
 
     // MARK: - Payment Methods
