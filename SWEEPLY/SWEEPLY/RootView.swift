@@ -215,7 +215,7 @@ struct RootView: View {
 
     private var biometricLockOverlay: some View {
         ZStack {
-            Color.sweeplyBackground.ignoresSafeArea()
+            Color.white.ignoresSafeArea()
             VStack(spacing: 32) {
                 Spacer()
                 Image("LockMascot")
