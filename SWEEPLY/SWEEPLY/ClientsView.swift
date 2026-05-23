@@ -42,7 +42,7 @@ enum ClientFrequency {
         case .none:      return Color.sweeplyTextSub.opacity(0.5)
         case .oneTime:   return Color.sweeplyTextSub
         case .recurring: return Color.sweeplyAccent
-        case .weekly:    return Color(red: 0.25, green: 0.65, blue: 0.45)  // Soft sage green
+        case .weekly:    return Color(red: 0.25, green: 0.65, blue: 0.45)
         case .biweekly:  return Color.orange
         case .monthly:   return Color.blue
         }
@@ -126,7 +126,7 @@ struct ClientsView: View {
                         }
                         let avgGap = gaps.reduce(0, +) / gaps.count
                         switch avgGap {
-                        case 0...9:  freq = .weekly
+                        case 0...9:   freq = .weekly
                         case 10...18: freq = .weekly
                         case 19...25: freq = .biweekly
                         case 26...35: freq = .monthly
@@ -148,14 +148,12 @@ struct ClientsView: View {
         }
     }
 
-    // Stats for the summary strip
     private var recurringCount: Int { clientsWithDerived.filter { $0.frequency.isRecurring }.count }
-    private var oneTimeCount: Int { clientsWithDerived.filter { $0.frequency == .oneTime }.count }
+    private var oneTimeCount: Int   { clientsWithDerived.filter { $0.frequency == .oneTime }.count }
     private var avgJobsPerClient: Int {
         let total = clientsWithDerived.count
         guard total > 0 else { return 0 }
-        let totalJobs = clientsWithDerived.reduce(0) { $0 + $1.jobCount }
-        return totalJobs / total
+        return clientsWithDerived.reduce(0) { $0 + $1.jobCount } / total
     }
 
     var body: some View {
@@ -163,13 +161,13 @@ struct ClientsView: View {
             ScrollView {
                 VStack(spacing: 0) {
                     headerSection
-                        .padding(.bottom, 14)
 
                     VStack(spacing: 12) {
                         searchAndFilterRow
-                        statsStrip
+                        statsRow
                     }
                     .padding(.horizontal, 20)
+                    .padding(.top, 14)
 
                     clientList
                         .padding(.top, 16)
@@ -265,7 +263,7 @@ struct ClientsView: View {
                     Button { search = "" } label: {
                         Image(systemName: "xmark.circle.fill")
                             .font(.system(size: 16))
-                            .foregroundStyle(Color.sweeplyTextSub.opacity(0.7))
+                            .foregroundStyle(Color.sweeplyTextSub.opacity(0.6))
                     }
                     .buttonStyle(.plain)
                 }
@@ -296,7 +294,6 @@ struct ClientsView: View {
                                 .font(.system(size: 15, weight: .semibold))
                                 .foregroundStyle(Color.sweeplyNavy)
                         )
-
                     if filterIsActive {
                         Circle()
                             .fill(Color.sweeplyAccent)
@@ -310,30 +307,24 @@ struct ClientsView: View {
         }
     }
 
-    // MARK: - Stats Strip
-    private var statsStrip: some View {
+    // MARK: - Stats Row
+    private var statsRow: some View {
         HStack(spacing: 0) {
-            StatPill(value: "\(displayClients.count)", label: "Total".translated())
-            statsDivider
-            StatPill(value: "\(recurringCount)", label: "Recurring".translated())
-            statsDivider
-            StatPill(value: "\(oneTimeCount)", label: "One-time".translated())
-            statsDivider
-            StatPill(value: "\(avgJobsPerClient)", label: "Avg jobs".translated())
+            ClientStatCell(value: "\(displayClients.count)", label: "Total".translated())
+            Divider().frame(height: 26)
+            ClientStatCell(value: "\(recurringCount)", label: "Recurring".translated())
+            Divider().frame(height: 26)
+            ClientStatCell(value: "\(oneTimeCount)", label: "One-time".translated())
+            Divider().frame(height: 26)
+            ClientStatCell(value: "\(avgJobsPerClient)", label: "Avg jobs".translated())
         }
-        .padding(.vertical, 14)
+        .padding(.vertical, 12)
         .background(Color.sweeplySurface)
-        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .stroke(Color.sweeplyBorder, lineWidth: 1)
         )
-    }
-
-    private var statsDivider: some View {
-        Rectangle()
-            .fill(Color.sweeplyBorder)
-            .frame(width: 1, height: 30)
     }
 
     // MARK: - Client List
@@ -345,92 +336,73 @@ struct ClientsView: View {
             } else if filteredClients.isEmpty {
                 emptyState
             } else {
-                rosterCard
-                    .padding(.horizontal, 20)
-                    .sensoryFeedback(.impact(weight: .heavy), trigger: archiveHaptic)
-            }
-        }
-    }
-
-    private var rosterCard: some View {
-        VStack(spacing: 0) {
-            ForEach(Array(filteredClients.enumerated()), id: \.element.id) { index, item in
-                NavigationLink(
-                    destination: ClientDetailView(clientId: item.client.id)
-                ) {
-                    ClientRow(
-                        client: item.client,
-                        jobCount: item.jobCount,
-                        frequency: item.frequency,
-                        onView: { viewingClientId = item.client.id },
-                        onEdit: { editSheetClient = item.client },
-                        onDelete: { deleteTarget = item.client },
-                        onToggleArchive: {
-                            archiveHaptic.toggle()
-                            Task {
-                                var updated = item.client
-                                updated.isActive.toggle()
-                                _ = await clientsStore.update(updated)
+                LazyVStack(spacing: 10) {
+                    ForEach(filteredClients) { item in
+                        NavigationLink(destination: ClientDetailView(clientId: item.client.id)) {
+                            ClientCard(
+                                client: item.client,
+                                jobCount: item.jobCount,
+                                frequency: item.frequency,
+                                onView: { viewingClientId = item.client.id },
+                                onEdit: { editSheetClient = item.client },
+                                onDelete: { deleteTarget = item.client },
+                                onToggleArchive: {
+                                    archiveHaptic.toggle()
+                                    Task {
+                                        var updated = item.client
+                                        updated.isActive.toggle()
+                                        _ = await clientsStore.update(updated)
+                                    }
+                                }
+                            )
+                        }
+                        .buttonStyle(.plain)
+                        .swipeActions(edge: .leading, allowsFullSwipe: true) {
+                            Button {
+                                let digits = item.client.phone.filter { $0.isNumber || $0 == "+" }
+                                if let url = URL(string: "tel://\(digits)") {
+                                    UIApplication.shared.open(url)
+                                }
+                            } label: {
+                                Label("Call".translated(), systemImage: "phone.fill")
                             }
+                            .tint(.green)
                         }
-                    )
-                }
-                .buttonStyle(.plain)
-                .swipeActions(edge: .leading, allowsFullSwipe: true) {
-                    Button {
-                        let digits = item.client.phone.filter { $0.isNumber || $0 == "+" }
-                        if let url = URL(string: "tel://\(digits)") {
-                            UIApplication.shared.open(url)
-                        }
-                    } label: {
-                        Label("Call".translated(), systemImage: "phone.fill")
-                    }
-                    .tint(.green)
-                }
-                .swipeActions(edge: .trailing) {
-                    Button {
-                        newJobForClient = item.client
-                    } label: {
-                        Label("New Job".translated(), systemImage: "plus.circle.fill")
-                    }
-                    .tint(Color.sweeplyNavy)
+                        .swipeActions(edge: .trailing) {
+                            Button { newJobForClient = item.client } label: {
+                                Label("New Job".translated(), systemImage: "plus.circle.fill")
+                            }
+                            .tint(Color.sweeplyNavy)
 
-                    Button {
-                        let digits = item.client.phone.filter { $0.isNumber || $0 == "+" }
-                        if let url = URL(string: "sms:\(digits)") {
-                            UIApplication.shared.open(url)
+                            Button {
+                                let digits = item.client.phone.filter { $0.isNumber || $0 == "+" }
+                                if let url = URL(string: "sms:\(digits)") {
+                                    UIApplication.shared.open(url)
+                                }
+                            } label: {
+                                Label("Text".translated(), systemImage: "message.fill")
+                            }
+                            .tint(.blue)
                         }
-                    } label: {
-                        Label("Text".translated(), systemImage: "message.fill")
                     }
-                    .tint(.blue)
                 }
-
-                if index < filteredClients.count - 1 {
-                    Divider()
-                        .padding(.leading, 82)
-                        .background(Color.sweeplySurface)
-                }
+                .padding(.horizontal, 20)
+                .sensoryFeedback(.impact(weight: .heavy), trigger: archiveHaptic)
             }
         }
-        .background(Color.sweeplySurface)
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(Color.sweeplyBorder, lineWidth: 1)
-        )
     }
 
+    // MARK: - Empty State
     private var emptyState: some View {
         VStack(spacing: 22) {
-            Spacer(minLength: 40)
+            Spacer(minLength: 44)
             ZStack {
                 Circle()
                     .fill(Color.sweeplyAccent.opacity(0.08))
                     .frame(width: 96, height: 96)
                 Image(systemName: search.isEmpty ? "person.2.fill" : "magnifyingglass")
                     .font(.system(size: 38, weight: .medium))
-                    .foregroundStyle(Color.sweeplyAccent.opacity(0.75))
+                    .foregroundStyle(Color.sweeplyAccent.opacity(0.7))
             }
             VStack(spacing: 10) {
                 Text(search.isEmpty
@@ -474,30 +446,29 @@ struct ClientsView: View {
     }
 }
 
-// MARK: - Stat Pill
+// MARK: - Stat Cell
 
-private struct StatPill: View {
+private struct ClientStatCell: View {
     let value: String
     let label: String
 
     var body: some View {
-        VStack(spacing: 4) {
+        VStack(spacing: 3) {
             Text(value)
-                .font(.system(size: 22, weight: .bold, design: .monospaced))
+                .font(.system(size: 20, weight: .bold, design: .monospaced))
                 .foregroundStyle(Color.sweeplyNavy)
-                .tracking(-0.5)
-            Text(label.uppercased())
-                .font(.system(size: 10, weight: .semibold))
+                .tracking(-0.3)
+            Text(label)
+                .font(.system(size: 11, weight: .medium))
                 .foregroundStyle(Color.sweeplyTextSub)
-                .tracking(0.7)
         }
         .frame(maxWidth: .infinity)
     }
 }
 
-// MARK: - Client Row
+// MARK: - Client Card
 
-private struct ClientRow: View {
+private struct ClientCard: View {
     let client: Client
     let jobCount: Int
     let frequency: ClientFrequency
@@ -506,31 +477,50 @@ private struct ClientRow: View {
     let onDelete: () -> Void
     let onToggleArchive: () -> Void
 
-    private var secondaryText: String? {
-        let addressParts = [client.address, client.city].filter { !$0.isEmpty }
-        if !addressParts.isEmpty {
-            return addressParts.joined(separator: ", ")
+    // Deterministic pastel palette — soft, light, airy
+    private static let palette: [(bg: Color, fg: Color)] = [
+        (Color(red: 0.96, green: 0.93, blue: 1.00), Color(red: 0.45, green: 0.28, blue: 0.82)),  // lavender
+        (Color(red: 0.90, green: 0.97, blue: 0.93), Color(red: 0.18, green: 0.58, blue: 0.36)),  // mint
+        (Color(red: 1.00, green: 0.93, blue: 0.88), Color(red: 0.80, green: 0.40, blue: 0.18)),  // peach
+        (Color(red: 0.88, green: 0.95, blue: 1.00), Color(red: 0.18, green: 0.48, blue: 0.84)),  // sky
+        (Color(red: 1.00, green: 0.96, blue: 0.86), Color(red: 0.76, green: 0.52, blue: 0.10)),  // amber
+        (Color(red: 0.94, green: 0.90, blue: 0.98), Color(red: 0.60, green: 0.26, blue: 0.72)),  // lilac
+    ]
+
+    private var paletteEntry: (bg: Color, fg: Color) {
+        guard client.isActive else {
+            return (Color.sweeplyTextSub.opacity(0.10), Color.sweeplyTextSub)
         }
-        if !client.phone.isEmpty { return client.phone }
-        if !client.email.isEmpty { return client.email }
+        let hash = client.name.unicodeScalars.reduce(0) { $0 + Int($1.value) }
+        return Self.palette[hash % Self.palette.count]
+    }
+
+    private var secondaryInfo: (icon: String, text: String)? {
+        let addr = [client.address, client.city].filter { !$0.isEmpty }.joined(separator: ", ")
+        if !addr.isEmpty { return ("mappin", addr) }
+        if !client.phone.isEmpty { return ("phone", client.phone) }
+        if !client.email.isEmpty { return ("envelope", client.email) }
         return nil
     }
 
-    private var secondaryIcon: String {
-        let hasAddress = !client.address.isEmpty || !client.city.isEmpty
-        if hasAddress { return "mappin" }
-        if !client.phone.isEmpty { return "phone" }
-        return "envelope"
-    }
-
     var body: some View {
-        HStack(spacing: 14) {
-            avatar
+        HStack(alignment: .center, spacing: 14) {
+            // Pastel avatar
+            ZStack {
+                Circle()
+                    .fill(paletteEntry.bg)
+                    .frame(width: 58, height: 58)
+                Text(String(client.name.prefix(1)).uppercased())
+                    .font(.system(size: 22, weight: .bold))
+                    .foregroundStyle(paletteEntry.fg)
+            }
 
-            VStack(alignment: .leading, spacing: 5) {
+            // Content
+            VStack(alignment: .leading, spacing: 6) {
+                // Name
                 HStack(spacing: 6) {
                     Text(client.name)
-                        .font(.system(size: 16, weight: .semibold))
+                        .font(.system(size: 17, weight: .semibold))
                         .foregroundStyle(client.isActive ? Color.sweeplyNavy : Color.sweeplyTextSub)
                         .lineLimit(1)
                         .truncationMode(.tail)
@@ -547,54 +537,67 @@ private struct ClientRow: View {
                     }
                 }
 
-                if let secondary = secondaryText {
+                // Address / phone / email
+                if let info = secondaryInfo {
                     HStack(spacing: 4) {
-                        Image(systemName: secondaryIcon)
-                            .font(.system(size: 10))
-                            .foregroundStyle(Color.sweeplyTextSub)
-                        Text(secondary)
-                            .font(.system(size: 12))
+                        Image(systemName: info.icon)
+                            .font(.system(size: 11))
+                            .foregroundStyle(Color.sweeplyTextSub.opacity(0.6))
+                        Text(info.text)
+                            .font(.system(size: 13))
                             .foregroundStyle(Color.sweeplyTextSub)
                             .lineLimit(1)
                             .truncationMode(.tail)
                     }
                 }
-            }
 
-            Spacer(minLength: 8)
-
-            VStack(alignment: .trailing, spacing: 5) {
-                HStack(alignment: .lastTextBaseline, spacing: 3) {
-                    Text("\(jobCount)")
-                        .font(.system(size: 20, weight: .bold, design: .monospaced))
-                        .foregroundStyle(Color.sweeplyNavy)
-                        .tracking(-0.5)
-                    Text("jobs".translated())
-                        .font(.system(size: 10, weight: .semibold))
-                        .foregroundStyle(Color.sweeplyTextSub)
-                        .tracking(0.5)
-                        .textCase(.uppercase)
-                }
-                if let freqLabel = frequency.label {
-                    HStack(spacing: 3) {
-                        Image(systemName: frequency.icon)
-                            .font(.system(size: 8, weight: .bold))
-                            .foregroundStyle(frequency.color)
-                        Text(freqLabel)
-                            .font(.system(size: 10, weight: .semibold))
-                            .foregroundStyle(frequency.color)
+                // Status · Frequency · Jobs
+                HStack(spacing: 6) {
+                    HStack(spacing: 4) {
+                        Circle()
+                            .fill(client.isActive ? Color.sweeplySuccess : Color.sweeplyTextSub.opacity(0.4))
+                            .frame(width: 6, height: 6)
+                        Text(client.isActive ? "Active".translated() : "Archived".translated())
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundStyle(client.isActive ? Color.sweeplySuccess : Color.sweeplyTextSub)
                     }
-                    .padding(.horizontal, 7)
-                    .padding(.vertical, 3)
-                    .background(frequency.color.opacity(0.12))
-                    .clipShape(Capsule())
+
+                    if let freqLabel = frequency.label {
+                        Text("·")
+                            .font(.system(size: 11))
+                            .foregroundStyle(Color.sweeplyTextSub.opacity(0.4))
+                        HStack(spacing: 3) {
+                            Image(systemName: frequency.icon)
+                                .font(.system(size: 9, weight: .semibold))
+                                .foregroundStyle(frequency.color)
+                            Text(freqLabel)
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundStyle(frequency.color)
+                        }
+                    }
+
+                    Spacer(minLength: 0)
+
+                    HStack(alignment: .lastTextBaseline, spacing: 2) {
+                        Text("\(jobCount)")
+                            .font(.system(size: 15, weight: .bold, design: .monospaced))
+                            .foregroundStyle(Color.sweeplyNavy)
+                        Text("jobs".translated())
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundStyle(Color.sweeplyTextSub)
+                    }
                 }
             }
 
+            // Overflow menu
             Menu {
-                Button { onView() } label: { Label("View Profile".translated(), systemImage: "person.fill") }
+                Button { onView() } label: {
+                    Label("View Profile".translated(), systemImage: "person.fill")
+                }
                 Divider()
-                Button { onEdit() } label: { Label("Edit Client".translated(), systemImage: "pencil") }
+                Button { onEdit() } label: {
+                    Label("Edit Client".translated(), systemImage: "pencil")
+                }
                 Button { onToggleArchive() } label: {
                     Label(
                         client.isActive ? "Archive Client".translated() : "Unarchive Client".translated(),
@@ -608,42 +611,26 @@ private struct ClientRow: View {
             } label: {
                 Image(systemName: "ellipsis")
                     .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(Color.sweeplyTextSub.opacity(0.7))
+                    .foregroundStyle(Color.sweeplyTextSub.opacity(0.55))
                     .frame(width: 28, height: 44)
                     .contentShape(Rectangle())
             }
         }
         .padding(.horizontal, 16)
-        .padding(.vertical, 14)
+        .padding(.vertical, 18)
         .background(Color.sweeplySurface)
-        .contentShape(Rectangle())
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .shadow(color: Color.black.opacity(0.04), radius: 8, x: 0, y: 2)
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(Color.sweeplyBorder, lineWidth: 1)
+        )
         .onLongPressGesture(minimumDuration: 0.45) {
             UIImpactFeedbackGenerator(style: .medium).impactOccurred()
             onView()
         }
     }
-
-    private var avatar: some View {
-        ZStack {
-            Circle()
-                .fill(
-                    LinearGradient(
-                        colors: client.isActive
-                            ? [Color.sweeplyNavy, Color.sweeplyNavy.opacity(0.82)]
-                            : [Color.sweeplyTextSub.opacity(0.35), Color.sweeplyTextSub.opacity(0.22)],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-                .frame(width: 52, height: 52)
-            Text(String(client.name.prefix(1)).uppercased())
-                .font(.system(size: 20, weight: .bold))
-                .foregroundStyle(.white)
-        }
-    }
 }
-
-// MARK: - Form Helpers Moved to NewClientForm.swift
 
 // MARK: - Client Filters Sheet
 
@@ -654,14 +641,12 @@ private struct ClientFiltersSheet: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // Handle
             Capsule()
                 .fill(Color.sweeplyBorder)
                 .frame(width: 36, height: 4)
                 .padding(.top, 12)
                 .padding(.bottom, 20)
 
-            // Header
             HStack {
                 Text("Filter Clients".translated())
                     .font(.system(size: 17, weight: .bold))
@@ -674,7 +659,6 @@ private struct ClientFiltersSheet: View {
             .padding(.horizontal, 24)
             .padding(.bottom, 24)
 
-            // Status section
             VStack(alignment: .leading, spacing: 12) {
                 Text("STATUS".translated())
                     .font(.system(size: 11, weight: .bold))
@@ -705,7 +689,6 @@ private struct ClientFiltersSheet: View {
                 .padding(.horizontal, 20)
             }
 
-            // Sort section
             VStack(alignment: .leading, spacing: 12) {
                 Text("SORT BY".translated())
                     .font(.system(size: 11, weight: .bold))
@@ -717,9 +700,7 @@ private struct ClientFiltersSheet: View {
                 VStack(spacing: 0) {
                     ForEach(ClientSortOrder.allCases, id: \.self) { option in
                         Button {
-                            withAnimation(.easeInOut(duration: 0.15)) {
-                                sortOrder = option
-                            }
+                            withAnimation(.easeInOut(duration: 0.15)) { sortOrder = option }
                         } label: {
                             HStack {
                                 Text(option.rawValue)
