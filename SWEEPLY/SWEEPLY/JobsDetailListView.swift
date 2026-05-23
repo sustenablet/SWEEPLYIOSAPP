@@ -242,7 +242,7 @@ private struct JobDetailRow: View {
                     .foregroundStyle(Color.sweeplyTextSub)
                     .lineLimit(1)
                 HStack(spacing: 6) {
-                    Text(job.serviceType.rawValue)
+                    Text(job.serviceType.rawValue.translated())
                         .font(.system(size: 11, weight: .medium))
                         .foregroundStyle(accentColor.opacity(0.85))
                     if job.isRecurring {

@@ -307,7 +307,7 @@ struct MemberPaySetupView: View {
                     .font(.system(size: 13, weight: .medium))
                     .foregroundStyle(Color.sweeplyAccent)
             }
-            Text(svc.rawValue)
+            Text(svc.rawValue.translated())
                 .font(.system(size: 14, weight: .medium))
                 .foregroundStyle(Color.sweeplyNavy)
                 .lineLimit(1)
@@ -454,7 +454,7 @@ struct MemberPaySetupView: View {
                         .font(.system(size: 16, weight: .medium))
                         .foregroundStyle(isSelected ? .white : Color.sweeplyTextSub)
                 }
-                Text(method.rawValue)
+                Text(method.rawValue.translated())
                     .font(.system(size: 12, weight: isSelected ? .semibold : .medium))
                     .foregroundStyle(isSelected ? Color.sweeplyNavy : Color.sweeplyTextSub)
             }
@@ -494,7 +494,7 @@ struct MemberPaySetupView: View {
                         VStack(spacing: 8) {
                             ForEach(active, id: \.rawValue) { svc in
                                 HStack {
-                                    Text(svc.rawValue)
+                                    Text(svc.rawValue.translated())
                                         .font(.system(size: 12))
                                         .foregroundStyle(Color.sweeplyTextSub)
                                     Spacer()

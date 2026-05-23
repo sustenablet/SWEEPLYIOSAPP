@@ -45,7 +45,7 @@ struct CleanerJobDetailView: View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(job.serviceType.rawValue)
+                    Text(job.serviceType.rawValue.translated())
                         .font(.system(size: 22, weight: .bold))
                         .foregroundStyle(Color.primary)
                     Text(job.clientName)

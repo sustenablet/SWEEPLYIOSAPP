@@ -425,7 +425,7 @@ private struct AddOnJobRow: View {
                     .foregroundStyle(Color.sweeplyAccent)
             }
             VStack(alignment: .leading, spacing: 2) {
-                Text(job.serviceType.rawValue)
+                Text(job.serviceType.rawValue.translated())
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(Color.sweeplyNavy)
                     .lineLimit(1)

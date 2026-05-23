@@ -524,7 +524,7 @@ struct CleanerDashboardView: View {
                 Text(job.clientName)
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(Color.primary)
-                Text("\(job.serviceType.rawValue) · \(job.date.formatted(.dateTime.month(.abbreviated).day()))")
+                Text("\(job.serviceType.rawValue.translated()) · \(job.date.formatted(.dateTime.month(.abbreviated).day()))")
                     .font(.system(size: 12))
                     .foregroundStyle(Color.sweeplyTextSub)
             }
@@ -533,7 +533,7 @@ struct CleanerDashboardView: View {
                 Text(job.price.currency)
                     .font(.system(size: 13, weight: .bold, design: .monospaced))
                     .foregroundStyle(job.status == .completed ? Color.sweeplyAccent : Color.sweeplyTextSub)
-                Text(job.status.rawValue)
+                Text(job.status.rawValue.translated())
                     .font(.system(size: 10, weight: .semibold))
                     .foregroundStyle(statusColor(job.status))
             }
@@ -612,7 +612,7 @@ struct CleanerDashJobRow: View {
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(Color.primary)
                     .lineLimit(1)
-                Text(job.serviceType.rawValue)
+                Text(job.serviceType.rawValue.translated())
                     .font(.system(size: 12))
                     .foregroundStyle(Color.sweeplyTextSub)
                     .lineLimit(1)
@@ -649,7 +649,7 @@ struct CleanerDashJobRow: View {
 
     private func statusPill(_ status: JobStatus) -> some View {
         let color = statusColor(status)
-        return Text(status.rawValue)
+        return Text(status.rawValue.translated())
             .font(.system(size: 10, weight: .semibold))
             .padding(.horizontal, 8)
             .padding(.vertical, 4)

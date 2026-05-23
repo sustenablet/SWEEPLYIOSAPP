@@ -81,7 +81,7 @@ struct AddressAutocompleteTF: View {
                     .foregroundStyle(isFocused ? Color.sweeplyAccent : Color.sweeplyTextSub)
                     .animation(.easeOut(duration: 0.15), value: isFocused)
 
-                TextField("123 Main St", text: $street)
+                TextField("123 Main St".translated(), text: $street)
                     .font(.system(size: 15))
                     .autocorrectionDisabled()
                     .focused($isFocused)
@@ -385,7 +385,7 @@ private struct StatePickerSheet: View {
                 }
                 .buttonStyle(.plain)
             }
-            .searchable(text: $search, prompt: "Search states")
+            .searchable(text: $search, prompt: "Search states".translated())
             .navigationTitle("Select State".translated())
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

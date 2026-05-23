@@ -669,7 +669,7 @@ struct CompletedJobsListView: View {
                     Button {
                         withAnimation(.spring(duration: 0.2)) { groupByPeriod = period }
                     } label: {
-                        Text(period.rawValue)
+                        Text(period.rawValue.translated())
                             .font(.system(size: 12, weight: groupByPeriod == period ? .bold : .medium))
                             .foregroundStyle(groupByPeriod == period ? .white : Color.sweeplyTextSub)
                             .padding(.horizontal, 12)
@@ -782,7 +782,7 @@ struct CompletedJobsListView: View {
                     .foregroundStyle(Color.sweeplyNavy)
                 
                 HStack(spacing: 4) {
-                    Text(job.serviceType.rawValue)
+                    Text(job.serviceType.rawValue.translated())
                         .font(.system(size: 11))
                         .foregroundStyle(Color.sweeplyTextSub)
                     if let city = client?.city, !city.isEmpty {
@@ -964,7 +964,7 @@ struct UpcomingJobsListView: View {
                     .foregroundStyle(Color.sweeplyNavy)
                 
                 HStack(spacing: 4) {
-                    Text(job.serviceType.rawValue)
+                    Text(job.serviceType.rawValue.translated())
                         .font(.system(size: 11))
                         .foregroundStyle(Color.sweeplyTextSub)
                     if let city = client?.city, !city.isEmpty {

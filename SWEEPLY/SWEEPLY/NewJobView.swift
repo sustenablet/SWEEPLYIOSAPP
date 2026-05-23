@@ -384,7 +384,7 @@ struct NewJobForm: View {
                                 .tint(Color.sweeplyNavy)
 
                                 if showEndDatePicker {
-                                    DatePicker("Repeat until", selection: $endDate, displayedComponents: .date)
+                                    DatePicker("Repeat until".translated(), selection: $endDate, displayedComponents: .date)
                                         .font(.system(size: 14))
                                 }
                             }

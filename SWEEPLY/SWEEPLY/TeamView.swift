@@ -211,7 +211,7 @@ struct TeamView: View {
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundStyle(Color.sweeplyNavy)
                     .lineLimit(1)
-                Text("Invited you as \(invite.role.capitalized)")
+                Text("Invited you as %@".translated(with: invite.role.capitalized))
                     .font(.system(size: 12))
                     .foregroundStyle(Color.sweeplyTextSub)
             }
@@ -339,7 +339,7 @@ struct TeamView: View {
             Spacer()
 
             // Owner badge
-            Text("OWNER")
+            Text("OWNER".translated())
                 .font(.system(size: 10, weight: .bold))
                 .foregroundStyle(Color.sweeplyNavy)
                 .tracking(0.6)
@@ -1258,7 +1258,7 @@ struct MemberDetailView: View {
                     .foregroundStyle(Color.sweeplyNavy)
                     .lineLimit(1)
                 HStack(spacing: 6) {
-                    Text(job.serviceType.rawValue)
+                    Text(job.serviceType.rawValue.translated())
                         .font(.system(size: 12))
                         .foregroundStyle(Color.sweeplyTextSub)
                     if !job.address.isEmpty {
@@ -1388,7 +1388,7 @@ struct MemberDetailView: View {
             Spacer()
 
             if let method {
-                Text(method.rawValue)
+                Text(method.rawValue.translated())
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(Color.sweeplyAccent)
                     .padding(.horizontal, 10)
@@ -1670,7 +1670,7 @@ struct RecordPaymentSheet: View {
                                     UIImpactFeedbackGenerator(style: .light).impactOccurred()
                                     withAnimation(.easeInOut(duration: 0.15)) { selectedMethod = method }
                                 } label: {
-                                    Text(method.rawValue)
+                                    Text(method.rawValue.translated())
                                         .font(.system(size: 14, weight: selectedMethod == method ? .semibold : .medium))
                                         .foregroundStyle(selectedMethod == method ? .white : Color.sweeplyNavy)
                                         .padding(.horizontal, 16)
@@ -2063,7 +2063,7 @@ struct MemberFullHistoryView: View {
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(Color.sweeplyNavy)
                     .lineLimit(1)
-                Text(job.serviceType.rawValue)
+                Text(job.serviceType.rawValue.translated())
                     .font(.system(size: 12))
                     .foregroundStyle(Color.sweeplyTextSub)
             }

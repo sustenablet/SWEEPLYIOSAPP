@@ -207,7 +207,7 @@ private struct CleanerJobHistoryRow: View {
                 }
                 
                 HStack(spacing: 8) {
-                    Text(job.serviceType.rawValue)
+                    Text(job.serviceType.rawValue.translated())
                         .font(.system(size: 12))
                         .foregroundStyle(Color.sweeplyTextSub)
                     

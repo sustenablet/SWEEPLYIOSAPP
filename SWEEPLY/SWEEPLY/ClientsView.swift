@@ -703,7 +703,7 @@ private struct ClientFiltersSheet: View {
                             withAnimation(.easeInOut(duration: 0.15)) { sortOrder = option }
                         } label: {
                             HStack {
-                                Text(option.rawValue)
+                                Text(option.rawValue.translated())
                                     .font(.system(size: 15))
                                     .foregroundStyle(Color.sweeplyNavy)
                                 Spacer()

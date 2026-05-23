@@ -1310,6 +1310,11 @@ enum Localization {
     "%d job": ["pt-BR": "%d job"],
     "%d jobs": ["pt-BR": "%d jobs"],
     "$3,200": ["pt-BR": "R$ 3.200"],
+    "OWNER": ["pt-BR": "PROPRIETÁRIO"],
+    "e.g. Sunrise Cleaning": ["pt-BR": "ex.: Limpeza Aurora"],
+    "123 Main St": ["pt-BR": "Rua Principal, 123"],
+    "Search states": ["pt-BR": "Buscar estados"],
+    "Repeat until": ["pt-BR": "Repetir até"],
     ]
 
     static func translate(_ key: String) -> String {

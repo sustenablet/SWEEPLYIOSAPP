@@ -121,6 +121,10 @@ struct FinancialReportsView: View {
         guard t > 0 else { return 0 }
         return paidTotal / t
     }
+    private var avgInvoiceValue: Double {
+        guard !invoices.isEmpty else { return 0 }
+        return invoices.reduce(0) { $0 + $1.total } / Double(invoices.count)
+    }
 
     // MARK: - P&L data (period-driven)
 
@@ -1853,7 +1857,7 @@ struct FinancialReportsView: View {
                     .font(.system(size: 13, weight: .medium))
                     .foregroundStyle(Color.sweeplyTextSub)
             }
-            Text(stat.method.rawValue)
+            Text(stat.method.rawValue.translated())
                 .font(.system(size: 14, weight: .medium))
                 .foregroundStyle(Color.sweeplyNavy)
             Spacer()

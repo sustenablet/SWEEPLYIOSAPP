@@ -91,7 +91,7 @@ struct PaymentMethodsListView: View {
                         Image(systemName: method.icon)
                             .font(.system(size: 14))
                             .foregroundStyle(Color.sweeplyAccent)
-                        Text(method.rawValue)
+                        Text(method.rawValue.translated())
                             .font(.system(size: 10, weight: .medium))
                             .foregroundStyle(Color.sweeplyTextSub)
                         Text((totalByMethod[method] ?? 0).currency)

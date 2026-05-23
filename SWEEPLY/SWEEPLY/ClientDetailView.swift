@@ -202,7 +202,7 @@ struct ClientDetailView: View {
                             Image(systemName: "star.fill")
                                 .font(.system(size: 10))
                                 .foregroundStyle(Color.sweeplyAccent)
-                            Text(service.rawValue)
+                            Text(service.rawValue.translated())
                                 .font(.system(size: 12, weight: .medium))
                                 .foregroundStyle(Color.sweeplyTextSub)
                         }
@@ -569,7 +569,7 @@ private struct DetailJobRow: View {
                 .frame(width: 65, alignment: .leading)
                 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(job.serviceType.rawValue)
+                    Text(job.serviceType.rawValue.translated())
                         .font(.system(size: 15, weight: .bold))
                         .foregroundStyle(Color.sweeplyNavy)
                     
@@ -627,7 +627,7 @@ private struct DetailInvoiceRow: View {
             HStack(spacing: 8) {
                 Text(invoice.total.currency)
                     .font(.system(size: 13, weight: .bold, design: .monospaced))
-                Text(invoice.status.rawValue)
+                Text(invoice.status.rawValue.translated())
                     .font(.system(size: 10, weight: .semibold))
                     .foregroundStyle(statusColor)
                     .padding(.horizontal, 7)

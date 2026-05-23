@@ -427,7 +427,7 @@ struct FinancesView: View {
                     Spacer()
                     Picker("", selection: selectedPeriodBinding) {
                         ForEach(ChartPeriod.allCases, id: \.self) { p in
-                            Text(p.rawValue).tag(p)
+                            Text(p.rawValue.translated()).tag(p)
                         }
                     }
                     .pickerStyle(.segmented)
@@ -749,7 +749,7 @@ struct FinancesView: View {
         } label: {
             VStack(spacing: 8) {
                 HStack(spacing: 6) {
-                    Text(filter.rawValue)
+                    Text(filter.rawValue.translated())
                         .font(.system(size: 13, weight: selected ? .semibold : .regular))
                     Text("\(count(for: filter))")
                         .font(.system(size: 12, weight: .medium, design: .rounded))
@@ -1300,7 +1300,7 @@ struct InvoicesListView: View {
                                         withAnimation(.easeInOut(duration: 0.15)) { selectedFilter = filter }
                                     } label: {
                                         HStack {
-                                            Text(filter.rawValue)
+                                            Text(filter.rawValue.translated())
                                             Spacer()
                                             Text("\(count(for: filter))")
                                                 .foregroundStyle(Color.sweeplyTextSub)
@@ -1320,7 +1320,7 @@ struct InvoicesListView: View {
                                         HStack {
                                             Image(systemName: order.icon)
                                                 .font(.system(size: 12))
-                                            Text(order.rawValue)
+                                            Text(order.rawValue.translated())
                                             if sortOrder == order {
                                                 Image(systemName: "checkmark")
                                             }
@@ -1387,7 +1387,7 @@ struct InvoicesListView: View {
                 .padding(.horizontal, 20)
                 .padding(.bottom, 32)
             }
-            .searchable(text: $searchText, placement: .navigationBarDrawer(displayMode: .always), prompt: "Search invoices…")
+            .searchable(text: $searchText, placement: .navigationBarDrawer(displayMode: .always), prompt: "Search invoices…".translated())
             .background(Color.sweeplyBackground.ignoresSafeArea())
             .navigationTitle("Invoices".translated())
             .navigationBarTitleDisplayMode(.inline)

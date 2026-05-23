@@ -764,7 +764,7 @@ private struct EditInvoiceSheet: View {
                         // Due date
                         VStack(alignment: .leading, spacing: 12) {
                             editSectionHeader("PAYMENT")
-                            DatePicker("Due Date", selection: $dueDate, in: Date()..., displayedComponents: .date)
+                            DatePicker("Due Date".translated(), selection: $dueDate, in: Date()..., displayedComponents: .date)
                                 .padding(.horizontal, 16)
                                 .padding(.vertical, 12)
                                 .background(Color.sweeplySurface)

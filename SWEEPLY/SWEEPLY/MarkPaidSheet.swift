@@ -132,7 +132,7 @@ struct MarkPaidSheet: View {
                 Image(systemName: method.icon)
                     .font(.system(size: 18, weight: .medium))
                     .foregroundStyle(selected ? .white : Color.sweeplyAccent)
-                Text(method.rawValue)
+                Text(method.rawValue.translated())
                     .font(.system(size: 11, weight: .medium))
                     .foregroundStyle(selected ? .white : Color.primary)
             }

@@ -572,7 +572,7 @@ struct OnboardingView: View {
             content: {
                 AnyView(VStack(spacing: 12) {
                     OnboardingField(
-                        placeholder: "First name",
+                        placeholder: "First name".translated(),
                         text: $firstName,
                         icon: "person",
                         keyboardType: .default,
@@ -582,7 +582,7 @@ struct OnboardingView: View {
                     .focused($focusedField, equals: .name)
 
                     OnboardingField(
-                        placeholder: "Last name",
+                        placeholder: "Last name".translated(),
                         text: $lastName,
                         icon: "person",
                         keyboardType: .default,
@@ -606,7 +606,7 @@ struct OnboardingView: View {
             subtitle: "You can change this anytime in Settings.",
             content: {
                 AnyView(OnboardingField(
-                    placeholder: "e.g. Sunrise Cleaning",
+                    placeholder: "e.g. Sunrise Cleaning".translated(),
                     text: $businessName,
                     icon: "building.2",
                     keyboardType: .default,
@@ -632,7 +632,7 @@ struct OnboardingView: View {
             content: {
                 AnyView(VStack(alignment: .leading, spacing: 20) {
                     OnboardingField(
-                        placeholder: "your@email.com",
+                        placeholder: "your@email.com".translated(),
                         text: $email,
                         icon: "envelope",
                         keyboardType: .emailAddress,
