@@ -363,21 +363,21 @@ struct ClientsView: View {
                             }
                             .tint(.green)
                         }
-                        .swipeActions(edge: .trailing) {
-                            Button { newJobForClient = item.client } label: {
-                                Label("New Job".translated(), systemImage: "plus.circle.fill")
-                            }
-                            .tint(Color.sweeplyNavy)
-
+                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                             Button {
-                                let digits = item.client.phone.filter { $0.isNumber || $0 == "+" }
-                                if let url = URL(string: "sms:\(digits)") {
-                                    UIApplication.shared.open(url)
+                                archiveHaptic.toggle()
+                                Task {
+                                    var updated = item.client
+                                    updated.isActive.toggle()
+                                    _ = await clientsStore.update(updated)
                                 }
                             } label: {
-                                Label("Text".translated(), systemImage: "message.fill")
+                                Label(
+                                    item.client.isActive ? "Archive".translated() : "Unarchive".translated(),
+                                    systemImage: item.client.isActive ? "archivebox.fill" : "arrow.uturn.backward.circle.fill"
+                                )
                             }
-                            .tint(.blue)
+                            .tint(item.client.isActive ? .orange : Color.sweeplyAccent)
                         }
                     }
                 }
