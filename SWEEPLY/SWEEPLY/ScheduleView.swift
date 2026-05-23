@@ -207,7 +207,7 @@ struct ScheduleView: View {
             HStack(spacing: 6) {
                 Image(systemName: viewMode.iconName)
                     .font(.system(size: 13, weight: .semibold))
-                Text("View".translated())
+                Text(viewMode.rawValue.translated())
                     .font(.system(size: 13, weight: .semibold))
                 Image(systemName: "chevron.down")
                     .font(.system(size: 10, weight: .bold))
