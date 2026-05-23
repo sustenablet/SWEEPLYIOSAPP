@@ -52,7 +52,11 @@ final class ClientsStore {
                     try? await Task.sleep(nanoseconds: 600_000_000)
                 }
             }
+        } catch is CancellationError {
+            // Pull-to-refresh was interrupted — keep existing data, don't show as error
+            return
         } catch {
+            if (error as NSError).code == NSURLErrorCancelled { return }
             lastError = error.localizedDescription
             clients = []
         }
