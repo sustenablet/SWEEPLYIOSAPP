@@ -1315,6 +1315,7 @@ enum Localization {
     "123 Main St": ["pt-BR": "Rua Principal, 123"],
     "Search states": ["pt-BR": "Buscar estados"],
     "Repeat until": ["pt-BR": "Repetir até"],
+    "Overdue since %@": ["pt-BR": "Vencido desde %@"],
     ]
 
     static func translate(_ key: String) -> String {

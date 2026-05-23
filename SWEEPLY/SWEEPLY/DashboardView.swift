@@ -77,6 +77,7 @@ struct DashboardView: View {
 
     private var longDate: String {
         let f = DateFormatter()
+        f.locale = Locale.app
         f.dateFormat = "EEEE, MMMM d"
         return f.string(from: Date())
     }
@@ -714,8 +715,8 @@ struct DashInvoiceRow: View {
             VStack(alignment: .leading, spacing: 3) {
                 Text(invoice.clientName).font(.system(size: 14, weight: .semibold)).foregroundStyle(Color.sweeplyNavy)
                 Text(invoice.status == .overdue
-                    ? "Overdue since \(invoice.dueDate.formatted(date: .abbreviated, time: .omitted))"
-                    : "Due \(invoice.dueDate.formatted(date: .abbreviated, time: .omitted))"
+                    ? "Overdue since %@".translated(with: invoice.dueDate.formatted(.dateTime.locale(Locale.app).month(.abbreviated).day().year()))
+                    : "Due %@".translated(with: invoice.dueDate.formatted(.dateTime.locale(Locale.app).month(.abbreviated).day().year()))
                 )
                 .font(.system(size: 12)).foregroundStyle(invoice.status == .overdue ? Color.sweeplyDestructive : Color.sweeplyTextSub)
             }

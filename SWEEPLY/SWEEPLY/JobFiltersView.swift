@@ -89,7 +89,7 @@ struct JobFiltersView: View {
                         VStack(spacing: 1) {
                             ForEach(ScheduleViewMode.allCases, id: \.self) { mode in
                                 ToggleRow(
-                                    label: mode.rawValue,
+                                    label: mode.rawValue.translated(),
                                     icon: iconFor(mode: mode),
                                     isOn: localViewModes.contains(mode)
                                 ) {

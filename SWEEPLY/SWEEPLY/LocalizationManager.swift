@@ -110,6 +110,16 @@ struct LanguageToggle: View {
     }
 }
 
+extension Locale {
+    /// The locale matching the user's selected app language. Use this on
+    /// every DateFormatter and `.formatted(...)` call so dates, months, and
+    /// weekday names render in the chosen language.
+    static var app: Locale {
+        let raw = UserDefaults.standard.string(forKey: "appLanguage") ?? AppLanguage.english.rawValue
+        return Locale(identifier: raw)
+    }
+}
+
 extension String {
     func translated() -> String {
         let lang = UserDefaults.standard.string(forKey: "appLanguage") ?? AppLanguage.english.rawValue

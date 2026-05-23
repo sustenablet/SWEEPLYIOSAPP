@@ -82,6 +82,7 @@ struct ScheduleView: View {
     private var calendar: Calendar {
         var cal = Calendar.current
         cal.firstWeekday = 1
+        cal.locale = Locale.app
         return cal
     }
 
@@ -188,6 +189,7 @@ struct ScheduleView: View {
 
     private var monthTitle: String {
         let f = DateFormatter()
+        f.locale = Locale.app
         f.dateFormat = "MMMM yyyy"
         return f.string(from: selectedDay)
     }
@@ -783,7 +785,11 @@ struct ScheduleView: View {
 struct JobberCalendarView: View {
     @Binding var selectedDay: Date
     let jobs: [Job]
-    private let calendar = Calendar.current
+    private var calendar: Calendar {
+        var c = Calendar.current
+        c.locale = Locale.app
+        return c
+    }
     private let daysInWeek = 7
     
     var body: some View {
@@ -828,6 +834,7 @@ struct JobberCalendarView: View {
 
     private var monthYearString: String {
         let f = DateFormatter()
+        f.locale = Locale.app
         f.dateFormat = "MMMM yyyy"
         return f.string(from: selectedDay)
     }
@@ -861,7 +868,11 @@ struct CalendarDayCell: View {
     let isSelected: Bool
     let isToday: Bool
     let jobs: [Job]
-    private let calendar = Calendar.current
+    private var calendar: Calendar {
+        var c = Calendar.current
+        c.locale = Locale.app
+        return c
+    }
 
     var body: some View {
         VStack(spacing: 4) {
@@ -1166,6 +1177,7 @@ private struct ScheduleMonthPicker: View {
 
     private var monthYearTitle: String {
         let f = DateFormatter()
+        f.locale = Locale.app
         f.dateFormat = "MMMM yyyy"
         return f.string(from: selectedDay)
     }
@@ -1433,11 +1445,12 @@ struct WeekStripView: View {
     let jobs: [Job]
 
     @State private var weekOffset: Int = 0
-    private let calendar: Calendar = {
+    private var calendar: Calendar {
         var c = Calendar.current
         c.firstWeekday = 1
+        c.locale = Locale.app
         return c
-    }()
+    }
 
     private var todayWeekStart: Date {
         calendar.date(from: calendar.dateComponents([.yearForWeekOfYear, .weekOfYear], from: Date())) ?? Date()
