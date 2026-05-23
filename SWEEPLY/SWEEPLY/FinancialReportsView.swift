@@ -1,5 +1,6 @@
 import SwiftUI
 import Charts
+import UIKit
 
 struct FinancialReportsView: View {
     @Environment(\.dismiss)                private var dismiss
@@ -23,6 +24,7 @@ struct FinancialReportsView: View {
     @State private var popupWeek: ForecastWeek? = nil
     @State private var showOverviewPeriodFilter: Bool = false
     @State private var showPLPeriodFilter: Bool = false
+    @State private var reportsScrollOffset: CGFloat = 0
 
     // MARK: - Enums
 
@@ -352,6 +354,12 @@ struct FinancialReportsView: View {
     var body: some View {
         NavigationStack {
             ScrollView {
+                GeometryReader { proxy in
+                    Color.clear
+                        .preference(key: ReportsScrollOffsetKey.self, value: proxy.frame(in: .named("reportsScroll")).minY)
+                }
+                .frame(height: 0)
+
                 VStack(alignment: .leading, spacing: 24) {
                     revenueProgressSection
                     sixMonthChartSection
@@ -364,7 +372,12 @@ struct FinancialReportsView: View {
                 .padding(.horizontal, 20)
                 .padding(.bottom, 80)
             }
+            .coordinateSpace(name: "reportsScroll")
+            .onPreferenceChange(ReportsScrollOffsetKey.self) { reportsScrollOffset = $0 }
             .background(Color.sweeplyBackground.ignoresSafeArea())
+            .background(
+                NavigationBarShadowConfigurator(showShadow: reportsScrollOffset < 0)
+            )
             .sheet(isPresented: $showOverviewPeriodFilter) {
                 overviewPeriodFilterSheet
                     .presentationDetents([.height(280)])
@@ -388,7 +401,6 @@ struct FinancialReportsView: View {
             }
         }
     }
-
     // MARK: - Overview Period Filter Sheet
 
     private var overviewPeriodFilterSheet: some View {
@@ -2038,6 +2050,35 @@ struct FinancialReportsView: View {
             Circle().fill(color).frame(width: 8, height: 8)
             Text(label).font(.system(size: 11)).foregroundStyle(Color.sweeplyTextSub)
         }
+    }
+}
+
+private struct ReportsScrollOffsetKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = nextValue()
+    }
+}
+
+private struct NavigationBarShadowConfigurator: UIViewControllerRepresentable {
+    let showShadow: Bool
+
+    func makeUIViewController(context: Context) -> UIViewController {
+        UIViewController()
+    }
+
+    func updateUIViewController(_ viewController: UIViewController, context: Context) {
+        guard let navigationController = viewController.navigationController else { return }
+
+        let appearance = UINavigationBarAppearance()
+        appearance.configureWithDefaultBackground()
+        appearance.shadowColor = showShadow ? UIColor(Color.sweeplyBorder) : .clear
+
+        navigationController.navigationBar.standardAppearance = appearance
+        navigationController.navigationBar.scrollEdgeAppearance = appearance
+        navigationController.navigationBar.compactAppearance = appearance
+        navigationController.navigationBar.compactScrollEdgeAppearance = appearance
     }
 }
 
