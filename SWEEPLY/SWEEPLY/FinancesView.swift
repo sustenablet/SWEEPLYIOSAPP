@@ -1482,19 +1482,19 @@ struct InvoicesListView: View {
             summaryCell(
                 label: "Outstanding".translated(),
                 value: invoicesStore.invoices.filter { $0.status == .unpaid }.reduce(0) { $0 + $1.total }.currency,
-                color: .sweeplyWarning
+                color: .sweeplyNavy
             )
             Divider().padding(.vertical, 10)
             summaryCell(
                 label: "Overdue".translated(),
                 value: invoicesStore.invoices.filter { $0.status == .overdue }.reduce(0) { $0 + $1.total }.currency,
-                color: .sweeplyDestructive
+                color: Color(red: 0.76, green: 0.19, blue: 0.22)
             )
             Divider().padding(.vertical, 10)
             summaryCell(
                 label: "Collected".translated(),
                 value: invoicesStore.invoices.filter { $0.status == .paid }.reduce(0) { $0 + $1.total }.currency,
-                color: .sweeplySuccess
+                color: Color(red: 0.11, green: 0.55, blue: 0.36)
             )
         }
         .padding(.vertical, 12)
