@@ -119,13 +119,9 @@ struct RevenueDetailView: View {
                         }
                     }
                 } label: {
-                    HStack(spacing: 4) {
-                        Text(selectedRange.rawValue.translated())
-                            .font(.system(size: 12, weight: .semibold))
-                        Image(systemName: "chevron.down")
-                            .font(.system(size: 10, weight: .bold))
-                    }
-                    .foregroundStyle(Color.sweeplyAccent)
+                    Image(systemName: "line.3.horizontal.decrease.circle")
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundStyle(Color.sweeplyAccent)
                 }
             }
         }
