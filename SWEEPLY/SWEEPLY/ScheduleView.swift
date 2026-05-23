@@ -183,7 +183,7 @@ struct ScheduleView: View {
         }
         .frame(minHeight: 76, alignment: .center)
         .padding(.horizontal, 16)
-        .padding(.top, 8)
+        .padding(.top, 4)
     }
 
     private var monthTitle: String {

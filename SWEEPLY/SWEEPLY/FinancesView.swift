@@ -356,7 +356,7 @@ struct FinancesView: View {
                     }
                 }
             }
-            .padding(.top, 8)
+            .padding(.top, 4)
 
             if let error = invoicesStore.lastError, !error.isEmpty {
                 Text(error)
