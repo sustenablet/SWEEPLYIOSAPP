@@ -506,8 +506,6 @@ private struct ClientRow: View {
     let onDelete: () -> Void
     let onToggleArchive: () -> Void
 
-    @State private var isPressed = false
-
     private var secondaryText: String? {
         let addressParts = [client.address, client.city].filter { !$0.isEmpty }
         if !addressParts.isEmpty {
@@ -617,14 +615,8 @@ private struct ClientRow: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 14)
-        .background(isPressed ? Color.sweeplyBackground.opacity(0.4) : Color.sweeplySurface)
+        .background(Color.sweeplySurface)
         .contentShape(Rectangle())
-        .animation(.easeOut(duration: 0.12), value: isPressed)
-        .simultaneousGesture(
-            DragGesture(minimumDistance: 0)
-                .onChanged { _ in isPressed = true }
-                .onEnded { _ in isPressed = false }
-        )
         .onLongPressGesture(minimumDuration: 0.45) {
             UIImpactFeedbackGenerator(style: .medium).impactOccurred()
             onView()
