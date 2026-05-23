@@ -490,16 +490,14 @@ struct ScheduleView: View {
 
                 if jobsStore.isLoading && jobsStore.jobs.isEmpty {
                     SkeletonList(count: 4).padding(.top, 16).padding(.horizontal, 20)
-                } else if jobs.isEmpty && paychecks.isEmpty {
-                    scheduleEmptyState
-                } else if !jobs.isEmpty {
+                } else {
                     let hours = Array(timelineStartHour...timelineEndHour)
                     let totalHeight = CGFloat(hours.count) * timelineHourHeight
                     let assignments = computeColumns(jobs)
                     let maxCols = assignments.map(\.totalColumns).max() ?? 1
 
                     GeometryReader { geo in
-                        let labelW: CGFloat = 28
+                        let labelW: CGFloat = 52
                         let totalW  = geo.size.width - labelW
                         let colGap: CGFloat = 6
                         // When overlapping jobs exist, shrink each column so the next one peeks ~44pt
@@ -514,8 +512,8 @@ struct ScheduleView: View {
                             VStack(spacing: 0) {
                                 ForEach(hours, id: \.self) { hour in
                                     Text(timelineHourLabel(hour))
-                                        .font(.system(size: 9, weight: .medium, design: .monospaced))
-                                        .foregroundStyle(Color.sweeplyTextSub.opacity(0.55))
+                                        .font(.system(size: 12, weight: .semibold, design: .monospaced))
+                                        .foregroundStyle(Color.sweeplyTextSub.opacity(0.78))
                                         .frame(width: labelW, alignment: .leading)
                                         .padding(.top, -5)
                                         .frame(height: timelineHourHeight, alignment: .top)
@@ -584,7 +582,14 @@ struct ScheduleView: View {
     }
 
     private func timelineHourLabel(_ hour: Int) -> String {
-        String(format: "%02d", hour)
+        let normalizedHour = hour % 24
+        let meridiem = normalizedHour < 12 ? "AM" : "PM"
+        let displayHour = switch normalizedHour {
+        case 0: 12
+        case 13...23: normalizedHour - 12
+        default: normalizedHour
+        }
+        return "\(displayHour) \(meridiem)"
     }
 
     private func dayRevenue(_ date: Date) -> Double {
