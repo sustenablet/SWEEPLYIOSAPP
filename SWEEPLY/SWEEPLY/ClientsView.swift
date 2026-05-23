@@ -413,7 +413,7 @@ struct ClientsView: View {
                     .multilineTextAlignment(.center)
                 Text(search.isEmpty
                      ? "Add your first client to start booking jobs and sending invoices.".translated()
-                     : "Nothing matches \"\(search)\". Try a different name or address.".translated())
+                     : "Nothing matches \"%@\". Try a different name or address.".translated(with: search))
                     .font(.system(size: 14))
                     .foregroundStyle(Color.sweeplyTextSub)
                     .multilineTextAlignment(.center)
