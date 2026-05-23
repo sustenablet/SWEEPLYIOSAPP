@@ -514,6 +514,16 @@ private struct ClientCard: View {
                     .font(.system(size: 22, weight: .bold))
                     .foregroundStyle(paletteEntry.fg)
             }
+            .overlay(alignment: .topTrailing) {
+                Circle()
+                    .fill(client.isActive ? Color.sweeplySuccess : Color.sweeplyTextSub.opacity(0.4))
+                    .frame(width: 12, height: 12)
+                    .overlay(
+                        Circle()
+                            .stroke(Color.sweeplySurface, lineWidth: 2)
+                    )
+                    .offset(x: 1, y: -1)
+            }
 
             // Content
             VStack(alignment: .leading, spacing: 6) {
@@ -553,19 +563,7 @@ private struct ClientCard: View {
 
                 // Status · Frequency · Jobs
                 HStack(spacing: 6) {
-                    HStack(spacing: 4) {
-                        Circle()
-                            .fill(client.isActive ? Color.sweeplySuccess : Color.sweeplyTextSub.opacity(0.4))
-                            .frame(width: 6, height: 6)
-                        Text(client.isActive ? "Active".translated() : "Archived".translated())
-                            .font(.system(size: 12, weight: .medium))
-                            .foregroundStyle(client.isActive ? Color.sweeplySuccess : Color.sweeplyTextSub)
-                    }
-
                     if let freqLabel = frequency.label {
-                        Text("·")
-                            .font(.system(size: 11))
-                            .foregroundStyle(Color.sweeplyTextSub.opacity(0.4))
                         HStack(spacing: 3) {
                             Image(systemName: frequency.icon)
                                 .font(.system(size: 9, weight: .semibold))
