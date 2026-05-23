@@ -200,7 +200,7 @@ struct RevenueDetailView: View {
                                 ZStack(alignment: .leading) {
                                     Capsule().fill(Color.sweeplyBorder.opacity(0.5)).frame(height: 6)
                                     Capsule().fill(serviceColorAt(idx))
-                                        .frame(width: geo.size.width * CGFloat(displayValue / maxRevenue), height: 6)
+                                        .frame(width: geo.size.width * CGFloat(item.revenue / maxRevenue), height: 6)
                                 }
                             }
                             .frame(height: 6)
