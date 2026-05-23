@@ -290,8 +290,8 @@ struct BusinessView: View {
                 }
                 .padding(.top, 16)
 
-                // Team membership switcher
-                if !session.activeMemberships.isEmpty {
+                // Team membership switcher — hidden, redesign pending
+                if false && !session.activeMemberships.isEmpty {
                     VStack(alignment: .leading, spacing: 10) {
                         Text("TEAMS".translated())
                             .font(.system(size: 11, weight: .bold))

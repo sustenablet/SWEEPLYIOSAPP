@@ -11,18 +11,18 @@ struct PageHeader<Trailing: View>: View {
     var body: some View {
         HStack(alignment: .center, spacing: 16) {
             VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .font(.system(size: 24, weight: .semibold))
+                    .foregroundStyle(Color.sweeplyNavy)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.85)
+
                 if let eyebrow, !eyebrow.isEmpty {
                     Text(eyebrow)
                         .font(.system(size: 10, weight: .bold))
                         .foregroundStyle(Color.sweeplyTextSub)
                         .tracking(1.3)
                 }
-
-                Text(title)
-                    .font(.system(size: 24, weight: .semibold))
-                    .foregroundStyle(Color.sweeplyNavy)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.85)
 
                 if let subtitle, !subtitle.isEmpty {
                     Text(subtitle)

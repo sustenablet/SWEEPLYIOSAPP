@@ -3,115 +3,86 @@ import SwiftUI
 // MARK: - TeamView
 
 struct TeamView: View {
-    @Environment(TeamStore.self)           private var teamStore
-    @Environment(ProfileStore.self)        private var profileStore
-    @Environment(AppSession.self)          private var session
+    @Environment(TeamStore.self)    private var teamStore
+    @Environment(ProfileStore.self) private var profileStore
+    @Environment(AppSession.self)   private var session
+    @Environment(\.dismiss)         private var dismiss
 
-    @State private var showInvite         = false
-    @State private var selectedMember  : TeamMember? = nil
-    @State private var deleteTarget    : TeamMember? = nil
+    @State private var showInvite        = false
+    @State private var selectedMember:   TeamMember? = nil
+    @State private var deleteTarget:     TeamMember? = nil
     @State private var showDeleteConfirm = false
+    @State private var acceptingInviteId: UUID? = nil
+    @State private var decliningInviteId: UUID? = nil
 
-    @AppStorage("newFeatureDot_teamBanner") private var dotTeamBanner = false
+    // MARK: - Derived
 
-    @Environment(\.dismiss) private var dismiss
+    private var cleaners: [TeamMember]   { teamStore.members.filter { $0.role == .member } }
+    private var activeCount: Int         { teamStore.members.filter { $0.status == .active  }.count }
+    private var invitedCount: Int        { teamStore.members.filter { $0.status == .invited }.count }
 
-    private var cleaners: [TeamMember]  { teamStore.members.filter { $0.role == .member } }
-    private var activeCount: Int        { teamStore.members.filter { $0.status == .active   }.count }
-    private var invitedCount: Int       { teamStore.members.filter { $0.status == .invited  }.count }
-    private var inactiveCount: Int      { teamStore.members.filter { $0.status == .inactive }.count }
+    private var ownerInitials: String {
+        let name = profileStore.profile?.businessName ?? ""
+        guard !name.isEmpty else { return "ME" }
+        return name.split(separator: " ")
+            .compactMap { $0.first }
+            .prefix(2)
+            .map { String($0).uppercased() }
+            .joined()
+    }
+
+    private var ownerDisplayName: String {
+        let name = profileStore.profile?.businessName ?? ""
+        return name.isEmpty ? "You" : name
+    }
+
+    // MARK: - Body
 
     var body: some View {
         NavigationStack {
             ZStack {
                 Color.sweeplyBackground.ignoresSafeArea()
 
-                ScrollView {
-                    VStack(spacing: 16) {
-                        if dotTeamBanner {
-                            proUnlockBanner
-                        }
+                ScrollView(showsIndicators: false) {
+                    VStack(spacing: 0) {
 
+                        // Summary bar
+                        summaryBar
+                            .padding(.horizontal, 20)
+                            .padding(.top, 20)
+                            .padding(.bottom, 20)
+
+                        // Pending invites (conditional)
                         if !session.pendingInvites.isEmpty {
-                            pendingInvitesSection
-                        }
-
-                        statsStrip
-
-                        if !session.activeMemberships.isEmpty {
-                            VStack(alignment: .leading, spacing: 10) {
-                                Text("TEAMS".translated())
-                                    .font(.system(size: 11, weight: .bold))
-                                    .foregroundStyle(Color.sweeplyTextSub)
-                                    .tracking(0.8)
-
-                                ForEach(session.activeMemberships) { (membership: TeamMembership) in
-                                    HStack(spacing: 10) {
-                                        Text(membership.businessName)
-                                            .font(.system(size: 15, weight: .semibold))
-                                            .foregroundStyle(Color.sweeplyNavy)
-                                            .lineLimit(1)
-
-                                        Spacer(minLength: 8)
-
-                                        Button {
-                                            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-                                            session.switchToMembership(membership)
-                                        } label: {
-                                            Text("Join".translated())
-                                                .font(.system(size: 13, weight: .bold))
-                                                .foregroundStyle(.white)
-                                                .padding(.horizontal, 16)
-                                                .padding(.vertical, 7)
-                                                .background(Color.sweeplyAccent)
-                                                .clipShape(Capsule())
-                                        }
-                                        .buttonStyle(.plain)
-                                    }
+                            VStack(spacing: 10) {
+                                ForEach(session.pendingInvites) { invite in
+                                    pendingInviteCard(invite)
                                 }
                             }
                             .padding(.horizontal, 20)
+                            .padding(.bottom, 20)
                         }
 
+                        // Error
                         if let err = teamStore.lastError, !err.isEmpty {
                             Text(err)
                                 .font(.system(size: 12, weight: .medium))
                                 .foregroundStyle(Color.sweeplyDestructive)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 .padding(.horizontal, 20)
+                                .padding(.bottom, 12)
                         }
 
-                        memberSection(title: "Owner".translated()) { ownerRow }
+                        // Roster list
+                        rosterList
+                            .padding(.horizontal, 20)
 
-                        memberSection(title: "Cleaners".translated()) {
-                            if cleaners.isEmpty {
-                                emptyCleanersState
-                            } else {
-                                VStack(spacing: 0) {
-                                    ForEach(Array(cleaners.enumerated()), id: \.element.id) { idx, member in
-                                        memberRow(member)
-                                        if idx < cleaners.count - 1 {
-                                            Divider().padding(.leading, 74)
-                                        }
-                                    }
-                                }
-                            }
-                        }
-
-                        Spacer(minLength: 40)
+                        Spacer(minLength: 48)
                     }
-                    .padding(.top, 16)
                 }
                 .refreshable {
                     if let uid = session.userId {
                         await teamStore.load(ownerId: uid)
-                    }
-                }
-            }
-            .onAppear {
-                if dotTeamBanner {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-                        withAnimation(.easeInOut(duration: 0.3)) { dotTeamBanner = false }
                     }
                 }
             }
@@ -128,14 +99,19 @@ struct TeamView: View {
                         UIImpactFeedbackGenerator(style: .light).impactOccurred()
                         showInvite = true
                     } label: {
-                        HStack(spacing: 4) {
+                        HStack(spacing: 5) {
                             Image(systemName: "person.badge.plus")
-                                .font(.system(size: 14, weight: .semibold))
+                                .font(.system(size: 13, weight: .semibold))
                             Text("Invite".translated())
                                 .font(.system(size: 14, weight: .semibold))
                         }
-                        .foregroundStyle(Color.sweeplyNavy)
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 7)
+                        .background(Color.sweeplyNavy)
+                        .clipShape(Capsule())
                     }
+                    .buttonStyle(.plain)
                 }
             }
             .sheet(isPresented: $showInvite) {
@@ -167,109 +143,99 @@ struct TeamView: View {
         }
     }
 
-    // MARK: - Pro Unlock Banner
+    // MARK: - Summary Bar
 
-    private var proUnlockBanner: some View {
-        HStack(spacing: 12) {
-            Image(systemName: "person.badge.plus")
-                .font(.system(size: 18, weight: .semibold))
-                .foregroundStyle(.white)
-
+    private var summaryBar: some View {
+        HStack(alignment: .center, spacing: 0) {
+            // Left: total count + label
             VStack(alignment: .leading, spacing: 2) {
-                Text("Team tools are unlocked".translated())
-                    .font(.system(size: 13, weight: .bold))
+                Text("\(teamStore.members.count + 1)")
+                    .font(.system(size: 28, weight: .bold, design: .monospaced))
                     .foregroundStyle(.white)
-                Text("Invite as many team members as your business needs.".translated())
-                    .font(.system(size: 12))
-                    .foregroundStyle(.white.opacity(0.85))
+                Text("Members".translated())
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(.white.opacity(0.6))
             }
 
             Spacer()
 
-            Button {
-                withAnimation(.easeInOut(duration: 0.2)) { dotTeamBanner = false }
-            } label: {
-                Image(systemName: "xmark")
-                    .font(.system(size: 11, weight: .bold))
-                    .foregroundStyle(.white.opacity(0.8))
-                    .frame(width: 24, height: 24)
-                    .background(.white.opacity(0.15))
-                    .clipShape(Circle())
-            }
-            .buttonStyle(.plain)
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 14)
-        .background(
-            LinearGradient(
-                colors: [Color(red: 0.22, green: 0.50, blue: 0.92), Color(red: 0.18, green: 0.42, blue: 0.80)],
-                startPoint: .leading, endPoint: .trailing
-            )
-        )
-        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-        .transition(.opacity.combined(with: .move(edge: .top)))
-    }
-
-    // MARK: - Pending Invites
-
-    @State private var acceptingInviteId: UUID? = nil
-    @State private var decliningInviteId: UUID? = nil
-
-    private var pendingInvitesSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("TEAM INVITES".translated())
-                .font(.system(size: 11, weight: .semibold))
-                .foregroundStyle(Color.sweeplyTextSub)
-                .tracking(0.5)
-                .padding(.horizontal, 20)
-
-            VStack(spacing: 10) {
-                ForEach(session.pendingInvites) { invite in
-                    pendingInviteCard(invite)
+            // Right: status chips
+            HStack(spacing: 8) {
+                statusChip(
+                    count: activeCount,
+                    label: "Active".translated(),
+                    dot: Color.sweeplySuccess
+                )
+                if invitedCount > 0 {
+                    statusChip(
+                        count: invitedCount,
+                        label: "Invited".translated(),
+                        dot: Color.sweeplyWarning
+                    )
                 }
             }
-            .padding(.horizontal, 20)
         }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 18)
+        .background(Color.sweeplyNavy, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
+
+    private func statusChip(count: Int, label: String, dot: Color) -> some View {
+        HStack(spacing: 5) {
+            Circle().fill(dot).frame(width: 6, height: 6)
+            Text("\(count) \(label)")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(.white.opacity(0.9))
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background(.white.opacity(0.12), in: Capsule())
+    }
+
+    // MARK: - Pending Invite Card
 
     private func pendingInviteCard(_ invite: PendingInvite) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 12) {
-                ZStack {
-                    Circle()
-                        .fill(Color.sweeplyAccent.opacity(0.12))
-                        .frame(width: 42, height: 42)
-                    Image(systemName: "building.2.fill")
-                        .font(.system(size: 16))
-                        .foregroundStyle(Color.sweeplyAccent)
-                }
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(invite.businessName)
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(Color.primary)
-                    Text("Invited you as %@".translated(with: invite.role.capitalized))
-                        .font(.system(size: 13))
-                        .foregroundStyle(Color.sweeplyTextSub)
-                }
-                Spacer()
+        HStack(spacing: 14) {
+            // Warning accent stripe via overlay on left
+            ZStack {
+                Circle()
+                    .fill(Color.sweeplyWarning.opacity(0.12))
+                    .frame(width: 42, height: 42)
+                Image(systemName: "building.2.fill")
+                    .font(.system(size: 15))
+                    .foregroundStyle(Color.sweeplyWarning)
             }
-            HStack(spacing: 10) {
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(invite.businessName)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(Color.sweeplyNavy)
+                    .lineLimit(1)
+                Text("Invited you as \(invite.role.capitalized)")
+                    .font(.system(size: 12))
+                    .foregroundStyle(Color.sweeplyTextSub)
+            }
+
+            Spacer(minLength: 8)
+
+            // Actions
+            HStack(spacing: 8) {
                 Button {
-                    UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
                     decliningInviteId = invite.id
                     Task {
                         await session.declineInvite(memberId: invite.id)
                         decliningInviteId = nil
                     }
                 } label: {
-                    Text(decliningInviteId == invite.id ? "Declining…" : "Decline")
-                        .font(.system(size: 14, weight: .medium))
+                    Text(decliningInviteId == invite.id ? "…" : "Decline".translated())
+                        .font(.system(size: 13, weight: .medium))
                         .foregroundStyle(Color.sweeplyTextSub)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 10)
-                        .background(Color.sweeplyBorder.opacity(0.5))
-                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 7)
+                        .background(Color.sweeplyBorder.opacity(0.5), in: Capsule())
                 }
+                .buttonStyle(.plain)
                 .disabled(acceptingInviteId != nil || decliningInviteId != nil)
 
                 Button {
@@ -280,150 +246,182 @@ struct TeamView: View {
                         acceptingInviteId = nil
                     }
                 } label: {
-                    HStack(spacing: 6) {
+                    Group {
                         if acceptingInviteId == invite.id {
-                            ProgressView().tint(.white).scaleEffect(0.75)
+                            ProgressView().tint(.white).scaleEffect(0.7)
                         } else {
-                            Image(systemName: "checkmark")
-                                .font(.system(size: 13, weight: .semibold))
+                            Text("Accept".translated())
+                                .font(.system(size: 13, weight: .bold))
                         }
-                        Text(acceptingInviteId == invite.id ? "Joining…" : "Accept")
-                            .font(.system(size: 14, weight: .semibold))
                     }
                     .foregroundStyle(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 10)
-                    .background(Color.sweeplyAccent)
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 7)
+                    .background(Color.sweeplyNavy, in: Capsule())
                 }
+                .buttonStyle(.plain)
                 .disabled(acceptingInviteId != nil || decliningInviteId != nil)
             }
         }
-        .padding(14)
-        .background(Color.sweeplySurface)
-        .clipShape(RoundedRectangle(cornerRadius: 14))
-        .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.sweeplyAccent.opacity(0.2), lineWidth: 1))
-    }
-
-    // MARK: - Stats Strip
-
-    private var statsStrip: some View {
-        HStack(spacing: 0) {
-            statCell(value: "\(teamStore.members.count + 1)", label: "Total".translated())
-            statDivider
-            statCell(value: "\(activeCount)", label: "Active".translated())
-            statDivider
-            statCell(value: "\(invitedCount)", label: "Invited".translated())
-            statDivider
-            statCell(value: "\(inactiveCount)", label: "Inactive".translated())
-        }
+        .padding(.horizontal, 16)
         .padding(.vertical, 14)
-        .background(Color.sweeplySurface, in: RoundedRectangle(cornerRadius: 14))
-        .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.sweeplyBorder, lineWidth: 1))
-        .padding(.horizontal, 20)
-    }
-
-    private func statCell(value: String, label: String) -> some View {
-        VStack(spacing: 3) {
-            Text(value)
-                .font(.system(size: 20, weight: .bold, design: .monospaced))
-                .foregroundStyle(Color.primary)
-            Text(label)
-                .font(.system(size: 11, weight: .medium))
-                .foregroundStyle(Color.sweeplyTextSub)
+        .background(Color.sweeplySurface)
+        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(Color.sweeplyWarning.opacity(0.35), lineWidth: 1)
+        )
+        // Left accent stripe
+        .overlay(alignment: .leading) {
+            RoundedRectangle(cornerRadius: 3, style: .continuous)
+                .fill(Color.sweeplyWarning)
+                .frame(width: 4)
+                .padding(.vertical, 10)
+                .padding(.leading, 0)
+                .clipped()
         }
-        .frame(maxWidth: .infinity)
+        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 
-    private var statDivider: some View {
-        Rectangle().fill(Color.sweeplyBorder).frame(width: 1, height: 36)
-    }
+    // MARK: - Roster List
 
-    // MARK: - Section Wrapper
+    private var rosterList: some View {
+        VStack(spacing: 0) {
+            // Owner row (top, visually distinct)
+            ownerRow
 
-    private func memberSection<Content: View>(title: String, @ViewBuilder content: () -> Content) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(title.uppercased())
-                .font(.system(size: 11, weight: .semibold))
-                .foregroundStyle(Color.sweeplyTextSub.opacity(0.7))
-                .padding(.horizontal, 20)
+            Divider().padding(.leading, 76)
 
-            content()
-                .background(Color.sweeplySurface, in: RoundedRectangle(cornerRadius: 14))
-                .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.sweeplyBorder, lineWidth: 1))
-                .padding(.horizontal, 20)
+            // Cleaners
+            if cleaners.isEmpty {
+                emptyState
+            } else {
+                ForEach(Array(cleaners.enumerated()), id: \.element.id) { idx, member in
+                    cleanerRow(member)
+                    if idx < cleaners.count - 1 {
+                        Divider().padding(.leading, 76)
+                    }
+                }
+            }
         }
+        .background(Color.sweeplySurface)
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(Color.sweeplyBorder, lineWidth: 1)
+        )
     }
 
     // MARK: - Owner Row
 
     private var ownerRow: some View {
         HStack(spacing: 14) {
-            avatarCircle(initials: ownerInitials, color: Color.sweeplyNavy)
-            VStack(alignment: .leading, spacing: 2) {
-                Text((profileStore.profile?.businessName ?? "").isEmpty
-                     ? "You"
-                     : (profileStore.profile?.businessName ?? ""))
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(Color.primary)
+            // Avatar
+            ZStack {
+                Circle()
+                    .fill(Color.sweeplyNavy.gradient)
+                    .frame(width: 48, height: 48)
+                Text(ownerInitials)
+                    .font(.system(size: 15, weight: .bold))
+                    .foregroundStyle(.white)
+            }
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(ownerDisplayName)
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(Color.sweeplyNavy)
+                    .lineLimit(1)
                 Text("Account owner".translated())
                     .font(.system(size: 12))
                     .foregroundStyle(Color.sweeplyTextSub)
             }
+
             Spacer()
-            roleBadge("Owner", color: Color.sweeplyNavy)
+
+            // Owner badge
+            Text("OWNER")
+                .font(.system(size: 10, weight: .bold))
+                .foregroundStyle(Color.sweeplyNavy)
+                .tracking(0.6)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 5)
+                .background(Color.sweeplyNavy.opacity(0.1), in: Capsule())
         }
         .padding(.horizontal, 20)
-        .padding(.vertical, 14)
+        .padding(.vertical, 16)
     }
 
-    private var ownerInitials: String {
-        let name = profileStore.profile?.businessName ?? ""
-        if name.isEmpty { return "ME".translated() }
-        return name.split(separator: " ")
-            .compactMap { $0.first }
-            .prefix(2)
-            .map { String($0).uppercased() }
-            .joined()
-    }
+    // MARK: - Cleaner Row
 
-    // MARK: - Member Row
-
-    private func memberRow(_ member: TeamMember) -> some View {
+    private func cleanerRow(_ member: TeamMember) -> some View {
         Button {
             UIImpactFeedbackGenerator(style: .light).impactOccurred()
             selectedMember = member
         } label: {
             HStack(spacing: 14) {
-                avatarCircle(initials: member.initials.isEmpty ? "?" : member.initials, color: Color.sweeplyAccent)
+                // Avatar
+                ZStack {
+                    Circle()
+                        .fill(
+                            member.status == .invited
+                                ? AnyShapeStyle(Color.sweeplyAccent.opacity(0.12))
+                                : AnyShapeStyle(Color.sweeplyAccent.gradient)
+                        )
+                        .frame(width: 48, height: 48)
+                        .overlay(
+                            Circle()
+                                .strokeBorder(
+                                    member.status == .invited
+                                        ? Color.sweeplyAccent.opacity(0.4)
+                                        : Color.clear,
+                                    style: StrokeStyle(lineWidth: 1.5, dash: [4, 3])
+                                )
+                        )
+                    Text(member.initials.isEmpty ? "?" : member.initials)
+                        .font(.system(size: 15, weight: .bold))
+                        .foregroundStyle(member.status == .invited ? Color.sweeplyAccent : .white)
+                }
 
-                VStack(alignment: .leading, spacing: 2) {
+                // Info
+                VStack(alignment: .leading, spacing: 4) {
                     Text(member.name)
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(Color.primary)
-                    
-                    HStack(spacing: 4) {
-                        Image(systemName: "dollarsign.circle.fill")
-                            .font(.system(size: 11))
-                        Text(member.payRateDescription)
-                            .font(.system(size: 12, weight: .medium))
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(
+                            member.status == .invited
+                                ? Color.sweeplyNavy.opacity(0.55)
+                                : Color.sweeplyNavy
+                        )
+                        .lineLimit(1)
+
+                    if member.status == .invited {
+                        Text("Invite sent · Tap to resend".translated())
+                            .font(.system(size: 12))
+                            .foregroundStyle(Color.sweeplyWarning)
+                    } else {
+                        HStack(spacing: 5) {
+                            Image(systemName: "dollarsign.circle.fill")
+                                .font(.system(size: 11))
+                            Text(member.payRateDescription)
+                                .font(.system(size: 12, weight: .medium))
+                        }
+                        .foregroundStyle(Color.sweeplySuccess)
                     }
-                    .foregroundStyle(Color.sweeplySuccess)
                 }
 
                 Spacer()
 
+                // Right side: status
                 VStack(alignment: .trailing, spacing: 5) {
-                    roleBadge("Cleaner", color: Color.sweeplyAccent)
-                    statusDot(member.status)
+                    statusPill(member.status)
+                    if member.status != .invited {
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundStyle(Color.sweeplyBorder)
+                    }
                 }
-
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundStyle(Color.sweeplyBorder)
             }
             .padding(.horizontal, 20)
-            .padding(.vertical, 14)
+            .padding(.vertical, 16)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -437,51 +435,63 @@ struct TeamView: View {
         }
     }
 
-    // MARK: - Empty State
-
-    private var emptyCleanersState: some View {
-        VStack(spacing: 10) {
-            Image(systemName: "person.badge.plus")
-                .font(.system(size: 30, weight: .light))
-                .foregroundStyle(Color.sweeplyTextSub.opacity(0.4))
-            Text("No cleaners yet".translated())
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(Color.sweeplyTextSub)
-            Text("Tap Invite to add your first cleaner".translated())
-                .font(.system(size: 12))
-                .foregroundStyle(Color.sweeplyTextSub.opacity(0.6))
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 36)
-    }
-
-    // MARK: - Shared Helpers
-
-    private func avatarCircle(initials: String, color: Color) -> some View {
-        ZStack {
-            Circle().fill(color.gradient).frame(width: 44, height: 44)
-            Text(initials).font(.system(size: 14, weight: .bold)).foregroundStyle(.white)
-        }
-    }
-
-    private func roleBadge(_ title: String, color: Color) -> some View {
-        Text(title)
-            .font(.system(size: 11, weight: .bold))
-            .foregroundStyle(.white)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 4)
-            .background(color, in: Capsule())
-    }
-
-    private func statusDot(_ status: TeamMemberStatus) -> some View {
+    private func statusPill(_ status: TeamMemberStatus) -> some View {
         HStack(spacing: 4) {
             Circle()
-                .fill(status == .active ? Color.sweeplySuccess : Color.sweeplyTextSub.opacity(0.4))
-                .frame(width: 6, height: 6)
+                .fill(statusColor(status))
+                .frame(width: 5, height: 5)
             Text(status.displayName)
-                .font(.system(size: 11))
-                .foregroundStyle(Color.sweeplyTextSub)
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(statusColor(status))
         }
+        .padding(.horizontal, 9)
+        .padding(.vertical, 4)
+        .background(statusColor(status).opacity(0.1), in: Capsule())
+    }
+
+    private func statusColor(_ status: TeamMemberStatus) -> Color {
+        switch status {
+        case .active:   return Color.sweeplySuccess
+        case .invited:  return Color.sweeplyWarning
+        case .inactive: return Color.sweeplyTextSub
+        }
+    }
+
+    // MARK: - Empty State
+
+    private var emptyState: some View {
+        VStack(spacing: 12) {
+            Image(systemName: "person.badge.plus")
+                .font(.system(size: 36, weight: .light))
+                .foregroundStyle(Color.sweeplyTextSub.opacity(0.35))
+            Text("Your crew starts here".translated())
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundStyle(Color.sweeplyNavy)
+            Text("Add your first cleaner to start assigning jobs".translated())
+                .font(.system(size: 13))
+                .foregroundStyle(Color.sweeplyTextSub)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 24)
+            Button {
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                showInvite = true
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "plus")
+                        .font(.system(size: 13, weight: .bold))
+                    Text("Invite a Cleaner".translated())
+                        .font(.system(size: 14, weight: .semibold))
+                }
+                .foregroundStyle(.white)
+                .padding(.horizontal, 24)
+                .padding(.vertical, 11)
+                .background(Color.sweeplyAccent, in: Capsule())
+            }
+            .buttonStyle(.plain)
+            .padding(.top, 4)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 44)
     }
 }
 
