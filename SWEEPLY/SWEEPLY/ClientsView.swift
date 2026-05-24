@@ -496,10 +496,13 @@ private struct ClientCard: View {
         guard fullAddress.count > Self.compactAddressCharacterLimit else { return fullAddress }
 
         let collapsedSeparator = " "
-        let collapsedPrefix = ".."
-        let collapsedBudget = collapsedPrefix.count + collapsedSeparator.count + city.count
-        guard collapsedBudget <= Self.compactAddressCharacterLimit else { return city }
-        return "\(collapsedPrefix)\(collapsedSeparator)\(city)"
+        let ellipsis = ".."
+        let streetBudget = Self.compactAddressCharacterLimit - city.count - collapsedSeparator.count - ellipsis.count
+        guard streetBudget > 0 else { return city }
+
+        let trimmedStreet = street.prefix(streetBudget).trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedStreet.isEmpty else { return city }
+        return "\(trimmedStreet)\(ellipsis)\(collapsedSeparator)\(city)"
     }
 
     var body: some View {
