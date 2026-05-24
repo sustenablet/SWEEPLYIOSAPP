@@ -1,0 +1,23 @@
+{
+  "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/SourcePackages/checkouts/xctest-dynamic-overlay/Sources/IssueReporting/Internal/SwiftTesting.swift" : {
+    "const-values" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/xctest-dynamic-overlay.build/Debug-iphonesimulator/IssueReporting.build/Objects-normal/arm64/SwiftTesting.swiftconstvalues",
+    "dependencies" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/xctest-dynamic-overlay.build/Debug-iphonesimulator/IssueReporting.build/Objects-normal/arm64/SwiftTesting.d",
+    "diagnostics" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/xctest-dynamic-overlay.build/Debug-iphonesimulator/IssueReporting.build/Objects-normal/arm64/SwiftTesting.dia",
+    "object" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/xctest-dynamic-overlay.build/Debug-iphonesimulator/IssueReporting.build/Objects-normal/arm64/SwiftTesting.o",
+    "swift-dependencies" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/xctest-dynamic-overlay.build/Debug-iphonesimulator/IssueReporting.build/Objects-normal/arm64/SwiftTesting.swiftdeps"
+  },
+  "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/SourcePackages/checkouts/xctest-dynamic-overlay/Sources/IssueReporting/Internal/UncheckedSendable.swift" : {
+    "const-values" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/xctest-dynamic-overlay.build/Debug-iphonesimulator/IssueReporting.build/Objects-normal/arm64/UncheckedSendable.swiftconstvalues",
+    "dependencies" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/xctest-dynamic-overlay.build/Debug-iphonesimulator/IssueReporting.build/Objects-normal/arm64/UncheckedSendable.d",
+    "diagnostics" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/xctest-dynamic-overlay.build/Debug-iphonesimulator/IssueReporting.build/Objects-normal/arm64/UncheckedSendable.dia",
+    "object" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/xctest-dynamic-overlay.build/Debug-iphonesimulator/IssueReporting.build/Objects-normal/arm64/UncheckedSendable.o",
+    "swift-dependencies" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/xctest-dynamic-overlay.build/Debug-iphonesimulator/IssueReporting.build/Objects-normal/arm64/UncheckedSendable.swiftdeps"
+  },
+  "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/SourcePackages/checkouts/xctest-dynamic-overlay/Sources/IssueReporting/Internal/Warn.swift" : {
+    "const-values" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/xctest-dynamic-overlay.build/Debug-iphonesimulator/IssueReporting.build/Objects-normal/arm64/Warn.swiftconstvalues",
+    "dependencies" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/xctest-dynamic-overlay.build/Debug-iphonesimulator/IssueReporting.build/Objects-normal/arm64/Warn.d",
+    "diagnostics" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/xctest-dynamic-overlay.build/Debug-iphonesimulator/IssueReporting.build/Objects-normal/arm64/Warn.dia",
+    "object" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/xctest-dynamic-overlay.build/Debug-iphonesimulator/IssueReporting.build/Objects-normal/arm64/Warn.o",
+    "swift-dependencies" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/xctest-dynamic-overlay.build/Debug-iphonesimulator/IssueReporting.build/Objects-normal/arm64/Warn.swiftdeps"
+  }
+}

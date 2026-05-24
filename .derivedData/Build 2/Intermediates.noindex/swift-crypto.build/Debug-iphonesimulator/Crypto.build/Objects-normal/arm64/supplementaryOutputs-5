@@ -1,0 +1,86 @@
+{
+  "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/SourcePackages/checkouts/swift-crypto/Sources/Crypto/Insecure/Insecure.swift" : {
+    "const-values" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/swift-crypto.build/Debug-iphonesimulator/Crypto.build/Objects-normal/arm64/Insecure.swiftconstvalues",
+    "dependencies" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/swift-crypto.build/Debug-iphonesimulator/Crypto.build/Objects-normal/arm64/Insecure.d",
+    "diagnostics" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/swift-crypto.build/Debug-iphonesimulator/Crypto.build/Objects-normal/arm64/Insecure.dia",
+    "object" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/swift-crypto.build/Debug-iphonesimulator/Crypto.build/Objects-normal/arm64/Insecure.o",
+    "swift-dependencies" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/swift-crypto.build/Debug-iphonesimulator/Crypto.build/Objects-normal/arm64/Insecure.swiftdeps"
+  },
+  "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/SourcePackages/checkouts/swift-crypto/Sources/Crypto/Insecure/Insecure_HashFunctions.swift" : {
+    "const-values" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/swift-crypto.build/Debug-iphonesimulator/Crypto.build/Objects-normal/arm64/Insecure_HashFunctions.swiftconstvalues",
+    "dependencies" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/swift-crypto.build/Debug-iphonesimulator/Crypto.build/Objects-normal/arm64/Insecure_HashFunctions.d",
+    "diagnostics" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/swift-crypto.build/Debug-iphonesimulator/Crypto.build/Objects-normal/arm64/Insecure_HashFunctions.dia",
+    "object" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/swift-crypto.build/Debug-iphonesimulator/Crypto.build/Objects-normal/arm64/Insecure_HashFunctions.o",
+    "swift-dependencies" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/swift-crypto.build/Debug-iphonesimulator/Crypto.build/Objects-normal/arm64/Insecure_HashFunctions.swiftdeps"
+  },
+  "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/SourcePackages/checkouts/swift-crypto/Sources/Crypto/KEM/BoringSSL/MLKEM_boring.swift" : {
+    "const-values" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/swift-crypto.build/Debug-iphonesimulator/Crypto.build/Objects-normal/arm64/MLKEM_boring.swiftconstvalues",
+    "dependencies" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/swift-crypto.build/Debug-iphonesimulator/Crypto.build/Objects-normal/arm64/MLKEM_boring.d",
+    "diagnostics" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/swift-crypto.build/Debug-iphonesimulator/Crypto.build/Objects-normal/arm64/MLKEM_boring.dia",
+    "object" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/swift-crypto.build/Debug-iphonesimulator/Crypto.build/Objects-normal/arm64/MLKEM_boring.o",
+    "swift-dependencies" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/swift-crypto.build/Debug-iphonesimulator/Crypto.build/Objects-normal/arm64/MLKEM_boring.swiftdeps"
+  },
+  "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/SourcePackages/checkouts/swift-crypto/Sources/Crypto/KEM/BoringSSL/MLKEM_wrapper.swift" : {
+    "const-values" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/swift-crypto.build/Debug-iphonesimulator/Crypto.build/Objects-normal/arm64/MLKEM_wrapper.swiftconstvalues",
+    "dependencies" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/swift-crypto.build/Debug-iphonesimulator/Crypto.build/Objects-normal/arm64/MLKEM_wrapper.d",
+    "diagnostics" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/swift-crypto.build/Debug-iphonesimulator/Crypto.build/Objects-normal/arm64/MLKEM_wrapper.dia",
+    "object" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/swift-crypto.build/Debug-iphonesimulator/Crypto.build/Objects-normal/arm64/MLKEM_wrapper.o",
+    "swift-dependencies" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/swift-crypto.build/Debug-iphonesimulator/Crypto.build/Objects-normal/arm64/MLKEM_wrapper.swiftdeps"
+  },
+  "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/SourcePackages/checkouts/swift-crypto/Sources/Crypto/KEM/BoringSSL/XWing_boring.swift" : {
+    "const-values" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/swift-crypto.build/Debug-iphonesimulator/Crypto.build/Objects-normal/arm64/XWing_boring.swiftconstvalues",
+    "dependencies" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/swift-crypto.build/Debug-iphonesimulator/Crypto.build/Objects-normal/arm64/XWing_boring.d",
+    "diagnostics" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/swift-crypto.build/Debug-iphonesimulator/Crypto.build/Objects-normal/arm64/XWing_boring.dia",
+    "object" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/swift-crypto.build/Debug-iphonesimulator/Crypto.build/Objects-normal/arm64/XWing_boring.o",
+    "swift-dependencies" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/swift-crypto.build/Debug-iphonesimulator/Crypto.build/Objects-normal/arm64/XWing_boring.swiftdeps"
+  },
+  "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/SourcePackages/checkouts/swift-crypto/Sources/Crypto/KEM/KEM-Errors.swift" : {
+    "const-values" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/swift-crypto.build/Debug-iphonesimulator/Crypto.build/Objects-normal/arm64/KEM-Errors.swiftconstvalues",
+    "dependencies" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/swift-crypto.build/Debug-iphonesimulator/Crypto.build/Objects-normal/arm64/KEM-Errors.d",
+    "diagnostics" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/swift-crypto.build/Debug-iphonesimulator/Crypto.build/Objects-normal/arm64/KEM-Errors.dia",
+    "object" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/swift-crypto.build/Debug-iphonesimulator/Crypto.build/Objects-normal/arm64/KEM-Errors.o",
+    "swift-dependencies" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/swift-crypto.build/Debug-iphonesimulator/Crypto.build/Objects-normal/arm64/KEM-Errors.swiftdeps"
+  },
+  "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/SourcePackages/checkouts/swift-crypto/Sources/Crypto/KEM/KEM.swift" : {
+    "const-values" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/swift-crypto.build/Debug-iphonesimulator/Crypto.build/Objects-normal/arm64/KEM.swiftconstvalues",
+    "dependencies" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/swift-crypto.build/Debug-iphonesimulator/Crypto.build/Objects-normal/arm64/KEM.d",
+    "diagnostics" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/swift-crypto.build/Debug-iphonesimulator/Crypto.build/Objects-normal/arm64/KEM.dia",
+    "object" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/swift-crypto.build/Debug-iphonesimulator/Crypto.build/Objects-normal/arm64/KEM.o",
+    "swift-dependencies" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/swift-crypto.build/Debug-iphonesimulator/Crypto.build/Objects-normal/arm64/KEM.swiftdeps"
+  },
+  "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/SourcePackages/checkouts/swift-crypto/Sources/Crypto/KEM/MLKEM.swift" : {
+    "const-values" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/swift-crypto.build/Debug-iphonesimulator/Crypto.build/Objects-normal/arm64/MLKEM.swiftconstvalues",
+    "dependencies" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/swift-crypto.build/Debug-iphonesimulator/Crypto.build/Objects-normal/arm64/MLKEM.d",
+    "diagnostics" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/swift-crypto.build/Debug-iphonesimulator/Crypto.build/Objects-normal/arm64/MLKEM.dia",
+    "object" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/swift-crypto.build/Debug-iphonesimulator/Crypto.build/Objects-normal/arm64/MLKEM.o",
+    "swift-dependencies" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/swift-crypto.build/Debug-iphonesimulator/Crypto.build/Objects-normal/arm64/MLKEM.swiftdeps"
+  },
+  "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/SourcePackages/checkouts/swift-crypto/Sources/Crypto/KEM/XWing.swift" : {
+    "const-values" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/swift-crypto.build/Debug-iphonesimulator/Crypto.build/Objects-normal/arm64/XWing.swiftconstvalues",
+    "dependencies" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/swift-crypto.build/Debug-iphonesimulator/Crypto.build/Objects-normal/arm64/XWing.d",
+    "diagnostics" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/swift-crypto.build/Debug-iphonesimulator/Crypto.build/Objects-normal/arm64/XWing.dia",
+    "object" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/swift-crypto.build/Debug-iphonesimulator/Crypto.build/Objects-normal/arm64/XWing.o",
+    "swift-dependencies" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/swift-crypto.build/Debug-iphonesimulator/Crypto.build/Objects-normal/arm64/XWing.swiftdeps"
+  },
+  "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/SourcePackages/checkouts/swift-crypto/Sources/Crypto/Key Agreement/BoringSSL/ECDH_boring.swift" : {
+    "const-values" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/swift-crypto.build/Debug-iphonesimulator/Crypto.build/Objects-normal/arm64/ECDH_boring.swiftconstvalues",
+    "dependencies" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/swift-crypto.build/Debug-iphonesimulator/Crypto.build/Objects-normal/arm64/ECDH_boring.d",
+    "diagnostics" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/swift-crypto.build/Debug-iphonesimulator/Crypto.build/Objects-normal/arm64/ECDH_boring.dia",
+    "object" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/swift-crypto.build/Debug-iphonesimulator/Crypto.build/Objects-normal/arm64/ECDH_boring.o",
+    "swift-dependencies" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/swift-crypto.build/Debug-iphonesimulator/Crypto.build/Objects-normal/arm64/ECDH_boring.swiftdeps"
+  },
+  "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/SourcePackages/checkouts/swift-crypto/Sources/Crypto/Key Agreement/DH.swift" : {
+    "const-values" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/swift-crypto.build/Debug-iphonesimulator/Crypto.build/Objects-normal/arm64/DH.swiftconstvalues",
+    "dependencies" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/swift-crypto.build/Debug-iphonesimulator/Crypto.build/Objects-normal/arm64/DH.d",
+    "diagnostics" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/swift-crypto.build/Debug-iphonesimulator/Crypto.build/Objects-normal/arm64/DH.dia",
+    "object" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/swift-crypto.build/Debug-iphonesimulator/Crypto.build/Objects-normal/arm64/DH.o",
+    "swift-dependencies" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/swift-crypto.build/Debug-iphonesimulator/Crypto.build/Objects-normal/arm64/DH.swiftdeps"
+  },
+  "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/SourcePackages/checkouts/swift-crypto/Sources/Crypto/Key Agreement/ECDH.swift" : {
+    "const-values" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/swift-crypto.build/Debug-iphonesimulator/Crypto.build/Objects-normal/arm64/ECDH.swiftconstvalues",
+    "dependencies" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/swift-crypto.build/Debug-iphonesimulator/Crypto.build/Objects-normal/arm64/ECDH.d",
+    "diagnostics" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/swift-crypto.build/Debug-iphonesimulator/Crypto.build/Objects-normal/arm64/ECDH.dia",
+    "object" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/swift-crypto.build/Debug-iphonesimulator/Crypto.build/Objects-normal/arm64/ECDH.o",
+    "swift-dependencies" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/swift-crypto.build/Debug-iphonesimulator/Crypto.build/Objects-normal/arm64/ECDH.swiftdeps"
+  }
+}

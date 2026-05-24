@@ -1,0 +1,56 @@
+{
+  "source": "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/SWEEPLY/SWEEPLY/Components/ServiceCatalogComponents.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Edit",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 33
+        }
+      },
+      {
+        "comment": "",
+        "key": "Edit Service",
+        "location": {
+          "startingColumn": 48,
+          "startingLine": 187
+        }
+      },
+      {
+        "comment": "",
+        "key": "New Service",
+        "location": {
+          "startingColumn": 65,
+          "startingLine": 187
+        }
+      },
+      {
+        "comment": "",
+        "key": "Deep Clean",
+        "location": {
+          "startingColumn": 31,
+          "startingLine": 111
+        }
+      },
+      {
+        "comment": "",
+        "key": "$",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 128
+        }
+      },
+      {
+        "comment": "",
+        "key": "150",
+        "location": {
+          "startingColumn": 35,
+          "startingLine": 131
+        }
+      }
+    ]
+  },
+  "version": 1
+}

@@ -1,0 +1,177 @@
+{
+  "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/DerivedSources/resource_bundle_accessor.swift" : {
+    "const-values" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/resource_bundle_accessor.swiftconstvalues",
+    "dependencies" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/resource_bundle_accessor.d",
+    "diagnostics" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/resource_bundle_accessor.dia",
+    "object" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/resource_bundle_accessor.o",
+    "swift-dependencies" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/resource_bundle_accessor.swiftdeps"
+  },
+  "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/SourcePackages/checkouts/purchases-ios-spm/Sources/Ads/AdMobSSV/AdMobSSVPollStatus.swift" : {
+    "const-values" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/AdMobSSVPollStatus.swiftconstvalues",
+    "dependencies" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/AdMobSSVPollStatus.d",
+    "diagnostics" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/AdMobSSVPollStatus.dia",
+    "object" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/AdMobSSVPollStatus.o",
+    "swift-dependencies" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/AdMobSSVPollStatus.swiftdeps"
+  },
+  "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/SourcePackages/checkouts/purchases-ios-spm/Sources/Ads/AdMobSSV/Networking/AdMobSSVStatusCallback.swift" : {
+    "const-values" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/AdMobSSVStatusCallback.swiftconstvalues",
+    "dependencies" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/AdMobSSVStatusCallback.d",
+    "diagnostics" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/AdMobSSVStatusCallback.dia",
+    "object" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/AdMobSSVStatusCallback.o",
+    "swift-dependencies" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/AdMobSSVStatusCallback.swiftdeps"
+  },
+  "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/SourcePackages/checkouts/purchases-ios-spm/Sources/Ads/AdMobSSV/Networking/AdMobSSVStatusResponse.swift" : {
+    "const-values" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/AdMobSSVStatusResponse.swiftconstvalues",
+    "dependencies" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/AdMobSSVStatusResponse.d",
+    "diagnostics" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/AdMobSSVStatusResponse.dia",
+    "object" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/AdMobSSVStatusResponse.o",
+    "swift-dependencies" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/AdMobSSVStatusResponse.swiftdeps"
+  },
+  "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/SourcePackages/checkouts/purchases-ios-spm/Sources/Ads/AdMobSSV/Networking/GetAdMobSSVStatusOperation.swift" : {
+    "const-values" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/GetAdMobSSVStatusOperation.swiftconstvalues",
+    "dependencies" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/GetAdMobSSVStatusOperation.d",
+    "diagnostics" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/GetAdMobSSVStatusOperation.dia",
+    "object" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/GetAdMobSSVStatusOperation.o",
+    "swift-dependencies" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/GetAdMobSSVStatusOperation.swiftdeps"
+  },
+  "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/SourcePackages/checkouts/purchases-ios-spm/Sources/Ads/AdTracker.swift" : {
+    "const-values" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/AdTracker.swiftconstvalues",
+    "dependencies" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/AdTracker.d",
+    "diagnostics" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/AdTracker.dia",
+    "object" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/AdTracker.o",
+    "swift-dependencies" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/AdTracker.swiftdeps"
+  },
+  "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/SourcePackages/checkouts/purchases-ios-spm/Sources/Ads/AdsAPI.swift" : {
+    "const-values" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/AdsAPI.swiftconstvalues",
+    "dependencies" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/AdsAPI.d",
+    "diagnostics" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/AdsAPI.dia",
+    "object" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/AdsAPI.o",
+    "swift-dependencies" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/AdsAPI.swiftdeps"
+  },
+  "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/SourcePackages/checkouts/purchases-ios-spm/Sources/Ads/Events/AdEvent.swift" : {
+    "const-values" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/AdEvent.swiftconstvalues",
+    "dependencies" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/AdEvent.d",
+    "diagnostics" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/AdEvent.dia",
+    "object" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/AdEvent.o",
+    "swift-dependencies" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/AdEvent.swiftdeps"
+  },
+  "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/SourcePackages/checkouts/purchases-ios-spm/Sources/Ads/Events/AdEventStore.swift" : {
+    "const-values" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/AdEventStore.swiftconstvalues",
+    "dependencies" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/AdEventStore.d",
+    "diagnostics" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/AdEventStore.dia",
+    "object" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/AdEventStore.o",
+    "swift-dependencies" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/AdEventStore.swiftdeps"
+  },
+  "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/SourcePackages/checkouts/purchases-ios-spm/Sources/Ads/Events/Networking/AdEventsRequest.swift" : {
+    "const-values" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/AdEventsRequest.swiftconstvalues",
+    "dependencies" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/AdEventsRequest.d",
+    "diagnostics" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/AdEventsRequest.dia",
+    "object" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/AdEventsRequest.o",
+    "swift-dependencies" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/AdEventsRequest.swiftdeps"
+  },
+  "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/SourcePackages/checkouts/purchases-ios-spm/Sources/Ads/Events/Networking/AdHTTPRequestPath.swift" : {
+    "const-values" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/AdHTTPRequestPath.swiftconstvalues",
+    "dependencies" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/AdHTTPRequestPath.d",
+    "diagnostics" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/AdHTTPRequestPath.dia",
+    "object" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/AdHTTPRequestPath.o",
+    "swift-dependencies" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/AdHTTPRequestPath.swiftdeps"
+  },
+  "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/SourcePackages/checkouts/purchases-ios-spm/Sources/Ads/Events/Networking/PostAdEventsOperation.swift" : {
+    "const-values" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/PostAdEventsOperation.swiftconstvalues",
+    "dependencies" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/PostAdEventsOperation.d",
+    "diagnostics" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/PostAdEventsOperation.dia",
+    "object" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/PostAdEventsOperation.o",
+    "swift-dependencies" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/PostAdEventsOperation.swiftdeps"
+  },
+  "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/SourcePackages/checkouts/purchases-ios-spm/Sources/Ads/Events/StoredAdEvent.swift" : {
+    "const-values" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/StoredAdEvent.swiftconstvalues",
+    "dependencies" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/StoredAdEvent.d",
+    "diagnostics" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/StoredAdEvent.dia",
+    "object" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/StoredAdEvent.o",
+    "swift-dependencies" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/StoredAdEvent.swiftdeps"
+  },
+  "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/SourcePackages/checkouts/purchases-ios-spm/Sources/Ads/Events/StoredAdEventSerializer.swift" : {
+    "const-values" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/StoredAdEventSerializer.swiftconstvalues",
+    "dependencies" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/StoredAdEventSerializer.d",
+    "diagnostics" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/StoredAdEventSerializer.dia",
+    "object" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/StoredAdEventSerializer.o",
+    "swift-dependencies" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/StoredAdEventSerializer.swiftdeps"
+  },
+  "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/SourcePackages/checkouts/purchases-ios-spm/Sources/Attribution/ASIdManagerProxy.swift" : {
+    "const-values" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/ASIdManagerProxy.swiftconstvalues",
+    "dependencies" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/ASIdManagerProxy.d",
+    "diagnostics" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/ASIdManagerProxy.dia",
+    "object" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/ASIdManagerProxy.o",
+    "swift-dependencies" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/ASIdManagerProxy.swiftdeps"
+  },
+  "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/SourcePackages/checkouts/purchases-ios-spm/Sources/Attribution/AttributionData.swift" : {
+    "const-values" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/AttributionData.swiftconstvalues",
+    "dependencies" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/AttributionData.d",
+    "diagnostics" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/AttributionData.dia",
+    "object" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/AttributionData.o",
+    "swift-dependencies" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/AttributionData.swiftdeps"
+  },
+  "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/SourcePackages/checkouts/purchases-ios-spm/Sources/Attribution/AttributionFetcher.swift" : {
+    "const-values" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/AttributionFetcher.swiftconstvalues",
+    "dependencies" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/AttributionFetcher.d",
+    "diagnostics" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/AttributionFetcher.dia",
+    "object" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/AttributionFetcher.o",
+    "swift-dependencies" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/AttributionFetcher.swiftdeps"
+  },
+  "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/SourcePackages/checkouts/purchases-ios-spm/Sources/Attribution/AttributionNetwork.swift" : {
+    "const-values" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/AttributionNetwork.swiftconstvalues",
+    "dependencies" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/AttributionNetwork.d",
+    "diagnostics" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/AttributionNetwork.dia",
+    "object" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/AttributionNetwork.o",
+    "swift-dependencies" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/AttributionNetwork.swiftdeps"
+  },
+  "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/SourcePackages/checkouts/purchases-ios-spm/Sources/Attribution/AttributionPoster.swift" : {
+    "const-values" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/AttributionPoster.swiftconstvalues",
+    "dependencies" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/AttributionPoster.d",
+    "diagnostics" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/AttributionPoster.dia",
+    "object" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/AttributionPoster.o",
+    "swift-dependencies" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/AttributionPoster.swiftdeps"
+  },
+  "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/SourcePackages/checkouts/purchases-ios-spm/Sources/Attribution/AttributionTypeFactory.swift" : {
+    "const-values" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/AttributionTypeFactory.swiftconstvalues",
+    "dependencies" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/AttributionTypeFactory.d",
+    "diagnostics" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/AttributionTypeFactory.dia",
+    "object" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/AttributionTypeFactory.o",
+    "swift-dependencies" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/AttributionTypeFactory.swiftdeps"
+  },
+  "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/SourcePackages/checkouts/purchases-ios-spm/Sources/Attribution/TrackingManagerProxy.swift" : {
+    "const-values" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/TrackingManagerProxy.swiftconstvalues",
+    "dependencies" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/TrackingManagerProxy.d",
+    "diagnostics" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/TrackingManagerProxy.dia",
+    "object" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/TrackingManagerProxy.o",
+    "swift-dependencies" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/TrackingManagerProxy.swiftdeps"
+  },
+  "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/SourcePackages/checkouts/purchases-ios-spm/Sources/Caching/CacheStatus.swift" : {
+    "const-values" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/CacheStatus.swiftconstvalues",
+    "dependencies" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/CacheStatus.d",
+    "diagnostics" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/CacheStatus.dia",
+    "object" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/CacheStatus.o",
+    "swift-dependencies" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/CacheStatus.swiftdeps"
+  },
+  "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/SourcePackages/checkouts/purchases-ios-spm/Sources/Caching/Checksum.swift" : {
+    "const-values" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/Checksum.swiftconstvalues",
+    "dependencies" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/Checksum.d",
+    "diagnostics" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/Checksum.dia",
+    "object" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/Checksum.o",
+    "swift-dependencies" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/Checksum.swiftdeps"
+  },
+  "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/SourcePackages/checkouts/purchases-ios-spm/Sources/Caching/DeviceCache.swift" : {
+    "const-values" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/DeviceCache.swiftconstvalues",
+    "dependencies" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/DeviceCache.d",
+    "diagnostics" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/DeviceCache.dia",
+    "object" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/DeviceCache.o",
+    "swift-dependencies" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/DeviceCache.swiftdeps"
+  },
+  "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/SourcePackages/checkouts/purchases-ios-spm/Sources/Caching/DirectoryHelper.swift" : {
+    "const-values" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/DirectoryHelper.swiftconstvalues",
+    "dependencies" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/DirectoryHelper.d",
+    "diagnostics" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/DirectoryHelper.dia",
+    "object" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/DirectoryHelper.o",
+    "swift-dependencies" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/RevenueCat.build/Debug-iphonesimulator/RevenueCat.build/Objects-normal/arm64/DirectoryHelper.swiftdeps"
+  }
+}

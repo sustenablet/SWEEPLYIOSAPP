@@ -1,9 +1,10 @@
 252b207142b458b339930103937061c250a132d2	not-for-merge	branch 'change-mega-yield' of https://github.com/pointfreeco/swift-concurrency-extras
 bac665e9d9038dd1f809e702674c420a19dd501a	not-for-merge	branch 'gh-pages' of https://github.com/pointfreeco/swift-concurrency-extras
-d74eaaa106e66184655982433b10a2f2dffbe2ac	not-for-merge	branch 'main' of https://github.com/pointfreeco/swift-concurrency-extras
+f9db8422fa13f554987eba71887f9652c4a46b9b	not-for-merge	branch 'main' of https://github.com/pointfreeco/swift-concurrency-extras
 5c512cf5d9fefc4809ff141d0301d7fdda1eeaa5	not-for-merge	branch 'mutex-backport' of https://github.com/pointfreeco/swift-concurrency-extras
 a46265bb4f75808b0e15d971eebc408f557870a3	not-for-merge	branch 'release/0.x' of https://github.com/pointfreeco/swift-concurrency-extras
 c9ac291d1e7e78377ec5c1ea1b61a8963ab1f426	not-for-merge	branch 'swift-testing' of https://github.com/pointfreeco/swift-concurrency-extras
+dc0776a77729346ba854a07ed4273dfbe2aa9a3a	not-for-merge	branch 'task-local-test-trait' of https://github.com/pointfreeco/swift-concurrency-extras
 1bc99b0c2815a1c199f7672d371f157dc20a24c8	not-for-merge	'refs/pull/1/head' of https://github.com/pointfreeco/swift-concurrency-extras
 a3610741d27e7d2ed8e4e204d2725aa1e67304d4	not-for-merge	'refs/pull/11/head' of https://github.com/pointfreeco/swift-concurrency-extras
 d1341a191fa98361e130e8df2243ffaf9fc82921	not-for-merge	'refs/pull/12/head' of https://github.com/pointfreeco/swift-concurrency-extras
@@ -47,6 +48,9 @@ aec3de2fe136182a45709695a72bdb420ff555a7	not-for-merge	'refs/pull/56/head' of ht
 5dc452ad7316a21ab91b7ce7dc7f4b7f449371b7	not-for-merge	'refs/pull/58/head' of https://github.com/pointfreeco/swift-concurrency-extras
 7e923512816266750ed1045c6687c8aebf0d5f32	not-for-merge	'refs/pull/59/head' of https://github.com/pointfreeco/swift-concurrency-extras
 83b7cce8a5cc633215de53d295fc64839caedfce	not-for-merge	'refs/pull/6/head' of https://github.com/pointfreeco/swift-concurrency-extras
+34663e236e89a1dbf632bb2c35dc64d1c58b57f6	not-for-merge	'refs/pull/61/head' of https://github.com/pointfreeco/swift-concurrency-extras
+28e138af77f8703171273fc4f245a359fe3f64a3	not-for-merge	'refs/pull/62/head' of https://github.com/pointfreeco/swift-concurrency-extras
+162b6d79590c74c96a6e4f5073380206bab2be2a	not-for-merge	'refs/pull/63/head' of https://github.com/pointfreeco/swift-concurrency-extras
 21df3dffb0b0ff543cecc84714884415c2cfa191	not-for-merge	'refs/pull/7/head' of https://github.com/pointfreeco/swift-concurrency-extras
 19c946d2f26bbab6b01d61c980ae52e2bdafc304	not-for-merge	'refs/pull/8/head' of https://github.com/pointfreeco/swift-concurrency-extras
 5e8f28f76b85e12c6dbf2c0249db64e9a5672ebf	not-for-merge	'refs/pull/9/head' of https://github.com/pointfreeco/swift-concurrency-extras

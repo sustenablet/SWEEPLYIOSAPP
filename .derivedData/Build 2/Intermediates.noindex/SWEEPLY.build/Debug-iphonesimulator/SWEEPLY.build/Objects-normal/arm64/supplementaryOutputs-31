@@ -1,0 +1,65 @@
+{
+  "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/SWEEPLY/SWEEPLY/ProductTutorialView.swift" : {
+    "const-values" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/SWEEPLY.build/Debug-iphonesimulator/SWEEPLY.build/Objects-normal/arm64/ProductTutorialView.swiftconstvalues",
+    "dependencies" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/SWEEPLY.build/Debug-iphonesimulator/SWEEPLY.build/Objects-normal/arm64/ProductTutorialView.d",
+    "diagnostics" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/SWEEPLY.build/Debug-iphonesimulator/SWEEPLY.build/Objects-normal/arm64/ProductTutorialView.dia",
+    "object" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/SWEEPLY.build/Debug-iphonesimulator/SWEEPLY.build/Objects-normal/arm64/ProductTutorialView.o",
+    "swift-dependencies" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/SWEEPLY.build/Debug-iphonesimulator/SWEEPLY.build/Objects-normal/arm64/ProductTutorialView.swiftdeps"
+  },
+  "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/SWEEPLY/SWEEPLY/ProfileStore.swift" : {
+    "const-values" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/SWEEPLY.build/Debug-iphonesimulator/SWEEPLY.build/Objects-normal/arm64/ProfileStore.swiftconstvalues",
+    "dependencies" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/SWEEPLY.build/Debug-iphonesimulator/SWEEPLY.build/Objects-normal/arm64/ProfileStore.d",
+    "diagnostics" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/SWEEPLY.build/Debug-iphonesimulator/SWEEPLY.build/Objects-normal/arm64/ProfileStore.dia",
+    "object" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/SWEEPLY.build/Debug-iphonesimulator/SWEEPLY.build/Objects-normal/arm64/ProfileStore.o",
+    "swift-dependencies" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/SWEEPLY.build/Debug-iphonesimulator/SWEEPLY.build/Objects-normal/arm64/ProfileStore.swiftdeps"
+  },
+  "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/SWEEPLY/SWEEPLY/RevenueDetailView.swift" : {
+    "const-values" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/SWEEPLY.build/Debug-iphonesimulator/SWEEPLY.build/Objects-normal/arm64/RevenueDetailView.swiftconstvalues",
+    "dependencies" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/SWEEPLY.build/Debug-iphonesimulator/SWEEPLY.build/Objects-normal/arm64/RevenueDetailView.d",
+    "diagnostics" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/SWEEPLY.build/Debug-iphonesimulator/SWEEPLY.build/Objects-normal/arm64/RevenueDetailView.dia",
+    "object" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/SWEEPLY.build/Debug-iphonesimulator/SWEEPLY.build/Objects-normal/arm64/RevenueDetailView.o",
+    "swift-dependencies" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/SWEEPLY.build/Debug-iphonesimulator/SWEEPLY.build/Objects-normal/arm64/RevenueDetailView.swiftdeps"
+  },
+  "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/SWEEPLY/SWEEPLY/RootView.swift" : {
+    "const-values" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/SWEEPLY.build/Debug-iphonesimulator/SWEEPLY.build/Objects-normal/arm64/RootView.swiftconstvalues",
+    "dependencies" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/SWEEPLY.build/Debug-iphonesimulator/SWEEPLY.build/Objects-normal/arm64/RootView.d",
+    "diagnostics" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/SWEEPLY.build/Debug-iphonesimulator/SWEEPLY.build/Objects-normal/arm64/RootView.dia",
+    "object" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/SWEEPLY.build/Debug-iphonesimulator/SWEEPLY.build/Objects-normal/arm64/RootView.o",
+    "swift-dependencies" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/SWEEPLY.build/Debug-iphonesimulator/SWEEPLY.build/Objects-normal/arm64/RootView.swiftdeps"
+  },
+  "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/SWEEPLY/SWEEPLY/SMSComposer.swift" : {
+    "const-values" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/SWEEPLY.build/Debug-iphonesimulator/SWEEPLY.build/Objects-normal/arm64/SMSComposer.swiftconstvalues",
+    "dependencies" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/SWEEPLY.build/Debug-iphonesimulator/SWEEPLY.build/Objects-normal/arm64/SMSComposer.d",
+    "diagnostics" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/SWEEPLY.build/Debug-iphonesimulator/SWEEPLY.build/Objects-normal/arm64/SMSComposer.dia",
+    "object" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/SWEEPLY.build/Debug-iphonesimulator/SWEEPLY.build/Objects-normal/arm64/SMSComposer.o",
+    "swift-dependencies" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/SWEEPLY.build/Debug-iphonesimulator/SWEEPLY.build/Objects-normal/arm64/SMSComposer.swiftdeps"
+  },
+  "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/SWEEPLY/SWEEPLY/ScheduleView.swift" : {
+    "const-values" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/SWEEPLY.build/Debug-iphonesimulator/SWEEPLY.build/Objects-normal/arm64/ScheduleView.swiftconstvalues",
+    "dependencies" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/SWEEPLY.build/Debug-iphonesimulator/SWEEPLY.build/Objects-normal/arm64/ScheduleView.d",
+    "diagnostics" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/SWEEPLY.build/Debug-iphonesimulator/SWEEPLY.build/Objects-normal/arm64/ScheduleView.dia",
+    "object" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/SWEEPLY.build/Debug-iphonesimulator/SWEEPLY.build/Objects-normal/arm64/ScheduleView.o",
+    "swift-dependencies" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/SWEEPLY.build/Debug-iphonesimulator/SWEEPLY.build/Objects-normal/arm64/ScheduleView.swiftdeps"
+  },
+  "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/SWEEPLY/SWEEPLY/ServiceCatalogView.swift" : {
+    "const-values" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/SWEEPLY.build/Debug-iphonesimulator/SWEEPLY.build/Objects-normal/arm64/ServiceCatalogView.swiftconstvalues",
+    "dependencies" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/SWEEPLY.build/Debug-iphonesimulator/SWEEPLY.build/Objects-normal/arm64/ServiceCatalogView.d",
+    "diagnostics" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/SWEEPLY.build/Debug-iphonesimulator/SWEEPLY.build/Objects-normal/arm64/ServiceCatalogView.dia",
+    "object" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/SWEEPLY.build/Debug-iphonesimulator/SWEEPLY.build/Objects-normal/arm64/ServiceCatalogView.o",
+    "swift-dependencies" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/SWEEPLY.build/Debug-iphonesimulator/SWEEPLY.build/Objects-normal/arm64/ServiceCatalogView.swiftdeps"
+  },
+  "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/SWEEPLY/SWEEPLY/SettingsView.swift" : {
+    "const-values" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/SWEEPLY.build/Debug-iphonesimulator/SWEEPLY.build/Objects-normal/arm64/SettingsView.swiftconstvalues",
+    "dependencies" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/SWEEPLY.build/Debug-iphonesimulator/SWEEPLY.build/Objects-normal/arm64/SettingsView.d",
+    "diagnostics" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/SWEEPLY.build/Debug-iphonesimulator/SWEEPLY.build/Objects-normal/arm64/SettingsView.dia",
+    "object" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/SWEEPLY.build/Debug-iphonesimulator/SWEEPLY.build/Objects-normal/arm64/SettingsView.o",
+    "swift-dependencies" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/SWEEPLY.build/Debug-iphonesimulator/SWEEPLY.build/Objects-normal/arm64/SettingsView.swiftdeps"
+  },
+  "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/SWEEPLY/SWEEPLY/SplashView.swift" : {
+    "const-values" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/SWEEPLY.build/Debug-iphonesimulator/SWEEPLY.build/Objects-normal/arm64/SplashView.swiftconstvalues",
+    "dependencies" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/SWEEPLY.build/Debug-iphonesimulator/SWEEPLY.build/Objects-normal/arm64/SplashView.d",
+    "diagnostics" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/SWEEPLY.build/Debug-iphonesimulator/SWEEPLY.build/Objects-normal/arm64/SplashView.dia",
+    "object" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/SWEEPLY.build/Debug-iphonesimulator/SWEEPLY.build/Objects-normal/arm64/SplashView.o",
+    "swift-dependencies" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/SWEEPLY.build/Debug-iphonesimulator/SWEEPLY.build/Objects-normal/arm64/SplashView.swiftdeps"
+  }
+}

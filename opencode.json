@@ -1,0 +1,14 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "model": "anthropic/claude-opus-4-6",
+  "instructions": ["AGENTS.md", "SWEEPLY.md", "CURSOR_CONTEXT.md"],
+  "agent": {
+    "ios-builder": {
+      "description": "Builds, tests, and runs the Sweeply iOS app. Use when building the app, running on simulator, or working with Xcode build tools.",
+      "mode": "primary",
+      "permission": {
+        "bash": "allow"
+      }
+    }
+  }
+}

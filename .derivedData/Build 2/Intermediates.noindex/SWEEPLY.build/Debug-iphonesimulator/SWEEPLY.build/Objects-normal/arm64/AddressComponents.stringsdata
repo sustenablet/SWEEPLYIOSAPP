@@ -1,0 +1,32 @@
+{
+  "source": "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/SWEEPLY/SWEEPLY/Components/AddressComponents.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "123 Main St",
+        "location": {
+          "startingColumn": 27,
+          "startingLine": 84
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 27,
+          "startingLine": 187
+        }
+      },
+      {
+        "comment": "",
+        "key": "Search states",
+        "location": {
+          "startingColumn": 48,
+          "startingLine": 388
+        }
+      }
+    ]
+  },
+  "version": 1
+}

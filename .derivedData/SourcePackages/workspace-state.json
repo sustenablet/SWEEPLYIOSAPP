@@ -7,27 +7,10 @@
       {
         "basedOn" : null,
         "packageRef" : {
-          "identity" : "purchases-ios-spm",
-          "kind" : "remoteSourceControl",
-          "location" : "https://github.com/RevenueCat/purchases-ios-spm.git",
-          "name" : "purchases-ios-spm"
-        },
-        "state" : {
-          "checkoutState" : {
-            "revision" : "a06accc1543fcedc3094d4b5b9a40b84e2213e8e",
-            "version" : "5.69.0"
-          },
-          "name" : "sourceControlCheckout"
-        },
-        "subpath" : "purchases-ios-spm"
-      },
-      {
-        "basedOn" : null,
-        "packageRef" : {
           "identity" : "supabase-swift",
           "kind" : "remoteSourceControl",
           "location" : "https://github.com/supabase/supabase-swift.git",
-          "name" : "supabase-swift"
+          "name" : "Supabase"
         },
         "state" : {
           "checkoutState" : {

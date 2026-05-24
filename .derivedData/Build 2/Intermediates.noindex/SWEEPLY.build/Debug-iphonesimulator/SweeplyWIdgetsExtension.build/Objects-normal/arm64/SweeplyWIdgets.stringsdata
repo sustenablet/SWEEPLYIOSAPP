@@ -1,0 +1,320 @@
+{
+  "source": "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/SWEEPLY/SweeplyWIdgets/SweeplyWIdgets.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "NEXT JOB",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 115
+        }
+      },
+      {
+        "comment": "",
+        "key": " at ",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 146
+        }
+      },
+      {
+        "comment": "",
+        "key": "TODAY'S SCHEDULE",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 158
+        }
+      },
+      {
+        "comment": "",
+        "key": "All caught up",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 170
+        }
+      },
+      {
+        "comment": "",
+        "key": "No jobs",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 174
+        }
+      },
+      {
+        "comment": "",
+        "key": "Next Job",
+        "location": {
+          "startingColumn": 35,
+          "startingLine": 197
+        }
+      },
+      {
+        "comment": "",
+        "key": "Your next upcoming job at a glance.",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 198
+        }
+      },
+      {
+        "comment": "",
+        "key": "TODAY'S SCHEDULE",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 215
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld job%@",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 221
+        }
+      },
+      {
+        "comment": "",
+        "key": "All clear today",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 235
+        }
+      },
+      {
+        "comment": "",
+        "key": "7-day revenue",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 252
+        }
+      },
+      {
+        "comment": "",
+        "key": "·",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 287
+        }
+      },
+      {
+        "comment": "",
+        "key": "Today's Schedule",
+        "location": {
+          "startingColumn": 35,
+          "startingLine": 309
+        }
+      },
+      {
+        "comment": "",
+        "key": "See all of today's jobs in one glance.",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 310
+        }
+      },
+      {
+        "comment": "",
+        "key": "+ %lld more job%@",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 385
+        }
+      },
+      {
+        "comment": "",
+        "key": "SWEEPLY",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 334
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 345
+        }
+      },
+      {
+        "comment": "",
+        "key": "job%@ today",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 348
+        }
+      },
+      {
+        "comment": "",
+        "key": "No jobs today",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 365
+        }
+      },
+      {
+        "comment": "",
+        "key": "Full Day Schedule",
+        "location": {
+          "startingColumn": 35,
+          "startingLine": 476
+        }
+      },
+      {
+        "comment": "",
+        "key": "Your complete today schedule with up to 6 jobs and revenue stats.",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 477
+        }
+      },
+      {
+        "comment": "",
+        "key": "THIS WK",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 513
+        }
+      },
+      {
+        "comment": "",
+        "key": "WEEK REVENUE",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 521
+        }
+      },
+      {
+        "comment": "",
+        "key": "7-day earnings",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 529
+        }
+      },
+      {
+        "comment": "",
+        "key": "Week Revenue",
+        "location": {
+          "startingColumn": 35,
+          "startingLine": 545
+        }
+      },
+      {
+        "comment": "",
+        "key": "Your earnings over the past 7 days.",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 546
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 573
+        }
+      },
+      {
+        "comment": "",
+        "key": "TODAY",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 576
+        }
+      },
+      {
+        "comment": "",
+        "key": "JOBS TODAY",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 584
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld %@",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 587
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld completed",
+        "location": {
+          "startingColumn": 39,
+          "startingLine": 591
+        }
+      },
+      {
+        "comment": "",
+        "key": "none completed yet",
+        "location": {
+          "startingColumn": 71,
+          "startingLine": 591
+        }
+      },
+      {
+        "comment": "",
+        "key": "Jobs Today",
+        "location": {
+          "startingColumn": 35,
+          "startingLine": 607
+        }
+      },
+      {
+        "comment": "",
+        "key": "How many jobs you have scheduled for today.",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 608
+        }
+      },
+      {
+        "comment": "",
+        "key": "TODAY",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 639
+        }
+      },
+      {
+        "comment": "",
+        "key": "TODAY'S VALUE",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 647
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld %@ on schedule",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 655
+        }
+      },
+      {
+        "comment": "",
+        "key": "Today's Revenue",
+        "location": {
+          "startingColumn": 35,
+          "startingLine": 671
+        }
+      },
+      {
+        "comment": "",
+        "key": "Total value of all jobs scheduled for today.",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 672
+        }
+      }
+    ]
+  },
+  "version": 1
+}

@@ -1,0 +1,29 @@
+{
+  "" : {
+    "diagnostics" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/SWEEPLY.build/Debug-iphonesimulator/SWEEPLYUITests.build/Objects-normal/arm64/SWEEPLYUITests-primary.dia",
+    "emit-module-dependencies" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/SWEEPLY.build/Debug-iphonesimulator/SWEEPLYUITests.build/Objects-normal/arm64/SWEEPLYUITests-primary-emit-module.d",
+    "emit-module-diagnostics" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/SWEEPLY.build/Debug-iphonesimulator/SWEEPLYUITests.build/Objects-normal/arm64/SWEEPLYUITests-primary-emit-module.dia",
+    "pch" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/SWEEPLY.build/Debug-iphonesimulator/SWEEPLYUITests.build/Objects-normal/arm64/SWEEPLYUITests-primary-Bridging-header.pch",
+    "swift-dependencies" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/SWEEPLY.build/Debug-iphonesimulator/SWEEPLYUITests.build/Objects-normal/arm64/SWEEPLYUITests-primary.swiftdeps"
+  },
+  "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/SWEEPLY/SWEEPLYUITests/SWEEPLYUITests.swift" : {
+    "const-values" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/SWEEPLY.build/Debug-iphonesimulator/SWEEPLYUITests.build/Objects-normal/arm64/SWEEPLYUITests.swiftconstvalues",
+    "dependencies" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/SWEEPLY.build/Debug-iphonesimulator/SWEEPLYUITests.build/Objects-normal/arm64/SWEEPLYUITests.d",
+    "diagnostics" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/SWEEPLY.build/Debug-iphonesimulator/SWEEPLYUITests.build/Objects-normal/arm64/SWEEPLYUITests.dia",
+    "index-unit-output-path" : "/SWEEPLY.build/Debug-iphonesimulator/SWEEPLYUITests.build/Objects-normal/arm64/SWEEPLYUITests.o",
+    "llvm-bc" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/SWEEPLY.build/Debug-iphonesimulator/SWEEPLYUITests.build/Objects-normal/arm64/SWEEPLYUITests.bc",
+    "object" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/SWEEPLY.build/Debug-iphonesimulator/SWEEPLYUITests.build/Objects-normal/arm64/SWEEPLYUITests.o",
+    "swift-dependencies" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/SWEEPLY.build/Debug-iphonesimulator/SWEEPLYUITests.build/Objects-normal/arm64/SWEEPLYUITests.swiftdeps",
+    "swiftmodule" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/SWEEPLY.build/Debug-iphonesimulator/SWEEPLYUITests.build/Objects-normal/arm64/SWEEPLYUITests~partial.swiftmodule"
+  },
+  "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/SWEEPLY/SWEEPLYUITests/SWEEPLYUITestsLaunchTests.swift" : {
+    "const-values" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/SWEEPLY.build/Debug-iphonesimulator/SWEEPLYUITests.build/Objects-normal/arm64/SWEEPLYUITestsLaunchTests.swiftconstvalues",
+    "dependencies" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/SWEEPLY.build/Debug-iphonesimulator/SWEEPLYUITests.build/Objects-normal/arm64/SWEEPLYUITestsLaunchTests.d",
+    "diagnostics" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/SWEEPLY.build/Debug-iphonesimulator/SWEEPLYUITests.build/Objects-normal/arm64/SWEEPLYUITestsLaunchTests.dia",
+    "index-unit-output-path" : "/SWEEPLY.build/Debug-iphonesimulator/SWEEPLYUITests.build/Objects-normal/arm64/SWEEPLYUITestsLaunchTests.o",
+    "llvm-bc" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/SWEEPLY.build/Debug-iphonesimulator/SWEEPLYUITests.build/Objects-normal/arm64/SWEEPLYUITestsLaunchTests.bc",
+    "object" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/SWEEPLY.build/Debug-iphonesimulator/SWEEPLYUITests.build/Objects-normal/arm64/SWEEPLYUITestsLaunchTests.o",
+    "swift-dependencies" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/SWEEPLY.build/Debug-iphonesimulator/SWEEPLYUITests.build/Objects-normal/arm64/SWEEPLYUITestsLaunchTests.swiftdeps",
+    "swiftmodule" : "/Users/joaoleite/Desktop/SWEEPLYIOSAPP/.derivedData/Build/Intermediates.noindex/SWEEPLY.build/Debug-iphonesimulator/SWEEPLYUITests.build/Objects-normal/arm64/SWEEPLYUITestsLaunchTests~partial.swiftmodule"
+  }
+}
