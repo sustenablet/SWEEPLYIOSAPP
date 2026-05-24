@@ -680,30 +680,32 @@ struct FinancesView: View {
     }
 
     private var invoicesBlock: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            SectionCard {
-                VStack(alignment: .leading, spacing: 14) {
-                    HStack {
-                        Text("Invoices".translated())
-                            .font(.system(size: 17, weight: .semibold))
-                            .foregroundStyle(Color.sweeplyNavy)
-                        Spacer()
-                    }
+        SectionCard {
+            VStack(alignment: .leading, spacing: 0) {
+                HStack {
+                    Text("Invoices".translated())
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundStyle(Color.sweeplyNavy)
+                    Spacer()
+                }
+                .padding(.bottom, 12)
 
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 10) {
-                            ForEach(InvoiceFilter.allCases, id: \.self) { filter in
-                                filterTab(filter)
-                            }
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 10) {
+                        ForEach(InvoiceFilter.allCases, id: \.self) { filter in
+                            filterTab(filter)
                         }
                     }
                 }
-            }
+                .padding(.bottom, 12)
 
-            if filteredInvoices.isEmpty {
-                emptyState
-            } else {
-                SectionCard {
+                Divider()
+                    .padding(.horizontal, -16)
+
+                if filteredInvoices.isEmpty {
+                    emptyState
+                        .padding(.top, 14)
+                } else {
                     VStack(spacing: 0) {
                         ForEach(Array(displayInvoices.enumerated()), id: \.element.id) { idx, invoice in
                             MinimalInvoiceRow(invoice: invoice, invoicesStore: invoicesStore) {
@@ -736,7 +738,8 @@ struct FinancesView: View {
                             .buttonStyle(.plain)
                         }
                     }
-                    .padding(-16)
+                    .padding(.horizontal, -16)
+                    .padding(.top, 0)
                 }
             }
         }
