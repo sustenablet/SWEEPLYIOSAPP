@@ -232,7 +232,7 @@ struct JobDetailView: View {
                             Circle()
                                 .fill(Color.sweeplyNavy.opacity(0.1))
                                 .frame(width: 48, height: 48)
-                            Text(String(client.name.prefix(1)).uppercased())
+                            Text(client.avatarInitials)
                                 .font(.system(size: 18, weight: .bold))
                                 .foregroundStyle(Color.sweeplyNavy)
                         }

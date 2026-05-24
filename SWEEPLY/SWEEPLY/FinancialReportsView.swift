@@ -159,7 +159,9 @@ struct FinancialReportsView: View {
         }
         let cal = Calendar.current
         let now = Date()
-        let f = DateFormatter(); f.dateFormat = "MMM"
+        let f = DateFormatter()
+        f.locale = Locale.app
+        f.dateFormat = "MMM"
         return (0..<count).reversed().compactMap { offset -> MonthlyBar? in
             guard let monthStart = cal.date(byAdding: .month, value: -offset, to: now),
                   let interval = cal.dateInterval(of: .month, for: monthStart) else { return nil }
@@ -176,7 +178,9 @@ struct FinancialReportsView: View {
         let today = cal.startOfDay(for: Date())
         let upcomingJobs     = jobsStore.jobs.filter { $0.status == .scheduled && $0.date >= today }
         let unpaidInv        = invoicesStore.invoices.filter { $0.status == .unpaid && $0.dueDate >= today }
-        let fmt = DateFormatter(); fmt.dateFormat = "MMM d"
+        let fmt = DateFormatter()
+        fmt.locale = Locale.app
+        fmt.dateFormat = "MMM d"
         return (0..<forecastWeekCount).map { offset in
             let weekStart = cal.date(byAdding: .weekOfYear, value: offset, to: today) ?? today
             let weekEnd   = cal.date(byAdding: .day, value: 7, to: weekStart) ?? weekStart

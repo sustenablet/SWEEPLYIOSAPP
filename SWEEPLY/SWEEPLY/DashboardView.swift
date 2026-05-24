@@ -690,8 +690,18 @@ struct DashJobRow: View {
         }.padding(.vertical, 10)
         .opacity(isCancelled ? 0.7 : 1.0)
     }
-    private var timeStr: String { let f = DateFormatter(); f.dateFormat = "h:mm"; return f.string(from: job.date) }
-    private var amPm: String { let f = DateFormatter(); f.dateFormat = "a"; return f.string(from: job.date).uppercased() }
+    private var timeStr: String {
+        let f = DateFormatter()
+        f.locale = Locale.app
+        f.dateFormat = "h:mm"
+        return f.string(from: job.date)
+    }
+    private var amPm: String {
+        let f = DateFormatter()
+        f.locale = Locale.app
+        f.dateFormat = "a"
+        return f.string(from: job.date).uppercased()
+    }
     private var statusColor: Color {
         switch job.status {
         case .completed:  return Color.sweeplyAccent

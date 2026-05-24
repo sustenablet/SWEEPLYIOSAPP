@@ -70,10 +70,12 @@ struct SWEEPLYApp: App {
     @State private var subscriptionManager = SubscriptionManager()
 
     @AppStorage("pendingShortcut") private var pendingShortcut: String = ""
+    @AppStorage("appLanguage") private var appLanguage: String = AppLanguage.english.rawValue
 
     var body: some Scene {
         WindowGroup {
             RootView()
+                .environment(\.locale, Locale(identifier: appLanguage))
                 .environment(appSession)
                 .environment(clientsStore)
                 .environment(jobsStore)
@@ -94,6 +96,9 @@ struct SWEEPLYApp: App {
                             await teamStore.load(ownerId: uid)
                         }
                     }
+                }
+                .onChange(of: appLanguage) { _, _ in
+                    registerQuickActions()
                 }
                 .onOpenURL { url in
                     // Auth callbacks (email confirmation, OAuth redirect)
@@ -131,13 +136,13 @@ struct SWEEPLYApp: App {
         UIApplication.shared.shortcutItems = [
             UIApplicationShortcutItem(
                 type: "com.sweeply.newjob",
-                localizedTitle: "New Job",
+                localizedTitle: "New Job".translated(),
                 localizedSubtitle: nil,
                 icon: UIApplicationShortcutIcon(systemImageName: "briefcase.fill")
             ),
             UIApplicationShortcutItem(
                 type: "com.sweeply.schedule",
-                localizedTitle: "Today's Schedule",
+                localizedTitle: "Today's Schedule".translated(),
                 localizedSubtitle: nil,
                 icon: UIApplicationShortcutIcon(systemImageName: "calendar")
             )

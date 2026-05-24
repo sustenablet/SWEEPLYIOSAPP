@@ -82,6 +82,7 @@ final class ClientsStore {
                 preferredService: newClient.preferredService?.rawValue,
                 entryInstructions: newClient.entryInstructions,
                 notes: newClient.notes,
+                avatarTone: newClient.avatarToneRaw,
                 isActive: newClient.isActive
             )
             let inserted: ClientRow = try await client
@@ -123,6 +124,7 @@ final class ClientsStore {
                 preferredService: updated.preferredService?.rawValue,
                 entryInstructions: updated.entryInstructions,
                 notes: updated.notes,
+                avatarTone: updated.avatarToneRaw,
                 isActive: updated.isActive
             )
             let refreshed: ClientRow = try await client
@@ -209,6 +211,7 @@ private struct ClientRow: Decodable {
     let isActive: Bool?
     let latitude: Double?
     let longitude: Double?
+    let avatarTone: String?
 
     enum CodingKeys: String, CodingKey {
         case id, name, email, phone, address, city, state, zip, notes, latitude, longitude
@@ -216,6 +219,7 @@ private struct ClientRow: Decodable {
         case preferredService = "preferred_service"
         case entryInstructions = "entry_instructions"
         case isActive = "is_active"
+        case avatarTone = "avatar_tone"
     }
 
     func toClient() -> Client {
@@ -234,6 +238,7 @@ private struct ClientRow: Decodable {
             notes: notes ?? "",
             latitude: latitude,
             longitude: longitude,
+            avatarToneRaw: avatarTone,
             isActive: isActive ?? true
         )
     }
@@ -251,6 +256,7 @@ private struct ClientRowInsert: Encodable {
     let preferredService: String?
     let entryInstructions: String
     let notes: String
+    let avatarTone: String?
     let isActive: Bool
 
     enum CodingKeys: String, CodingKey {
@@ -258,6 +264,7 @@ private struct ClientRowInsert: Encodable {
         case name, email, phone, address, city, state, zip, notes
         case preferredService = "preferred_service"
         case entryInstructions = "entry_instructions"
+        case avatarTone = "avatar_tone"
         case isActive = "is_active"
     }
 }
@@ -278,12 +285,14 @@ private struct ClientRowPatch: Encodable {
     let preferredService: String?
     let entryInstructions: String
     let notes: String
+    let avatarTone: String?
     let isActive: Bool
 
     enum CodingKeys: String, CodingKey {
         case name, email, phone, address, city, state, zip, notes
         case preferredService = "preferred_service"
         case entryInstructions = "entry_instructions"
+        case avatarTone = "avatar_tone"
         case isActive = "is_active"
     }
 }

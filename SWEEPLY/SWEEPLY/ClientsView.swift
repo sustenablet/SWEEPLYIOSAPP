@@ -480,7 +480,7 @@ private struct ClientCard: View {
     let onToggleArchive: () -> Void
 
     private var avatarTone: ClientAvatarTone {
-        ClientAvatarStyle.tone(for: client)
+        client.avatarTone
     }
 
     private var secondaryInfo: (icon: String, text: String)? {
@@ -518,7 +518,7 @@ private struct ClientCard: View {
                 Circle()
                     .fill(client.isActive ? avatarTone.backgroundColor : Color.sweeplyTextSub.opacity(0.10))
                     .frame(width: 58, height: 58)
-                Text(String(client.name.prefix(1)).uppercased())
+                Text(client.avatarInitials)
                     .font(.system(size: 22, weight: .bold))
                     .foregroundStyle(client.isActive ? avatarTone.foregroundColor : Color.sweeplyTextSub)
             }

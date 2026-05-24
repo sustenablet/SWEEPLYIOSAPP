@@ -168,9 +168,36 @@ struct Client: Identifiable {
     var notes: String
     var latitude: Double?
     var longitude: Double?
+    var avatarToneRaw: String? = nil
     var isActive: Bool = true
 
-    init(id: UUID, name: String, email: String, phone: String, address: String, city: String, state: String, zip: String, preferredService: ServiceType?, entryInstructions: String, notes: String, latitude: Double? = nil, longitude: Double? = nil, isActive: Bool = true) {
+    var avatarTone: ClientAvatarTone {
+        ClientAvatarStyle.tone(
+            storedRaw: avatarToneRaw,
+            clientID: id,
+            fallbackName: name
+        )
+    }
+
+    var avatarInitials: String {
+        let parts = name
+            .split(separator: " ")
+            .map(String.init)
+            .filter { !$0.isEmpty }
+
+        switch parts.count {
+        case 0:
+            return "C"
+        case 1:
+            return String(parts[0].prefix(1)).uppercased()
+        default:
+            let first = parts.first?.prefix(1) ?? ""
+            let last = parts.last?.prefix(1) ?? ""
+            return "\(first)\(last)".uppercased()
+        }
+    }
+
+    init(id: UUID, name: String, email: String, phone: String, address: String, city: String, state: String, zip: String, preferredService: ServiceType?, entryInstructions: String, notes: String, latitude: Double? = nil, longitude: Double? = nil, avatarToneRaw: String? = nil, isActive: Bool = true) {
         self.id = id
         self.name = name
         self.email = email
@@ -184,11 +211,12 @@ struct Client: Identifiable {
         self.notes = notes
         self.latitude = latitude
         self.longitude = longitude
+        self.avatarToneRaw = avatarToneRaw
         self.isActive = isActive
     }
 
     // Linker compatibility for previous builds
-    init(id: UUID, name: String, email: String, phone: String, address: String, city: String, state: String, zip: String, preferredService: ServiceType?, entryInstructions: String, notes: String, latitude: Double?, longitude: Double?) {
+    init(id: UUID, name: String, email: String, phone: String, address: String, city: String, state: String, zip: String, preferredService: ServiceType?, entryInstructions: String, notes: String, latitude: Double?, longitude: Double?, avatarToneRaw: String? = nil) {
         self.id = id
         self.name = name
         self.email = email
@@ -202,6 +230,7 @@ struct Client: Identifiable {
         self.notes = notes
         self.latitude = latitude
         self.longitude = longitude
+        self.avatarToneRaw = avatarToneRaw
         self.isActive = true
     }
 }

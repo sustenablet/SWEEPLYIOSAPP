@@ -29,6 +29,7 @@ struct NewClientForm: View {
     @State private var selectedAvatarTone: ClientAvatarTone = .slate
     @State private var didManuallySelectAvatarTone = false
     @State private var showingCreatePreview = false
+    @State private var showAvatarTonePicker = false
 
     private var fallbackSettings: AppSettings {
         var settings = AppSettings()
@@ -67,6 +68,24 @@ struct NewClientForm: View {
         let combined = "\(firstName.trimmingCharacters(in: .whitespaces)) \(lastName.trimmingCharacters(in: .whitespaces))"
             .trimmingCharacters(in: .whitespaces)
         return combined.isEmpty ? "Client Preview".translated() : combined
+    }
+
+    private var previewInitials: String {
+        let parts = previewName
+            .split(separator: " ")
+            .map(String.init)
+            .filter { !$0.isEmpty }
+
+        switch parts.count {
+        case 0:
+            return "C"
+        case 1:
+            return String(parts[0].prefix(1)).uppercased()
+        default:
+            let first = parts.first?.prefix(1) ?? ""
+            let last = parts.last?.prefix(1) ?? ""
+            return "\(first)\(last)".uppercased()
+        }
     }
 
     private var previewAddress: String {
@@ -136,6 +155,62 @@ struct NewClientForm: View {
                                 .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).stroke(Color.sweeplyNavy.opacity(0.15), lineWidth: 1))
                             }
                             .buttonStyle(.plain)
+                        }
+
+                        if editingClient != nil {
+                            VStack(alignment: .leading, spacing: 12) {
+                                Text("AVATAR".translated())
+                                    .font(.system(size: 10, weight: .bold))
+                                    .foregroundStyle(Color.sweeplyTextSub)
+                                    .tracking(1.0)
+
+                                Button {
+                                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                    withAnimation(.easeInOut(duration: 0.2)) {
+                                        showAvatarTonePicker.toggle()
+                                    }
+                                } label: {
+                                    HStack(spacing: 14) {
+                                        ZStack {
+                                            Circle()
+                                                .fill(selectedAvatarTone.backgroundColor)
+                                                .frame(width: 56, height: 56)
+
+                                            Text(editingClient?.avatarInitials ?? previewInitials)
+                                                .font(.system(size: 19, weight: .bold))
+                                                .foregroundStyle(selectedAvatarTone.foregroundColor)
+                                        }
+
+                                        VStack(alignment: .leading, spacing: 3) {
+                                            Text("Client Avatar".translated())
+                                                .font(.system(size: 14, weight: .semibold))
+                                                .foregroundStyle(Color.sweeplyNavy)
+                                            Text("Tap the avatar to change the color.".translated())
+                                                .font(.system(size: 12))
+                                                .foregroundStyle(Color.sweeplyTextSub)
+                                        }
+
+                                        Spacer()
+
+                                        Image(systemName: showAvatarTonePicker ? "chevron.up" : "paintpalette")
+                                            .font(.system(size: 14, weight: .semibold))
+                                            .foregroundStyle(Color.sweeplyTextSub)
+                                    }
+                                    .padding(14)
+                                    .background(Color.sweeplySurface)
+                                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                            .stroke(Color.sweeplyBorder, lineWidth: 1)
+                                    )
+                                }
+                                .buttonStyle(.plain)
+
+                                if showAvatarTonePicker {
+                                    avatarTonePicker
+                                        .transition(.opacity.combined(with: .move(edge: .top)))
+                                }
+                            }
                         }
 
                         // Contact
@@ -308,6 +383,7 @@ struct NewClientForm: View {
                 notes = c.notes
                 selectedAvatarTone = ClientAvatarStyle.tone(for: c)
                 didManuallySelectAvatarTone = true
+                showAvatarTonePicker = false
             } else {
                 selectedAvatarTone = ClientAvatarStyle.defaultTone(for: previewName)
             }
@@ -317,6 +393,7 @@ struct NewClientForm: View {
             selectedAvatarTone = ClientAvatarStyle.defaultTone(for: newValue)
         }
         .animation(.easeInOut(duration: 0.2), value: showingCreatePreview)
+        .animation(.easeInOut(duration: 0.2), value: showAvatarTonePicker)
     }
 
     private func handlePrimaryAction() {
@@ -353,6 +430,7 @@ struct NewClientForm: View {
             updated.zip = zip
             updated.entryInstructions = entryInstructions
             updated.notes = notes
+            updated.avatarToneRaw = selectedAvatarTone.rawValue
             let success = await clientsStore.update(updated)
             guard success else {
                 isSaving = false
@@ -372,7 +450,8 @@ struct NewClientForm: View {
                 zip: zip,
                 preferredService: preferredService,
                 entryInstructions: entryInstructions,
-                notes: notes
+                notes: notes,
+                avatarToneRaw: selectedAvatarTone.rawValue
             )
             let success = await clientsStore.insert(newClient, userId: userId)
             guard success else {
@@ -463,7 +542,7 @@ struct NewClientForm: View {
                     Circle()
                         .fill(selectedAvatarTone.backgroundColor)
                         .frame(width: 58, height: 58)
-                    Text(String(previewName.prefix(1)).uppercased())
+                    Text(previewInitials)
                         .font(.system(size: 22, weight: .bold))
                         .foregroundStyle(selectedAvatarTone.foregroundColor)
                 }
@@ -552,12 +631,12 @@ struct NewClientForm: View {
             didManuallySelectAvatarTone = true
         } label: {
             VStack(spacing: 6) {
-                ZStack {
-                    Circle()
-                        .fill(tone.backgroundColor)
-                        .frame(width: 38, height: 38)
+                    ZStack {
+                        Circle()
+                            .fill(tone.backgroundColor)
+                            .frame(width: 38, height: 38)
 
-                    Text(String(previewName.prefix(1)).uppercased())
+                    Text(previewInitials)
                         .font(.system(size: 15, weight: .bold))
                         .foregroundStyle(tone.foregroundColor)
 

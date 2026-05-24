@@ -51,18 +51,23 @@ enum ClientAvatarStyle {
     private static let storagePrefix = "clientAvatarTone."
 
     static func tone(for client: Client) -> ClientAvatarTone {
-        if let storedRaw = UserDefaults.standard.string(forKey: storagePrefix + client.id.uuidString),
-           let stored = ClientAvatarTone(rawValue: storedRaw) {
-            return stored
-        }
-        return defaultTone(for: client.name)
+        tone(storedRaw: client.avatarToneRaw, clientID: client.id, fallbackName: client.name)
     }
 
     static func tone(for clientID: UUID, fallbackName: String) -> ClientAvatarTone {
+        tone(storedRaw: nil, clientID: clientID, fallbackName: fallbackName)
+    }
+
+    static func tone(storedRaw: String?, clientID: UUID, fallbackName: String) -> ClientAvatarTone {
+        if let storedRaw, let stored = ClientAvatarTone(rawValue: storedRaw) {
+            return stored
+        }
+
         if let storedRaw = UserDefaults.standard.string(forKey: storagePrefix + clientID.uuidString),
            let stored = ClientAvatarTone(rawValue: storedRaw) {
             return stored
         }
+
         return defaultTone(for: fallbackName)
     }
 
