@@ -81,8 +81,6 @@ struct FABView: View {
                 }
                 .buttonStyle(.plain)
             }
-            .padding(.trailing, 20)
-            .padding(.bottom, 80)
         }
     }
 }

@@ -28,6 +28,7 @@ struct RootView: View {
     @State private var getStartedDismissed = false
     @State private var notificationRefreshTrigger = 0
     @State private var lastNotificationRefresh = Date.distantPast
+    @State private var pendingLockTask: Task<Void, Never>? = nil
 
     @AppStorage("hasSeenIntroOnboarding") private var hasSeenIntroOnboarding = true
     @AppStorage("newFeatureDot_revenueBar")  private var dotRevenueBar  = false
@@ -50,6 +51,7 @@ struct RootView: View {
     }
 
     @Environment(\.scenePhase) private var scenePhase
+    private let biometricLockDelay: Duration = .seconds(30)
 
     var body: some View {
         ZStack {
@@ -108,8 +110,9 @@ struct RootView: View {
         .preferredColorScheme(.light)
         .onChange(of: scenePhase) { _, phase in
             if phase == .background && biometricLockEnabled {
-                isLocked = true
+                scheduleDelayedLock()
             } else if phase == .active {
+                cancelDelayedLock()
                 applyTabBarAppearance()
                 if isLocked {
                     authenticate()
@@ -119,6 +122,11 @@ struct RootView: View {
                 if session.isAuthenticated {
                     Task { await refreshNotificationsWithDebounce() }
                 }
+            }
+        }
+        .onChange(of: biometricLockEnabled) { _, enabled in
+            if !enabled {
+                cancelDelayedLock()
             }
         }
         .onChange(of: notificationRefreshTrigger) { _, _ in
@@ -134,6 +142,23 @@ struct RootView: View {
         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("NewNotificationsArrived"))) { _ in
             notificationRefreshTrigger += 1
         }
+    }
+
+    private func scheduleDelayedLock() {
+        cancelDelayedLock()
+        pendingLockTask = Task {
+            try? await Task.sleep(for: biometricLockDelay)
+            guard !Task.isCancelled else { return }
+            await MainActor.run {
+                isLocked = true
+                pendingLockTask = nil
+            }
+        }
+    }
+
+    private func cancelDelayedLock() {
+        pendingLockTask?.cancel()
+        pendingLockTask = nil
     }
 
     private func handleSpotlightLink() {
@@ -221,13 +246,13 @@ struct RootView: View {
                 Image("LockMascot")
                     .resizable()
                     .scaledToFit()
-                    .frame(width: 130, height: 130)
+                    .frame(width: 160, height: 160)
                 VStack(spacing: 10) {
                     Text("Sweeply is Locked".translated())
-                        .font(.system(size: 22, weight: .bold))
+                        .font(.system(size: 26, weight: .bold))
                         .foregroundStyle(Color.sweeplyNavy)
                     Text("Your business data is protected.".translated())
-                        .font(.system(size: 15))
+                        .font(.system(size: 17))
                         .foregroundStyle(Color.sweeplyTextSub)
                 }
                 Spacer()
@@ -281,9 +306,7 @@ struct RootView: View {
                     .tag(Tab.business)
             }
             .tint(Color.sweeplyAccent)
-            .toolbarBackground(Color.sweeplyNavy, for: .tabBar)
             .toolbarBackground(.visible, for: .tabBar)
-            .toolbarColorScheme(.dark, for: .tabBar)
         .onChange(of: selectedTab) { _, _ in
             UIImpactFeedbackGenerator(style: .light).impactOccurred()
             applyTabBarAppearance()
@@ -296,6 +319,8 @@ struct RootView: View {
                 onNewClient: { showNewClient = true },
                 onNewInvoice: { showNewInvoice = true }
             )
+            .padding(.trailing, 20)
+            .padding(.bottom, 14)
         }
     }
         .sheet(isPresented: $showNewJob) {
@@ -423,13 +448,17 @@ struct RootView: View {
     
     private func applyTabBarAppearanceInternal() {
         // ── Tab bar ──────────────────────────────────────────────────────────
+        // iOS 18+/26 renders the tab bar as a floating glass material on top of
+        // the warm-stone app background. White-on-navy unselected colors become
+        // invisible when the system overrides the configured background — so we
+        // use dark adaptive colors that read well on glass *and* any solid bg.
         let tabAppearance = UITabBarAppearance()
-        tabAppearance.configureWithOpaqueBackground()
-        tabAppearance.backgroundColor = UIColor(Color.sweeplyNavy)
+        tabAppearance.configureWithDefaultBackground()
 
-        tabAppearance.stackedLayoutAppearance.normal.iconColor = UIColor(white: 1, alpha: 0.35)
+        let unselectedColor = UIColor(red: 0.15, green: 0.15, blue: 0.18, alpha: 0.55)
+        tabAppearance.stackedLayoutAppearance.normal.iconColor = unselectedColor
         tabAppearance.stackedLayoutAppearance.normal.titleTextAttributes = [
-            .foregroundColor: UIColor(white: 1, alpha: 0.35),
+            .foregroundColor: unselectedColor,
             .font: UIFont.systemFont(ofSize: 10, weight: .medium)
         ]
 
