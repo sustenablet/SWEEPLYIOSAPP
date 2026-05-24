@@ -70,9 +70,34 @@ struct NewClientForm: View {
     }
 
     private var previewAddress: String {
-        [street, city].map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+        [street, city, state].map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
             .filter { !$0.isEmpty }
             .joined(separator: ", ")
+    }
+
+    private var previewPhone: String? {
+        let trimmed = phone.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed
+    }
+
+    private var previewEmail: String? {
+        let trimmed = email.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed
+    }
+
+    private var previewPreferredService: String? {
+        guard let preferredService else { return nil }
+        return preferredService.rawValue
+    }
+
+    private var previewEntryInstructions: String? {
+        let trimmed = entryInstructions.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed
+    }
+
+    private var previewNotes: String? {
+        let trimmed = notes.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed
     }
 
     var body: some View {
@@ -419,7 +444,7 @@ struct NewClientForm: View {
                 }
             }
             .padding(22)
-            .frame(maxWidth: 340)
+            .frame(maxWidth: 356)
             .background(Color.sweeplyBackground)
             .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
             .overlay(
@@ -432,38 +457,54 @@ struct NewClientForm: View {
     }
 
     private var previewCardContent: some View {
-        HStack(spacing: 14) {
-            ZStack {
-                Circle()
-                    .fill(selectedAvatarTone.backgroundColor)
-                    .frame(width: 58, height: 58)
-                Text(String(previewName.prefix(1)).uppercased())
-                    .font(.system(size: 22, weight: .bold))
-                    .foregroundStyle(selectedAvatarTone.foregroundColor)
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .top, spacing: 14) {
+                ZStack {
+                    Circle()
+                        .fill(selectedAvatarTone.backgroundColor)
+                        .frame(width: 58, height: 58)
+                    Text(String(previewName.prefix(1)).uppercased())
+                        .font(.system(size: 22, weight: .bold))
+                        .foregroundStyle(selectedAvatarTone.foregroundColor)
+                }
+
+                VStack(alignment: .leading, spacing: 5) {
+                    Text(previewName)
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundStyle(Color.sweeplyNavy)
+                        .lineLimit(1)
+
+                    if let preferredService = previewPreferredService {
+                        Text(preferredService)
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(Color.sweeplyAccent)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 5)
+                            .background(Color.sweeplyAccent.opacity(0.08))
+                            .clipShape(Capsule())
+                    }
+                }
+
+                Spacer(minLength: 0)
             }
 
-            VStack(alignment: .leading, spacing: 4) {
-                Text(previewName)
-                    .font(.system(size: 17, weight: .semibold))
-                    .foregroundStyle(Color.sweeplyNavy)
-                    .lineLimit(1)
-
+            VStack(alignment: .leading, spacing: 8) {
                 if !previewAddress.isEmpty {
-                    Label(previewAddress, systemImage: "mappin.and.ellipse")
-                        .font(.system(size: 13))
-                        .foregroundStyle(Color.sweeplyTextSub)
-                        .lineLimit(1)
+                    previewInfoRow(icon: "mappin.and.ellipse", text: previewAddress)
                 }
-
-                if !email.isEmpty {
-                    Label(email, systemImage: "envelope")
-                        .font(.system(size: 13))
-                        .foregroundStyle(Color.sweeplyTextSub)
-                        .lineLimit(1)
+                if let previewPhone {
+                    previewInfoRow(icon: "phone", text: previewPhone)
+                }
+                if let previewEmail {
+                    previewInfoRow(icon: "envelope", text: previewEmail)
+                }
+                if let previewEntryInstructions {
+                    previewInfoRow(icon: "key.horizontal", text: previewEntryInstructions)
+                }
+                if let previewNotes {
+                    previewInfoRow(icon: "note.text", text: previewNotes, lineLimit: 3)
                 }
             }
-
-            Spacer(minLength: 0)
         }
         .padding(16)
         .background(Color.sweeplySurface)
@@ -475,20 +516,22 @@ struct NewClientForm: View {
     }
 
     private var avatarTonePicker: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 10) {
             HStack {
                 Text("Avatar Color".translated())
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundStyle(Color.sweeplyNavy)
                 Spacer()
                 Text(selectedAvatarTone.label.translated())
-                    .font(.system(size: 12, weight: .medium))
+                    .font(.system(size: 11, weight: .medium))
                     .foregroundStyle(Color.sweeplyTextSub)
             }
 
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 3), spacing: 10) {
-                ForEach(ClientAvatarTone.allCases, id: \.rawValue) { tone in
-                    avatarToneSwatch(tone)
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 10) {
+                    ForEach(ClientAvatarTone.allCases, id: \.rawValue) { tone in
+                        avatarToneSwatch(tone)
+                    }
                 }
             }
         }
@@ -508,36 +551,36 @@ struct NewClientForm: View {
             selectedAvatarTone = tone
             didManuallySelectAvatarTone = true
         } label: {
-            VStack(spacing: 8) {
+            VStack(spacing: 6) {
                 ZStack {
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    Circle()
                         .fill(tone.backgroundColor)
-                        .frame(height: 54)
+                        .frame(width: 38, height: 38)
 
                     Text(String(previewName.prefix(1)).uppercased())
-                        .font(.system(size: 20, weight: .bold))
+                        .font(.system(size: 15, weight: .bold))
                         .foregroundStyle(tone.foregroundColor)
 
                     if isSelected {
                         Circle()
                             .fill(Color.white)
-                            .frame(width: 20, height: 20)
+                            .frame(width: 16, height: 16)
                             .overlay(
                                 Image(systemName: "checkmark")
-                                    .font(.system(size: 10, weight: .bold))
+                                    .font(.system(size: 8, weight: .bold))
                                     .foregroundStyle(tone.backgroundColor)
                             )
-                            .offset(x: 22, y: -17)
+                            .offset(x: 14, y: -14)
                     }
                 }
 
                 Text(tone.label.translated())
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(.system(size: 10, weight: .semibold))
                     .foregroundStyle(isSelected ? Color.sweeplyNavy : Color.sweeplyTextSub)
                     .lineLimit(1)
             }
-            .frame(maxWidth: .infinity)
-            .padding(10)
+            .frame(width: 54)
+            .padding(.vertical, 6)
             .background(isSelected ? Color.sweeplyAccent.opacity(0.08) : Color.sweeplyBackground)
             .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
             .overlay(
@@ -546,6 +589,23 @@ struct NewClientForm: View {
             )
         }
         .buttonStyle(.plain)
+    }
+
+    private func previewInfoRow(icon: String, text: String, lineLimit: Int = 2) -> some View {
+        HStack(alignment: .top, spacing: 8) {
+            Image(systemName: icon)
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(Color.sweeplyTextSub.opacity(0.75))
+                .frame(width: 14, alignment: .center)
+                .padding(.top, 1)
+
+            Text(text)
+                .font(.system(size: 13))
+                .foregroundStyle(Color.sweeplyTextSub)
+                .lineLimit(lineLimit)
+
+            Spacer(minLength: 0)
+        }
     }
 }
 
