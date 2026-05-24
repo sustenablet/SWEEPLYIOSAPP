@@ -31,9 +31,7 @@ struct CleanerRootView: View {
                 .tag(Tab.finance)
         }
         .tint(Color.sweeplyAccent)
-        .toolbarBackground(Color.sweeplyNavy, for: .tabBar)
         .toolbarBackground(.visible, for: .tabBar)
-        .toolbarColorScheme(.dark, for: .tabBar)
         .onChange(of: selectedTab) { _, _ in
             UIImpactFeedbackGenerator(style: .light).impactOccurred()
         }
@@ -86,13 +84,16 @@ struct CleanerRootView: View {
     }
 
     private func applyTabBarAppearance() {
+        // iOS 18+/26 renders the tab bar as a floating glass material that
+        // overrides custom backgrounds. Use dark adaptive colors that read on
+        // both glass and any opaque background the system may fall back to.
         let appearance = UITabBarAppearance()
-        appearance.configureWithOpaqueBackground()
-        appearance.backgroundColor = UIColor(Color.sweeplyNavy)
+        appearance.configureWithDefaultBackground()
 
-        appearance.stackedLayoutAppearance.normal.iconColor = UIColor(white: 1, alpha: 0.35)
+        let unselectedColor = UIColor(red: 0.15, green: 0.15, blue: 0.18, alpha: 0.55)
+        appearance.stackedLayoutAppearance.normal.iconColor = unselectedColor
         appearance.stackedLayoutAppearance.normal.titleTextAttributes = [
-            .foregroundColor: UIColor(white: 1, alpha: 0.35),
+            .foregroundColor: unselectedColor,
             .font: UIFont.systemFont(ofSize: 10, weight: .medium)
         ]
 
