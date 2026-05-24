@@ -22,8 +22,6 @@ struct FinancialReportsView: View {
     @State private var revenueSlide: Int = 0
     @State private var showForecastPopup: Bool = false
     @State private var popupWeek: ForecastWeek? = nil
-    @State private var showOverviewPeriodFilter: Bool = false
-    @State private var showPLPeriodFilter: Bool = false
     @State private var reportsScrollOffset: CGFloat = 0
 
     // MARK: - Enums
@@ -350,16 +348,6 @@ struct FinancialReportsView: View {
             .background(
                 NavigationBarShadowConfigurator(showShadow: reportsScrollOffset < 0)
             )
-            .sheet(isPresented: $showOverviewPeriodFilter) {
-                overviewPeriodFilterSheet
-                    .presentationDetents([.height(280)])
-                    .presentationDragIndicator(.visible)
-            }
-            .sheet(isPresented: $showPLPeriodFilter) {
-                plPeriodFilterSheet
-                    .presentationDetents([.height(240)])
-                    .presentationDragIndicator(.visible)
-            }
             .navigationTitle("Reports".translated())
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -373,52 +361,6 @@ struct FinancialReportsView: View {
             }
         }
     }
-    // MARK: - Overview Period Filter Sheet
-
-    private var overviewPeriodFilterSheet: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            HStack {
-                Text("Select Time Range".translated())
-                    .font(.system(size: 17, weight: .semibold))
-                    .foregroundStyle(Color.sweeplyNavy)
-                Spacer()
-            }
-            .padding(.top, 8)
-
-            VStack(spacing: 8) {
-                ForEach(OverviewPeriod.allCases, id: \.self) { period in
-                    Button {
-                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                        overviewPeriodRaw = period.rawValue
-                        selectedOverviewMonth = nil
-                        showOverviewPeriodFilter = false
-                    } label: {
-                        HStack {
-                            Text(periodLabel(for: period))
-                                .font(.system(size: 15, weight: .medium))
-                                .foregroundStyle(Color.sweeplyNavy)
-                            Spacer()
-                            if period == overviewPeriod {
-                                Image(systemName: "checkmark")
-                                    .font(.system(size: 14, weight: .bold))
-                                    .foregroundStyle(Color.sweeplyAccent)
-                            }
-                        }
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 14)
-                        .background(period == overviewPeriod ? Color.sweeplyAccent.opacity(0.08) : Color.sweeplySurface)
-                        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-                        .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).stroke(period == overviewPeriod ? Color.sweeplyAccent : Color.sweeplyBorder, lineWidth: 1))
-                    }
-                }
-            }
-
-            Spacer()
-        }
-        .padding(.horizontal, 20)
-        .background(Color.sweeplyBackground.ignoresSafeArea())
-    }
-
     private func periodLabel(for period: OverviewPeriod) -> String {
         switch period {
         case .oneMonth: return "Last Month".translated()
@@ -426,51 +368,6 @@ struct FinancialReportsView: View {
         case .sixMonth: return "Last 6 Months".translated()
         case .twelveMonth: return "Last 12 Months".translated()
         }
-    }
-
-    // MARK: - P&L Period Filter Sheet
-
-    private var plPeriodFilterSheet: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            HStack {
-                Text("Select Time Range".translated())
-                    .font(.system(size: 17, weight: .semibold))
-                    .foregroundStyle(Color.sweeplyNavy)
-                Spacer()
-            }
-            .padding(.top, 8)
-
-            VStack(spacing: 8) {
-                ForEach(PLPeriod.allCases, id: \.self) { period in
-                    Button {
-                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                        plPeriod = period
-                        showPLPeriodFilter = false
-                    } label: {
-                        HStack {
-                            Text(plPeriodLabel(for: period))
-                                .font(.system(size: 15, weight: .medium))
-                                .foregroundStyle(Color.sweeplyNavy)
-                            Spacer()
-                            if period == plPeriod {
-                                Image(systemName: "checkmark")
-                                    .font(.system(size: 14, weight: .bold))
-                                    .foregroundStyle(Color.sweeplyAccent)
-                            }
-                        }
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 14)
-                        .background(period == plPeriod ? Color.sweeplyAccent.opacity(0.08) : Color.sweeplySurface)
-                        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-                        .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).stroke(period == plPeriod ? Color.sweeplyAccent : Color.sweeplyBorder, lineWidth: 1))
-                    }
-                }
-            }
-
-            Spacer()
-        }
-        .padding(.horizontal, 20)
-        .background(Color.sweeplyBackground.ignoresSafeArea())
     }
 
     private func plPeriodLabel(for period: PLPeriod) -> String {
@@ -631,9 +528,20 @@ struct FinancialReportsView: View {
                             .foregroundStyle(Color.sweeplyTextSub)
                     }
                     Spacer()
-                    Button {
-                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                        showOverviewPeriodFilter = true
+                    Menu {
+                        ForEach(OverviewPeriod.allCases, id: \.self) { period in
+                            Button {
+                                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                overviewPeriodRaw = period.rawValue
+                                selectedOverviewMonth = nil
+                            } label: {
+                                if period == overviewPeriod {
+                                    Label(periodLabel(for: period), systemImage: "checkmark")
+                                } else {
+                                    Text(periodLabel(for: period))
+                                }
+                            }
+                        }
                     } label: {
                         HStack(spacing: 4) {
                             Text(periodLabel(for: overviewPeriod))
@@ -1124,13 +1032,23 @@ struct FinancialReportsView: View {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Profit & Loss".translated().uppercased())
                             .font(.system(size: 11, weight: .bold))
-                            .foregroundStyle(Color.sweeplyTextSub)
+                            .foregroundStyle(Color.black)
                             .tracking(0.8)
                     }
                     Spacer()
-                    Button {
-                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                        showPLPeriodFilter = true
+                    Menu {
+                        ForEach(PLPeriod.allCases, id: \.self) { period in
+                            Button {
+                                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                plPeriod = period
+                            } label: {
+                                if period == plPeriod {
+                                    Label(plPeriodLabel(for: period), systemImage: "checkmark")
+                                } else {
+                                    Text(plPeriodLabel(for: period))
+                                }
+                            }
+                        }
                     } label: {
                         HStack(spacing: 4) {
                             Text(plPeriodLabel(for: plPeriod))
