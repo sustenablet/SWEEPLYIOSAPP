@@ -174,22 +174,20 @@ struct FinancesView: View {
         max(chartData.map { $0.amount }.max() ?? 1, 1)
     }
     private var filteredInvoices: [Invoice] {
-        let sorted = invoices.sorted { a, b in
-            let rank: (Invoice) -> Int = {
-                switch $0.status {
-                case .overdue: return 0
-                case .unpaid:  return 1
-                case .paid:    return 2
-                }
-            }
-            if rank(a) != rank(b) { return rank(a) < rank(b) }
-            return a.dueDate < b.dueDate
-        }
+        let filtered: [Invoice]
         switch selectedFilter {
-        case .all:     return sorted
-        case .paid:    return sorted.filter { $0.status == .paid }
-        case .unpaid:  return sorted.filter { $0.status == .unpaid }
-        case .overdue: return sorted.filter { $0.status == .overdue }
+        case .all:     filtered = invoices
+        case .paid:    filtered = invoices.filter { $0.status == .paid }
+        case .unpaid:  filtered = invoices.filter { $0.status == .unpaid }
+        case .overdue: filtered = invoices.filter { $0.status == .overdue }
+        }
+
+        return filtered.sorted {
+            let comparison = $0.clientName.localizedCaseInsensitiveCompare($1.clientName)
+            if comparison == .orderedSame {
+                return $0.invoiceNumber.localizedCaseInsensitiveCompare($1.invoiceNumber) == .orderedAscending
+            }
+            return comparison == .orderedAscending
         }
     }
     private func count(for filter: InvoiceFilter) -> Int {
@@ -1216,7 +1214,7 @@ struct InvoicesListView: View {
     @State private var selectedInvoiceId: UUID? = nil
     @State private var showInvoiceDetail = false
     @State private var markPaidInvoice: Invoice? = nil
-    @State private var sortOrder: InvoiceSortOrder = .newestFirst
+    @State private var sortOrder: InvoiceSortOrder = .clientAZ
 
     init(preselectedFilter: String = "all") {
         _selectedFilter = State(initialValue: InvoiceFilter(rawValue: preselectedFilter) ?? .all)
@@ -1252,7 +1250,7 @@ struct InvoicesListView: View {
     }
 
     private var hasActiveFilters: Bool {
-        sortOrder != .newestFirst
+        selectedFilter != .all || sortOrder != .clientAZ
     }
 
     private var filtered: [Invoice] {
@@ -1281,7 +1279,11 @@ struct InvoicesListView: View {
         case .dueLatest:     return result.sorted { $0.dueDate > $1.dueDate }
         case .highestAmount: return result.sorted { $0.total > $1.total }
         case .lowestAmount:  return result.sorted { $0.total < $1.total }
-        case .clientAZ:      return result.sorted { $0.clientName.localizedCaseInsensitiveCompare($1.clientName) == .orderedAscending }
+        case .clientAZ:      return result.sorted {
+            let comparison = $0.clientName.localizedCaseInsensitiveCompare($1.clientName)
+            if comparison == .orderedSame { return $0.invoiceNumber.localizedCaseInsensitiveCompare($1.invoiceNumber) == .orderedAscending }
+            return comparison == .orderedAscending
+        }
         }
     }
 
@@ -1302,14 +1304,7 @@ struct InvoicesListView: View {
 
                     searchControlsRow
 
-                    VStack(alignment: .leading, spacing: 10) {
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(spacing: 8) {
-                                activeFilterChip(icon: "line.3.horizontal.decrease.circle", text: selectedFilter.rawValue)
-                                activeFilterChip(icon: sortOrder.icon, text: sortOrder.rawValue)
-                            }
-                        }
-                    }
+                    activeFiltersBar
 
                     // List
                     if filtered.isEmpty {
@@ -1429,6 +1424,49 @@ struct InvoicesListView: View {
         }
     }
 
+    private var activeFiltersBar: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 10) {
+                filterSummaryChip(
+                    title: "Status".translated(),
+                    value: selectedFilter.rawValue.translated(),
+                    icon: "line.3.horizontal.decrease.circle",
+                    isEmphasized: selectedFilter != .all
+                )
+                filterSummaryChip(
+                    title: "Sort".translated(),
+                    value: sortOrder.rawValue.translated(),
+                    icon: sortOrder.icon,
+                    isEmphasized: sortOrder != .clientAZ
+                )
+
+                if hasActiveFilters {
+                    Button {
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        withAnimation(.easeInOut(duration: 0.15)) {
+                            selectedFilter = .all
+                            sortOrder = .clientAZ
+                        }
+                    } label: {
+                        HStack(spacing: 6) {
+                            Image(systemName: "arrow.counterclockwise")
+                                .font(.system(size: 11, weight: .semibold))
+                            Text("Reset".translated())
+                                .font(.system(size: 12, weight: .semibold))
+                        }
+                        .foregroundStyle(Color.sweeplyTextSub)
+                        .padding(.horizontal, 12)
+                        .frame(height: 32)
+                        .background(Color.sweeplySurface)
+                        .clipShape(Capsule())
+                        .overlay(Capsule().stroke(Color.sweeplyBorder, lineWidth: 1))
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+    }
+
     private var statusFilterMenuButton: some View {
         Menu {
             ForEach(InvoiceFilter.allCases, id: \.self) { filter in
@@ -1529,19 +1567,36 @@ struct InvoicesListView: View {
         .frame(maxWidth: .infinity)
     }
 
-    private func activeFilterChip(icon: String, text: String) -> some View {
-        HStack(spacing: 6) {
-            Image(systemName: icon)
-                .font(.system(size: 11, weight: .semibold))
-            Text(text)
-                .font(.system(size: 12, weight: .medium))
+    private func filterSummaryChip(title: String, value: String, icon: String, isEmphasized: Bool) -> some View {
+        HStack(spacing: 10) {
+            ZStack {
+                Circle()
+                    .fill(isEmphasized ? Color.sweeplyAccent.opacity(0.14) : Color.sweeplyBorder.opacity(0.35))
+                    .frame(width: 28, height: 28)
+                Image(systemName: icon)
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(isEmphasized ? Color.sweeplyAccent : Color.sweeplyTextSub)
+            }
+
+            VStack(alignment: .leading, spacing: 1) {
+                Text(title.uppercased())
+                    .font(.system(size: 9, weight: .bold))
+                    .foregroundStyle(Color.sweeplyTextSub)
+                    .tracking(0.8)
+                Text(value)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(Color.sweeplyNavy)
+                    .lineLimit(1)
+            }
         }
-        .foregroundStyle(Color.sweeplyNavy)
-        .padding(.horizontal, 10)
-        .frame(height: 32)
-        .background(Color.sweeplySurface)
-        .clipShape(Capsule())
-        .overlay(Capsule().stroke(Color.sweeplyBorder, lineWidth: 1))
+        .padding(.horizontal, 12)
+        .frame(height: 44)
+        .background(isEmphasized ? Color.sweeplyAccent.opacity(0.08) : Color.sweeplySurface)
+        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(isEmphasized ? Color.sweeplyAccent.opacity(0.24) : Color.sweeplyBorder, lineWidth: 1)
+        )
     }
 }
 
