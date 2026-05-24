@@ -27,7 +27,7 @@ struct NewJobForm: View {
     @State private var selectedExtras: [BusinessService] = []
     @State private var showExtrasPicker = false
     @State private var baseServicePrice: Double = 0
-    @State private var assignedMemberId: UUID? = nil
+    @State private var assignedMemberIds: Set<UUID> = []
 
     /// Default to the next full hour, at minimum 1 hour from now.
     private static func defaultJobDate() -> Date {
@@ -63,9 +63,8 @@ struct NewJobForm: View {
         teamStore.members.filter { $0.role == .member && $0.status == .active }
     }
 
-    private var assignedMember: TeamMember? {
-        guard let id = assignedMemberId else { return nil }
-        return activeCleaners.first { $0.id == id }
+    private var assignedMembers: [TeamMember] {
+        activeCleaners.filter { assignedMemberIds.contains($0.id) }
     }
 
     private var selectedServiceLabel: String {
@@ -453,33 +452,34 @@ struct NewJobForm: View {
                             .buttonStyle(.plain)
                         }
                     }
-                    // 4. Assign Cleaner (only if there are active cleaners)
+                    // 4. Assign Cleaners (only if there are active cleaners)
                     if !activeCleaners.isEmpty {
                         VStack(alignment: .leading, spacing: 12) {
-                            SectionHeader(title: "ASSIGN CLEANER")
+                            SectionHeader(title: "ASSIGN CLEANERS")
 
                             Menu {
-                                Button {
-                                    assignedMemberId = nil
-                                } label: {
-                                    Label("Unassigned".translated(), systemImage: "person.slash")
-                                }
-                                Divider()
                                 ForEach(activeCleaners) { cleaner in
                                     Button {
-                                        assignedMemberId = cleaner.id
+                                        if assignedMemberIds.contains(cleaner.id) {
+                                            assignedMemberIds.remove(cleaner.id)
+                                        } else {
+                                            assignedMemberIds.insert(cleaner.id)
+                                        }
                                     } label: {
-                                        Label(cleaner.name, systemImage: "person.fill")
+                                        Label(
+                                            cleaner.name,
+                                            systemImage: assignedMemberIds.contains(cleaner.id) ? "checkmark.circle.fill" : "circle"
+                                        )
                                     }
                                 }
                             } label: {
                                 HStack(spacing: 10) {
                                     ZStack {
                                         Circle()
-                                            .fill(assignedMember != nil ? Color.sweeplyAccent.opacity(0.15) : Color.sweeplyBorder.opacity(0.4))
+                                            .fill(!assignedMembers.isEmpty ? Color.sweeplyAccent.opacity(0.15) : Color.sweeplyBorder.opacity(0.4))
                                             .frame(width: 32, height: 32)
-                                        if let m = assignedMember {
-                                            Text(m.initials)
+                                        if let firstMember = assignedMembers.first {
+                                            Text(firstMember.initials)
                                                 .font(.system(size: 11, weight: .bold))
                                                 .foregroundStyle(Color.sweeplyAccent)
                                         } else {
@@ -488,9 +488,9 @@ struct NewJobForm: View {
                                                 .foregroundStyle(Color.sweeplyTextSub)
                                         }
                                     }
-                                    Text(assignedMember?.name ?? "Unassigned")
+                                    Text(assignedMembersLabel)
                                         .font(.system(size: 15, weight: .medium))
-                                        .foregroundStyle(assignedMember != nil ? Color.sweeplyNavy : Color.sweeplyTextSub)
+                                        .foregroundStyle(!assignedMembers.isEmpty ? Color.sweeplyNavy : Color.sweeplyTextSub)
                                     Spacer()
                                     Image(systemName: "chevron.up.chevron.down")
                                         .font(.system(size: 12, weight: .semibold))
@@ -576,6 +576,17 @@ struct NewJobForm: View {
         clientsStore.clients.first { $0.id == selectedClientId }
     }
 
+    private var assignedMembersLabel: String {
+        switch assignedMembers.count {
+        case 0:
+            return "Unassigned".translated()
+        case 1:
+            return assignedMembers[0].name
+        default:
+            return "\(assignedMembers.count) cleaners assigned"
+        }
+    }
+
     private func applyPricingHierarchy() {
         let settings = profileStore.profile?.settings ?? fallbackSettings
 
@@ -638,21 +649,27 @@ struct NewJobForm: View {
                 status: .scheduled,
                 address: client.address,
                 isRecurring: false,
-                assignedMemberId: assignedMemberId,
-                assignedMemberName: assignedMember?.name
+                assignedMemberId: assignedMembers.first?.id,
+                assignedMemberName: assignedMembers.first?.name,
+                assignedMemberIds: assignedMembers.map(\.id),
+                assignedMemberNames: assignedMembers.map(\.name)
             )
             success = await jobsStore.insert(newJob, userId: userId)
-            // Notify assigned member that a new job has been given to them
-            if success, let cleanerUserId = assignedMember?.cleanerUserId {
+            // Notify assigned members that a new job has been given to them.
+            if success {
                 let dateStr = date.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day().hour().minute())
                 let body = "\(serviceType.rawValue) at \(client.name) — \(dateStr). \(finalPrice.currency)"
-                await NotificationHelper.insert(
-                    userId: cleanerUserId,
-                    title: "New Job Assigned",
-                    message: body,
-                    kind: "jobs"
-                )
-                NotificationManager.shared.fireInstantBanner(title: "New Job Assigned", body: body)
+                for cleanerUserId in assignedMembers.compactMap(\.cleanerUserId) {
+                    await NotificationHelper.insert(
+                        userId: cleanerUserId,
+                        title: "New Job Assigned",
+                        message: body,
+                        kind: "jobs"
+                    )
+                }
+                if !assignedMembers.isEmpty {
+                    NotificationManager.shared.fireInstantBanner(title: "New Job Assigned", body: body)
+                }
             }
         } else {
             let rule = RecurrenceRule(

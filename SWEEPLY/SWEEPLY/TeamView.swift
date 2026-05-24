@@ -1287,7 +1287,7 @@ struct MemberDetailView: View {
 
     private var memberJobHistory: [Job] {
         jobsStore.jobs
-            .filter { $0.assignedMemberId == member.id && $0.status != .cancelled }
+            .filter { $0.isAssigned(to: member.id) && $0.status != .cancelled }
             .sorted { $0.date > $1.date }
     }
 
@@ -1502,7 +1502,7 @@ struct MemberDetailView: View {
     // MARK: - Computed Job Stats
 
     private var allMemberJobs: [Job] {
-        jobsStore.jobs.filter { $0.assignedMemberId == member.id && $0.status != .cancelled }
+        jobsStore.jobs.filter { $0.isAssigned(to: member.id) && $0.status != .cancelled }
     }
 
     private var monthStart: Date {
@@ -1914,7 +1914,7 @@ struct MemberFullHistoryView: View {
 
     private var memberJobHistory: [Job] {
         jobsStore.jobs
-            .filter { $0.assignedMemberId == member.id && $0.status != .cancelled }
+            .filter { $0.isAssigned(to: member.id) && $0.status != .cancelled }
             .sorted { $0.date > $1.date }
     }
 

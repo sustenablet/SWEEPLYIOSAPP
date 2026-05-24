@@ -85,7 +85,7 @@ struct CleanerUpcomingView: View {
     // MARK: - Derived
 
     private var myJobs: [Job] {
-        jobsStore.jobs.filter { $0.assignedMemberId == membership.id && $0.status != .cancelled }
+        jobsStore.jobs.filter { $0.isAssigned(to: membership.id) && $0.status != .cancelled }
     }
 
     private func applyFilters(_ job: Job) -> Bool {

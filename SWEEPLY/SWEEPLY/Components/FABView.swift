@@ -67,7 +67,7 @@ struct FABView: View {
                 .buttonStyle(.plain)
             }
             .padding(.trailing, 20)
-            .padding(.bottom, 86)
+            .padding(.bottom, 72)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
         .animation(.spring(response: 0.32, dampingFraction: 0.78), value: isExpanded)

@@ -79,7 +79,9 @@ final class JobsStore {
                 isRecurring: job.isRecurring,
                 recurrence_rule_id: job.recurrenceRuleId,
                 assignedMemberId: job.assignedMemberId,
-                assignedMemberName: job.assignedMemberName
+                assignedMemberName: job.assignedMemberName,
+                assignedMemberIds: job.effectiveAssignedMemberIds,
+                assignedMemberNames: job.effectiveAssignedMemberNames
             )
             let inserted: JobRow = try await client
                 .from("jobs")
@@ -123,7 +125,9 @@ final class JobsStore {
                 isRecurring: job.isRecurring,
                 recurrence_rule_id: job.recurrenceRuleId,
                 assignedMemberId: job.assignedMemberId,
-                assignedMemberName: job.assignedMemberName
+                assignedMemberName: job.assignedMemberName,
+                assignedMemberIds: job.effectiveAssignedMemberIds,
+                assignedMemberNames: job.effectiveAssignedMemberNames
             )
             let refreshed: JobRow = try await client
                 .from("jobs")
@@ -178,7 +182,7 @@ final class JobsStore {
             switch status {
             case .completed:
                 requestReviewIfAppropriate()
-                let completedBy = mapped.assignedMemberName.map { " by \($0)" } ?? ""
+                let completedBy = mapped.effectiveAssignedMemberNames.first.map { " by \($0)" } ?? ""
                 await NotificationHelper.insert(
                     title: "Job Completed",
                     message: "\(mapped.serviceType.rawValue) for \(mapped.clientName) completed\(completedBy)",
@@ -297,7 +301,9 @@ final class JobsStore {
                     isRecurring: true,
                     recurrence_rule_id: insertedRule.id,
                     assignedMemberId: nil,
-                    assignedMemberName: nil
+                    assignedMemberName: nil,
+                    assignedMemberIds: [],
+                    assignedMemberNames: []
                 )
             }
             
@@ -389,6 +395,8 @@ private struct JobRow: Decodable {
     let recurrence_rules: RecurrenceRuleEmbed?
     let assignedMemberId: UUID?
     let assignedMemberName: String?
+    let assignedMemberIds: [UUID]?
+    let assignedMemberNames: [String]?
 
     enum CodingKeys: String, CodingKey {
         case id, address, price, status
@@ -403,6 +411,8 @@ private struct JobRow: Decodable {
         case recurrence_rules
         case assignedMemberId  = "assigned_member_id"
         case assignedMemberName = "assigned_member_name"
+        case assignedMemberIds = "assigned_member_ids"
+        case assignedMemberNames = "assigned_member_names"
     }
 
     func toJob() -> Job {
@@ -421,7 +431,9 @@ private struct JobRow: Decodable {
             recurrenceRuleId: recurrence_rule_id,
             recurrenceFrequency: recurrence_rules.flatMap { RecurrenceFrequency(rawValue: $0.frequency) },
             assignedMemberId: assignedMemberId,
-            assignedMemberName: assignedMemberName
+            assignedMemberName: assignedMemberName,
+            assignedMemberIds: assignedMemberIds ?? [],
+            assignedMemberNames: assignedMemberNames ?? []
         )
     }
 }
@@ -439,6 +451,8 @@ private struct JobRowPatch: Encodable {
     let recurrence_rule_id: UUID?
     let assignedMemberId: UUID?
     let assignedMemberName: String?
+    let assignedMemberIds: [UUID]
+    let assignedMemberNames: [String]
 
     enum CodingKeys: String, CodingKey {
         case address, price, status
@@ -451,6 +465,8 @@ private struct JobRowPatch: Encodable {
         case recurrence_rule_id
         case assignedMemberId   = "assigned_member_id"
         case assignedMemberName = "assigned_member_name"
+        case assignedMemberIds  = "assigned_member_ids"
+        case assignedMemberNames = "assigned_member_names"
     }
 }
 
@@ -468,6 +484,8 @@ private struct JobRowInsert: Encodable {
     let recurrence_rule_id: UUID?
     let assignedMemberId: UUID?
     let assignedMemberName: String?
+    let assignedMemberIds: [UUID]
+    let assignedMemberNames: [String]
 
     enum CodingKeys: String, CodingKey {
         case address, price, status
@@ -481,6 +499,8 @@ private struct JobRowInsert: Encodable {
         case recurrence_rule_id
         case assignedMemberId   = "assigned_member_id"
         case assignedMemberName = "assigned_member_name"
+        case assignedMemberIds  = "assigned_member_ids"
+        case assignedMemberNames = "assigned_member_names"
     }
 }
 

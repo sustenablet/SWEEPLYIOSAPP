@@ -325,9 +325,13 @@ struct JobDetailView: View {
                             Text("Assigned To".translated())
                                 .font(.system(size: 11, weight: .semibold))
                                 .foregroundStyle(Color.sweeplyTextSub)
-                            Text(job.assignedMemberName ?? "Unassigned".translated())
+                            Text(
+                                job.effectiveAssignedMemberNames.isEmpty
+                                    ? "Unassigned".translated()
+                                    : job.effectiveAssignedMemberNames.joined(separator: ", ")
+                            )
                                 .font(.system(size: 14, weight: .medium))
-                                .foregroundStyle(job.assignedMemberName != nil ? Color.sweeplyNavy : Color.sweeplyTextSub)
+                                .foregroundStyle(job.effectiveAssignedMemberNames.isEmpty ? Color.sweeplyTextSub : Color.sweeplyNavy)
                         }
                         Spacer()
                         Button {
@@ -514,7 +518,7 @@ struct ReassignCleanerSheet: View {
     @Environment(JobsStore.self)  private var jobsStore
 
     let job: Job
-    @State private var selectedId: UUID? = nil
+    @State private var selectedIds: Set<UUID> = []
     @State private var isSaving = false
 
     private var activeCleaners: [TeamMember] {
@@ -528,13 +532,17 @@ struct ReassignCleanerSheet: View {
                 ScrollView {
                     VStack(spacing: 8) {
                         // Unassigned option
-                        cleanerRow(name: "Unassigned".translated(), initials: nil, isSelected: selectedId == nil) {
-                            selectedId = nil
+                        cleanerRow(name: "Unassigned".translated(), initials: nil, isSelected: selectedIds.isEmpty) {
+                            selectedIds.removeAll()
                         }
                         Divider().padding(.leading, 54)
                         ForEach(activeCleaners) { cleaner in
-                            cleanerRow(name: cleaner.name, initials: cleaner.initials, isSelected: selectedId == cleaner.id) {
-                                selectedId = cleaner.id
+                            cleanerRow(name: cleaner.name, initials: cleaner.initials, isSelected: selectedIds.contains(cleaner.id)) {
+                                if selectedIds.contains(cleaner.id) {
+                                    selectedIds.remove(cleaner.id)
+                                } else {
+                                    selectedIds.insert(cleaner.id)
+                                }
                             }
                             if cleaner.id != activeCleaners.last?.id {
                                 Divider().padding(.leading, 54)
@@ -567,7 +575,7 @@ struct ReassignCleanerSheet: View {
             }
         }
         .onAppear {
-            selectedId = job.assignedMemberId
+            selectedIds = Set(job.effectiveAssignedMemberIds)
         }
     }
 
@@ -606,13 +614,15 @@ struct ReassignCleanerSheet: View {
     private func save() async {
         isSaving = true
         defer { isSaving = false }
-        let name = activeCleaners.first { $0.id == selectedId }?.name
+        let selectedMembers = activeCleaners.filter { selectedIds.contains($0.id) }
         var updated = job
-        updated.assignedMemberId   = selectedId
-        updated.assignedMemberName = name
+        updated.assignedMemberId = selectedMembers.first?.id
+        updated.assignedMemberName = selectedMembers.first?.name
+        updated.assignedMemberIds = selectedMembers.map(\.id)
+        updated.assignedMemberNames = selectedMembers.map(\.name)
         let ok = await jobsStore.update(updated)
         if ok {
-            if let cleanerUserId = activeCleaners.first(where: { $0.id == selectedId })?.cleanerUserId {
+            if let cleanerUserId = selectedMembers.first?.cleanerUserId {
                 let dateStr = updated.date.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day().hour().minute())
                 let body = "%@ at %@ — %@".translated(with: updated.serviceType.rawValue.translated(), updated.clientName, dateStr)
                 NotificationManager.shared.fireInstantBanner(title: "New Job Assigned".translated(), body: body)

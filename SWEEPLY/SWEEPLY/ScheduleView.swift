@@ -1083,6 +1083,17 @@ private struct TimelineJobBlock: View {
                             .font(.system(size: 11, weight: .medium))
                             .foregroundStyle(statusAccentColor)
                             .lineLimit(1)
+                        if !job.effectiveAssignedMemberNames.isEmpty {
+                            HStack(spacing: 5) {
+                                Image(systemName: job.effectiveAssignedMemberNames.count > 1 ? "person.2.fill" : "person.fill")
+                                    .font(.system(size: 9, weight: .semibold))
+                                    .foregroundStyle(Color.sweeplyAccent)
+                                Text(job.effectiveAssignedMemberNames.joined(separator: ", "))
+                                    .font(.system(size: 10, weight: .semibold))
+                                    .foregroundStyle(Color.sweeplyNavy)
+                                    .lineLimit(1)
+                            }
+                        }
                         HStack(spacing: 4) {
                             Text(timeString(from: job.date))
                                 .font(.system(size: 10, design: .monospaced))

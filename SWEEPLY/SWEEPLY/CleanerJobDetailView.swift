@@ -238,7 +238,7 @@ struct CleanerJobDetailView: View {
         Task {
             _ = await jobsStore.updateStatus(id: job.id, status: .inProgress)
             // Notify owner of check-in
-            let memberName = job.assignedMemberName ?? "Your cleaner"
+            let memberName = job.effectiveAssignedMemberNames.first ?? "Your cleaner"
             await NotificationHelper.insert(
                 userId: ownerId,
                 title: "Job Check-In",
@@ -254,7 +254,7 @@ struct CleanerJobDetailView: View {
         Task {
             _ = await jobsStore.updateStatus(id: job.id, status: .completed)
             // Notify owner of completion
-            let memberName = job.assignedMemberName ?? "Your cleaner"
+            let memberName = job.effectiveAssignedMemberNames.first ?? "Your cleaner"
             await NotificationHelper.insert(
                 userId: ownerId,
                 title: "Job Completed",

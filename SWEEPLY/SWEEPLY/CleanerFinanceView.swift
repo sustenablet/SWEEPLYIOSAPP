@@ -37,7 +37,7 @@ struct CleanerFinanceView: View {
     // MARK: - Derived
 
     private var allMyJobs: [Job] {
-        jobsStore.jobs.filter { $0.assignedMemberId == membership.id }
+        jobsStore.jobs.filter { $0.isAssigned(to: membership.id) }
     }
 
     private var periodStart: Date? {

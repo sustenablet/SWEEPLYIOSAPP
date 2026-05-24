@@ -17,7 +17,7 @@ struct CleanerJobsHistoryView: View {
     @State private var selectedJobId: UUID? = nil
     
     private var myJobs: [Job] {
-        jobsStore.jobs.filter { $0.assignedMemberId == membership.id }
+        jobsStore.jobs.filter { $0.isAssigned(to: membership.id) }
     }
     
     private var filteredJobs: [Job] {

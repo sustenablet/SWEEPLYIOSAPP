@@ -222,6 +222,24 @@ struct Job: Identifiable, Codable {
     var recurrenceFrequency: RecurrenceFrequency? = nil
     var assignedMemberId: UUID? = nil
     var assignedMemberName: String? = nil
+    var assignedMemberIds: [UUID] = []
+    var assignedMemberNames: [String] = []
+
+    var effectiveAssignedMemberIds: [UUID] {
+        if !assignedMemberIds.isEmpty { return assignedMemberIds }
+        if let assignedMemberId { return [assignedMemberId] }
+        return []
+    }
+
+    var effectiveAssignedMemberNames: [String] {
+        if !assignedMemberNames.isEmpty { return assignedMemberNames }
+        if let assignedMemberName, !assignedMemberName.isEmpty { return [assignedMemberName] }
+        return []
+    }
+
+    func isAssigned(to memberId: UUID) -> Bool {
+        effectiveAssignedMemberIds.contains(memberId)
+    }
 }
 
 struct RecurrenceRule: Identifiable, Codable {
