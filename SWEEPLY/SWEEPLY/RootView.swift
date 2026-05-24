@@ -319,8 +319,6 @@ struct RootView: View {
                 onNewClient: { showNewClient = true },
                 onNewInvoice: { showNewInvoice = true }
             )
-            .padding(.trailing, 20)
-            .padding(.bottom, 14)
         }
     }
         .sheet(isPresented: $showNewJob) {

@@ -15,20 +15,16 @@ struct FABView: View {
 
     var body: some View {
         ZStack(alignment: .bottomTrailing) {
-            // Scrim when expanded
             if isExpanded {
-                Color.black.opacity(0.3)
+                Color.black.opacity(0.34)
                     .ignoresSafeArea()
                     .onTapGesture {
-                        withAnimation(.spring(duration: 0.3)) {
-                            isExpanded = false
-                        }
+                        collapseActions()
                     }
                     .transition(.opacity)
             }
 
             VStack(alignment: .trailing, spacing: 12) {
-                // Expanded action buttons
                 if isExpanded {
                     ForEach(actions, id: \.tag) { action in
                         FABActionButton(
@@ -36,9 +32,7 @@ struct FABView: View {
                             icon: action.icon
                         ) {
                             UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-                            withAnimation(.spring(duration: 0.3)) {
-                                isExpanded = false
-                            }
+                            collapseActions()
                             switch action.tag {
                             case "job": onNewJob()
                             case "client": onNewClient()
@@ -47,18 +41,15 @@ struct FABView: View {
                             }
                         }
                         .transition(.asymmetric(
-                            insertion: .move(edge: .bottom).combined(with: .opacity),
-                            removal: .opacity
+                            insertion: .offset(y: 16).combined(with: .opacity).combined(with: .scale(scale: 0.92, anchor: .trailing)),
+                            removal: .offset(y: 10).combined(with: .opacity)
                         ))
                     }
                 }
 
-                // Main FAB — Sweeply brand button
                 Button {
                     UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                        isExpanded.toggle()
-                    }
+                    toggleActions()
                 } label: {
                     ZStack {
                         Circle()
@@ -66,21 +57,31 @@ struct FABView: View {
                             .frame(width: 58, height: 58)
                             .shadow(color: Color.sweeplyNavy.opacity(0.4), radius: 14, x: 0, y: 5)
 
-                        if isExpanded {
-                            Image(systemName: "xmark")
-                                .font(.system(size: 18, weight: .bold))
-                                .foregroundStyle(.white)
-                                .transition(.scale.combined(with: .opacity))
-                        } else {
-                            // Brand "S" mark
-                            Text("S")
-                                .font(.system(size: 22, weight: .black, design: .rounded))
-                                .foregroundStyle(.white)
-                        }
+                        Image(systemName: "plus")
+                            .font(.system(size: 20, weight: .bold))
+                            .foregroundStyle(.white)
+                            .rotationEffect(.degrees(isExpanded ? 45 : 0))
+                            .scaleEffect(isExpanded ? 0.94 : 1)
                     }
                 }
                 .buttonStyle(.plain)
             }
+            .padding(.trailing, 20)
+            .padding(.bottom, 86)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
+        .animation(.spring(response: 0.32, dampingFraction: 0.78), value: isExpanded)
+    }
+
+    private func toggleActions() {
+        withAnimation(.spring(response: 0.32, dampingFraction: 0.78)) {
+            isExpanded.toggle()
+        }
+    }
+
+    private func collapseActions() {
+        withAnimation(.spring(response: 0.28, dampingFraction: 0.82)) {
+            isExpanded = false
         }
     }
 }
