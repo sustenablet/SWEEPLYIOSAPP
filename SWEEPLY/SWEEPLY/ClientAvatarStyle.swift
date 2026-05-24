@@ -3,6 +3,10 @@ import SwiftUI
 enum ClientAvatarTone: String, CaseIterable {
     case slate
     case blue
+    case teal
+    case amber
+    case coral
+    case olive
 
     var backgroundColor: Color {
         switch self {
@@ -10,6 +14,14 @@ enum ClientAvatarTone: String, CaseIterable {
             return Color.sweeplyNavy
         case .blue:
             return Color.sweeplyAccent
+        case .teal:
+            return Color(red: 0.23, green: 0.63, blue: 0.60)
+        case .amber:
+            return Color(red: 0.80, green: 0.58, blue: 0.18)
+        case .coral:
+            return Color(red: 0.83, green: 0.41, blue: 0.35)
+        case .olive:
+            return Color(red: 0.46, green: 0.56, blue: 0.26)
         }
     }
 
@@ -23,6 +35,14 @@ enum ClientAvatarTone: String, CaseIterable {
             return "Slate"
         case .blue:
             return "Blue"
+        case .teal:
+            return "Teal"
+        case .amber:
+            return "Amber"
+        case .coral:
+            return "Coral"
+        case .olive:
+            return "Olive"
         }
     }
 }

@@ -28,6 +28,7 @@ struct NewClientForm: View {
     @State private var showValidationErrors = false
     @State private var selectedAvatarTone: ClientAvatarTone = .slate
     @State private var didManuallySelectAvatarTone = false
+    @State private var showingCreatePreview = false
 
     private var fallbackSettings: AppSettings {
         var settings = AppSettings()
@@ -75,172 +76,159 @@ struct NewClientForm: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            // Header
-            HStack {
-                Text(editingClient == nil ? "New Client" : "Edit Client")
-                    .font(.system(size: 20, weight: .bold))
-                Spacer()
-                Button("Cancel".translated()) { dismiss() }
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(Color.sweeplyTextSub)
-            }
-            .padding(24)
+        ZStack {
+            VStack(spacing: 0) {
+                // Header
+                HStack {
+                    Text(editingClient == nil ? "New Client" : "Edit Client")
+                        .font(.system(size: 20, weight: .bold))
+                    Spacer()
+                    Button("Cancel".translated()) { dismiss() }
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(Color.sweeplyTextSub)
+                }
+                .padding(24)
 
-            ScrollView {
-                VStack(spacing: 24) {
-                    clientPreviewCard
-
-                    // Import from Contacts button (new client only)
-                    if editingClient == nil {
-                        Button {
-                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                            showContactPicker = true
-                        } label: {
-                            HStack(spacing: 8) {
-                                Image(systemName: "person.crop.circle.badge.plus")
-                                    .font(.system(size: 15, weight: .semibold))
-                                Text("Import from Contacts".translated())
-                                    .font(.system(size: 14, weight: .semibold))
-                            }
-                            .foregroundStyle(Color.sweeplyNavy)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 12)
-                            .background(Color.sweeplyNavy.opacity(0.06))
-                            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-                            .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).stroke(Color.sweeplyNavy.opacity(0.15), lineWidth: 1))
-                        }
-                        .buttonStyle(.plain)
-                    }
-
-                    // Contact
-                    VStack(alignment: .leading, spacing: 14) {
-                        Text("CONTACT INFO".translated()).font(.system(size: 10, weight: .bold)).foregroundStyle(Color.sweeplyTextSub).tracking(1.0)
-                        HStack(spacing: 12) {
-                            FormTextField(
-                                label: "First Name *".translated(),
-                                text: $firstName,
-                                placeholder: "John".translated(),
-                                errorMessage: showValidationErrors && firstName.isEmpty ? "First name is required".translated() : nil
-                            )
-                            FormTextField(label: "Last Name".translated(), text: $lastName, placeholder: "Doe".translated())
-                        }
-                        FormTextField(
-                            label: "Email".translated(),
-                            text: $email,
-                            placeholder: "john@example.com".translated(),
-                            keyboard: .emailAddress,
-                            errorMessage: showValidationErrors && !isEmailValid ? "Enter a valid email address".translated() : nil
-                        )
-                        FormTextField(
-                            label: "Phone".translated(),
-                            text: $phone,
-                            placeholder: "(555) 000-0000".translated(),
-                            keyboard: .phonePad,
-                            errorMessage: showValidationErrors && !isPhoneValid ? "Phone number must be at least 10 digits".translated() : nil
-                        )
-                    }
-
-                    // Preferences
-                    VStack(alignment: .leading, spacing: 14) {
-                        Text("PREFERENCES".translated()).font(.system(size: 10, weight: .bold)).foregroundStyle(Color.sweeplyTextSub).tracking(1.0)
-                        VStack(alignment: .leading, spacing: 10) {
-                            Text("Avatar Color".translated())
-                                .font(.system(size: 12))
-                                .foregroundStyle(Color.sweeplyTextSub)
-
-                            HStack(spacing: 10) {
-                                ForEach(ClientAvatarTone.allCases, id: \.rawValue) { tone in
-                                    avatarToneButton(tone)
+                ScrollView {
+                    VStack(spacing: 24) {
+                        // Import from Contacts button (new client only)
+                        if editingClient == nil {
+                            Button {
+                                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                showContactPicker = true
+                            } label: {
+                                HStack(spacing: 8) {
+                                    Image(systemName: "person.crop.circle.badge.plus")
+                                        .font(.system(size: 15, weight: .semibold))
+                                    Text("Import from Contacts".translated())
+                                        .font(.system(size: 14, weight: .semibold))
                                 }
+                                .foregroundStyle(Color.sweeplyNavy)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 12)
+                                .background(Color.sweeplyNavy.opacity(0.06))
+                                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                                .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).stroke(Color.sweeplyNavy.opacity(0.15), lineWidth: 1))
                             }
+                            .buttonStyle(.plain)
                         }
 
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text("Preferred Service".translated()).font(.system(size: 12)).foregroundStyle(Color.sweeplyTextSub)
-                            Menu {
-                                Button("None".translated()) { preferredService = nil }
-                                ForEach(serviceCatalog) { service in
-                                    if !service.isAddon {
-                                        Button("\(service.name) · \(service.price.currency)") {
-                                            preferredService = ServiceType(rawValue: service.name)
+                        // Contact
+                        VStack(alignment: .leading, spacing: 14) {
+                            Text("CONTACT INFO".translated()).font(.system(size: 10, weight: .bold)).foregroundStyle(Color.sweeplyTextSub).tracking(1.0)
+                            HStack(spacing: 12) {
+                                FormTextField(
+                                    label: "First Name *".translated(),
+                                    text: $firstName,
+                                    placeholder: "John".translated(),
+                                    errorMessage: showValidationErrors && firstName.isEmpty ? "First name is required".translated() : nil
+                                )
+                                FormTextField(label: "Last Name".translated(), text: $lastName, placeholder: "Doe".translated())
+                            }
+                            FormTextField(
+                                label: "Email".translated(),
+                                text: $email,
+                                placeholder: "john@example.com".translated(),
+                                keyboard: .emailAddress,
+                                errorMessage: showValidationErrors && !isEmailValid ? "Enter a valid email address".translated() : nil
+                            )
+                            FormTextField(
+                                label: "Phone".translated(),
+                                text: $phone,
+                                placeholder: "(555) 000-0000".translated(),
+                                keyboard: .phonePad,
+                                errorMessage: showValidationErrors && !isPhoneValid ? "Phone number must be at least 10 digits".translated() : nil
+                            )
+                        }
+
+                        // Preferences
+                        VStack(alignment: .leading, spacing: 14) {
+                            Text("PREFERENCES".translated()).font(.system(size: 10, weight: .bold)).foregroundStyle(Color.sweeplyTextSub).tracking(1.0)
+                            VStack(alignment: .leading, spacing: 6) {
+                                Text("Preferred Service".translated()).font(.system(size: 12)).foregroundStyle(Color.sweeplyTextSub)
+                                Menu {
+                                    Button("None".translated()) { preferredService = nil }
+                                    ForEach(serviceCatalog) { service in
+                                        if !service.isAddon {
+                                            Button("\(service.name) · \(service.price.currency)") {
+                                                preferredService = ServiceType(rawValue: service.name)
+                                            }
                                         }
                                     }
+                                } label: {
+                                    HStack {
+                                        Text(preferredServiceLabel)
+                                            .foregroundStyle(preferredService == nil ? Color.sweeplyTextSub : .primary)
+                                        Spacer()
+                                        Image(systemName: "chevron.down").font(.system(size: 12))
+                                    }
+                                    .padding(.vertical, 12)
+                                    .padding(.horizontal, 16)
+                                    .background(Color.sweeplyBackground)
+                                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                                    .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.sweeplyBorder, lineWidth: 1))
                                 }
-                            } label: {
-                                HStack {
-                                    Text(preferredServiceLabel)
-                                        .foregroundStyle(preferredService == nil ? Color.sweeplyTextSub : .primary)
-                                    Spacer()
-                                    Image(systemName: "chevron.down").font(.system(size: 12))
-                                }
-                                .padding(.vertical, 12)
-                                .padding(.horizontal, 16)
-                                .background(Color.sweeplyBackground)
-                                .clipShape(RoundedRectangle(cornerRadius: 10))
-                                .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.sweeplyBorder, lineWidth: 1))
+                            }
+                        }
+
+                        // Address
+                        VStack(alignment: .leading, spacing: 14) {
+                            Text("SERVICE ADDRESS".translated()).font(.system(size: 10, weight: .bold)).foregroundStyle(Color.sweeplyTextSub).tracking(1.0)
+                            AddressAutocompleteTF(
+                                label: "Street Address".translated(),
+                                street: $street,
+                                city: $city,
+                                state: $state,
+                                zip: $zip
+                            )
+                            HStack(spacing: 12) {
+                                FormTextField(label: "City".translated(), text: $city, placeholder: "Miami".translated())
+                                StatePickerField(label: "State".translated(), state: $state).frame(width: 90)
+                                FormTextField(label: "ZIP".translated(), text: $zip, placeholder: "33101".translated(), keyboard: .numberPad).frame(width: 90)
+                            }
+                        }
+
+                        // Notes
+                        VStack(alignment: .leading, spacing: 14) {
+                            Text("OPERATIONAL NOTES".translated()).font(.system(size: 10, weight: .bold)).foregroundStyle(Color.sweeplyTextSub).tracking(1.0)
+                            FormTextField(label: "Entry Instructions".translated(), text: $entryInstructions, placeholder: "Gate code #1234...".translated())
+
+                            VStack(alignment: .leading, spacing: 6) {
+                                Text("Notes".translated()).font(.system(size: 12)).foregroundStyle(Color.sweeplyTextSub)
+                                TextEditor(text: $notes)
+                                    .frame(minHeight: 100)
+                                    .padding(12)
+                                    .background(Color.sweeplyBackground)
+                                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                                    .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.sweeplyBorder, lineWidth: 1))
                             }
                         }
                     }
-
-                    // Address
-                    VStack(alignment: .leading, spacing: 14) {
-                        Text("SERVICE ADDRESS".translated()).font(.system(size: 10, weight: .bold)).foregroundStyle(Color.sweeplyTextSub).tracking(1.0)
-                        AddressAutocompleteTF(
-                            label: "Street Address".translated(),
-                            street: $street,
-                            city: $city,
-                            state: $state,
-                            zip: $zip
-                        )
-HStack(spacing: 12) {
-                             FormTextField(label: "City".translated(), text: $city, placeholder: "Miami".translated())
-                             StatePickerField(label: "State".translated(), state: $state).frame(width: 90)
-                             FormTextField(label: "ZIP".translated(), text: $zip, placeholder: "33101".translated(), keyboard: .numberPad).frame(width: 90)
-                         }
-                    }
-
-                    // Notes
-                    VStack(alignment: .leading, spacing: 14) {
-                        Text("OPERATIONAL NOTES".translated()).font(.system(size: 10, weight: .bold)).foregroundStyle(Color.sweeplyTextSub).tracking(1.0)
-                        FormTextField(label: "Entry Instructions".translated(), text: $entryInstructions, placeholder: "Gate code #1234...".translated())
-                        
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text("Notes".translated()).font(.system(size: 12)).foregroundStyle(Color.sweeplyTextSub)
-                            TextEditor(text: $notes)
-                                .frame(minHeight: 100)
-                                .padding(12)
-                                .background(Color.sweeplyBackground)
-                                .clipShape(RoundedRectangle(cornerRadius: 10))
-                                .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.sweeplyBorder, lineWidth: 1))
-                        }
-                    }
+                    .padding(.horizontal, 24)
                 }
-                .padding(.horizontal, 24)
+
+                // Save
+                Button {
+                    handlePrimaryAction()
+                } label: {
+                    HStack {
+                        if isSaving { ProgressView().tint(.white).padding(.trailing, 8) }
+                        Text(isSaving ? "Saving..." : (editingClient == nil ? "Create Client" : "Update Client"))
+                    }
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(isSaving ? Color.sweeplyBorder : Color.sweeplyNavy)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
+                .disabled(isSaving)
+                .padding(24)
             }
 
-            // Save
-            Button {
-                showValidationErrors = true
-                guard !firstName.isEmpty, isEmailValid, isPhoneValid else {
-                    UINotificationFeedbackGenerator().notificationOccurred(.error)
-                    return
-                }
-                Task { await saveClient() }
-            } label: {
-                HStack {
-                    if isSaving { ProgressView().tint(.white).padding(.trailing, 8) }
-                    Text(isSaving ? "Saving..." : (editingClient == nil ? "Create Client" : "Update Client"))
-                }
-                .font(.system(size: 16, weight: .bold))
-                .foregroundStyle(.white)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 14)
-                .background(isSaving ? Color.sweeplyBorder : Color.sweeplyNavy)
-                .clipShape(RoundedRectangle(cornerRadius: 12))
+            if showingCreatePreview {
+                createPreviewOverlay
             }
-            .disabled(isSaving)
-            .padding(24)
         }
         .ignoresSafeArea(.keyboard, edges: .bottom)
         .scrollDismissesKeyboard(.interactively)
@@ -303,6 +291,23 @@ HStack(spacing: 12) {
             guard !didManuallySelectAvatarTone, editingClient == nil else { return }
             selectedAvatarTone = ClientAvatarStyle.defaultTone(for: newValue)
         }
+        .animation(.easeInOut(duration: 0.2), value: showingCreatePreview)
+    }
+
+    private func handlePrimaryAction() {
+        showValidationErrors = true
+        guard !firstName.isEmpty, isEmailValid, isPhoneValid else {
+            UINotificationFeedbackGenerator().notificationOccurred(.error)
+            return
+        }
+
+        guard editingClient == nil else {
+            Task { await saveClient() }
+            return
+        }
+
+        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+        showingCreatePreview = true
     }
 
     private func saveClient() async {
@@ -358,88 +363,185 @@ HStack(spacing: 12) {
         dismiss()
     }
 
-    private var clientPreviewCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("PREVIEW".translated())
-                .font(.system(size: 10, weight: .bold))
-                .foregroundStyle(Color.sweeplyTextSub)
-                .tracking(1.0)
-
-            HStack(spacing: 14) {
-                ZStack {
-                    Circle()
-                        .fill(selectedAvatarTone.backgroundColor)
-                        .frame(width: 58, height: 58)
-                    Text(String(previewName.prefix(1)).uppercased())
-                        .font(.system(size: 22, weight: .bold))
-                        .foregroundStyle(selectedAvatarTone.foregroundColor)
+    private var createPreviewOverlay: some View {
+        ZStack {
+            Color.black.opacity(0.18)
+                .ignoresSafeArea()
+                .onTapGesture {
+                    showingCreatePreview = false
                 }
 
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(previewName)
-                        .font(.system(size: 17, weight: .semibold))
-                        .foregroundStyle(Color.sweeplyNavy)
-                        .lineLimit(1)
+            VStack(spacing: 18) {
+                Text("Preview Client".translated())
+                    .font(.system(size: 18, weight: .bold))
+                    .foregroundStyle(Color.sweeplyNavy)
 
-                    if !previewAddress.isEmpty {
-                        Label(previewAddress, systemImage: "mappin.and.ellipse")
-                            .font(.system(size: 13))
-                            .foregroundStyle(Color.sweeplyTextSub)
-                            .lineLimit(1)
-                    }
+                previewCardContent
+                avatarTonePicker
 
-                    if !email.isEmpty {
-                        Label(email, systemImage: "envelope")
-                            .font(.system(size: 13))
+                HStack(spacing: 12) {
+                    Button {
+                        showingCreatePreview = false
+                    } label: {
+                        Text("Cancel".translated())
+                            .font(.system(size: 15, weight: .semibold))
                             .foregroundStyle(Color.sweeplyTextSub)
-                            .lineLimit(1)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 46)
+                            .background(Color.sweeplySurface)
+                            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                    .stroke(Color.sweeplyBorder, lineWidth: 1)
+                            )
                     }
+                    .buttonStyle(.plain)
+
+                    Button {
+                        Task { await saveClient() }
+                    } label: {
+                        HStack(spacing: 8) {
+                            if isSaving {
+                                ProgressView()
+                                    .tint(.white)
+                            }
+                            Text(isSaving ? "Saving..." : "Confirm".translated())
+                        }
+                        .font(.system(size: 15, weight: .bold))
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 46)
+                        .background(isSaving ? Color.sweeplyBorder : Color.sweeplyNavy)
+                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(isSaving)
                 }
-
-                Spacer(minLength: 0)
             }
-            .padding(16)
+            .padding(22)
+            .frame(maxWidth: 340)
             .background(Color.sweeplyBackground)
-            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
             .overlay(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                RoundedRectangle(cornerRadius: 22, style: .continuous)
                     .stroke(Color.sweeplyBorder, lineWidth: 1)
             )
+            .shadow(color: Color.black.opacity(0.08), radius: 24, x: 0, y: 12)
+            .padding(.horizontal, 24)
         }
     }
 
-    private func avatarToneButton(_ tone: ClientAvatarTone) -> some View {
+    private var previewCardContent: some View {
+        HStack(spacing: 14) {
+            ZStack {
+                Circle()
+                    .fill(selectedAvatarTone.backgroundColor)
+                    .frame(width: 58, height: 58)
+                Text(String(previewName.prefix(1)).uppercased())
+                    .font(.system(size: 22, weight: .bold))
+                    .foregroundStyle(selectedAvatarTone.foregroundColor)
+            }
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(previewName)
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundStyle(Color.sweeplyNavy)
+                    .lineLimit(1)
+
+                if !previewAddress.isEmpty {
+                    Label(previewAddress, systemImage: "mappin.and.ellipse")
+                        .font(.system(size: 13))
+                        .foregroundStyle(Color.sweeplyTextSub)
+                        .lineLimit(1)
+                }
+
+                if !email.isEmpty {
+                    Label(email, systemImage: "envelope")
+                        .font(.system(size: 13))
+                        .foregroundStyle(Color.sweeplyTextSub)
+                        .lineLimit(1)
+                }
+            }
+
+            Spacer(minLength: 0)
+        }
+        .padding(16)
+        .background(Color.sweeplySurface)
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(Color.sweeplyBorder, lineWidth: 1)
+        )
+    }
+
+    private var avatarTonePicker: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text("Avatar Color".translated())
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(Color.sweeplyNavy)
+                Spacer()
+                Text(selectedAvatarTone.label.translated())
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(Color.sweeplyTextSub)
+            }
+
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 3), spacing: 10) {
+                ForEach(ClientAvatarTone.allCases, id: \.rawValue) { tone in
+                    avatarToneSwatch(tone)
+                }
+            }
+        }
+        .padding(14)
+        .background(Color.sweeplySurface)
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(Color.sweeplyBorder, lineWidth: 1)
+        )
+    }
+
+    private func avatarToneSwatch(_ tone: ClientAvatarTone) -> some View {
         let isSelected = selectedAvatarTone == tone
 
         return Button {
             selectedAvatarTone = tone
             didManuallySelectAvatarTone = true
         } label: {
-            HStack(spacing: 10) {
-                Circle()
-                    .fill(tone.backgroundColor)
-                    .frame(width: 18, height: 18)
-                    .overlay(Circle().stroke(Color.white.opacity(0.35), lineWidth: 1))
+            VStack(spacing: 8) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .fill(tone.backgroundColor)
+                        .frame(height: 54)
+
+                    Text(String(previewName.prefix(1)).uppercased())
+                        .font(.system(size: 20, weight: .bold))
+                        .foregroundStyle(tone.foregroundColor)
+
+                    if isSelected {
+                        Circle()
+                            .fill(Color.white)
+                            .frame(width: 20, height: 20)
+                            .overlay(
+                                Image(systemName: "checkmark")
+                                    .font(.system(size: 10, weight: .bold))
+                                    .foregroundStyle(tone.backgroundColor)
+                            )
+                            .offset(x: 22, y: -17)
+                    }
+                }
 
                 Text(tone.label.translated())
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(.system(size: 12, weight: .semibold))
                     .foregroundStyle(isSelected ? Color.sweeplyNavy : Color.sweeplyTextSub)
-
-                Spacer()
-
-                if isSelected {
-                    Image(systemName: "checkmark.circle.fill")
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(Color.sweeplyAccent)
-                }
+                    .lineLimit(1)
             }
-            .padding(.horizontal, 12)
-            .frame(height: 42)
             .frame(maxWidth: .infinity)
+            .padding(10)
             .background(isSelected ? Color.sweeplyAccent.opacity(0.08) : Color.sweeplyBackground)
-            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
             .overlay(
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
                     .stroke(isSelected ? Color.sweeplyAccent.opacity(0.35) : Color.sweeplyBorder, lineWidth: 1)
             )
         }
