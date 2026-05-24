@@ -594,8 +594,7 @@ struct MemberDetailView: View {
         NavigationStack {
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 20) {
-                    profileHeader
-                    contactCard
+                    memberProfileCard
                     performanceCard
                     paySetupCard
                     historyCard
@@ -693,51 +692,60 @@ struct MemberDetailView: View {
         }
     }
 
-    // MARK: - Profile Header
+    // MARK: - Profile Card
 
-    private var profileHeader: some View {
-        VStack(spacing: 8) {
-            ZStack {
-                Circle()
-                    .fill(Color.sweeplyAccent.gradient)
-                    .frame(width: 76, height: 76)
-                Text(member.initials.isEmpty ? "?" : member.initials)
-                    .font(.system(size: 26, weight: .bold))
-                    .foregroundStyle(.white)
-            }
-
-            VStack(spacing: 4) {
-                Text(member.name)
-                    .font(.system(size: 20, weight: .bold))
-                    .foregroundStyle(Color.sweeplyNavy)
-
-                HStack(spacing: 6) {
+    private var memberProfileCard: some View {
+        VStack(spacing: 0) {
+            HStack(alignment: .top, spacing: 16) {
+                ZStack {
                     Circle()
-                        .fill(statusColor(member.status))
-                        .frame(width: 7, height: 7)
-                    Text(member.status.displayName)
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundStyle(Color.sweeplyTextSub)
+                        .fill(Color.sweeplyAccent.gradient)
+                        .frame(width: 72, height: 72)
+                    Text(member.initials.isEmpty ? "?" : member.initials)
+                        .font(.system(size: 25, weight: .bold))
+                        .foregroundStyle(.white)
                 }
 
-                Text("Member since %@".translated(with: member.addedAt.formatted(date: .abbreviated, time: .omitted)))
-                    .font(.system(size: 12))
-                    .foregroundStyle(Color.sweeplyTextSub.opacity(0.7))
+                VStack(alignment: .leading, spacing: 10) {
+                    HStack(alignment: .top, spacing: 12) {
+                        VStack(alignment: .leading, spacing: 5) {
+                            Text(isEditing ? localName : member.name)
+                                .font(.system(size: 21, weight: .bold))
+                                .foregroundStyle(Color.sweeplyNavy)
+                                .lineLimit(2)
+                                .minimumScaleFactor(0.85)
+
+                            HStack(spacing: 6) {
+                                Circle()
+                                    .fill(statusColor(member.status))
+                                    .frame(width: 7, height: 7)
+                                Text(member.status.displayName)
+                                    .font(.system(size: 13, weight: .medium))
+                                    .foregroundStyle(Color.sweeplyTextSub)
+                            }
+                        }
+
+                        Spacer(minLength: 8)
+
+                        Text(member.role.displayName)
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(Color.sweeplyAccent)
+                            .padding(.horizontal, 11)
+                            .padding(.vertical, 5)
+                            .background(Color.sweeplyAccent.opacity(0.12), in: Capsule())
+                    }
+
+                    Text("Member since %@".translated(with: member.addedAt.formatted(date: .abbreviated, time: .omitted)))
+                        .font(.system(size: 12))
+                        .foregroundStyle(Color.sweeplyTextSub.opacity(0.72))
+                }
             }
-        }
-        .frame(maxWidth: .infinity)
-        .frame(minHeight: 110)
-        .padding(.vertical, 20)
-        .background(Color.sweeplySurface)
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(Color.sweeplyBorder, lineWidth: 1))
-    }
+            .padding(.horizontal, 16)
+            .padding(.top, 18)
+            .padding(.bottom, 16)
 
-    // MARK: - Contact Card
+            Divider()
 
-    private var contactCard: some View {
-        VStack(spacing: 0) {
-            // Name (only shown in edit mode — normally in header)
             if isEditing {
                 contactEditRow(label: "Name".translated(), systemImage: "person") {
                     TextField("Full name".translated(), text: $localName)
@@ -777,18 +785,6 @@ struct MemberDetailView: View {
             }
 
             Divider().padding(.leading, 52)
-
-            contactRow(label: "Role".translated(), value: "", systemImage: "briefcase") {
-                HStack {
-                    Spacer(minLength: 0)
-                    Text("Cleaner".translated())
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 4)
-                        .background(Color.sweeplyAccent, in: Capsule())
-                }
-            }
 
             if isEditing && hasContactChanges {
                 Divider()
