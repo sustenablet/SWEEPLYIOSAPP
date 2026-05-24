@@ -47,6 +47,19 @@ enum ClientFrequency {
         case .monthly:   return Color.blue
         }
     }
+
+    static func from(_ recurrenceFrequency: RecurrenceFrequency) -> ClientFrequency {
+        switch recurrenceFrequency {
+        case .weekly:
+            return .weekly
+        case .biweekly:
+            return .biweekly
+        case .monthly:
+            return .monthly
+        case .once, .custom:
+            return .recurring
+        }
+    }
 }
 
 // MARK: - Clients List View
@@ -109,15 +122,18 @@ struct ClientsView: View {
             if count == 0 {
                 freq = .none
             } else {
-                let hasRecurring = clientJobs.contains { $0.isRecurring }
+                let recurringJobs = clientJobs.filter { $0.isRecurring }
+                let hasRecurring = !recurringJobs.isEmpty
                 if !hasRecurring {
                     freq = .oneTime
                 } else {
-                    let recurringDates = clientJobs
-                        .filter { $0.isRecurring }
+                    let selectedFrequency = recurringJobs.compactMap(\.recurrenceFrequency).first
+                    let recurringDates = recurringJobs
                         .map { $0.date }
                         .sorted()
-                    if recurringDates.count < 2 {
+                    if let selectedFrequency {
+                        freq = .from(selectedFrequency)
+                    } else if recurringDates.count < 2 {
                         freq = .recurring
                     } else {
                         let gaps = zip(recurringDates, recurringDates.dropFirst()).map {
@@ -149,12 +165,6 @@ struct ClientsView: View {
 
     private var recurringCount: Int { clientsWithDerived.filter { $0.frequency.isRecurring }.count }
     private var oneTimeCount: Int   { clientsWithDerived.filter { $0.frequency == .oneTime }.count }
-    private var avgJobsPerClient: Int {
-        let total = clientsWithDerived.count
-        guard total > 0 else { return 0 }
-        return clientsWithDerived.reduce(0) { $0 + $1.jobCount } / total
-    }
-
     var body: some View {
         NavigationStack {
             ScrollView {
@@ -311,8 +321,6 @@ struct ClientsView: View {
             ClientStatCell(value: "\(recurringCount)", label: "Recurring".translated())
             Divider().frame(height: 26)
             ClientStatCell(value: "\(oneTimeCount)", label: "One-time".translated())
-            Divider().frame(height: 26)
-            ClientStatCell(value: "\(avgJobsPerClient)", label: "Avg jobs".translated())
         }
         .padding(.vertical, 12)
         .background(Color.sweeplySurface)
@@ -337,7 +345,6 @@ struct ClientsView: View {
                         NavigationLink(destination: ClientDetailView(clientId: item.client.id)) {
                             ClientCard(
                                 client: item.client,
-                                jobCount: item.jobCount,
                                 frequency: item.frequency,
                                 onEdit: { editSheetClient = item.client },
                                 onDelete: { deleteTarget = item.client },
@@ -467,7 +474,6 @@ private struct ClientCard: View {
     private static let compactAddressCharacterLimit = 31
 
     let client: Client
-    let jobCount: Int
     let frequency: ClientFrequency
     let onEdit: () -> Void
     let onDelete: () -> Void
@@ -574,17 +580,6 @@ private struct ClientCard: View {
                                 .font(.system(size: 12, weight: .semibold))
                                 .foregroundStyle(frequency.color)
                         }
-                    }
-
-                    Spacer(minLength: 0)
-
-                    HStack(alignment: .lastTextBaseline, spacing: 2) {
-                        Text("\(jobCount)")
-                            .font(.system(size: 15, weight: .bold, design: .monospaced))
-                            .foregroundStyle(Color.sweeplyNavy)
-                        Text("jobs".translated())
-                            .font(.system(size: 11, weight: .medium))
-                            .foregroundStyle(Color.sweeplyTextSub)
                     }
                 }
             }
