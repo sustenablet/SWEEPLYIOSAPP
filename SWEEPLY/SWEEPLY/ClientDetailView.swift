@@ -107,36 +107,36 @@ struct ClientDetailView: View {
                 .toolbar(.visible, for: .navigationBar)
                 .toolbar {
                     ToolbarItem(placement: .topBarTrailing) {
-                        HStack(spacing: 8) {
-                            Button("Edit".translated()) {
+                        Menu {
+                            Button {
                                 UIImpactFeedbackGenerator(style: .light).impactOccurred()
                                 showEditSheet = true
-                            }
-                            .font(.system(size: 14, weight: .bold))
-                            .foregroundStyle(Color.sweeplyNavy)
-                            
-                            Menu {
-                                Button {
-                                    UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-                                    Task { await toggleArchive(client: client) }
-                                } label: {
-                                    Label(client.isActive ? "Archive Client".translated() : "Unarchive Client".translated(),
-                                          systemImage: client.isActive ? "archivebox" : "archivebox.fill")
-                                }
-
-                                Divider()
-
-                                Button(role: .destructive) {
-                                    UIImpactFeedbackGenerator(style: .heavy).impactOccurred()
-                                    showDeleteConfirmation = true
-                                } label: {
-                                    Label("Delete Client".translated(), systemImage: "trash")
-                                }
                             } label: {
-                                Image(systemName: "ellipsis.circle")
-                                    .font(.system(size: 18))
-                                    .foregroundStyle(Color.sweeplyNavy)
+                                Label("Edit".translated(), systemImage: "pencil")
                             }
+
+                            Divider()
+
+                            Button {
+                                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                                Task { await toggleArchive(client: client) }
+                            } label: {
+                                Label(client.isActive ? "Archive Client".translated() : "Unarchive Client".translated(),
+                                      systemImage: client.isActive ? "archivebox" : "archivebox.fill")
+                            }
+
+                            Divider()
+
+                            Button(role: .destructive) {
+                                UIImpactFeedbackGenerator(style: .heavy).impactOccurred()
+                                showDeleteConfirmation = true
+                            } label: {
+                                Label("Delete Client".translated(), systemImage: "trash")
+                            }
+                        } label: {
+                            Image(systemName: "ellipsis.circle")
+                                .font(.system(size: 18))
+                                .foregroundStyle(Color.sweeplyNavy)
                         }
                     }
                 }
@@ -180,7 +180,7 @@ struct ClientDetailView: View {
 
     // MARK: - Profile Header
     private func profileHeader(client: Client) -> some View {
-        let avatarTone = ClientAvatarStyle.tone(for: client)
+        let avatarTone = client.avatarTone
         return VStack(spacing: 20) {
             // Avatar & Basic Info
             HStack(spacing: 16) {
@@ -188,7 +188,7 @@ struct ClientDetailView: View {
                     RoundedRectangle(cornerRadius: 18)
                         .fill(avatarTone.backgroundColor)
                         .frame(width: 64, height: 64)
-                    Text(String(client.name.prefix(1)).uppercased())
+                    Text(client.avatarInitials)
                         .font(.system(size: 24, weight: .bold))
                         .foregroundStyle(avatarTone.foregroundColor)
                 }
