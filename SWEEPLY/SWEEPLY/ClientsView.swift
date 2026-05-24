@@ -464,6 +464,8 @@ private struct ClientStatCell: View {
 // MARK: - Client Card
 
 private struct ClientCard: View {
+    private static let compactAddressCharacterLimit = 31
+
     let client: Client
     let jobCount: Int
     let frequency: ClientFrequency
@@ -490,11 +492,34 @@ private struct ClientCard: View {
     }
 
     private var secondaryInfo: (icon: String, text: String)? {
-        let addr = [client.address, client.city].filter { !$0.isEmpty }.joined(separator: ", ")
-        if !addr.isEmpty { return ("mappin", addr) }
+        let street = client.address.trimmingCharacters(in: .whitespacesAndNewlines)
+        let city = client.city.trimmingCharacters(in: .whitespacesAndNewlines)
+        let compactAddress = formattedCompactAddress(street: street, city: city)
+        if !compactAddress.isEmpty { return ("mappin", compactAddress) }
         if !client.phone.isEmpty { return ("phone", client.phone) }
         if !client.email.isEmpty { return ("envelope", client.email) }
         return nil
+    }
+
+    private func formattedCompactAddress(street: String, city: String) -> String {
+        guard !street.isEmpty || !city.isEmpty else { return "" }
+        guard !street.isEmpty, !city.isEmpty else { return street.isEmpty ? city : street }
+
+        let separator = ", "
+        let fullAddress = "\(street)\(separator)\(city)"
+        guard fullAddress.count > Self.compactAddressCharacterLimit else { return fullAddress }
+
+        let streetBudget = max(0, Self.compactAddressCharacterLimit - city.count - separator.count)
+        guard streetBudget > 0 else { return city }
+        guard street.count > streetBudget else { return fullAddress }
+
+        if streetBudget == 1 {
+            return "\(street.prefix(1))\(separator)\(city)"
+        }
+
+        let visibleStreetCount = max(1, streetBudget - 1)
+        let trimmedStreet = street.prefix(visibleStreetCount).trimmingCharacters(in: .whitespaces)
+        return "\(trimmedStreet)…\(separator)\(city)"
     }
 
     var body: some View {
