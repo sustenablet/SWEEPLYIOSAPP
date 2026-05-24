@@ -39,6 +39,7 @@ create table if not exists public.clients (
   preferred_service text,
   entry_instructions text default '',
   notes text default '',
+  avatar_tone text,
   created_at timestamptz default now()
 );
 
