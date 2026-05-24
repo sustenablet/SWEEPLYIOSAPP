@@ -10,6 +10,7 @@ struct NewClientForm: View {
 
     // Edit mode
     var editingClient: Client? = nil
+    var onSave: ((Client) -> Void)? = nil
 
     @State private var firstName = ""
     @State private var lastName = ""
@@ -25,6 +26,8 @@ struct NewClientForm: View {
     @State private var isSaving = false
     @State private var showContactPicker = false
     @State private var showValidationErrors = false
+    @State private var selectedAvatarTone: ClientAvatarTone = .slate
+    @State private var didManuallySelectAvatarTone = false
 
     private var fallbackSettings: AppSettings {
         var settings = AppSettings()
@@ -59,6 +62,18 @@ struct NewClientForm: View {
         return preferredService.rawValue
     }
 
+    private var previewName: String {
+        let combined = "\(firstName.trimmingCharacters(in: .whitespaces)) \(lastName.trimmingCharacters(in: .whitespaces))"
+            .trimmingCharacters(in: .whitespaces)
+        return combined.isEmpty ? "Client Preview".translated() : combined
+    }
+
+    private var previewAddress: String {
+        [street, city].map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+            .joined(separator: ", ")
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             // Header
@@ -74,6 +89,8 @@ struct NewClientForm: View {
 
             ScrollView {
                 VStack(spacing: 24) {
+                    clientPreviewCard
+
                     // Import from Contacts button (new client only)
                     if editingClient == nil {
                         Button {
@@ -127,6 +144,18 @@ struct NewClientForm: View {
                     // Preferences
                     VStack(alignment: .leading, spacing: 14) {
                         Text("PREFERENCES".translated()).font(.system(size: 10, weight: .bold)).foregroundStyle(Color.sweeplyTextSub).tracking(1.0)
+                        VStack(alignment: .leading, spacing: 10) {
+                            Text("Avatar Color".translated())
+                                .font(.system(size: 12))
+                                .foregroundStyle(Color.sweeplyTextSub)
+
+                            HStack(spacing: 10) {
+                                ForEach(ClientAvatarTone.allCases, id: \.rawValue) { tone in
+                                    avatarToneButton(tone)
+                                }
+                            }
+                        }
+
                         VStack(alignment: .leading, spacing: 6) {
                             Text("Preferred Service".translated()).font(.system(size: 12)).foregroundStyle(Color.sweeplyTextSub)
                             Menu {
@@ -264,7 +293,15 @@ HStack(spacing: 12) {
                 zip = c.zip
                 entryInstructions = c.entryInstructions
                 notes = c.notes
+                selectedAvatarTone = ClientAvatarStyle.tone(for: c)
+                didManuallySelectAvatarTone = true
+            } else {
+                selectedAvatarTone = ClientAvatarStyle.defaultTone(for: previewName)
             }
+        }
+        .onChange(of: previewName) { _, newValue in
+            guard !didManuallySelectAvatarTone, editingClient == nil else { return }
+            selectedAvatarTone = ClientAvatarStyle.defaultTone(for: newValue)
         }
     }
 
@@ -272,7 +309,8 @@ HStack(spacing: 12) {
         guard let userId = session.userId else { return }
         isSaving = true
         let fullName = "\(firstName.trimmingCharacters(in: .whitespaces)) \(lastName.trimmingCharacters(in: .whitespaces))".trimmingCharacters(in: .whitespaces)
-        
+
+        let savedClient: Client
         if let existing = editingClient {
             var updated = existing
             updated.name = fullName
@@ -285,7 +323,13 @@ HStack(spacing: 12) {
             updated.zip = zip
             updated.entryInstructions = entryInstructions
             updated.notes = notes
-            _ = await clientsStore.update(updated)
+            let success = await clientsStore.update(updated)
+            guard success else {
+                isSaving = false
+                return
+            }
+            ClientAvatarStyle.save(selectedAvatarTone, for: updated.id)
+            savedClient = updated
         } else {
             let newClient = Client(
                 id: UUID(),
@@ -300,11 +344,106 @@ HStack(spacing: 12) {
                 entryInstructions: entryInstructions,
                 notes: notes
             )
-            _ = await clientsStore.insert(newClient, userId: userId)
+            let success = await clientsStore.insert(newClient, userId: userId)
+            guard success else {
+                isSaving = false
+                return
+            }
+            ClientAvatarStyle.save(selectedAvatarTone, for: newClient.id)
+            savedClient = newClient
         }
-        
+
         isSaving = false
+        onSave?(savedClient)
         dismiss()
+    }
+
+    private var clientPreviewCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("PREVIEW".translated())
+                .font(.system(size: 10, weight: .bold))
+                .foregroundStyle(Color.sweeplyTextSub)
+                .tracking(1.0)
+
+            HStack(spacing: 14) {
+                ZStack {
+                    Circle()
+                        .fill(selectedAvatarTone.backgroundColor)
+                        .frame(width: 58, height: 58)
+                    Text(String(previewName.prefix(1)).uppercased())
+                        .font(.system(size: 22, weight: .bold))
+                        .foregroundStyle(selectedAvatarTone.foregroundColor)
+                }
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(previewName)
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundStyle(Color.sweeplyNavy)
+                        .lineLimit(1)
+
+                    if !previewAddress.isEmpty {
+                        Label(previewAddress, systemImage: "mappin.and.ellipse")
+                            .font(.system(size: 13))
+                            .foregroundStyle(Color.sweeplyTextSub)
+                            .lineLimit(1)
+                    }
+
+                    if !email.isEmpty {
+                        Label(email, systemImage: "envelope")
+                            .font(.system(size: 13))
+                            .foregroundStyle(Color.sweeplyTextSub)
+                            .lineLimit(1)
+                    }
+                }
+
+                Spacer(minLength: 0)
+            }
+            .padding(16)
+            .background(Color.sweeplyBackground)
+            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .stroke(Color.sweeplyBorder, lineWidth: 1)
+            )
+        }
+    }
+
+    private func avatarToneButton(_ tone: ClientAvatarTone) -> some View {
+        let isSelected = selectedAvatarTone == tone
+
+        return Button {
+            selectedAvatarTone = tone
+            didManuallySelectAvatarTone = true
+        } label: {
+            HStack(spacing: 10) {
+                Circle()
+                    .fill(tone.backgroundColor)
+                    .frame(width: 18, height: 18)
+                    .overlay(Circle().stroke(Color.white.opacity(0.35), lineWidth: 1))
+
+                Text(tone.label.translated())
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(isSelected ? Color.sweeplyNavy : Color.sweeplyTextSub)
+
+                Spacer()
+
+                if isSelected {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(Color.sweeplyAccent)
+                }
+            }
+            .padding(.horizontal, 12)
+            .frame(height: 42)
+            .frame(maxWidth: .infinity)
+            .background(isSelected ? Color.sweeplyAccent.opacity(0.08) : Color.sweeplyBackground)
+            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .stroke(isSelected ? Color.sweeplyAccent.opacity(0.35) : Color.sweeplyBorder, lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
     }
 }
 

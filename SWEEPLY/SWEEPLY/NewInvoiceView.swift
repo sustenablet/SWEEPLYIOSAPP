@@ -15,6 +15,7 @@ struct NewInvoiceView: View {
     @State private var errorMessage: String? = nil
     @State private var autoInvoiceNumber: String = ""
     @State private var showingServicePicker = false
+    @State private var showingNewClientForm = false
 
     init() {
         _selectedClientId = State(initialValue: nil)
@@ -25,6 +26,7 @@ struct NewInvoiceView: View {
         _errorMessage = State(initialValue: nil)
         _autoInvoiceNumber = State(initialValue: "")
         _showingServicePicker = State(initialValue: false)
+        _showingNewClientForm = State(initialValue: false)
     }
 
     /// Pre-fill from a completed job — client + one line item already populated.
@@ -39,6 +41,7 @@ struct NewInvoiceView: View {
         _errorMessage = State(initialValue: nil)
         _autoInvoiceNumber = State(initialValue: "")
         _showingServicePicker = State(initialValue: false)
+        _showingNewClientForm = State(initialValue: false)
     }
 
     private var activeClients: [Client] {
@@ -166,6 +169,14 @@ struct NewInvoiceView: View {
                     lineItems.append(item)
                 }
             }
+            .sheet(isPresented: $showingNewClientForm) {
+                NewClientForm { savedClient in
+                    selectedClientId = savedClient.id
+                }
+                .environment(clientsStore)
+                .environment(profileStore)
+                .environment(session)
+            }
         }
     }
 
@@ -179,6 +190,14 @@ struct NewInvoiceView: View {
                 Menu {
                     ForEach(activeClients) { client in
                         Button(client.name) { selectedClientId = client.id }
+                    }
+
+                    Divider()
+
+                    Button {
+                        showingNewClientForm = true
+                    } label: {
+                        Label("Create New Client".translated(), systemImage: "person.badge.plus")
                     }
                 } label: {
                     InvoicePickerButton(
@@ -216,10 +235,27 @@ struct NewInvoiceView: View {
                 }
 
                 if activeClients.isEmpty {
-                    Text("No active clients. Add a client first.".translated())
-                        .font(.system(size: 12))
-                        .foregroundStyle(Color.sweeplyDestructive)
-                        .padding(.leading, 4)
+                    Button {
+                        showingNewClientForm = true
+                    } label: {
+                        HStack(spacing: 8) {
+                            Image(systemName: "person.badge.plus")
+                                .font(.system(size: 13, weight: .semibold))
+                            Text("Create your first client".translated())
+                                .font(.system(size: 13, weight: .semibold))
+                        }
+                        .foregroundStyle(Color.sweeplyNavy)
+                        .padding(.horizontal, 14)
+                        .frame(height: 42)
+                        .background(Color.sweeplySurface)
+                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                .stroke(Color.sweeplyBorder, lineWidth: 1)
+                        )
+                    }
+                    .buttonStyle(.plain)
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
             }
         }

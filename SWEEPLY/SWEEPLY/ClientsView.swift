@@ -473,22 +473,8 @@ private struct ClientCard: View {
     let onDelete: () -> Void
     let onToggleArchive: () -> Void
 
-    // Deterministic pastel palette — soft, light, airy
-    private static let palette: [(bg: Color, fg: Color)] = [
-        (Color(red: 0.96, green: 0.93, blue: 1.00), Color(red: 0.45, green: 0.28, blue: 0.82)),  // lavender
-        (Color(red: 0.90, green: 0.97, blue: 0.93), Color(red: 0.18, green: 0.58, blue: 0.36)),  // mint
-        (Color(red: 1.00, green: 0.93, blue: 0.88), Color(red: 0.80, green: 0.40, blue: 0.18)),  // peach
-        (Color(red: 0.88, green: 0.95, blue: 1.00), Color(red: 0.18, green: 0.48, blue: 0.84)),  // sky
-        (Color(red: 1.00, green: 0.96, blue: 0.86), Color(red: 0.76, green: 0.52, blue: 0.10)),  // amber
-        (Color(red: 0.94, green: 0.90, blue: 0.98), Color(red: 0.60, green: 0.26, blue: 0.72)),  // lilac
-    ]
-
-    private var paletteEntry: (bg: Color, fg: Color) {
-        guard client.isActive else {
-            return (Color.sweeplyTextSub.opacity(0.10), Color.sweeplyTextSub)
-        }
-        let hash = client.name.unicodeScalars.reduce(0) { $0 + Int($1.value) }
-        return Self.palette[hash % Self.palette.count]
+    private var avatarTone: ClientAvatarTone {
+        ClientAvatarStyle.tone(for: client)
     }
 
     private var secondaryInfo: (icon: String, text: String)? {
@@ -521,11 +507,11 @@ private struct ClientCard: View {
             // Pastel avatar
             ZStack {
                 Circle()
-                    .fill(paletteEntry.bg)
+                    .fill(client.isActive ? avatarTone.backgroundColor : Color.sweeplyTextSub.opacity(0.10))
                     .frame(width: 58, height: 58)
                 Text(String(client.name.prefix(1)).uppercased())
                     .font(.system(size: 22, weight: .bold))
-                    .foregroundStyle(paletteEntry.fg)
+                    .foregroundStyle(client.isActive ? avatarTone.foregroundColor : Color.sweeplyTextSub)
             }
             .overlay(alignment: .topTrailing) {
                 Circle()

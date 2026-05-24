@@ -265,7 +265,8 @@ struct InvoiceDetailView: View {
     // MARK: - Client Profile Card
 
     private func clientProfileCard(client: Client) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
+        let avatarTone = ClientAvatarStyle.tone(for: client)
+        return VStack(alignment: .leading, spacing: 12) {
             Text("BILLED TO".translated())
                 .font(.system(size: 11, weight: .bold))
                 .foregroundStyle(Color.sweeplyTextSub)
@@ -276,11 +277,11 @@ struct InvoiceDetailView: View {
                     HStack(spacing: 14) {
                         ZStack {
                             Circle()
-                                .fill(Color.sweeplyNavy.opacity(0.1))
+                                .fill(avatarTone.backgroundColor)
                                 .frame(width: 48, height: 48)
                             Text(String(client.name.prefix(1)).uppercased())
                                 .font(.system(size: 18, weight: .bold))
-                                .foregroundStyle(Color.sweeplyNavy)
+                                .foregroundStyle(avatarTone.foregroundColor)
                         }
 
                         VStack(alignment: .leading, spacing: 4) {

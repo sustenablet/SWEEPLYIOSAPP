@@ -180,16 +180,17 @@ struct ClientDetailView: View {
 
     // MARK: - Profile Header
     private func profileHeader(client: Client) -> some View {
-        VStack(spacing: 20) {
+        let avatarTone = ClientAvatarStyle.tone(for: client)
+        return VStack(spacing: 20) {
             // Avatar & Basic Info
             HStack(spacing: 16) {
                 ZStack {
                     RoundedRectangle(cornerRadius: 18)
-                        .fill(Color.sweeplyNavy)
+                        .fill(avatarTone.backgroundColor)
                         .frame(width: 64, height: 64)
                     Text(String(client.name.prefix(1)).uppercased())
                         .font(.system(size: 24, weight: .bold))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(avatarTone.foregroundColor)
                 }
 
                 VStack(alignment: .leading, spacing: 4) {
