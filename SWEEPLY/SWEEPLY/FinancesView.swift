@@ -138,6 +138,7 @@ struct FinancesView: View {
         guard let nextPayday = calendar.date(byAdding: .day, value: daysUntilPayday, to: today) else { return nil }
         
         let formatter = DateFormatter()
+        formatter.locale = Locale.app
         formatter.dateFormat = "EEEE, MMM d"
         return formatter.string(from: nextPayday)
     }
@@ -204,6 +205,7 @@ struct FinancesView: View {
         let calendar = Calendar.current
         let interval = calendar.dateInterval(of: .weekOfYear, for: Date()) ?? DateInterval(start: Date(), end: Date())
         let formatter = DateFormatter()
+        formatter.locale = Locale.app
         formatter.dateFormat = "EEE"
 
         return (0..<7).compactMap { offset in
@@ -678,23 +680,22 @@ struct FinancesView: View {
     }
 
     private var invoicesBlock: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack {
-                Text("Invoices".translated())
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(Color.sweeplyNavy)
-                Spacer()
-                if selectedFilter != .all {
-                    Text("%d shown".translated(with: filteredInvoices.count))
-                        .font(.system(size: 12))
-                        .foregroundStyle(Color.sweeplyTextSub)
-                }
-            }
+        VStack(alignment: .leading, spacing: 12) {
+            SectionCard {
+                VStack(alignment: .leading, spacing: 14) {
+                    HStack {
+                        Text("Invoices".translated())
+                            .font(.system(size: 17, weight: .semibold))
+                            .foregroundStyle(Color.sweeplyNavy)
+                        Spacer()
+                    }
 
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 0) {
-                    ForEach(InvoiceFilter.allCases, id: \.self) { filter in
-                        filterTab(filter)
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 10) {
+                            ForEach(InvoiceFilter.allCases, id: \.self) { filter in
+                                filterTab(filter)
+                            }
+                        }
                     }
                 }
             }
@@ -747,22 +748,26 @@ struct FinancesView: View {
             UIImpactFeedbackGenerator(style: .light).impactOccurred()
             withAnimation(.easeInOut(duration: 0.2)) { selectedFilterRaw = filter.rawValue }
         } label: {
-            VStack(spacing: 8) {
-                HStack(spacing: 6) {
-                    Text(filter.rawValue.translated())
-                        .font(.system(size: 13, weight: selected ? .semibold : .regular))
-                    Text("\(count(for: filter))")
-                        .font(.system(size: 12, weight: .medium, design: .rounded))
-                        .foregroundStyle(Color.sweeplyTextSub)
-                        .monospacedDigit()
-                }
-                .foregroundStyle(selected ? Color.sweeplyNavy : Color.sweeplyTextSub)
-                Rectangle()
-                    .fill(selected ? Color.sweeplyAccent : Color.clear)
-                    .frame(height: 2)
+            HStack(spacing: 6) {
+                Text(filter.rawValue.translated())
+                    .font(.system(size: 13, weight: selected ? .semibold : .medium))
+                Text("\(count(for: filter))")
+                    .font(.system(size: 12, weight: .semibold, design: .rounded))
+                    .monospacedDigit()
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 3)
+                    .background(selected ? Color.white.opacity(0.55) : Color.sweeplyBorder.opacity(0.45))
+                    .clipShape(Capsule())
             }
+            .foregroundStyle(selected ? Color.sweeplyNavy : Color.sweeplyTextSub)
             .padding(.horizontal, 14)
-            .padding(.vertical, 6)
+            .padding(.vertical, 10)
+            .background(selected ? Color.sweeplyAccent.opacity(0.14) : Color.sweeplyBackground)
+            .clipShape(Capsule())
+            .overlay(
+                Capsule()
+                    .stroke(selected ? Color.sweeplyAccent.opacity(0.35) : Color.sweeplyBorder, lineWidth: 1)
+            )
         }
         .buttonStyle(.plain)
     }
@@ -985,6 +990,7 @@ private func payButton(for member: TeamMember, status: PaymentStatus, rateAmount
 
     private func formatLastPaid(_ date: Date) -> String {
         let formatter = DateFormatter()
+        formatter.locale = Locale.app
         formatter.dateFormat = "Last paid MMM d"
         return formatter.string(from: date)
     }
@@ -992,7 +998,7 @@ private func payButton(for member: TeamMember, status: PaymentStatus, rateAmount
     private func completedJobsThisMonth(for member: TeamMember) -> [Job] {
         guard let start = Calendar.current.dateInterval(of: .month, for: Date())?.start else { return [] }
         return jobsStore.jobs.filter { job in
-            job.assignedMemberId == member.id && job.status == .completed && job.date >= start
+            job.isAssigned(to: member.id) && job.status == .completed && job.date >= start
         }
     }
 
@@ -1111,6 +1117,7 @@ struct MinimalInvoiceRow: View {
 
     private var shortDate: String {
         let f = DateFormatter()
+        f.locale = Locale.app
         f.dateFormat = "MMM d"
         return f.string(from: invoice.paidAt ?? invoice.dueDate)
     }
