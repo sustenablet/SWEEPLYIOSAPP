@@ -151,34 +151,27 @@ struct TeamView: View {
             HStack(spacing: 14) {
                 ZStack {
                     Circle()
-                        .fill(Color.sweeplyAccent.gradient)
+                        .fill(Color.sweeplyAccent.opacity(0.12))
                         .frame(width: 50, height: 50)
                     Text(ownerInitials)
                         .font(.system(size: 16, weight: .bold))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(Color.sweeplyAccent)
                 }
                 VStack(alignment: .leading, spacing: 3) {
                     Text(ownerDisplayName)
                         .font(.system(size: 16, weight: .semibold))
-                        .foregroundStyle(.white)
-                        .lineLimit(1)
+                        .foregroundStyle(Color.primary)
+                        .fixedSize(horizontal: false, vertical: true)
                     Text("Account Owner".translated())
                         .font(.system(size: 12))
-                        .foregroundStyle(.white.opacity(0.5))
+                        .foregroundStyle(Color.sweeplyTextSub)
                 }
                 Spacer()
-                Text("OWNER".translated())
-                    .font(.system(size: 10, weight: .bold))
-                    .foregroundStyle(.white.opacity(0.65))
-                    .tracking(0.8)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 5)
-                    .background(.white.opacity(0.12), in: Capsule())
             }
 
             // Separator
             Rectangle()
-                .fill(.white.opacity(0.1))
+                .fill(Color.sweeplyBorder)
                 .frame(height: 1)
                 .padding(.vertical, 18)
 
@@ -188,10 +181,10 @@ struct TeamView: View {
                     HStack(alignment: .firstTextBaseline, spacing: 6) {
                         Text("\(teamStore.members.count + 1)")
                             .font(.system(size: 30, weight: .bold, design: .monospaced))
-                            .foregroundStyle(.white)
+                            .foregroundStyle(Color.primary)
                         Text("Members".translated())
                             .font(.system(size: 13, weight: .medium))
-                            .foregroundStyle(.white.opacity(0.5))
+                            .foregroundStyle(Color.sweeplyTextSub)
                     }
                     HStack(spacing: 8) {
                         statusChip(count: activeCount, label: "Active".translated(), dot: Color.sweeplySuccess)
@@ -206,7 +199,11 @@ struct TeamView: View {
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 20)
-        .background(Color.sweeplyNavy, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .background(Color.sweeplySurface, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .stroke(Color.sweeplyBorder, lineWidth: 1)
+        )
     }
 
     // Overlapping avatar circles for the team strip
@@ -217,23 +214,23 @@ struct TeamView: View {
             ForEach(visible) { member in
                 ZStack {
                     Circle()
-                        .fill(Color.sweeplyAccent.opacity(0.85))
+                        .fill(Color.sweeplyAccent.opacity(0.15))
                         .frame(width: 33, height: 33)
-                        .overlay(Circle().stroke(Color.sweeplyNavy, lineWidth: 2.5))
+                        .overlay(Circle().stroke(Color.sweeplySurface, lineWidth: 2.5))
                     Text(member.initials.isEmpty ? "?" : member.initials)
                         .font(.system(size: 11, weight: .bold))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(Color.sweeplyAccent)
                 }
             }
             if overflow > 0 {
                 ZStack {
                     Circle()
-                        .fill(.white.opacity(0.18))
+                        .fill(Color.sweeplyBorder.opacity(0.5))
                         .frame(width: 33, height: 33)
-                        .overlay(Circle().stroke(Color.sweeplyNavy, lineWidth: 2.5))
+                        .overlay(Circle().stroke(Color.sweeplySurface, lineWidth: 2.5))
                     Text("+\(overflow)")
                         .font(.system(size: 10, weight: .bold))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(Color.sweeplyTextSub)
                 }
             }
         }
@@ -244,11 +241,11 @@ struct TeamView: View {
             Circle().fill(dot).frame(width: 6, height: 6)
             Text("\(count) \(label)")
                 .font(.system(size: 12, weight: .semibold))
-                .foregroundStyle(.white.opacity(0.9))
+                .foregroundStyle(Color.primary)
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 6)
-        .background(.white.opacity(0.12), in: Capsule())
+        .background(Color.sweeplyBackground, in: Capsule())
     }
 
     // MARK: - Roster Section

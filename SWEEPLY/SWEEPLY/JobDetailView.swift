@@ -520,6 +520,7 @@ struct ReassignCleanerSheet: View {
     let job: Job
     @State private var selectedIds: Set<UUID> = []
     @State private var isSaving = false
+    @State private var saveError: String? = nil
 
     private var activeCleaners: [TeamMember] {
         teamStore.members.filter { $0.role == .member && $0.status == .active }
@@ -577,6 +578,16 @@ struct ReassignCleanerSheet: View {
         .onAppear {
             selectedIds = Set(job.effectiveAssignedMemberIds)
         }
+        .alert("Couldn't save assignment".translated(), isPresented: Binding(
+            get: { saveError != nil },
+            set: { if !$0 { saveError = nil } }
+        )) {
+            Button("OK".translated(), role: .cancel) { saveError = nil }
+        } message: {
+            if let err = saveError {
+                Text(err)
+            }
+        }
     }
 
     private func cleanerRow(name: String, initials: String?, isSelected: Bool, action: @escaping () -> Void) -> some View {
@@ -622,12 +633,14 @@ struct ReassignCleanerSheet: View {
         updated.assignedMemberNames = selectedMembers.map(\.name)
         let ok = await jobsStore.update(updated)
         if ok {
-            if let cleanerUserId = selectedMembers.first?.cleanerUserId {
+            if selectedMembers.first?.cleanerUserId != nil {
                 let dateStr = updated.date.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day().hour().minute())
                 let body = "%@ at %@ — %@".translated(with: updated.serviceType.rawValue.translated(), updated.clientName, dateStr)
                 NotificationManager.shared.fireInstantBanner(title: "New Job Assigned".translated(), body: body)
             }
             dismiss()
+        } else {
+            saveError = jobsStore.lastError ?? "Something went wrong. Please try again.".translated()
         }
     }
 }
