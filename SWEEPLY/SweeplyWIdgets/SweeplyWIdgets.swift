@@ -1,6 +1,71 @@
 import WidgetKit
 import SwiftUI
 
+private enum WidgetLocalization {
+    static let appGroupID = "group.com.sweeply.app"
+
+    private static let translations: [String: String] = [
+        "Today": "Hoje",
+        "Tomorrow": "Amanhã",
+        "Next Job": "Próximo Serviço",
+        "Your next upcoming job at a glance.": "Seu próximo serviço em destaque.",
+        "NEXT JOB": "PRÓXIMO SERVIÇO",
+        "TODAY'S SCHEDULE": "AGENDA DE HOJE",
+        "All caught up": "Tudo em dia",
+        "No jobs": "Sem serviços",
+        "All clear today": "Tudo certo hoje",
+        "Today's Schedule": "Agenda de Hoje",
+        "See all of today's jobs in one glance.": "Veja os serviços de hoje em um só lugar.",
+        "7-day revenue": "Faturamento de 7 dias",
+        "No jobs today": "Nenhum serviço hoje",
+        "updated": "atualizado",
+        "Full Day Schedule": "Agenda Completa do Dia",
+        "Your complete today schedule with up to 6 jobs and revenue stats.": "Sua agenda completa de hoje com até 6 serviços e métricas de faturamento.",
+        "THIS WK": "ESTA SEM.",
+        "WEEK REVENUE": "FATURAMENTO DA SEMANA",
+        "7-day earnings": "Ganhos de 7 dias",
+        "TODAY": "HOJE",
+        "JOBS TODAY": "SERVIÇOS DE HOJE",
+        "job": "serviço",
+        "jobs": "serviços",
+        "none completed yet": "nenhum concluído ainda",
+        "Today's Revenue": "Faturamento de Hoje",
+        "Total value of all jobs scheduled for today.": "Valor total de todos os serviços agendados para hoje.",
+        "TODAY'S VALUE": "VALOR DE HOJE",
+        "%d job on schedule": "%d serviço agendado",
+        "%d jobs on schedule": "%d serviços agendados",
+        "done today": "concluídos hoje",
+        "next job": "próximo serviço",
+        "at": "às"
+    ]
+
+    static var languageCode: String {
+        UserDefaults(suiteName: appGroupID)?.string(forKey: "appLanguage") ?? "en"
+    }
+
+    static var isPortuguese: Bool { languageCode == "pt-BR" }
+
+    static var locale: Locale {
+        isPortuguese ? Locale(identifier: "pt_BR") : Locale.current
+    }
+
+    static func translate(_ key: String) -> String {
+        guard isPortuguese else { return key }
+        return translations[key] ?? key
+    }
+}
+
+private extension String {
+    func widgetTranslated() -> String {
+        WidgetLocalization.translate(self)
+    }
+
+    func widgetTranslated(with args: CVarArg...) -> String {
+        let template = WidgetLocalization.translate(self)
+        return String(format: template, locale: WidgetLocalization.locale, arguments: args)
+    }
+}
+
 // MARK: - Colors (hardcoded — widget can't import main app DesignSystem)
 
 private extension Color {
@@ -51,15 +116,17 @@ private func timeString(from date: Date) -> String {
     let f = DateFormatter()
     f.timeStyle = .short
     f.dateStyle = .none
+    f.locale = WidgetLocalization.locale
     return f.string(from: date)
 }
 
 private func relativeDay(for date: Date) -> String {
     let cal = Calendar.current
-    if cal.isDateInToday(date)     { return "Today" }
-    if cal.isDateInTomorrow(date)  { return "Tomorrow" }
+    if cal.isDateInToday(date)     { return "Today".widgetTranslated() }
+    if cal.isDateInTomorrow(date)  { return "Tomorrow".widgetTranslated() }
     let f = DateFormatter()
     f.dateFormat = "EEEE"
+    f.locale = WidgetLocalization.locale
     return f.string(from: date)
 }
 
@@ -75,7 +142,7 @@ private func statusColor(_ statusRaw: String) -> Color {
 private func formattedCurrency(_ amount: Double) -> String {
     let f = NumberFormatter()
     f.numberStyle = .currency
-    f.locale = .current
+    f.locale = WidgetLocalization.locale
     f.maximumFractionDigits = 0
     return f.string(from: NSNumber(value: amount)) ?? "$0"
 }
@@ -112,7 +179,7 @@ struct NextJobEntryView: View {
 
             if let job = entry.snapshot.nextJob {
                 VStack(alignment: .leading, spacing: 0) {
-                    Text("NEXT JOB")
+                    Text("NEXT JOB".widgetTranslated())
                         .font(.system(size: 8, weight: .bold))
                         .foregroundStyle(Color.charcoal.opacity(0.45))
                         .tracking(1.4)
@@ -140,10 +207,10 @@ struct NextJobEntryView: View {
                     Spacer(minLength: 6)
 
                     HStack(spacing: 0) {
-Text(relativeDay(for: job.date))
+                        Text(relativeDay(for: job.date))
                         .font(.system(size: 10, weight: .semibold))
                         .foregroundStyle(Color.charcoal.opacity(0.5))
-                    Text(" at ")
+                    Text(WidgetLocalization.isPortuguese ? " às " : " at ")
                         .font(.system(size: 10, weight: .semibold))
                         .foregroundStyle(Color.charcoal.opacity(0.5))
                     Text(timeString(from: job.date))
@@ -155,7 +222,7 @@ Text(relativeDay(for: job.date))
                 .padding(14)
             } else {
                 VStack(alignment: .leading, spacing: 0) {
-                    Text("TODAY'S SCHEDULE")
+                    Text("TODAY'S SCHEDULE".widgetTranslated())
                         .font(.system(size: 8, weight: .bold))
                         .foregroundStyle(Color.charcoal.opacity(0.45))
                         .tracking(1.4)
@@ -167,11 +234,11 @@ Text(relativeDay(for: job.date))
                         .foregroundStyle(Color.charcoal.opacity(0.7))
                         .padding(.bottom, 6)
 
-                    Text("All caught up")
+                    Text("All caught up".widgetTranslated())
                         .font(.system(size: 13, weight: .bold))
                         .foregroundStyle(Color.charcoal)
 
-                    Text("No jobs")
+                    Text("No jobs".widgetTranslated())
                         .font(.system(size: 11, weight: .medium))
                         .foregroundStyle(Color.charcoal.opacity(0.5))
                         .padding(.top, 2)
@@ -194,8 +261,8 @@ struct NextJobWidget: Widget {
             NextJobEntryView(entry: entry)
                 .containerBackground(Color.white, for: .widget)
         }
-        .configurationDisplayName("Next Job")
-        .description("Your next upcoming job at a glance.")
+        .configurationDisplayName("Next Job".widgetTranslated())
+        .description("Your next upcoming job at a glance.".widgetTranslated())
         .supportedFamilies([.systemSmall])
     }
 }
@@ -212,13 +279,13 @@ struct TodayScheduleEntryView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack {
-                Text("TODAY'S SCHEDULE")
+                Text("TODAY'S SCHEDULE".widgetTranslated())
                     .font(.system(size: 8, weight: .black, design: .rounded))
                     .foregroundStyle(accent)
                     .tracking(1.2)
                 Spacer()
                 let count = entry.snapshot.todayJobs.count
-                Text("\(count) job\(count == 1 ? "" : "s")")
+                Text("\(count) \(count == 1 ? "job".widgetTranslated() : "jobs".widgetTranslated())")
                     .font(.system(size: 9, weight: .bold, design: .monospaced))
                     .foregroundStyle(accent.opacity(0.7))
             }
@@ -232,7 +299,7 @@ struct TodayScheduleEntryView: View {
                         Image(systemName: "checkmark.circle.fill")
                             .font(.system(size: 20))
                             .foregroundStyle(accent.opacity(0.5))
-                        Text("All clear today")
+                        Text("All clear today".widgetTranslated())
                             .font(.system(size: 11, weight: .semibold))
                             .foregroundStyle(Color.mutedText)
                     }
@@ -249,7 +316,7 @@ struct TodayScheduleEntryView: View {
                 if entry.snapshot.weekRevenue > 0 {
                     Divider().padding(.bottom, 5)
                     HStack {
-                        Text("7-day revenue")
+                        Text("7-day revenue".widgetTranslated())
                             .font(.system(size: 9))
                             .foregroundStyle(Color.mutedText)
                         Spacer()
@@ -306,8 +373,8 @@ struct TodayScheduleWidget: Widget {
             TodayScheduleEntryView(entry: entry)
                 .containerBackground(Color.stone, for: .widget)
         }
-        .configurationDisplayName("Today's Schedule")
-        .description("See all of today's jobs in one glance.")
+        .configurationDisplayName("Today's Schedule".widgetTranslated())
+        .description("See all of today's jobs in one glance.".widgetTranslated())
         .supportedFamilies([.systemMedium])
     }
 }
@@ -324,6 +391,7 @@ struct LargeScheduleEntryView: View {
     private var todayLabel: String {
         let f = DateFormatter()
         f.dateFormat = "EEEE, MMM d"
+        f.locale = WidgetLocalization.locale
         return f.string(from: Date())
     }
 
@@ -345,7 +413,9 @@ struct LargeScheduleEntryView: View {
                     Text("\(count)")
                         .font(.system(size: 22, weight: .black, design: .monospaced))
                         .foregroundStyle(accent)
-                    Text("job\(count == 1 ? "" : "s") today")
+                    Text(WidgetLocalization.isPortuguese
+                         ? "\(count) \(count == 1 ? "serviço" : "serviços") hoje"
+                         : "\(count) \(count == 1 ? "job" : "jobs") today")
                         .font(.system(size: 8, weight: .semibold))
                         .foregroundStyle(Color.mutedText)
                 }
@@ -362,7 +432,7 @@ struct LargeScheduleEntryView: View {
                         Image(systemName: "checkmark.circle.fill")
                             .font(.system(size: 28))
                             .foregroundStyle(accent.opacity(0.45))
-                        Text("No jobs today")
+                        Text("No jobs today".widgetTranslated())
                             .font(.system(size: 14, weight: .semibold))
                             .foregroundStyle(Color.mutedText)
                     }
@@ -382,7 +452,7 @@ struct LargeScheduleEntryView: View {
                 }
                 let overflow = entry.snapshot.todayJobs.count - jobs.count
                 if overflow > 0 {
-                    Text("+ \(overflow) more job\(overflow == 1 ? "" : "s")")
+                    Text("+ \(overflow) more \(overflow == 1 ? "job".widgetTranslated() : "jobs".widgetTranslated())")
                         .font(.system(size: 10, weight: .medium))
                         .foregroundStyle(Color.mutedText)
                         .padding(.top, 6)
@@ -393,15 +463,15 @@ struct LargeScheduleEntryView: View {
 
             Divider().padding(.bottom, 8)
             HStack(spacing: 0) {
-                statPill(label: "7-day rev.", value: formattedCurrency(entry.snapshot.weekRevenue), accent: accent)
+                statPill(label: "7-day rev.".widgetTranslated(), value: formattedCurrency(entry.snapshot.weekRevenue), accent: accent)
                 Spacer()
                 let completed = entry.snapshot.todayJobs.filter { $0.isCompleted }.count
-                statPill(label: "done today", value: "\(completed)/\(entry.snapshot.todayJobs.count)", accent: accent)
+                statPill(label: "done today".widgetTranslated(), value: "\(completed)/\(entry.snapshot.todayJobs.count)", accent: accent)
                 Spacer()
                 if let next = entry.snapshot.nextJob, !Calendar.current.isDateInToday(next.date) {
-                    statPill(label: "next job", value: relativeDay(for: next.date), accent: accent)
+                    statPill(label: "next job".widgetTranslated(), value: relativeDay(for: next.date), accent: accent)
                 } else {
-                    statPill(label: "updated", value: shortTime(entry.snapshot.updatedAt), accent: accent)
+                    statPill(label: "updated".widgetTranslated(), value: shortTime(entry.snapshot.updatedAt), accent: accent)
                 }
             }
         }
@@ -425,6 +495,7 @@ struct LargeScheduleEntryView: View {
         let f = DateFormatter()
         f.timeStyle = .short
         f.dateStyle = .none
+        f.locale = WidgetLocalization.locale
         return f.string(from: date)
     }
 }
@@ -473,8 +544,8 @@ struct LargeScheduleWidget: Widget {
             LargeScheduleEntryView(entry: entry)
                 .containerBackground(Color.stone, for: .widget)
         }
-        .configurationDisplayName("Full Day Schedule")
-        .description("Your complete today schedule with up to 6 jobs and revenue stats.")
+        .configurationDisplayName("Full Day Schedule".widgetTranslated())
+        .description("Your complete today schedule with up to 6 jobs and revenue stats.".widgetTranslated())
         .supportedFamilies([.systemLarge])
     }
 }
@@ -482,6 +553,10 @@ struct LargeScheduleWidget: Widget {
 // MARK: - Lock Screen Shared Helpers
 
 private func formattedLockScreen(_ amount: Double) -> String {
+    if WidgetLocalization.isPortuguese {
+        if amount >= 1000 { return String(format: "R$ %.1fk", amount / 1000) }
+        return String(format: "R$ %.0f", amount)
+    }
     if amount >= 1000 { return String(format: "$%.1fk", amount / 1000) }
     return "$\(Int(amount))"
 }
@@ -510,7 +585,7 @@ struct WeekRevenueEntryView: View {
                 .widgetAccentable()
                 .minimumScaleFactor(0.7)
                 .lineLimit(1)
-            Text("THIS WK")
+            Text("THIS WK".widgetTranslated())
                 .font(.system(size: 8, weight: .bold))
                 .opacity(0.65)
         }
@@ -518,7 +593,7 @@ struct WeekRevenueEntryView: View {
 
     private var rectangularView: some View {
         VStack(alignment: .leading, spacing: 2) {
-            Text("WEEK REVENUE")
+            Text("WEEK REVENUE".widgetTranslated())
                 .font(.system(size: 9, weight: .bold))
                 .opacity(0.6)
             Text(formattedCurrency(entry.snapshot.weekRevenue))
@@ -526,7 +601,7 @@ struct WeekRevenueEntryView: View {
                 .widgetAccentable()
                 .minimumScaleFactor(0.75)
                 .lineLimit(1)
-            Text("7-day earnings")
+            Text("7-day earnings".widgetTranslated())
                 .font(.system(size: 10))
                 .opacity(0.6)
         }
@@ -542,8 +617,8 @@ struct WeekRevenueWidget: Widget {
             WeekRevenueEntryView(entry: entry)
                 .containerBackground(.clear, for: .widget)
         }
-        .configurationDisplayName("Week Revenue")
-        .description("Your earnings over the past 7 days.")
+        .configurationDisplayName("Week Revenue".widgetTranslated())
+        .description("Your earnings over the past 7 days.".widgetTranslated())
         .supportedFamilies([.accessoryCircular, .accessoryRectangular])
     }
 }
@@ -573,7 +648,7 @@ struct JobsTodayEntryView: View {
             Text("\(count)")
                 .font(.system(size: 22, weight: .bold, design: .monospaced))
                 .widgetAccentable()
-            Text("TODAY")
+            Text("TODAY".widgetTranslated())
                 .font(.system(size: 8, weight: .bold))
                 .opacity(0.65)
         }
@@ -581,14 +656,18 @@ struct JobsTodayEntryView: View {
 
     private var rectangularView: some View {
         VStack(alignment: .leading, spacing: 2) {
-            Text("JOBS TODAY")
+            Text("JOBS TODAY".widgetTranslated())
                 .font(.system(size: 9, weight: .bold))
                 .opacity(0.6)
-            Text("\(count) \(count == 1 ? "job" : "jobs")")
+            Text("\(count) \(count == 1 ? "job".widgetTranslated() : "jobs".widgetTranslated())")
                 .font(.system(size: 18, weight: .bold, design: .monospaced))
                 .widgetAccentable()
                 .lineLimit(1)
-            Text(completedCount > 0 ? "\(completedCount) completed" : "none completed yet")
+            Text(completedCount > 0
+                 ? (WidgetLocalization.isPortuguese
+                    ? "\(completedCount) \(completedCount == 1 ? "concluído" : "concluídos")"
+                    : "\(completedCount) completed")
+                 : "none completed yet".widgetTranslated())
                 .font(.system(size: 10))
                 .opacity(0.6)
         }
@@ -604,8 +683,8 @@ struct JobsTodayWidget: Widget {
             JobsTodayEntryView(entry: entry)
                 .containerBackground(.clear, for: .widget)
         }
-        .configurationDisplayName("Jobs Today")
-        .description("How many jobs you have scheduled for today.")
+        .configurationDisplayName("Jobs Today".widgetTranslated())
+        .description("How many jobs you have scheduled for today.".widgetTranslated())
         .supportedFamilies([.accessoryCircular, .accessoryRectangular])
     }
 }
@@ -636,7 +715,7 @@ struct TodayRevenueEntryView: View {
                 .widgetAccentable()
                 .minimumScaleFactor(0.7)
                 .lineLimit(1)
-            Text("TODAY")
+            Text("TODAY".widgetTranslated())
                 .font(.system(size: 8, weight: .bold))
                 .opacity(0.65)
         }
@@ -644,7 +723,7 @@ struct TodayRevenueEntryView: View {
 
     private var rectangularView: some View {
         VStack(alignment: .leading, spacing: 2) {
-            Text("TODAY'S VALUE")
+            Text("TODAY'S VALUE".widgetTranslated())
                 .font(.system(size: 9, weight: .bold))
                 .opacity(0.6)
             Text(formattedCurrency(entry.snapshot.todayRevenue))
@@ -652,7 +731,9 @@ struct TodayRevenueEntryView: View {
                 .widgetAccentable()
                 .minimumScaleFactor(0.75)
                 .lineLimit(1)
-            Text("\(jobCount) \(jobCount == 1 ? "job" : "jobs") on schedule")
+            Text(jobCount == 1
+                 ? "%d job on schedule".widgetTranslated(with: jobCount)
+                 : "%d jobs on schedule".widgetTranslated(with: jobCount))
                 .font(.system(size: 10))
                 .opacity(0.6)
         }
@@ -668,8 +749,8 @@ struct TodayRevenueWidget: Widget {
             TodayRevenueEntryView(entry: entry)
                 .containerBackground(.clear, for: .widget)
         }
-        .configurationDisplayName("Today's Revenue")
-        .description("Total value of all jobs scheduled for today.")
+        .configurationDisplayName("Today's Revenue".widgetTranslated())
+        .description("Total value of all jobs scheduled for today.".widgetTranslated())
         .supportedFamilies([.accessoryCircular, .accessoryRectangular])
     }
 }

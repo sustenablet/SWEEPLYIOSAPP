@@ -3,6 +3,7 @@ import CoreSpotlight
 import SwiftUI
 import Supabase
 import UIKit
+import WidgetKit
 
 // MARK: - AppDelegate
 
@@ -89,6 +90,7 @@ struct SWEEPLYApp: App {
                 .onAppear {
                     notificationManager.checkAuthorizationStatus()
                     registerQuickActions()
+                    syncAppLanguageToWidgets()
                     AppDelegate.scheduleBackgroundRefresh()
                     Task {
                         if appSession.isAuthenticated, let uid = appSession.userId {
@@ -99,6 +101,7 @@ struct SWEEPLYApp: App {
                 }
                 .onChange(of: appLanguage) { _, _ in
                     registerQuickActions()
+                    syncAppLanguageToWidgets()
                 }
                 .onOpenURL { url in
                     // Auth callbacks (email confirmation, OAuth redirect)
@@ -147,5 +150,10 @@ struct SWEEPLYApp: App {
                 icon: UIApplicationShortcutIcon(systemImageName: "calendar")
             )
         ]
+    }
+
+    private func syncAppLanguageToWidgets() {
+        UserDefaults(suiteName: "group.com.sweeply.app")?.set(appLanguage, forKey: "appLanguage")
+        WidgetCenter.shared.reloadAllTimelines()
     }
 }

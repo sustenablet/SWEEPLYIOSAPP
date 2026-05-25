@@ -64,12 +64,12 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
 
         let markPaidAction = UNNotificationAction(
             identifier: "MARK_INVOICE_PAID",
-            title: "Marcar como pago",
+            title: "Mark as Paid".translated(),
             options: [.authenticationRequired]
         )
         let remindLaterAction = UNNotificationAction(
             identifier: "REMIND_INVOICE_LATER",
-            title: "Lembrar em 3 dias",
+            title: "Remind in 3 days".translated(),
             options: []
         )
         let invoiceCategory = UNNotificationCategory(
@@ -424,8 +424,13 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
         if let threeDayBefore = Calendar.current.date(byAdding: .day, value: -3, to: invoice.dueDate),
            threeDayBefore > Date() {
             let content = UNMutableNotificationContent()
-            content.title = "Fatura vence em 3 dias"
-            content.body = "\(invoice.invoiceNumber) para \(invoice.clientName) — \(invoice.subtotal.currency) vence em \(shortDate(invoice.dueDate))"
+            content.title = "Invoice due in 3 days".translated()
+            content.body = "%@ for %@ — %@ due on %@".translated(
+                with: invoice.invoiceNumber,
+                invoice.clientName,
+                invoice.subtotal.currency,
+                shortDate(invoice.dueDate)
+            )
             content.sound = .default
             content.userInfo = ["invoiceId": invoice.id.uuidString]
             content.categoryIdentifier = "INVOICE_REMINDER"
@@ -438,8 +443,13 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
 
             Task {
                 await NotificationHelper.insert(
-                    title: "Fatura vence em 3 dias",
-                    message: "\(invoice.invoiceNumber) para \(invoice.clientName) — \(invoice.subtotal.currency) vence em \(shortDate(invoice.dueDate))",
+                    title: "Invoice due in 3 days".translated(),
+                    message: "%@ for %@ — %@ due on %@".translated(
+                        with: invoice.invoiceNumber,
+                        invoice.clientName,
+                        invoice.subtotal.currency,
+                        shortDate(invoice.dueDate)
+                    ),
                     kind: "billing"
                 )
             }
@@ -448,8 +458,12 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
         // Day of due at 9am
         if Calendar.current.startOfDay(for: invoice.dueDate) >= Calendar.current.startOfDay(for: Date()) {
             let content = UNMutableNotificationContent()
-            content.title = "Fatura vence hoje"
-            content.body = "\(invoice.invoiceNumber) para \(invoice.clientName) — \(invoice.subtotal.currency) vence hoje"
+            content.title = "Invoice due today".translated()
+            content.body = "%@ for %@ — %@ due today".translated(
+                with: invoice.invoiceNumber,
+                invoice.clientName,
+                invoice.subtotal.currency
+            )
             content.sound = .default
             content.userInfo = ["invoiceId": invoice.id.uuidString]
             content.categoryIdentifier = "INVOICE_REMINDER"
@@ -462,8 +476,12 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
 
             Task {
                 await NotificationHelper.insert(
-                    title: "Fatura vence hoje",
-                    message: "\(invoice.invoiceNumber) para \(invoice.clientName) — \(invoice.subtotal.currency) vence hoje",
+                    title: "Invoice due today".translated(),
+                    message: "%@ for %@ — %@ due today".translated(
+                        with: invoice.invoiceNumber,
+                        invoice.clientName,
+                        invoice.subtotal.currency
+                    ),
                     kind: "billing"
                 )
             }
@@ -473,8 +491,12 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
         if let dayAfterDue = Calendar.current.date(byAdding: .day, value: 1, to: invoice.dueDate),
            dayAfterDue > Date() {
             let content = UNMutableNotificationContent()
-            content.title = "Fatura atrasada"
-            content.body = "\(invoice.invoiceNumber) para \(invoice.clientName) venceu ontem — \(invoice.subtotal.currency) ainda não pago"
+            content.title = "Invoice overdue".translated()
+            content.body = "%@ for %@ was due yesterday — %@ still unpaid".translated(
+                with: invoice.invoiceNumber,
+                invoice.clientName,
+                invoice.subtotal.currency
+            )
             content.sound = .defaultCritical
             content.userInfo = ["invoiceId": invoice.id.uuidString]
             content.categoryIdentifier = "INVOICE_REMINDER"
@@ -487,8 +509,12 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
 
             Task {
                 await NotificationHelper.insert(
-                    title: "Fatura atrasada",
-                    message: "\(invoice.invoiceNumber) para \(invoice.clientName) — \(invoice.subtotal.currency) ainda não pago",
+                    title: "Invoice overdue".translated(),
+                    message: "%@ for %@ — %@ still unpaid".translated(
+                        with: invoice.invoiceNumber,
+                        invoice.clientName,
+                        invoice.subtotal.currency
+                    ),
                     kind: "billing"
                 )
             }
@@ -498,8 +524,12 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
         if let sevenDaysAfterDue = Calendar.current.date(byAdding: .day, value: 7, to: invoice.dueDate),
            sevenDaysAfterDue > Date() {
             let content = UNMutableNotificationContent()
-            content.title = "Fatura gravemente atrasada"
-            content.body = "\(invoice.invoiceNumber) para \(invoice.clientName) está 7 dias atrasada — \(invoice.subtotal.currency) pendente"
+            content.title = "Invoice seriously overdue".translated()
+            content.body = "%@ for %@ is 7 days overdue — %@ pending".translated(
+                with: invoice.invoiceNumber,
+                invoice.clientName,
+                invoice.subtotal.currency
+            )
             content.sound = .defaultCritical
             content.userInfo = ["invoiceId": invoice.id.uuidString]
             content.categoryIdentifier = "INVOICE_REMINDER"
@@ -512,8 +542,12 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
 
             Task {
                 await NotificationHelper.insert(
-                    title: "Fatura gravemente atrasada",
-                    message: "\(invoice.invoiceNumber) para \(invoice.clientName) — \(invoice.subtotal.currency) — 7 dias atrasada",
+                    title: "Invoice seriously overdue".translated(),
+                    message: "%@ for %@ — %@ — 7 days overdue".translated(
+                        with: invoice.invoiceNumber,
+                        invoice.clientName,
+                        invoice.subtotal.currency
+                    ),
                     kind: "billing"
                 )
             }
@@ -539,15 +573,22 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
         return f.string(from: date)
     }
 
+    private var appLocale: Locale {
+        UserDefaults.standard.string(forKey: "appLanguage") == "pt-BR"
+            ? Locale(identifier: "pt_BR")
+            : Locale.current
+    }
+
     private func shortTime(_ date: Date) -> String {
         let f = DateFormatter()
         f.timeStyle = .short
         f.dateStyle = .none
+        f.locale = appLocale
         return f.string(from: date)
     }
 
     private func shortDate(_ date: Date) -> String {
-        date.formatted(.dateTime.month(.abbreviated).day())
+        date.formatted(.dateTime.locale(appLocale).month(.abbreviated).day())
     }
 
     // MARK: - UNUserNotificationCenterDelegate
@@ -592,7 +633,7 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
             if let invoiceIdString = userInfo["invoiceId"] as? String,
                let invoiceId = UUID(uuidString: invoiceIdString) {
                 let content = UNMutableNotificationContent()
-                content.title = "Lembrete de fatura"
+                content.title = "Invoice Reminder".translated()
                 content.body = response.notification.request.content.body
                 content.sound = .default
                 content.categoryIdentifier = "INVOICE_REMINDER"
