@@ -280,7 +280,7 @@ struct BusinessView: View {
             VStack(alignment: .leading, spacing: 28) {
                 // Header
                 PageHeader(
-                    eyebrow: profile.businessName.isEmpty ? "Business" : profile.businessName.uppercased(),
+                    eyebrow: profile.businessName.isEmpty ? "Business".translated() : profile.businessName.uppercased(),
                     title: "Operational Overview".translated(),
                     subtitle: nil
                 ) {
@@ -702,7 +702,7 @@ struct BusinessView: View {
 
     private func overviewChip(title: String, value: String) -> some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text(title.uppercased())
+            Text(title.translated().uppercased())
                 .font(.system(size: 10, weight: .bold))
                 .foregroundStyle(Color.sweeplyTextSub)
                 .tracking(0.8)

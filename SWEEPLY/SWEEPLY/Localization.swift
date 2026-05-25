@@ -300,6 +300,7 @@ enum Localization {
 
     // MARK: - Onboarding
     "Welcome to Sweeply": ["pt-BR": "Bem-vindo ao Sweeply"],
+    "You're all set. Job reminders will help you stay on schedule.": ["pt-BR": "Está tudo pronto. Os lembretes de serviços vão ajudar você a manter a agenda em dia."],
     "Next": ["pt-BR": "Próximo"],
     "Skip": ["pt-BR": "Pular"],
     "Get Started": ["pt-BR": "Começar"],

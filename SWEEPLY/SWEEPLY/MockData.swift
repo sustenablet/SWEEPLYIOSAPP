@@ -148,8 +148,8 @@ enum MockData {
     static let notifications: [AppNotification] = [
         AppNotification(
             id: UUID(),
-            title: "Welcome to Sweeply",
-            message: "You're all set. Job reminders will help you stay on schedule.",
+            title: "Welcome to Sweeply".translated(),
+            message: "You're all set. Job reminders will help you stay on schedule.".translated(),
             kind: .system,
             timestamp: Date().addingTimeInterval(-86400),
             isRead: true
