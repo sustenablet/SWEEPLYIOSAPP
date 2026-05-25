@@ -16,6 +16,7 @@ struct BusinessView: View {
     @State private var showExtrasCatalog = false
     @State private var selectedSnapshotSlide = 0
     @State private var showKPICustomizer = false
+    @State private var showNextJobDetail = false
     @State private var serviceTab: ServiceTab = .services
 
     enum ServiceTab {
@@ -534,7 +535,7 @@ struct BusinessView: View {
                 // 3. Next Job
                 SectionCard {
                     VStack(alignment: .leading, spacing: 16) {
-                        CardHeader(title: "Next Up".translated(), subtitle: "Your nearest scheduled visit".translated(), action: nil)
+                        CardHeader(title: "Next Up".translated(), subtitle: "Your nearest scheduled visit".translated(), action: { showNextJobDetail = true })
 
                         if let nextJob {
                             VStack(alignment: .leading, spacing: 10) {
@@ -669,6 +670,11 @@ struct BusinessView: View {
         }
         .sheet(isPresented: $showExtrasCatalog) {
             ServiceCatalogView(addonsOnly: true)
+        }
+        .sheet(isPresented: $showNextJobDetail) {
+            if let job = nextJob {
+                JobDetailView(jobId: job.id)
+            }
         }
     }
 
