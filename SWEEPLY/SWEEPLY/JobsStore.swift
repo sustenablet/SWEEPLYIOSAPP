@@ -67,6 +67,7 @@ final class JobsStore {
         lastError = nil
         do {
             let row = JobRowInsert(
+                id: job.id,
                 userId: userId,
                 clientId: job.clientId,
                 clientName: job.clientName,
@@ -100,7 +101,24 @@ final class JobsStore {
             return true
         } catch {
             lastError = error.localizedDescription
-            return false
+            // Offline fallback — apply locally and queue for later sync
+            jobs.append(job)
+            jobs.sort { $0.date > $1.date }
+            NotificationManager.shared.scheduleJobReminder(for: job)
+            NotificationManager.shared.refreshDailyDigests(jobs: jobs)
+            SyncQueue.shared.enqueue(.insertJob(
+                id: job.id, userId: userId,
+                clientId: job.clientId, clientName: job.clientName,
+                serviceType: job.serviceType.rawValue, scheduledAt: job.date,
+                durationHours: job.duration, price: job.price,
+                status: job.status.rawValue, address: job.address,
+                isRecurring: job.isRecurring,
+                assignedMemberId: job.assignedMemberId,
+                assignedMemberName: job.assignedMemberName,
+                assignedMemberIds: job.effectiveAssignedMemberIds,
+                assignedMemberNames: job.effectiveAssignedMemberNames
+            ))
+            return true
         }
     }
 
@@ -148,7 +166,26 @@ final class JobsStore {
             return true
         } catch {
             lastError = error.localizedDescription
-            return false
+            // Offline fallback — apply locally and queue for later sync
+            if let idx = jobs.firstIndex(where: { $0.id == job.id }) {
+                jobs[idx] = job
+            }
+            NotificationManager.shared.cancelJobReminders(for: job.id)
+            NotificationManager.shared.scheduleJobReminder(for: job)
+            NotificationManager.shared.refreshDailyDigests(jobs: jobs)
+            SyncQueue.shared.enqueue(.updateJob(
+                id: job.id,
+                clientId: job.clientId, clientName: job.clientName,
+                serviceType: job.serviceType.rawValue, scheduledAt: job.date,
+                durationHours: job.duration, price: job.price,
+                status: job.status.rawValue, address: job.address,
+                isRecurring: job.isRecurring,
+                assignedMemberId: job.assignedMemberId,
+                assignedMemberName: job.assignedMemberName,
+                assignedMemberIds: job.effectiveAssignedMemberIds,
+                assignedMemberNames: job.effectiveAssignedMemberNames
+            ))
+            return true
         }
     }
 
@@ -211,7 +248,13 @@ final class JobsStore {
             return true
         } catch {
             lastError = error.localizedDescription
-            return false
+            // Offline fallback — apply locally and queue for later sync
+            if let idx = jobs.firstIndex(where: { $0.id == id }) {
+                jobs[idx].status = status
+            }
+            if status == .completed { requestReviewIfAppropriate() }
+            SyncQueue.shared.enqueue(.updateJobStatus(id: id, status: status.rawValue))
+            return true
         }
     }
 
@@ -237,7 +280,12 @@ final class JobsStore {
             return true
         } catch {
             lastError = error.localizedDescription
-            return false
+            // Offline fallback — apply locally and queue for later sync
+            NotificationManager.shared.cancelJobReminders(for: id)
+            jobs.removeAll { $0.id == id }
+            NotificationManager.shared.refreshDailyDigests(jobs: jobs)
+            SyncQueue.shared.enqueue(.deleteJob(id: id))
+            return true
         }
     }
 
@@ -291,6 +339,7 @@ final class JobsStore {
             
             let jobRows = dates.map { date in
                 JobRowInsert(
+                    id: UUID(),
                     userId: rule.userId,
                     clientId: rule.clientId,
                     clientName: clientName,
@@ -473,6 +522,7 @@ private struct JobRowPatch: Encodable {
 }
 
 private struct JobRowInsert: Encodable {
+    let id: UUID
     let userId: UUID
     let clientId: UUID
     let clientName: String
@@ -490,7 +540,7 @@ private struct JobRowInsert: Encodable {
     let assignedMemberNames: [String]
 
     enum CodingKeys: String, CodingKey {
-        case address, price, status
+        case id, address, price, status
         case userId             = "user_id"
         case clientId           = "client_id"
         case clientName         = "client_name"

@@ -62,6 +62,7 @@ final class InvoicesStore {
         do {
             let lineItemsJSON = (try? JSONEncoder().encode(invoice.lineItems)).flatMap { String(data: $0, encoding: .utf8) }
             let row = InvoiceRowInsert(
+                id: invoice.id,
                 userId: userId,
                 clientId: invoice.clientId,
                 clientName: invoice.clientName,
@@ -86,7 +87,20 @@ final class InvoicesStore {
             return true
         } catch {
             lastError = error.localizedDescription
-            return false
+            // Offline fallback — apply locally and queue for later sync
+            let lineItemsJSON = (try? JSONEncoder().encode(invoice.lineItems)).flatMap { String(data: $0, encoding: .utf8) }
+            invoices.insert(invoice, at: 0)
+            NotificationManager.shared.refreshInvoiceDigests(invoices: invoices)
+            NotificationManager.shared.scheduleInvoiceReminder(for: invoice)
+            SyncQueue.shared.enqueue(.insertInvoice(
+                id: invoice.id, userId: userId,
+                clientId: invoice.clientId, clientName: invoice.clientName,
+                amount: invoice.subtotal, status: invoice.status.rawValue,
+                dueDate: invoice.dueDate, invoiceNumber: invoice.invoiceNumber,
+                notes: invoice.notes.isEmpty ? nil : invoice.notes,
+                lineItems: lineItemsJSON
+            ))
+            return true
         }
     }
 
@@ -125,7 +139,18 @@ final class InvoicesStore {
             return true
         } catch {
             lastError = error.localizedDescription
-            return false
+            // Offline fallback — apply locally and queue for later sync
+            let lineItemsJSON = (try? JSONEncoder().encode(invoice.lineItems)).flatMap { String(data: $0, encoding: .utf8) }
+            if let idx = invoices.firstIndex(where: { $0.id == invoice.id }) {
+                invoices[idx] = invoice
+            }
+            NotificationManager.shared.refreshInvoiceDigests(invoices: invoices)
+            SyncQueue.shared.enqueue(.updateInvoice(
+                id: invoice.id, amount: invoice.subtotal, dueDate: invoice.dueDate,
+                notes: invoice.notes.isEmpty ? nil : invoice.notes,
+                lineItems: lineItemsJSON
+            ))
+            return true
         }
     }
 
@@ -205,7 +230,19 @@ final class InvoicesStore {
             return true
         } catch {
             lastError = error.localizedDescription
-            return false
+            // Offline fallback — apply locally and queue for later sync
+            if let idx = invoices.firstIndex(where: { $0.id == id }) {
+                invoices[idx].status = .paid
+                invoices[idx].paidAmount = amount
+                invoices[idx].paymentMethod = method
+                invoices[idx].paidAt = paidAt
+            }
+            NotificationManager.shared.refreshInvoiceDigests(invoices: invoices)
+            SyncQueue.shared.enqueue(.markInvoicePaid(
+                id: id, amount: amount,
+                method: method.rawValue, paidAt: paidAt
+            ))
+            return true
         }
     }
 
@@ -227,7 +264,12 @@ final class InvoicesStore {
             return true
         } catch {
             lastError = error.localizedDescription
-            return false
+            // Offline fallback — apply locally and queue for later sync
+            NotificationManager.shared.cancelInvoiceReminders(for: id)
+            invoices.removeAll { $0.id == id }
+            NotificationManager.shared.refreshInvoiceDigests(invoices: invoices)
+            SyncQueue.shared.enqueue(.deleteInvoice(id: id))
+            return true
         }
     }
 
@@ -338,6 +380,7 @@ private struct InvoiceRow: Decodable {
 }
 
 private struct InvoiceRowInsert: Encodable {
+    let id: UUID
     let userId: UUID
     let clientId: UUID
     let clientName: String
@@ -349,7 +392,7 @@ private struct InvoiceRowInsert: Encodable {
     let lineItems: String?
 
     enum CodingKeys: String, CodingKey {
-        case amount, status, notes
+        case id, amount, status, notes
         case userId        = "user_id"
         case clientId      = "client_id"
         case clientName    = "client_name"

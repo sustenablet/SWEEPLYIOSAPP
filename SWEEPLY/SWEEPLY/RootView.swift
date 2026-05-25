@@ -142,10 +142,11 @@ struct RootView: View {
             notificationRefreshTrigger += 1
         }
         .onChange(of: networkMonitor.isConnected) { wasConnected, isNowConnected in
-            // Reconnected — pull fresh data from Supabase so any optimistic
-            // local writes get reconciled and remote changes come in.
+            // Reconnected — flush any queued offline writes first, then pull
+            // fresh data so remote changes and our optimistic writes are reconciled.
             guard isNowConnected && !wasConnected && session.isAuthenticated else { return }
             Task {
+                await SyncQueue.shared.flush()
                 async let j: () = jobsStore.load(isAuthenticated: true)
                 async let i: () = invoicesStore.load(isAuthenticated: true)
                 async let c: () = clientsStore.load(isAuthenticated: true)

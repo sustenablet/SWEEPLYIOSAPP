@@ -48,6 +48,7 @@ final class ExpenseStore {
         }
 
         let insert = ExpenseInsert(
+            id: expense.id,
             userId: expense.userId,
             amount: expense.amount,
             category: expense.category.rawValue,
@@ -67,8 +68,13 @@ final class ExpenseStore {
             return true
         } catch {
             lastError = error.localizedDescription
-            // Fallback: add locally so the user is never blocked
+            // Offline fallback — apply locally and queue for later sync
             expenses.insert(expense, at: 0)
+            SyncQueue.shared.enqueue(.insertExpense(
+                id: expense.id, userId: expense.userId,
+                amount: expense.amount, category: expense.category.rawValue,
+                notes: expense.notes, date: expense.date
+            ))
             return true
         }
     }
@@ -91,7 +97,10 @@ final class ExpenseStore {
             return true
         } catch {
             lastError = error.localizedDescription
-            return false
+            // Offline fallback — apply locally and queue for later sync
+            expenses.removeAll { $0.id == id }
+            SyncQueue.shared.enqueue(.deleteExpense(id: id))
+            return true
         }
     }
 
@@ -140,6 +149,7 @@ private struct ExpenseRow: Decodable {
 }
 
 private struct ExpenseInsert: Encodable {
+    let id: UUID
     let userId: UUID
     let amount: Double
     let category: String
@@ -147,7 +157,7 @@ private struct ExpenseInsert: Encodable {
     let date: Date
 
     enum CodingKeys: String, CodingKey {
-        case amount, category, notes, date
+        case id, amount, category, notes, date
         case userId = "user_id"
     }
 }

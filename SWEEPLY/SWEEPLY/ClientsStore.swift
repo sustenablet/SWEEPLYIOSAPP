@@ -71,6 +71,7 @@ final class ClientsStore {
         lastError = nil
         do {
             let row = ClientRowInsert(
+                id: newClient.id,
                 userId: userId,
                 name: newClient.name,
                 email: newClient.email,
@@ -100,7 +101,18 @@ final class ClientsStore {
             return true
         } catch {
             lastError = error.localizedDescription
-            return false
+            // Offline fallback — apply locally and queue for later sync
+            clients.append(newClient)
+            clients.sort { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+            SyncQueue.shared.enqueue(.insertClient(
+                id: newClient.id, userId: userId,
+                name: newClient.name, email: newClient.email, phone: newClient.phone,
+                address: newClient.address, city: newClient.city, state: newClient.state,
+                zip: newClient.zip, preferredService: newClient.preferredService?.rawValue,
+                entryInstructions: newClient.entryInstructions, notes: newClient.notes,
+                avatarTone: newClient.avatarToneRaw, isActive: newClient.isActive
+            ))
+            return true
         }
     }
 
@@ -143,7 +155,19 @@ final class ClientsStore {
             return true
         } catch {
             lastError = error.localizedDescription
-            return false
+            // Offline fallback — apply locally and queue for later sync
+            if let idx = clients.firstIndex(where: { $0.id == updated.id }) {
+                clients[idx] = updated
+            }
+            SyncQueue.shared.enqueue(.updateClient(
+                id: updated.id,
+                name: updated.name, email: updated.email, phone: updated.phone,
+                address: updated.address, city: updated.city, state: updated.state,
+                zip: updated.zip, preferredService: updated.preferredService?.rawValue,
+                entryInstructions: updated.entryInstructions, notes: updated.notes,
+                avatarTone: updated.avatarToneRaw, isActive: updated.isActive
+            ))
+            return true
         }
     }
 
@@ -188,7 +212,11 @@ final class ClientsStore {
             return true
         } catch {
             lastError = error.localizedDescription
-            return false
+            // Offline fallback — apply locally and queue for later sync
+            clients.removeAll { $0.id == id }
+            SpotlightIndexer.shared.removeClient(id: id)
+            SyncQueue.shared.enqueue(.deleteClient(id: id))
+            return true
         }
     }
 }
@@ -245,6 +273,7 @@ private struct ClientRow: Decodable {
 }
 
 private struct ClientRowInsert: Encodable {
+    let id: UUID
     let userId: UUID
     let name: String
     let email: String
@@ -260,6 +289,7 @@ private struct ClientRowInsert: Encodable {
     let isActive: Bool
 
     enum CodingKeys: String, CodingKey {
+        case id
         case userId = "user_id"
         case name, email, phone, address, city, state, zip, notes
         case preferredService = "preferred_service"
