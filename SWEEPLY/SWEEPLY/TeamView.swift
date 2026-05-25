@@ -235,10 +235,13 @@ struct TeamView: View {
 
     // MARK: - Carousel Slides (Premium)
 
+    // MARK: - Carousel Slides
+
+    // Slide 1 — crew breakdown: hero number left, separated stat list right
     private var overviewSlide: some View {
         VStack(alignment: .leading, spacing: 0) {
-            slideAccentStrip(Color.sweeplyNavy)
 
+            // Header
             HStack(spacing: 5) {
                 Image(systemName: "person.2.fill")
                     .font(.system(size: 9, weight: .bold))
@@ -249,9 +252,9 @@ struct TeamView: View {
                     .tracking(0.7)
                 Spacer()
             }
-            .padding(.bottom, 10)
+            .padding(.bottom, 12)
 
-            HStack(alignment: .center, spacing: 0) {
+            HStack(alignment: .center, spacing: 18) {
                 // Hero: crew count
                 VStack(alignment: .leading, spacing: 2) {
                     Text("\(totalCrewCount)")
@@ -264,43 +267,32 @@ struct TeamView: View {
                         .foregroundStyle(Color.sweeplyTextSub)
                         .tracking(0.6)
                 }
-                .frame(minWidth: 62, alignment: .leading)
+                .frame(minWidth: 58, alignment: .leading)
 
-                Rectangle()
-                    .fill(Color.sweeplyBorder)
-                    .frame(width: 1, height: 54)
-                    .padding(.horizontal, 14)
-
-                // Status breakdown
-                VStack(alignment: .leading, spacing: 6) {
+                // Status list with hairline separators
+                VStack(spacing: 0) {
                     crewStatRow(value: "\(activeCount)",   label: "Active".translated(),   tint: Color.sweeplySuccess)
+                        .padding(.vertical, 6)
+                    Rectangle().fill(Color.sweeplyBorder.opacity(0.45)).frame(height: 0.5)
                     crewStatRow(value: "\(invitedCount)",  label: "Pending".translated(),  tint: Color.sweeplyWarning)
+                        .padding(.vertical, 6)
+                    Rectangle().fill(Color.sweeplyBorder.opacity(0.45)).frame(height: 0.5)
                     crewStatRow(value: "\(inactiveCount)", label: "Inactive".translated(), tint: Color.sweeplyTextSub.opacity(0.45))
+                        .padding(.vertical, 6)
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
+                .frame(maxWidth: .infinity)
             }
-
-            // Distribution bar + color legend
-            VStack(alignment: .leading, spacing: 5) {
-                crewDistributionBar
-                HStack(spacing: 10) {
-                    crewLegendDot(color: Color.sweeplySuccess, label: "Active".translated())
-                    crewLegendDot(color: Color.sweeplyWarning, label: "Pending".translated())
-                    crewLegendDot(color: Color.sweeplyBorder,  label: "Inactive".translated())
-                    Spacer()
-                }
-            }
-            .padding(.top, 9)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
 
+    // Slide 2 — this week: 3-column stat grid (intentionally different from slides 1 & 3)
     private var statusSlide: some View {
         VStack(alignment: .leading, spacing: 0) {
-            slideAccentStrip(Color.sweeplySuccess)
 
+            // Header
             HStack(spacing: 5) {
-                Image(systemName: "checkmark.seal.fill")
+                Image(systemName: "calendar.badge.clock")
                     .font(.system(size: 9, weight: .bold))
                     .foregroundStyle(Color.sweeplySuccess)
                 Text("This Week".translated().uppercased())
@@ -309,64 +301,58 @@ struct TeamView: View {
                     .tracking(0.7)
                 Spacer()
             }
-            .padding(.bottom, 10)
+            .padding(.bottom, 14)
 
-            HStack(alignment: .center, spacing: 0) {
-                // Hero: completion %
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("\(weekCompletionPct)%")
-                        .font(.system(size: 44, weight: .black, design: .monospaced))
-                        .foregroundStyle(weekCompletionHeroColor)
-                        .minimumScaleFactor(0.5)
-                        .lineLimit(1)
-                    Text("Done".translated().uppercased())
-                        .font(.system(size: 9, weight: .bold))
-                        .foregroundStyle(Color.sweeplyTextSub)
-                        .tracking(0.6)
-                }
-                .frame(minWidth: 62, alignment: .leading)
+            // 3-column centered stat grid
+            HStack(spacing: 0) {
+                weekStatColumn(
+                    value: "\(weekAssignedCount)",
+                    label: "Assigned".translated(),
+                    tint: Color.sweeplyNavy
+                )
 
                 Rectangle()
-                    .fill(Color.sweeplyBorder)
-                    .frame(width: 1, height: 54)
-                    .padding(.horizontal, 14)
+                    .fill(Color.sweeplyBorder.opacity(0.5))
+                    .frame(width: 0.5, height: 44)
 
-                VStack(alignment: .leading, spacing: 6) {
-                    crewStatRow(value: "\(weekAssignedCount)",  label: "Assigned".translated(),  tint: Color.sweeplyNavy)
-                    crewStatRow(value: "\(weekCompletedCount)", label: "Completed".translated(), tint: Color.sweeplySuccess)
-                    crewStatRow(value: "\(weekUpcomingCount)",  label: "Upcoming".translated(),  tint: Color.sweeplyWarning)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
+                weekStatColumn(
+                    value: "\(weekCompletedCount)",
+                    label: "Completed".translated(),
+                    tint: Color.sweeplySuccess
+                )
+
+                Rectangle()
+                    .fill(Color.sweeplyBorder.opacity(0.5))
+                    .frame(width: 0.5, height: 44)
+
+                weekStatColumn(
+                    value: "\(weekUpcomingCount)",
+                    label: "Upcoming".translated(),
+                    tint: Color.sweeplyWarning
+                )
             }
+            .frame(maxWidth: .infinity)
 
-            // Gradient progress bar + caption
-            VStack(alignment: .leading, spacing: 4) {
-                GeometryReader { geo in
-                    let w = CGFloat(weekCompletedCount) / CGFloat(max(weekAssignedCount, 1))
-                    ZStack(alignment: .leading) {
-                        Capsule().fill(Color.sweeplyBorder.opacity(0.4))
-                        Capsule()
-                            .fill(LinearGradient(
-                                colors: [Color.sweeplySuccess, Color.sweeplySuccess.opacity(0.6)],
-                                startPoint: .leading, endPoint: .trailing))
-                            .frame(width: geo.size.width * w)
-                    }
-                }
-                .frame(height: 7)
-                Text("\(weekCompletedCount) of \(weekAssignedCount) jobs complete".translated())
-                    .font(.system(size: 9, weight: .medium))
+            // Completion context line
+            HStack(spacing: 4) {
+                Text("\(weekCompletionPct)%".translated())
+                    .font(.system(size: 11, weight: .black, design: .monospaced))
+                    .foregroundStyle(weekCompletionHeroColor)
+                Text("of jobs completed this week".translated())
+                    .font(.system(size: 11, weight: .medium))
                     .foregroundStyle(Color.sweeplyTextSub)
+                Spacer()
             }
-            .padding(.top, 9)
+            .padding(.top, 14)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
 
+    // Slide 3 — performance: hero earned + separated stat list right, range picker in header
     private var operationsSlide: some View {
         VStack(alignment: .leading, spacing: 0) {
-            slideAccentStrip(Color.sweeplyWarning)
 
-            // Header row + inline range picker
+            // Header + inline range picker
             HStack(spacing: 0) {
                 HStack(spacing: 5) {
                     Image(systemName: "chart.bar.fill")
@@ -399,9 +385,9 @@ struct TeamView: View {
                     }
                 }
             }
-            .padding(.bottom, 10)
+            .padding(.bottom, 12)
 
-            HStack(alignment: .center, spacing: 0) {
+            HStack(alignment: .center, spacing: 18) {
                 // Hero: total earned
                 VStack(alignment: .leading, spacing: 2) {
                     Text(performanceEarned.currencyWithoutTrailingZeros)
@@ -416,17 +402,18 @@ struct TeamView: View {
                 }
                 .frame(minWidth: 70, alignment: .leading)
 
-                Rectangle()
-                    .fill(Color.sweeplyBorder)
-                    .frame(width: 1, height: 54)
-                    .padding(.horizontal, 14)
-
-                VStack(alignment: .leading, spacing: 6) {
+                // Stat list with hairline separators
+                VStack(spacing: 0) {
                     crewStatRow(value: "\(performanceAssignedCount)",  label: "Assigned".translated(),  tint: Color.sweeplyNavy)
+                        .padding(.vertical, 6)
+                    Rectangle().fill(Color.sweeplyBorder.opacity(0.45)).frame(height: 0.5)
                     crewStatRow(value: "\(performanceCompletedCount)", label: "Completed".translated(), tint: Color.sweeplySuccess)
+                        .padding(.vertical, 6)
+                    Rectangle().fill(Color.sweeplyBorder.opacity(0.45)).frame(height: 0.5)
                     crewStatRow(value: "\(performanceUpcomingCount)",  label: "Upcoming".translated(),  tint: Color.sweeplyWarning)
+                        .padding(.vertical, 6)
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
+                .frame(maxWidth: .infinity)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
@@ -434,16 +421,7 @@ struct TeamView: View {
 
     // MARK: - Slide sub-components
 
-    private func slideAccentStrip(_ color: Color) -> some View {
-        LinearGradient(
-            colors: [color, color.opacity(0.25)],
-            startPoint: .leading, endPoint: .trailing
-        )
-        .frame(height: 3)
-        .clipShape(Capsule())
-        .padding(.bottom, 10)
-    }
-
+    // Stat row used in slides 1 & 3: dot + label + right-aligned number
     private func crewStatRow(value: String, label: String, tint: Color) -> some View {
         HStack(spacing: 6) {
             Circle()
@@ -460,13 +438,22 @@ struct TeamView: View {
         }
     }
 
-    private func crewLegendDot(color: Color, label: String) -> some View {
-        HStack(spacing: 3) {
-            Circle().fill(color).frame(width: 5, height: 5)
+    // Centered column used only in slide 2
+    private func weekStatColumn(value: String, label: String, tint: Color) -> some View {
+        VStack(spacing: 4) {
+            Text(value)
+                .font(.system(size: 32, weight: .black, design: .monospaced))
+                .foregroundStyle(tint)
+                .minimumScaleFactor(0.6)
+                .lineLimit(1)
             Text(label)
-                .font(.system(size: 9, weight: .medium))
+                .font(.system(size: 9, weight: .bold))
                 .foregroundStyle(Color.sweeplyTextSub)
+                .tracking(0.4)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
         }
+        .frame(maxWidth: .infinity)
     }
 
     private var teamCarouselIndicator: some View {
@@ -480,25 +467,6 @@ struct TeamView: View {
         }
     }
 
-    private var crewDistributionBar: some View {
-        GeometryReader { geo in
-            let denominator = max(totalCrewCount, 1)
-            let activeWidth  = geo.size.width * CGFloat(activeCount)   / CGFloat(denominator)
-            let invitedWidth = geo.size.width * CGFloat(invitedCount)  / CGFloat(denominator)
-            let inactiveWidth = geo.size.width * CGFloat(inactiveCount) / CGFloat(denominator)
-
-            ZStack(alignment: .leading) {
-                Capsule().fill(Color.sweeplyBorder.opacity(0.35))
-                HStack(spacing: 0) {
-                    if activeWidth > 0  { Capsule().fill(Color.sweeplySuccess).frame(width: activeWidth) }
-                    if invitedWidth > 0 { Capsule().fill(Color.sweeplyWarning).frame(width: invitedWidth) }
-                    if inactiveWidth > 0 { Capsule().fill(Color.sweeplyBorder).frame(width: inactiveWidth) }
-                }
-                .clipShape(Capsule())
-            }
-        }
-        .frame(height: 6)
-    }
 
 
     // MARK: - Roster Section
