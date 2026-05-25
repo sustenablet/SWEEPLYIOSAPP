@@ -224,223 +224,240 @@ struct TeamView: View {
         }
     }
 
+    // MARK: - Carousel Slides (redesigned)
+
     private var overviewSlide: some View {
-        slideContainer(title: "Overview".translated(), subtitle: "Crew Breakdown".translated()) {
-            VStack(alignment: .leading, spacing: 12) {
-                HStack(alignment: .top, spacing: 12) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("\(totalCrewCount)")
-                            .font(.system(size: 30, weight: .bold, design: .monospaced))
-                            .foregroundStyle(Color.primary)
-                            .minimumScaleFactor(0.8)
-                            .lineLimit(1)
-                        Text("Members".translated())
-                            .font(.system(size: 13, weight: .medium))
-                            .foregroundStyle(Color.sweeplyTextSub)
-                    }
-                    Spacer(minLength: 10)
-                    VStack(alignment: .trailing, spacing: 8) {
-                        teamCompactStat(value: "\(activeCount)", label: "Active".translated(), tint: .sweeplySuccess)
-                        teamCompactStat(value: "\(invitedCount)", label: "Pending".translated(), tint: .sweeplyWarning)
-                    }
+        slideContainer(icon: "person.2.fill", title: "Overview".translated(), accent: Color.sweeplyNavy) {
+            HStack(alignment: .bottom, spacing: 0) {
+                // Left — big crew count
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("\(totalCrewCount)")
+                        .font(.system(size: 38, weight: .black, design: .monospaced))
+                        .foregroundStyle(Color.sweeplyNavy)
+                        .minimumScaleFactor(0.7)
+                        .lineLimit(1)
+                    Text("Members".translated())
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(Color.sweeplyTextSub)
                 }
 
-                HStack(spacing: 8) {
-                    teamCompactStat(value: "\(inactiveCount)", label: "Inactive".translated(), tint: Color.sweeplyTextSub)
-                    teamCompactStat(value: "\(cleaners.count)", label: "Cleaners".translated(), tint: Color.sweeplyNavy)
-                }
+                Spacer()
 
-                crewDistributionBar
+                // Right — status rows
+                VStack(alignment: .trailing, spacing: 7) {
+                    slideStatRow(value: activeCount,   label: "Active".translated(),   dot: Color.sweeplySuccess)
+                    slideStatRow(value: invitedCount,  label: "Pending".translated(),  dot: Color.sweeplyWarning)
+                    slideStatRow(value: inactiveCount, label: "Inactive".translated(), dot: Color.sweeplyTextSub.opacity(0.5))
+                }
             }
+
+            // Distribution bar
+            crewDistributionBar
+                .padding(.top, 12)
         }
     }
 
     private var statusSlide: some View {
-        slideContainer(title: "Activity".translated(), subtitle: "This Week".translated()) {
-            VStack(alignment: .leading, spacing: 12) {
-                HStack(alignment: .top, spacing: 12) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("\(weekAssignedCount)")
-                            .font(.system(size: 30, weight: .bold, design: .monospaced))
-                            .foregroundStyle(Color.primary)
-                            .minimumScaleFactor(0.8)
-                            .lineLimit(1)
-                        Text("Jobs Assigned".translated())
-                            .font(.system(size: 13, weight: .medium))
-                            .foregroundStyle(Color.sweeplyTextSub)
-                    }
-                    Spacer(minLength: 10)
-                    VStack(alignment: .trailing, spacing: 8) {
-                        teamCompactStat(value: "\(weekCompletedCount)", label: "Completed".translated(), tint: .sweeplySuccess)
-                        teamCompactStat(value: "\(weekUpcomingCount)", label: "Upcoming".translated(), tint: .sweeplyWarning)
-                    }
+        slideContainer(icon: "calendar.badge.clock", title: "This Week".translated(), accent: Color.sweeplySuccess) {
+            HStack(alignment: .bottom, spacing: 0) {
+                // Left — big job count
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("\(weekAssignedCount)")
+                        .font(.system(size: 38, weight: .black, design: .monospaced))
+                        .foregroundStyle(Color.sweeplyNavy)
+                        .minimumScaleFactor(0.7)
+                        .lineLimit(1)
+                    Text("Jobs Assigned".translated())
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(Color.sweeplyTextSub)
                 }
 
-                VStack(alignment: .leading, spacing: 6) {
-                    HStack {
-                        Text("Completion".translated())
-                            .font(.system(size: 11, weight: .semibold))
-                            .foregroundStyle(Color.sweeplyTextSub)
-                        Spacer()
-                        Text("\(weekCompletedCount)/\(max(weekAssignedCount, 1))")
-                            .font(.system(size: 11, weight: .semibold, design: .monospaced))
-                            .foregroundStyle(Color.sweeplyTextSub)
-                    }
-                    GeometryReader { geo in
-                        let denominator = max(weekAssignedCount, 1)
-                        let completedWidth = geo.size.width * CGFloat(weekCompletedCount) / CGFloat(denominator)
-                        let remainingWidth = geo.size.width * CGFloat(max(weekAssignedCount - weekCompletedCount, 0)) / CGFloat(denominator)
+                Spacer()
 
-                        RoundedRectangle(cornerRadius: 999)
-                            .fill(Color.sweeplyBorder.opacity(0.55))
-                            .overlay(alignment: .leading) {
-                                HStack(spacing: 0) {
-                                    Rectangle().fill(Color.sweeplySuccess).frame(width: completedWidth)
-                                    Rectangle().fill(Color.sweeplyBorder).frame(width: remainingWidth)
-                                }
-                                .clipShape(RoundedRectangle(cornerRadius: 999))
-                            }
-                    }
-                    .frame(height: 10)
+                // Right — outcome rows
+                VStack(alignment: .trailing, spacing: 7) {
+                    slideStatRow(value: weekCompletedCount, label: "Done".translated(),     dot: Color.sweeplySuccess)
+                    slideStatRow(value: weekUpcomingCount,  label: "Upcoming".translated(), dot: Color.sweeplyWarning)
+                    slideStatRow(value: max(weekAssignedCount - weekCompletedCount - weekUpcomingCount, 0),
+                                 label: "Other".translated(), dot: Color.sweeplyTextSub.opacity(0.4))
                 }
             }
+
+            // Completion bar
+            VStack(alignment: .leading, spacing: 5) {
+                HStack {
+                    Text("Completion".translated())
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(Color.sweeplyTextSub)
+                    Spacer()
+                    Text("\(weekCompletedCount)/\(max(weekAssignedCount, 1))")
+                        .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                        .foregroundStyle(Color.sweeplyTextSub)
+                }
+                GeometryReader { geo in
+                    let pct = CGFloat(weekCompletedCount) / CGFloat(max(weekAssignedCount, 1))
+                    ZStack(alignment: .leading) {
+                        Capsule().fill(Color.sweeplyBorder.opacity(0.45))
+                        Capsule().fill(Color.sweeplySuccess)
+                            .frame(width: geo.size.width * pct)
+                    }
+                }
+                .frame(height: 6)
+            }
+            .padding(.top, 12)
         }
     }
 
     private var operationsSlide: some View {
-        slideContainer(title: "Performance".translated(), subtitle: performanceSubtitle) {
-            VStack(alignment: .leading, spacing: 12) {
-                performanceRangePicker
-
-                HStack(spacing: 8) {
-                    teamMetricCard(value: "\(performanceAssignedCount)", label: "Assigned".translated())
-                    teamMetricCard(value: "\(performanceCompletedCount)", label: "Completed".translated())
-                }
-                HStack(spacing: 8) {
-                    teamMetricCard(value: "\(performanceUpcomingCount)", label: "Upcoming".translated())
-                    teamMetricCard(value: performanceEarned.currencyWithoutTrailingZeros, label: "Earned".translated())
+        slideContainer(icon: "chart.bar.fill", title: "Performance".translated(), accent: Color.sweeplyWarning) {
+            // Range picker — slim pill strip
+            HStack(spacing: 4) {
+                ForEach(TeamPerformanceRange.allCases, id: \.self) { range in
+                    Button {
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        selectedPerformanceRange = range
+                    } label: {
+                        Text(range.label)
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(selectedPerformanceRange == range ? .white : Color.sweeplyTextSub)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 5)
+                            .background(
+                                Capsule().fill(selectedPerformanceRange == range
+                                    ? Color.sweeplyNavy
+                                    : Color.sweeplyBorder.opacity(0.35))
+                            )
+                    }
+                    .buttonStyle(.plain)
                 }
             }
+            .padding(.top, 2)
+
+            // 4-stat row
+            HStack(spacing: 0) {
+                performanceInlineStat(value: "\(performanceAssignedCount)",  label: "Assigned".translated())
+                performanceDivider
+                performanceInlineStat(value: "\(performanceCompletedCount)", label: "Completed".translated())
+                performanceDivider
+                performanceInlineStat(value: "\(performanceUpcomingCount)",  label: "Upcoming".translated())
+                performanceDivider
+                performanceInlineStat(value: performanceEarned.currencyWithoutTrailingZeros, label: "Earned".translated())
+            }
+            .padding(.top, 10)
         }
     }
 
+    // MARK: - Slide sub-components
+
     private func slideContainer<Content: View>(
+        icon: String,
         title: String,
-        subtitle: String,
+        accent: Color,
         @ViewBuilder content: () -> Content
     ) -> some View {
         VStack(alignment: .leading, spacing: 0) {
-            HStack(alignment: .top, spacing: 12) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(title.uppercased())
-                        .font(.system(size: 10, weight: .bold))
-                        .foregroundStyle(Color.sweeplyTextSub)
-                        .tracking(0.8)
-                    Text(subtitle)
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(Color.sweeplyNavy)
-                }
+            // Header row
+            HStack(spacing: 6) {
+                Image(systemName: icon)
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundStyle(accent)
+                Text(title.uppercased())
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundStyle(Color.sweeplyTextSub)
+                    .tracking(0.7)
                 Spacer()
             }
-            .padding(.bottom, 14)
-
-            Divider()
+            .padding(.bottom, 12)
 
             content()
-                .padding(.top, 14)
-                .padding(.bottom, 12)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
 
+    private func slideStatRow(value: Int, label: String, dot: Color) -> some View {
+        HStack(spacing: 6) {
+            Text(label)
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(Color.sweeplyTextSub)
+            Circle()
+                .fill(dot)
+                .frame(width: 5, height: 5)
+            Text("\(value)")
+                .font(.system(size: 13, weight: .bold, design: .monospaced))
+                .foregroundStyle(Color.primary)
+                .frame(minWidth: 18, alignment: .trailing)
+        }
+    }
+
+    private func performanceInlineStat(value: String, label: String) -> some View {
+        VStack(spacing: 3) {
+            Text(value)
+                .font(.system(size: 15, weight: .black, design: .monospaced))
+                .foregroundStyle(Color.sweeplyNavy)
+                .minimumScaleFactor(0.7)
+                .lineLimit(1)
+            Text(label)
+                .font(.system(size: 9, weight: .semibold))
+                .foregroundStyle(Color.sweeplyTextSub)
+                .lineLimit(1)
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    private var performanceDivider: some View {
+        Rectangle()
+            .fill(Color.sweeplyBorder.opacity(0.6))
+            .frame(width: 1, height: 32)
+    }
+
     private var teamCarouselIndicator: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 6) {
             ForEach(0..<3, id: \.self) { index in
                 Capsule()
-                    .fill(index == selectedTeamSlide ? Color.sweeplyNavy : Color.sweeplyBorder.opacity(0.85))
-                    .frame(width: index == selectedTeamSlide ? 18 : 8, height: 8)
+                    .fill(index == selectedTeamSlide ? Color.sweeplyNavy : Color.sweeplyBorder.opacity(0.6))
+                    .frame(width: index == selectedTeamSlide ? 16 : 6, height: 6)
                     .animation(.easeInOut(duration: 0.2), value: selectedTeamSlide)
             }
         }
     }
 
-    private func teamCompactStat(value: String, label: String, tint: Color) -> some View {
-        VStack(alignment: .trailing, spacing: 2) {
-            Text(value)
-                .font(.system(size: 16, weight: .bold, design: .monospaced))
-                .foregroundStyle(tint)
-                .lineLimit(1)
-                .minimumScaleFactor(0.8)
-            Text(label)
-                .font(.system(size: 9, weight: .semibold))
-                .foregroundStyle(Color.sweeplyTextSub)
-        }
-        .frame(minWidth: 74, alignment: .trailing)
-        .padding(.horizontal, 10)
-        .padding(.vertical, 8)
-        .background(Color.sweeplyBackground)
-        .clipShape(RoundedRectangle(cornerRadius: 10))
-        .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.sweeplyBorder, lineWidth: 1))
-    }
-
-    private func teamMetricCard(value: String, label: String) -> some View {
-        VStack(spacing: 3) {
-            Text(value)
-                .font(.system(size: 16, weight: .bold, design: .monospaced))
-                .foregroundStyle(Color.sweeplyNavy)
-                .lineLimit(1)
-                .minimumScaleFactor(0.8)
-            Text(label)
-                .font(.system(size: 9, weight: .semibold))
-                .foregroundStyle(Color.sweeplyTextSub)
-        }
-        .frame(maxWidth: .infinity)
-        .frame(height: 54)
-        .background(Color.sweeplyBackground)
-        .clipShape(RoundedRectangle(cornerRadius: 10))
-        .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.sweeplyBorder, lineWidth: 1))
-    }
-
     private var crewDistributionBar: some View {
         GeometryReader { geo in
             let denominator = max(totalCrewCount, 1)
-            let activeWidth = geo.size.width * CGFloat(activeCount) / CGFloat(denominator)
-            let invitedWidth = geo.size.width * CGFloat(invitedCount) / CGFloat(denominator)
+            let activeWidth  = geo.size.width * CGFloat(activeCount)   / CGFloat(denominator)
+            let invitedWidth = geo.size.width * CGFloat(invitedCount)  / CGFloat(denominator)
             let inactiveWidth = geo.size.width * CGFloat(inactiveCount) / CGFloat(denominator)
 
-            RoundedRectangle(cornerRadius: 999)
-                .fill(Color.sweeplyBorder.opacity(0.55))
-                .overlay(alignment: .leading) {
-                    HStack(spacing: 0) {
-                        Rectangle().fill(Color.sweeplySuccess).frame(width: activeWidth)
-                        Rectangle().fill(Color.sweeplyWarning).frame(width: invitedWidth)
-                        Rectangle().fill(Color.sweeplyBorder).frame(width: inactiveWidth)
-                    }
-                    .clipShape(RoundedRectangle(cornerRadius: 999))
+            ZStack(alignment: .leading) {
+                Capsule().fill(Color.sweeplyBorder.opacity(0.35))
+                HStack(spacing: 0) {
+                    if activeWidth > 0  { Capsule().fill(Color.sweeplySuccess).frame(width: activeWidth) }
+                    if invitedWidth > 0 { Capsule().fill(Color.sweeplyWarning).frame(width: invitedWidth) }
+                    if inactiveWidth > 0 { Capsule().fill(Color.sweeplyBorder).frame(width: inactiveWidth) }
                 }
+                .clipShape(Capsule())
+            }
         }
-        .frame(height: 10)
+        .frame(height: 6)
     }
 
+    // Legacy picker kept for any other future use — no longer used in carousel
     private var performanceRangePicker: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 4) {
             ForEach(TeamPerformanceRange.allCases, id: \.self) { range in
                 Button {
                     UIImpactFeedbackGenerator(style: .light).impactOccurred()
                     selectedPerformanceRange = range
                 } label: {
                     Text(range.label)
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(selectedPerformanceRange == range ? .white : Color.sweeplyNavy)
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(selectedPerformanceRange == range ? .white : Color.sweeplyTextSub)
                         .frame(maxWidth: .infinity)
-                        .padding(.vertical, 8)
+                        .padding(.vertical, 5)
                         .background(
-                            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                .fill(selectedPerformanceRange == range ? Color.sweeplyNavy : Color.sweeplyBackground)
-                        )
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                .stroke(selectedPerformanceRange == range ? Color.sweeplyNavy : Color.sweeplyBorder, lineWidth: 1)
+                            Capsule().fill(selectedPerformanceRange == range
+                                ? Color.sweeplyNavy
+                                : Color.sweeplyBorder.opacity(0.35))
                         )
                 }
                 .buttonStyle(.plain)
