@@ -492,12 +492,16 @@ struct TeamView: View {
                 .padding(.bottom, 12)
 
                 // Individual member cards
-                VStack(spacing: 10) {
-                    ForEach(cleaners) { member in
-                        memberCard(member)
-                            .padding(.horizontal, 20)
+                ScrollView(.horizontal, showsIndicators: false) {
+                    LazyHStack(spacing: 12) {
+                        ForEach(cleaners) { member in
+                            memberCard(member)
+                        }
                     }
+                    .padding(.horizontal, 20)
+                    .scrollTargetLayout()
                 }
+                .scrollTargetBehavior(.viewAligned)
 
                 // Invite nudge at bottom
                 Button {
@@ -527,84 +531,73 @@ struct TeamView: View {
             UIImpactFeedbackGenerator(style: .light).impactOccurred()
             selectedMember = member
         } label: {
-            HStack(spacing: 0) {
+            VStack(alignment: .leading, spacing: 12) {
+                ZStack(alignment: .topTrailing) {
+                    ZStack {
+                        Circle()
+                            .fill(
+                                member.status == .invited
+                                    ? AnyShapeStyle(member.avatarTone.backgroundColor.opacity(0.15))
+                                    : AnyShapeStyle(member.avatarTone.backgroundColor)
+                            )
+                            .frame(width: 56, height: 56)
+                            .overlay(
+                                Circle()
+                                    .strokeBorder(
+                                        member.status == .invited
+                                            ? member.avatarTone.backgroundColor.opacity(0.4)
+                                            : Color.clear,
+                                        style: StrokeStyle(lineWidth: 1.5, dash: [4, 3])
+                                    )
+                            )
+                        Text(member.initials.isEmpty ? "?" : member.initials)
+                            .font(.system(size: 17, weight: .bold))
+                            .foregroundStyle(
+                                member.status == .invited
+                                    ? member.avatarTone.backgroundColor
+                                    : member.avatarTone.foregroundColor
+                            )
+                    }
+                    .padding(.top, 4)
 
-                // Left status stripe
-                RoundedRectangle(cornerRadius: 2, style: .continuous)
-                    .fill(stripeColor(member.status))
-                    .frame(width: 4)
-                    .padding(.leading, 14)
-                    .padding(.vertical, 16)
-
-                // Avatar
-                ZStack {
                     Circle()
-                        .fill(
-                            member.status == .invited
-                                ? AnyShapeStyle(member.avatarTone.backgroundColor.opacity(0.15))
-                                : AnyShapeStyle(member.avatarTone.backgroundColor)
-                        )
-                        .frame(width: 50, height: 50)
+                        .fill(statusColor(member.status))
+                        .frame(width: 11, height: 11)
                         .overlay(
                             Circle()
-                                .strokeBorder(
-                                    member.status == .invited
-                                        ? member.avatarTone.backgroundColor.opacity(0.4)
-                                        : Color.clear,
-                                    style: StrokeStyle(lineWidth: 1.5, dash: [4, 3])
-                                )
+                                .stroke(Color.sweeplySurface, lineWidth: 2)
                         )
-                    Text(member.initials.isEmpty ? "?" : member.initials)
-                        .font(.system(size: 16, weight: .bold))
-                        .foregroundStyle(
-                            member.status == .invited
-                                ? member.avatarTone.backgroundColor
-                                : member.avatarTone.foregroundColor
-                        )
+                        .offset(x: 4, y: -2)
                 }
-                .padding(.leading, 14)
 
-                // Info
-                VStack(alignment: .leading, spacing: 5) {
+                VStack(alignment: .leading, spacing: 4) {
                     Text(member.name)
-                        .font(.system(size: 16, weight: .semibold))
+                        .font(.system(size: 15, weight: .semibold))
                         .foregroundStyle(
                             member.status == .invited
                                 ? Color.sweeplyNavy.opacity(0.45)
                                 : Color.sweeplyNavy
                         )
-                        .lineLimit(1)
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.85)
 
                     if member.status == .invited {
                         Text("Invite sent · Tap to resend".translated())
-                            .font(.system(size: 12, weight: .medium))
+                            .font(.system(size: 11, weight: .medium))
                             .foregroundStyle(Color.sweeplyWarning)
+                            .lineLimit(2)
                     } else {
-                        HStack(spacing: 5) {
-                            Image(systemName: "dollarsign.circle.fill")
-                                .font(.system(size: 11))
-                            Text(member.payRateDescription)
-                                .font(.system(size: 12, weight: .medium))
-                        }
-                        .foregroundStyle(Color.sweeplySuccess)
+                        Text(member.payRateDescription)
+                            .font(.system(size: 11.5, weight: .medium))
+                            .foregroundStyle(Color.sweeplyTextSub)
+                            .lineLimit(2)
                     }
                 }
-                .padding(.leading, 14)
 
-                Spacer(minLength: 10)
-
-                // Status pill + chevron
-                VStack(alignment: .trailing, spacing: 6) {
-                    statusPill(member.status)
-                    if member.status != .invited {
-                        Image(systemName: "chevron.right")
-                            .font(.system(size: 11, weight: .semibold))
-                            .foregroundStyle(Color.sweeplyBorder)
-                    }
-                }
-                .padding(.trailing, 16)
+                Spacer(minLength: 0)
             }
-            .frame(minHeight: 84)
+            .padding(14)
+            .frame(width: 156, height: 148, alignment: .topLeading)
             .background(Color.sweeplySurface)
             .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
             .overlay(
@@ -614,7 +607,7 @@ struct TeamView: View {
             .contentShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         }
         .buttonStyle(.plain)
-        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+        .contextMenu {
             Button(role: .destructive) {
                 deleteTarget = member
                 showDeleteConfirm = true
@@ -622,28 +615,6 @@ struct TeamView: View {
                 Label("Remove".translated(), systemImage: "trash")
             }
         }
-    }
-
-    private func stripeColor(_ status: TeamMemberStatus) -> Color {
-        switch status {
-        case .active:   return Color.sweeplySuccess
-        case .invited:  return Color.sweeplyWarning
-        case .inactive: return Color.sweeplyBorder
-        }
-    }
-
-    private func statusPill(_ status: TeamMemberStatus) -> some View {
-        HStack(spacing: 4) {
-            Circle()
-                .fill(statusColor(status))
-                .frame(width: 5, height: 5)
-            Text(status.displayName)
-                .font(.system(size: 11, weight: .semibold))
-                .foregroundStyle(statusColor(status))
-        }
-        .padding(.horizontal, 9)
-        .padding(.vertical, 4)
-        .background(statusColor(status).opacity(0.1), in: Capsule())
     }
 
     private func statusColor(_ status: TeamMemberStatus) -> Color {
