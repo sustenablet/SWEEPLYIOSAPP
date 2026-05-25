@@ -241,14 +241,14 @@ struct RootView: View {
         let context = LAContext()
         var error: NSError?
         if context.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: &error) {
-            context.evaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, localizedReason: "Unlock Sweeply") { success, _ in
+            context.evaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, localizedReason: "Unlock Sweeply".translated()) { success, _ in
                 DispatchQueue.main.async {
                     if success { isLocked = false }
                 }
             }
         } else {
             // Fall back to passcode
-            context.evaluatePolicy(.deviceOwnerAuthentication, localizedReason: "Unlock Sweeply") { success, _ in
+            context.evaluatePolicy(.deviceOwnerAuthentication, localizedReason: "Unlock Sweeply".translated()) { success, _ in
                 DispatchQueue.main.async {
                     if success { isLocked = false }
                 }
