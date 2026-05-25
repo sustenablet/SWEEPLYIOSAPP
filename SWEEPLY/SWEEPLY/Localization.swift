@@ -132,6 +132,7 @@ enum Localization {
     "Locks app when it goes to background": ["pt-BR": "Bloqueia app quando vai para segundo plano"],
     "Sync Jobs to Calendar": ["pt-BR": "Sincronizar Serviços com Calendário"],
     "Adds scheduled jobs to your Calendar app": ["pt-BR": "Adiciona serviços agendados ao seu aplicativo Calendário"],
+    "Sweeply job": ["pt-BR": "Serviço Sweeply"],
     "Reset Password": ["pt-BR": "Redefinir Senha"],
     // MARK: - New onboarding flow
     "Log In": ["pt-BR": "Entrar"],

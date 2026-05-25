@@ -71,11 +71,11 @@ final class CalendarSyncManager {
     // MARK: - Helpers
 
     private func configure(_ event: EKEvent, with job: Job) {
-        event.title = "\(job.serviceType.rawValue) — \(job.clientName)"
+        event.title = "\(job.serviceType.rawValue.translated()) — \(job.clientName)"
         event.location = job.address.isEmpty ? nil : job.address
         event.startDate = job.date
         event.endDate = job.date.addingTimeInterval(job.duration * 3600)
-        event.notes = "Sweeply job"
+        event.notes = "Sweeply job".translated()
     }
 
     // MARK: - Mapping persistence
