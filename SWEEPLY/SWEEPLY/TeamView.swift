@@ -4,6 +4,7 @@ import SwiftUI
 
 struct TeamView: View {
     @Environment(TeamStore.self)    private var teamStore
+    @Environment(JobsStore.self)    private var jobsStore
     @Environment(ProfileStore.self) private var profileStore
     @Environment(AppSession.self)   private var session
     @Environment(\.dismiss)         private var dismiss
@@ -14,12 +15,35 @@ struct TeamView: View {
     @State private var showDeleteConfirm = false
     @State private var acceptingInviteId: UUID? = nil
     @State private var decliningInviteId: UUID? = nil
+    @State private var selectedTeamSlide = 0
+
+    private let teamCarouselHeight: CGFloat = 160
 
     // MARK: - Derived
 
     private var cleaners: [TeamMember]   { teamStore.members.filter { $0.role == .member } }
     private var activeCount: Int         { teamStore.members.filter { $0.status == .active  }.count }
     private var invitedCount: Int        { teamStore.members.filter { $0.status == .invited }.count }
+    private var teamJobs: [Job] {
+        guard !cleaners.isEmpty else { return [] }
+        return jobsStore.jobs.filter { job in
+            job.status != .cancelled && cleaners.contains(where: { job.isAssigned(to: $0.id) })
+        }
+    }
+
+    private var monthStart: Date {
+        Calendar.current.dateInterval(of: .month, for: Date())?.start ?? Date()
+    }
+
+    private var monthTeamJobs: [Job] { teamJobs.filter { $0.date >= monthStart } }
+    private var monthAssignedCount: Int { monthTeamJobs.count }
+    private var monthCompletedCount: Int { monthTeamJobs.filter { $0.status == .completed }.count }
+    private var monthUpcomingCount: Int {
+        teamJobs.filter { ($0.status == .scheduled || $0.status == .inProgress) && $0.date >= Date() }.count
+    }
+    private var monthEarned: Double {
+        monthTeamJobs.filter { $0.status == .completed }.reduce(0) { $0 + $1.price }
+    }
 
     private var ownerInitials: String {
         let name = profileStore.profile?.businessName ?? ""
@@ -145,9 +169,33 @@ struct TeamView: View {
     // MARK: - Team Header
 
     private var teamHeader: some View {
-        VStack(alignment: .leading, spacing: 0) {
+        ZStack(alignment: .bottom) {
+            TabView(selection: $selectedTeamSlide) {
+                overviewSlide
+                    .tag(0)
+                statusSlide
+                    .tag(1)
+                operationsSlide
+                    .tag(2)
+            }
+            .tabViewStyle(.page(indexDisplayMode: .never))
+            .frame(height: teamCarouselHeight)
+            .animation(.easeInOut(duration: 0.2), value: selectedTeamSlide)
 
-            // Owner identity row
+            teamCarouselIndicator
+                .padding(.bottom, 6)
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 20)
+        .background(Color.sweeplySurface, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .stroke(Color.sweeplyBorder, lineWidth: 1)
+        )
+    }
+
+    private var overviewSlide: some View {
+        slideContainer(title: "Overview".translated(), subtitle: "Account Owner".translated()) {
             HStack(spacing: 14) {
                 ZStack {
                     Circle()
@@ -161,21 +209,18 @@ struct TeamView: View {
                     Text(ownerDisplayName)
                         .font(.system(size: 16, weight: .semibold))
                         .foregroundStyle(Color.primary)
-                        .fixedSize(horizontal: false, vertical: true)
+                        .lineLimit(2)
                     Text("Account Owner".translated())
                         .font(.system(size: 12))
                         .foregroundStyle(Color.sweeplyTextSub)
                 }
                 Spacer()
             }
+        }
+    }
 
-            // Separator
-            Rectangle()
-                .fill(Color.sweeplyBorder)
-                .frame(height: 1)
-                .padding(.vertical, 18)
-
-            // Stats + avatar strip
+    private var statusSlide: some View {
+        slideContainer(title: "Members".translated(), subtitle: "Team Status".translated()) {
             HStack(alignment: .center, spacing: 0) {
                 VStack(alignment: .leading, spacing: 6) {
                     HStack(alignment: .firstTextBaseline, spacing: 6) {
@@ -197,13 +242,83 @@ struct TeamView: View {
                 memberAvatarStrip
             }
         }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 20)
-        .background(Color.sweeplySurface, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .stroke(Color.sweeplyBorder, lineWidth: 1)
-        )
+    }
+
+    private var operationsSlide: some View {
+        slideContainer(title: "This Month".translated(), subtitle: "Performance Overview".translated()) {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(spacing: 8) {
+                    teamMetricCard(value: "\(monthAssignedCount)", label: "Assigned".translated())
+                    teamMetricCard(value: "\(monthCompletedCount)", label: "Completed".translated())
+                }
+                HStack(spacing: 8) {
+                    teamMetricCard(value: "\(monthUpcomingCount)", label: "Upcoming".translated())
+                    teamMetricCard(value: monthEarned.currencyWithoutTrailingZeros, label: "Earned".translated())
+                }
+            }
+        }
+    }
+
+    private func slideContainer<Content: View>(
+        title: String,
+        subtitle: String,
+        @ViewBuilder content: () -> Content
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(alignment: .top, spacing: 12) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title.uppercased())
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundStyle(Color.sweeplyTextSub)
+                        .tracking(0.8)
+                    Text(subtitle)
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(Color.sweeplyNavy)
+                }
+                Spacer()
+            }
+            .padding(.bottom, 14)
+
+            Divider()
+
+            content()
+                .padding(.top, 14)
+                .padding(.bottom, 12)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    }
+
+    private var teamCarouselIndicator: some View {
+        HStack(spacing: 8) {
+            ForEach(0..<3, id: \.self) { index in
+                Capsule()
+                    .fill(index == selectedTeamSlide ? Color.sweeplyNavy : Color.sweeplyBorder.opacity(0.8))
+                    .frame(width: index == selectedTeamSlide ? 18 : 8, height: 8)
+                    .animation(.easeInOut(duration: 0.2), value: selectedTeamSlide)
+            }
+            Spacer()
+            Text("\(selectedTeamSlide + 1) / 3")
+                .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                .foregroundStyle(Color.sweeplyTextSub)
+        }
+    }
+
+    private func teamMetricCard(value: String, label: String) -> some View {
+        VStack(spacing: 3) {
+            Text(value)
+                .font(.system(size: 16, weight: .bold, design: .monospaced))
+                .foregroundStyle(Color.sweeplyNavy)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+            Text(label)
+                .font(.system(size: 9, weight: .semibold))
+                .foregroundStyle(Color.sweeplyTextSub)
+        }
+        .frame(maxWidth: .infinity)
+        .frame(height: 54)
+        .background(Color.sweeplyBackground)
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.sweeplyBorder, lineWidth: 1))
     }
 
     // Overlapping avatar circles for the team strip

@@ -23,6 +23,7 @@ enum Localization {
     "Error": ["pt-BR": "Erro"],
     "Success": ["pt-BR": "Sucesso"],
     "Overview": ["pt-BR": "Visão Geral"],
+    "Team Status": ["pt-BR": "Status da Equipe"],
     "Value": ["pt-BR": "Valor"],
     "Week": ["pt-BR": "Semana"],
     "Now": ["pt-BR": "Agora"],
