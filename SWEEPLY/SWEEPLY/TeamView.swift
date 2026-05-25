@@ -97,6 +97,46 @@ struct TeamView: View {
             : Color.sweeplyNavy
     }
 
+    private var payrollMembers: [TeamMember] {
+        cleaners.sorted { lhs, rhs in
+            if lhs.payRateEnabled != rhs.payRateEnabled {
+                return lhs.payRateEnabled && !rhs.payRateEnabled
+            }
+            if lhs.status != rhs.status {
+                return lhs.status == .active
+            }
+            return lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
+        }
+    }
+
+    private var payrollConfiguredCount: Int {
+        payrollMembers.filter { $0.payRateEnabled }.count
+    }
+
+    private var payrollNeedsSetupCount: Int {
+        payrollMembers.filter { !$0.payRateEnabled }.count
+    }
+
+    private var payrollCoverageRatio: Double {
+        guard !cleaners.isEmpty else { return 0 }
+        return Double(payrollConfiguredCount) / Double(cleaners.count)
+    }
+
+    private var payrollEstimatedTotal: Double {
+        payrollMembers.reduce(0) { total, member in
+            total + estimatedPayrollAmount(for: member)
+        }
+    }
+
+    private var nearestPayrollDate: Date? {
+        payrollMembers.compactMap { nextPaydayDate(for: $0) }.min()
+    }
+
+    private var nearestPayrollLabel: String {
+        guard let nearestPayrollDate else { return "—" }
+        return nearestPayrollDate.formatted(.dateTime.locale(Locale.app).weekday(.abbreviated).month(.abbreviated).day())
+    }
+
     // MARK: - Body
 
     var body: some View {
@@ -136,6 +176,9 @@ struct TeamView: View {
 
                         // Roster — individual cards
                         rosterSection
+
+                        // Payroll hub
+                        payrollSection
 
                         Spacer(minLength: 48)
                     }
@@ -252,13 +295,12 @@ struct TeamView: View {
                     .tracking(0.7)
                 Spacer()
             }
-            .padding(.bottom, 12)
+            .padding(.bottom, 9)
 
-            HStack(alignment: .center, spacing: 18) {
-                // Hero: crew count
+            HStack(alignment: .top, spacing: 14) {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("\(totalCrewCount)")
-                        .font(.system(size: 44, weight: .black, design: .monospaced))
+                        .font(.system(size: 41, weight: .black, design: .monospaced))
                         .foregroundStyle(Color.sweeplyNavy)
                         .minimumScaleFactor(0.55)
                         .lineLimit(1)
@@ -272,16 +314,58 @@ struct TeamView: View {
                 // Status list with hairline separators
                 VStack(spacing: 0) {
                     crewStatRow(value: "\(activeCount)",   label: "Active".translated(),   tint: Color.sweeplySuccess)
-                        .padding(.vertical, 6)
+                        .padding(.vertical, 4)
                     Rectangle().fill(Color.sweeplyBorder.opacity(0.45)).frame(height: 0.5)
                     crewStatRow(value: "\(invitedCount)",  label: "Pending".translated(),  tint: Color.sweeplyWarning)
-                        .padding(.vertical, 6)
+                        .padding(.vertical, 4)
                     Rectangle().fill(Color.sweeplyBorder.opacity(0.45)).frame(height: 0.5)
                     crewStatRow(value: "\(inactiveCount)", label: "Inactive".translated(), tint: Color.sweeplyTextSub.opacity(0.45))
-                        .padding(.vertical, 6)
+                        .padding(.vertical, 4)
                 }
                 .frame(maxWidth: .infinity)
             }
+
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Text("Setup coverage".translated())
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundStyle(Color.sweeplyTextSub)
+                        .tracking(0.6)
+                    Spacer()
+                    Text(payrollMembers.isEmpty ? "0/0" : "\(payrollConfiguredCount)/\(cleaners.count)")
+                        .font(.system(size: 10, weight: .bold, design: .monospaced))
+                        .foregroundStyle(Color.sweeplyNavy)
+                }
+
+                GeometryReader { geo in
+                    ZStack(alignment: .leading) {
+                        Capsule().fill(Color.sweeplyBorder.opacity(0.45))
+                        Capsule()
+                            .fill(Color.sweeplyAccent)
+                            .frame(width: geo.size.width * payrollCoverageRatio)
+                    }
+                }
+                .frame(height: 6)
+
+                HStack(spacing: 10) {
+                    overviewMiniMetric(
+                        value: payrollMembers.isEmpty ? "0" : "\(payrollConfiguredCount)",
+                        label: "Configured".translated(),
+                        tint: Color.sweeplySuccess
+                    )
+                    overviewMiniMetric(
+                        value: payrollMembers.isEmpty ? "0" : "\(payrollNeedsSetupCount)",
+                        label: "Needs setup".translated(),
+                        tint: Color.sweeplyWarning
+                    )
+                    overviewMiniMetric(
+                        value: nearestPayrollLabel,
+                        label: "Next payday".translated(),
+                        tint: Color.sweeplyAccent
+                    )
+                }
+            }
+            .padding(.top, 10)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
@@ -434,8 +518,24 @@ struct TeamView: View {
             Spacer(minLength: 4)
             Text(value)
                 .font(.system(size: 13, weight: .bold, design: .monospaced))
-                .foregroundStyle(Color.primary)
+            .foregroundStyle(Color.primary)
         }
+    }
+
+    private func overviewMiniMetric(value: String, label: String, tint: Color) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(value)
+                .font(.system(size: 11, weight: .black, design: .monospaced))
+                .foregroundStyle(tint)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+            Text(label)
+                .font(.system(size: 9, weight: .medium))
+                .foregroundStyle(Color.sweeplyTextSub)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     // Centered column used only in slide 2
@@ -497,30 +597,247 @@ struct TeamView: View {
                         ForEach(cleaners) { member in
                             memberCard(member)
                         }
+                        addMemberCard
                     }
                     .padding(.horizontal, 20)
                     .scrollTargetLayout()
                 }
                 .scrollTargetBehavior(.viewAligned)
-
-                // Invite nudge at bottom
-                Button {
-                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                    showInvite = true
-                } label: {
-                    HStack(spacing: 6) {
-                        Image(systemName: "plus.circle")
-                            .font(.system(size: 14))
-                        Text("Invite Another Cleaner".translated())
-                            .font(.system(size: 14, weight: .medium))
-                    }
-                    .foregroundStyle(Color.sweeplyNavy.opacity(0.45))
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 16)
-                }
-                .buttonStyle(.plain)
-                .padding(.horizontal, 20)
             }
+        }
+    }
+
+    // MARK: - Payroll Section
+
+    private var payrollSection: some View {
+        SectionCard {
+            VStack(alignment: .leading, spacing: 14) {
+                HStack(alignment: .top, spacing: 12) {
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("Team Payroll".translated())
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundStyle(Color.sweeplyNavy)
+                        Text("Estimated this month".translated())
+                            .font(.system(size: 12))
+                            .foregroundStyle(Color.sweeplyTextSub)
+                    }
+
+                    Spacer(minLength: 10)
+
+                    VStack(alignment: .trailing, spacing: 3) {
+                        Text(payrollEstimatedTotal.currencyWithoutTrailingZeros)
+                            .font(.system(size: 20, weight: .black, design: .monospaced))
+                            .foregroundStyle(Color.sweeplyNavy)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
+                        Text(payrollMembers.isEmpty
+                             ? "No team members yet".translated()
+                             : "\(payrollMembers.count) " + "Cleaners".translated())
+                            .font(.system(size: 11))
+                            .foregroundStyle(Color.sweeplyTextSub)
+                    }
+                }
+
+                VStack(spacing: 0) {
+                    HStack(spacing: 0) {
+                        payrollMetricColumn(
+                            value: payrollMembers.isEmpty ? "0" : "\(payrollConfiguredCount)/\(cleaners.count)",
+                            label: "Setup coverage".translated(),
+                            tint: Color.sweeplySuccess
+                        )
+
+                        Rectangle()
+                            .fill(Color.sweeplyBorder.opacity(0.5))
+                            .frame(width: 0.5, height: 38)
+
+                        payrollMetricColumn(
+                            value: payrollMembers.isEmpty ? "0" : "\(payrollNeedsSetupCount)",
+                            label: "Needs setup".translated(),
+                            tint: Color.sweeplyWarning
+                        )
+
+                        Rectangle()
+                            .fill(Color.sweeplyBorder.opacity(0.5))
+                            .frame(width: 0.5, height: 38)
+
+                        payrollMetricColumn(
+                            value: nearestPayrollLabel,
+                            label: "Next payday".translated(),
+                            tint: Color.sweeplyAccent
+                        )
+                    }
+                    .padding(.vertical, 2)
+                }
+
+                Divider()
+
+                if payrollMembers.isEmpty {
+                    VStack(spacing: 8) {
+                        Image(systemName: "creditcard.and.123")
+                            .font(.system(size: 28))
+                            .foregroundStyle(Color.sweeplyTextSub.opacity(0.35))
+                        Text("Add your crew to start tracking payroll.".translated())
+                            .font(.system(size: 13))
+                            .foregroundStyle(Color.sweeplyTextSub)
+                            .multilineTextAlignment(.center)
+                            .lineSpacing(2)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                } else {
+                    VStack(spacing: 0) {
+                        ForEach(Array(payrollMembers.prefix(4).enumerated()), id: \.element.id) { index, member in
+                            payrollRow(member)
+
+                            if index < min(payrollMembers.count, 4) - 1 {
+                                Divider().padding(.leading, 52)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        .padding(.horizontal, 20)
+        .padding(.top, 18)
+    }
+
+    private func payrollMetricColumn(value: String, label: String, tint: Color) -> some View {
+        VStack(spacing: 3) {
+            Text(value)
+                .font(.system(size: 12, weight: .bold, design: .monospaced))
+                .foregroundStyle(tint)
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
+            Text(label)
+                .font(.system(size: 9))
+                .foregroundStyle(Color.sweeplyTextSub)
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    private func payrollRow(_ member: TeamMember) -> some View {
+        let est = estimatedPayrollAmount(for: member)
+        let nextPay = nextPaydayLabel(for: member)
+
+        return Button {
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            selectedMember = member
+        } label: {
+            HStack(spacing: 12) {
+                ZStack {
+                    Circle()
+                        .fill(member.avatarTone.backgroundColor)
+                        .frame(width: 36, height: 36)
+                    Text(member.initials.isEmpty ? "?" : member.initials)
+                        .font(.system(size: 13, weight: .bold))
+                        .foregroundStyle(member.avatarTone.foregroundColor)
+                }
+
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(spacing: 6) {
+                        Text(member.name)
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(Color.primary)
+                            .lineLimit(1)
+                        if member.payRateEnabled {
+                            statusBadge(label: "Configured".translated(), tint: Color.sweeplySuccess)
+                        } else {
+                            statusBadge(label: "Needs setup".translated(), tint: Color.sweeplyWarning)
+                        }
+                    }
+
+                    Text(member.payRateEnabled ? member.payRateDescription : "Tap to set up payroll.".translated())
+                        .font(.system(size: 11))
+                        .foregroundStyle(member.payRateEnabled ? Color.sweeplyAccent : Color.sweeplyTextSub)
+                        .lineLimit(2)
+
+                    if let nextPay {
+                        HStack(spacing: 4) {
+                            Image(systemName: "calendar")
+                                .font(.system(size: 10, weight: .semibold))
+                            Text(nextPay)
+                                .font(.system(size: 11))
+                        }
+                        .foregroundStyle(Color.sweeplyTextSub)
+                    }
+                }
+
+                Spacer(minLength: 8)
+
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text(est.currencyWithoutTrailingZeros)
+                        .font(.system(size: 15, weight: .bold, design: .monospaced))
+                        .foregroundStyle(Color.sweeplyNavy)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                    Text("This month".translated())
+                        .font(.system(size: 10))
+                        .foregroundStyle(Color.sweeplyTextSub)
+                }
+            }
+            .padding(.vertical, 12)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func statusBadge(label: String, tint: Color) -> some View {
+        Text(label)
+            .font(.system(size: 9, weight: .semibold))
+            .foregroundStyle(tint)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2)
+            .background(tint.opacity(0.12), in: Capsule())
+    }
+
+    private func nextPaydayDate(for member: TeamMember) -> Date? {
+        guard let payDay = member.payDayOfWeek else { return nil }
+
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+        let currentWeekday = calendar.component(.weekday, from: today)
+
+        var daysUntilPayday = payDay - currentWeekday
+        if daysUntilPayday <= 0 { daysUntilPayday += 7 }
+
+        return calendar.date(byAdding: .day, value: daysUntilPayday, to: today)
+    }
+
+    private func nextPaydayLabel(for member: TeamMember) -> String? {
+        guard let nextPaydayDate = nextPaydayDate(for: member) else { return nil }
+        return nextPaydayDate.formatted(.dateTime.locale(Locale.app).weekday(.abbreviated).month(.abbreviated).day())
+    }
+
+    private func estimatedPayrollAmount(for member: TeamMember) -> Double {
+        guard member.payRateEnabled else { return 0 }
+
+        let jobs = completedJobsThisMonth(for: member)
+        let cal = Calendar.current
+
+        switch member.payRateType {
+        case .perJob:
+            return jobs.reduce(0.0) { acc, job in
+                let rate = member.serviceRates[job.serviceType.rawValue] ?? member.payRateAmount
+                return acc + rate
+            }
+        case .perDay:
+            let dailyTotals = Dictionary(grouping: jobs) { job in
+                cal.startOfDay(for: job.date)
+            }
+            return dailyTotals.values.reduce(0.0) { acc, _ in acc + member.payRateAmount }
+        case .perWeek:
+            return member.payRateAmount
+        case .custom:
+            return member.payRateAmount
+        }
+    }
+
+    private func completedJobsThisMonth(for member: TeamMember) -> [Job] {
+        guard let start = Calendar.current.dateInterval(of: .month, for: Date())?.start else { return [] }
+        return jobsStore.jobs.filter { job in
+            job.isAssigned(to: member.id) && job.status == .completed && job.date >= start
         }
     }
 
@@ -582,7 +899,7 @@ struct TeamView: View {
                         .minimumScaleFactor(0.85)
 
                     if member.status == .invited {
-                        Text("Invite sent · Tap to resend".translated())
+                        Text("Invite sent".translated())
                             .font(.system(size: 11, weight: .medium))
                             .foregroundStyle(Color.sweeplyWarning)
                             .lineLimit(2)
@@ -615,6 +932,49 @@ struct TeamView: View {
                 Label("Remove".translated(), systemImage: "trash")
             }
         }
+    }
+
+    private var addMemberCard: some View {
+        Button {
+            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+            showInvite = true
+        } label: {
+            VStack(alignment: .leading, spacing: 12) {
+                ZStack {
+                    Circle()
+                        .fill(Color.sweeplyTextSub.opacity(0.10))
+                        .frame(width: 56, height: 56)
+                    Image(systemName: "plus")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundStyle(Color.sweeplyTextSub)
+                }
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Invite Another Cleaner".translated())
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(Color.sweeplyNavy)
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.85)
+
+                    Text("Add a new member to your team".translated())
+                        .font(.system(size: 11.5, weight: .medium))
+                        .foregroundStyle(Color.sweeplyTextSub)
+                        .lineLimit(2)
+                }
+
+                Spacer(minLength: 0)
+            }
+            .padding(14)
+            .frame(width: 156, height: 148, alignment: .topLeading)
+            .background(Color.sweeplySurface.opacity(0.9))
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .stroke(Color.sweeplyBorder, style: StrokeStyle(lineWidth: 1, dash: [4, 4]))
+            )
+            .contentShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        }
+        .buttonStyle(.plain)
     }
 
     private func statusColor(_ status: TeamMemberStatus) -> Color {
