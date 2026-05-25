@@ -184,7 +184,7 @@ struct NewInvoiceView: View {
 
     private var clientSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            InvoiceFormSectionHeader(title: "CLIENT")
+            InvoiceFormSectionHeader(title: "CLIENT".translated())
 
             VStack(spacing: 8) {
                 Menu {
@@ -341,7 +341,7 @@ struct NewInvoiceView: View {
 
     private var invoiceDetailsSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            InvoiceFormSectionHeader(title: "INVOICE DETAILS")
+            InvoiceFormSectionHeader(title: "INVOICE DETAILS".translated())
 
             VStack(spacing: 8) {
                 HStack {
@@ -380,7 +380,7 @@ struct NewInvoiceView: View {
 
     private var paymentSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            InvoiceFormSectionHeader(title: "PAYMENT")
+            InvoiceFormSectionHeader(title: "PAYMENT".translated())
 
             VStack(alignment: .leading, spacing: 8) {
                 Text("Due Date".translated())

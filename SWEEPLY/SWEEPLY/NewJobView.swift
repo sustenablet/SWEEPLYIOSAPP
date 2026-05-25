@@ -396,7 +396,7 @@ struct NewJobForm: View {
                     // 5. Extras
                     if !extrasCatalog.isEmpty {
                         VStack(alignment: .leading, spacing: 16) {
-                            SectionHeader(title: "EXTRAS (OPTIONAL)")
+                            SectionHeader(title: "EXTRAS (OPTIONAL)".translated())
 
                             if !selectedExtras.isEmpty {
                                 VStack(spacing: 8) {
@@ -455,7 +455,7 @@ struct NewJobForm: View {
                     // 4. Assign Cleaners (only if there are active cleaners)
                     if !activeCleaners.isEmpty {
                         VStack(alignment: .leading, spacing: 12) {
-                            SectionHeader(title: "ASSIGN CLEANERS")
+                            SectionHeader(title: "ASSIGN CLEANERS".translated())
 
                             Menu {
                                 ForEach(activeCleaners) { cleaner in
@@ -658,17 +658,17 @@ struct NewJobForm: View {
             // Notify assigned members that a new job has been given to them.
             if success {
                 let dateStr = date.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day().hour().minute())
-                let body = "\(serviceType.rawValue) at \(client.name) — \(dateStr). \(finalPrice.currency)"
+                let body = "%@ at %@ — %@. %@".translated(with: serviceType.rawValue.translated(), client.name, dateStr, finalPrice.currency)
                 for cleanerUserId in assignedMembers.compactMap(\.cleanerUserId) {
                     await NotificationHelper.insert(
                         userId: cleanerUserId,
-                        title: "New Job Assigned",
+                        title: "New Job Assigned".translated(),
                         message: body,
                         kind: "jobs"
                     )
                 }
                 if !assignedMembers.isEmpty {
-                    NotificationManager.shared.fireInstantBanner(title: "New Job Assigned", body: body)
+                    NotificationManager.shared.fireInstantBanner(title: "New Job Assigned".translated(), body: body)
                 }
             }
         } else {

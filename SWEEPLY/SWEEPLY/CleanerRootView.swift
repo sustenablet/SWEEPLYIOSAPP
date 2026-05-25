@@ -77,7 +77,7 @@ struct CleanerRootView: View {
         await NotificationHelper.insert(
             userId: userId,
             title: "It's Pay Day!".translated(),
-            message: "Your \(membership.payRateAmount.currency) from \(membership.businessName) should be processed today. Check with your manager.",
+            message: "Your %@ from %@ should be processed today. Check with your manager.".translated(with: membership.payRateAmount.currency, membership.businessName),
             kind: "billing"
         )
         UserDefaults.standard.set(true, forKey: storageKey)

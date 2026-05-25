@@ -95,8 +95,8 @@ final class TeamStore {
                 // Send in-app notification to the invited user
                 await NotificationHelper.insert(
                     userId: cleanerUserId,
-                    title: "Team Invitation",
-                    message: "You've been invited to join a team on Sweeply. Open the Team tab to accept.",
+                    title: "Team Invitation".translated(),
+                    message: "You've been invited to join a team on Sweeply. Open the Team tab to accept.".translated(),
                     kind: "team"
                 )
                 // Update local member with linked cleaner ID
@@ -177,13 +177,13 @@ final class TeamStore {
             if status == .active {
                 let name = members.first(where: { $0.id == id })?.name ?? "A team member"
                 await NotificationHelper.insert(
-                    title: "Team Member Joined",
-                    message: "\(name) accepted your invitation and joined the team",
+                    title: "Team Member Joined".translated(),
+                    message: "%@ accepted your invitation and joined the team".translated(with: name),
                     kind: "team"
                 )
                 NotificationManager.shared.fireInstantBanner(
-                    title: "Team Member Joined",
-                    body: "\(name) is now on your team!"
+                    title: "Team Member Joined".translated(),
+                    body: "%@ is now on your team!".translated(with: name)
                 )
             }
             return true
@@ -261,11 +261,11 @@ final class TeamStore {
 
             // Notify the member's app that they've been paid
             if let cleanerUserId = members.first(where: { $0.id == memberId })?.cleanerUserId {
-                let senderLabel = businessName.isEmpty ? "your manager" : businessName
+                let senderLabel = businessName.isEmpty ? "your manager".translated() : businessName
                 await NotificationHelper.insert(
                     userId: cleanerUserId,
-                    title: "Payment Received",
-                    message: "You received \(amount.currency) from \(senderLabel). Check your Finance tab.",
+                    title: "Payment Received".translated(),
+                    message: "You received %@ from %@. Check your Finance tab.".translated(with: amount.currency, senderLabel),
                     kind: "billing"
                 )
             }

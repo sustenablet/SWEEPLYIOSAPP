@@ -241,8 +241,8 @@ struct CleanerJobDetailView: View {
             let memberName = job.effectiveAssignedMemberNames.first ?? "Your cleaner"
             await NotificationHelper.insert(
                 userId: ownerId,
-                title: "Job Check-In",
-                message: "\(memberName) just arrived at \(job.clientName) for \(job.serviceType.rawValue).",
+                title: "Job Check-In".translated(),
+                message: "%@ just arrived at %@ for %@.".translated(with: memberName, job.clientName, job.serviceType.rawValue.translated()),
                 kind: "jobs"
             )
             isUpdatingStatus = false
@@ -257,8 +257,8 @@ struct CleanerJobDetailView: View {
             let memberName = job.effectiveAssignedMemberNames.first ?? "Your cleaner"
             await NotificationHelper.insert(
                 userId: ownerId,
-                title: "Job Completed",
-                message: "\(memberName) completed the \(job.serviceType.rawValue) at \(job.clientName). Ready to invoice.",
+                title: "Job Completed".translated(),
+                message: "%@ completed the %@ at %@. Ready to invoice.".translated(with: memberName, job.serviceType.rawValue.translated(), job.clientName),
                 kind: "jobs"
             )
             isUpdatingStatus = false

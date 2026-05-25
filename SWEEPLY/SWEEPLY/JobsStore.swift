@@ -182,24 +182,26 @@ final class JobsStore {
             switch status {
             case .completed:
                 requestReviewIfAppropriate()
-                let completedBy = mapped.effectiveAssignedMemberNames.first.map { " by \($0)" } ?? ""
+                let completedBy = mapped.effectiveAssignedMemberNames.first
                 await NotificationHelper.insert(
-                    title: "Job Completed",
-                    message: "\(mapped.serviceType.rawValue) for \(mapped.clientName) completed\(completedBy)",
+                    title: "Job Completed".translated(),
+                    message: completedBy == nil
+                        ? "%@ for %@ completed".translated(with: mapped.serviceType.rawValue.translated(), mapped.clientName)
+                        : "%@ for %@ completed by %@".translated(with: mapped.serviceType.rawValue.translated(), mapped.clientName, completedBy!),
                     kind: "jobs",
                     jobId: mapped.id
                 )
             case .inProgress:
                 await NotificationHelper.insert(
-                    title: "Job Started",
-                    message: "\(mapped.serviceType.rawValue) for \(mapped.clientName) is now in progress",
+                    title: "Job Started".translated(),
+                    message: "%@ for %@ is now in progress".translated(with: mapped.serviceType.rawValue.translated(), mapped.clientName),
                     kind: "jobs",
                     jobId: mapped.id
                 )
             case .cancelled:
                 await NotificationHelper.insert(
-                    title: "Job Cancelled",
-                    message: "\(mapped.serviceType.rawValue) for \(mapped.clientName) was cancelled",
+                    title: "Job Cancelled".translated(),
+                    message: "%@ for %@ was cancelled".translated(with: mapped.serviceType.rawValue.translated(), mapped.clientName),
                     kind: "jobs",
                     jobId: mapped.id
                 )

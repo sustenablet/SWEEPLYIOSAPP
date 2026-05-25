@@ -420,7 +420,7 @@ struct OnboardingView: View {
 
             Divider().opacity(0.5)
             primaryButton(
-                label: "Continue",
+                label: "Continue".translated(),
                 isEnabled: selection.wrappedValue != nil,
                 action: {
                     UIImpactFeedbackGenerator(style: .medium).impactOccurred()
@@ -492,7 +492,7 @@ struct OnboardingView: View {
 
             Divider().opacity(0.5)
             primaryButton(
-                label: "Continue",
+                label: "Continue".translated(),
                 isEnabled: recurringCards.contains { !$0.name.trimmingCharacters(in: .whitespaces).isEmpty },
                 action: {
                     UIImpactFeedbackGenerator(style: .medium).impactOccurred()
@@ -879,7 +879,7 @@ struct OnboardingView: View {
 
             Divider().opacity(0.5)
             primaryButton(
-                label: isLoading ? "Creating account…" : "Continue",
+                label: isLoading ? "Creating account…".translated() : "Continue".translated(),
                 isEnabled: isEnabled,
                 action: onContinue
             )
@@ -1036,11 +1036,11 @@ struct OnboardingView: View {
                 Spacer().frame(height: 40)
             }
         }
-        .safeAreaInset(edge: .bottom, spacing: 0) {
+                .safeAreaInset(edge: .bottom, spacing: 0) {
             VStack(spacing: 0) {
                 Divider().opacity(0.5)
                 primaryButton(
-                    label: "Continue",
+                    label: "Continue".translated(),
                     isEnabled: servicesStepValid,
                     action: {
                         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
@@ -1242,7 +1242,7 @@ struct OnboardingView: View {
 
             Divider().opacity(0.5)
             primaryButton(
-                label: teamInviteMembers.isEmpty ? "Skip for now" : "Continue",
+                label: teamInviteMembers.isEmpty ? "Skip for now".translated() : "Continue".translated(),
                 isEnabled: true,
                 action: {
                     UIImpactFeedbackGenerator(style: .medium).impactOccurred()
@@ -1634,7 +1634,7 @@ struct OnboardingView: View {
         action: @escaping () -> Void
     ) -> some View {
         Button(action: action) {
-            Text(label)
+            Text(label.translated())
                 .font(.system(size: 17, weight: .bold))
                 .foregroundStyle(.white)
                 .frame(maxWidth: .infinity)

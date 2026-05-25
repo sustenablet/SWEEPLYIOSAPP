@@ -169,13 +169,13 @@ final class InvoicesStore {
                             ? "$\(String(format: "%.0f", milestone / 1_000))k"
                             : milestone.currency
                         await NotificationHelper.insert(
-                            title: "Revenue Milestone Reached 🎉",
-                            message: "You've collected \(label) in total revenue. Keep it up!",
+                            title: "Revenue Milestone Reached 🎉".translated(),
+                            message: "You've collected %@ in total revenue. Keep it up!".translated(with: label),
                             kind: "system"
                         )
                         NotificationManager.shared.fireInstantBanner(
-                            title: "Revenue Milestone 🎉",
-                            body: "You've collected \(label) in total revenue!"
+                            title: "Revenue Milestone 🎉".translated(),
+                            body: "You've collected %@ in total revenue!".translated(with: label)
                         )
                         break
                     }
