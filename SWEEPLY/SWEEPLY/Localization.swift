@@ -133,6 +133,7 @@ enum Localization {
     "Sync Jobs to Calendar": ["pt-BR": "Sincronizar Serviços com Calendário"],
     "Adds scheduled jobs to your Calendar app": ["pt-BR": "Adiciona serviços agendados ao seu aplicativo Calendário"],
     "Sweeply job": ["pt-BR": "Serviço Sweeply"],
+    "Last paid %@": ["pt-BR": "Último pagamento %@"],
     "Reset Password": ["pt-BR": "Redefinir Senha"],
     // MARK: - New onboarding flow
     "Log In": ["pt-BR": "Entrar"],

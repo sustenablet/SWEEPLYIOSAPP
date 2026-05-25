@@ -32,8 +32,7 @@ struct CleanerDashboardView: View {
     }
 
     private var longDate: String {
-        let f = DateFormatter(); f.dateFormat = "EEEE, MMMM d"
-        return f.string(from: Date())
+        Date().formatted(.dateTime.locale(Locale.app).weekday(.wide).month(.wide).day())
     }
 
     private var firstName: String {

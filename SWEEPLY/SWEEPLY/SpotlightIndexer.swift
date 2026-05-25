@@ -40,13 +40,11 @@ final class SpotlightIndexer {
     // MARK: - Jobs
 
     func indexJobs(_ jobs: [Job]) {
-        let f = DateFormatter()
-        f.dateFormat = "MMM d 'at' h:mm a"
         let items = jobs.map { job -> CSSearchableItem in
             let attrs = CSSearchableItemAttributeSet(contentType: .text)
             let serviceName = job.serviceType.rawValue.translated()
             attrs.title = "\(serviceName) — \(job.clientName)"
-            attrs.contentDescription = "\(f.string(from: job.date)), \(job.address)"
+            attrs.contentDescription = "\(job.date.formatted(.dateTime.locale(Locale.app).month(.abbreviated).day().hour().minute())), \(job.address)"
             attrs.keywords = ["job", "cleaning", job.clientName, serviceName]
             return CSSearchableItem(
                 uniqueIdentifier: "\(jobDomain).\(job.id.uuidString)",

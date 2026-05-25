@@ -159,15 +159,12 @@ struct FinancialReportsView: View {
         }
         let cal = Calendar.current
         let now = Date()
-        let f = DateFormatter()
-        f.locale = Locale.app
-        f.dateFormat = "MMM"
         return (0..<count).reversed().compactMap { offset -> MonthlyBar? in
             guard let monthStart = cal.date(byAdding: .month, value: -offset, to: now),
                   let interval = cal.dateInterval(of: .month, for: monthStart) else { return nil }
             let collected   = invoices.filter { $0.status == .paid  && $0.createdAt >= interval.start && $0.createdAt < interval.end }.reduce(0) { $0 + $1.total }
             let outstanding = invoices.filter { $0.status != .paid  && $0.createdAt >= interval.start && $0.createdAt < interval.end }.reduce(0) { $0 + $1.total }
-            return MonthlyBar(month: f.string(from: interval.start), collected: collected, scheduled: outstanding)
+            return MonthlyBar(month: interval.start.formatted(.dateTime.locale(Locale.app).month(.abbreviated)), collected: collected, scheduled: outstanding)
         }
     }
 
@@ -178,9 +175,6 @@ struct FinancialReportsView: View {
         let today = cal.startOfDay(for: Date())
         let upcomingJobs     = jobsStore.jobs.filter { $0.status == .scheduled && $0.date >= today }
         let unpaidInv        = invoicesStore.invoices.filter { $0.status == .unpaid && $0.dueDate >= today }
-        let fmt = DateFormatter()
-        fmt.locale = Locale.app
-        fmt.dateFormat = "MMM d"
         return (0..<forecastWeekCount).map { offset in
             let weekStart = cal.date(byAdding: .weekOfYear, value: offset, to: today) ?? today
             let weekEnd   = cal.date(byAdding: .day, value: 7, to: weekStart) ?? weekStart
@@ -189,7 +183,7 @@ struct FinancialReportsView: View {
             let wInv      = unpaidInv.filter    { interval.contains($0.dueDate) }
             return ForecastWeek(
                 weekStart: weekStart,
-                weekLabel: fmt.string(from: weekStart),
+                weekLabel: weekStart.formatted(.dateTime.locale(Locale.app).month(.abbreviated).day()),
                 jobsAmount: wJobs.reduce(0) { $0 + $1.price },
                 invoicesAmount: wInv.reduce(0) { $0 + $1.amount },
                 jobCount: wJobs.count,

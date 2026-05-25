@@ -405,9 +405,7 @@ private struct AddOnJobRow: View {
     let job: Job
 
     private var dateStr: String {
-        let f = DateFormatter()
-        f.dateFormat = "MMM d, yyyy"
-        return f.string(from: job.date)
+        job.date.formatted(date: .abbreviated, time: .omitted)
     }
 
     var body: some View {

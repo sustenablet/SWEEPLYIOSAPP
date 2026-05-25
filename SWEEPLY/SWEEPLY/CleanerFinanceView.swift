@@ -751,7 +751,7 @@ struct CompletedJobsListView: View {
         VStack(alignment: .leading, spacing: 16) {
             ForEach(Array(groupedJobs.enumerated()), id: \.offset) { _, group in
                 VStack(alignment: .leading, spacing: 8) {
-                    Text(dateHeaderFormatter.string(from: group.date))
+                    Text(group.date.formatted(.dateTime.locale(Locale.app).weekday(.wide).month(.abbreviated).day()))
                         .font(.system(size: 12, weight: .semibold))
                         .foregroundStyle(Color.sweeplyTextSub)
                         .padding(.horizontal, 4)
@@ -796,7 +796,7 @@ struct CompletedJobsListView: View {
                 }
                 
                 HStack(spacing: 4) {
-                    Text(shortDateFormatter.string(from: job.date))
+                    Text(job.date.formatted(.dateTime.locale(Locale.app).month(.abbreviated).day()))
                         .font(.system(size: 11))
                         .foregroundStyle(Color.sweeplyTextSub.opacity(0.7))
                     Text("at".translated())
@@ -818,17 +818,6 @@ struct CompletedJobsListView: View {
         .padding(.horizontal, 16)
     }
     
-    private var shortDateFormatter: DateFormatter {
-        let f = DateFormatter()
-        f.dateFormat = "MMM d"
-        return f
-    }
-    
-    private var dateHeaderFormatter: DateFormatter {
-        let f = DateFormatter()
-        f.dateFormat = "EEEE, MMM d"
-        return f
-    }
 }
 
 // MARK: - Upcoming Jobs List View
@@ -928,7 +917,7 @@ struct UpcomingJobsListView: View {
             ForEach(Array(groupedJobs.enumerated()), id: \.offset) { _, group in
                 VStack(alignment: .leading, spacing: 8) {
                     HStack {
-                        Text(dateHeaderFormatter.string(from: group.date))
+                    Text(group.date.formatted(.dateTime.locale(Locale.app).weekday(.wide).month(.abbreviated).day()))
                             .font(.system(size: 12, weight: .semibold))
                             .foregroundStyle(Color.sweeplyTextSub)
                         Spacer()
@@ -978,7 +967,7 @@ struct UpcomingJobsListView: View {
                 }
                 
                 HStack(spacing: 4) {
-                    Text(shortDateFormatter.string(from: job.date))
+                    Text(job.date.formatted(.dateTime.locale(Locale.app).month(.abbreviated).day()))
                         .font(.system(size: 11))
                         .foregroundStyle(Color.sweeplyTextSub.opacity(0.7))
                     Text("at".translated())
@@ -1013,25 +1002,8 @@ struct UpcomingJobsListView: View {
             .clipShape(Capsule())
     }
     
-    private var shortDateFormatter: DateFormatter {
-        let f = DateFormatter()
-        f.dateFormat = "MMM d"
-        return f
-    }
-    
-    private var dateHeaderFormatter: DateFormatter {
-        let f = DateFormatter()
-        f.dateFormat = "EEEE, MMM d"
-        return f
-    }
 }
-    
-    private var shortDateFormatter: DateFormatter {
-        let f = DateFormatter()
-        f.dateFormat = "MMM d"
-        return f
-    }
-    
+
     private func statusColor(_ status: JobStatus) -> Color {
         switch status {
         case .scheduled: return Color.sweeplyAccent

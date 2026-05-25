@@ -132,10 +132,7 @@ private struct InvoiceDetailRow: View {
     }
 
     private func formatted(_ date: Date) -> String {
-        let f = DateFormatter()
-        f.locale = Locale.app
-        f.dateFormat = "MMM d, yyyy"
-        return f.string(from: date)
+        date.formatted(.dateTime.locale(Locale.app).month(.abbreviated).day().year())
     }
 
     var body: some View {

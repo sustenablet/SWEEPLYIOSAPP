@@ -188,10 +188,7 @@ struct ScheduleView: View {
     }
 
     private var monthTitle: String {
-        let f = DateFormatter()
-        f.locale = Locale.app
-        f.dateFormat = "MMMM yyyy"
-        return f.string(from: selectedDay)
+        selectedDay.formatted(.dateTime.locale(Locale.app).month(.wide).year())
     }
 
     private var viewMenuButton: some View {
@@ -833,10 +830,7 @@ struct JobberCalendarView: View {
     }
 
     private var monthYearString: String {
-        let f = DateFormatter()
-        f.locale = Locale.app
-        f.dateFormat = "MMMM yyyy"
-        return f.string(from: selectedDay)
+        selectedDay.formatted(.dateTime.locale(Locale.app).month(.wide).year())
     }
 
     private func moveMonth(by months: Int) {
@@ -1187,10 +1181,7 @@ private struct ScheduleMonthPicker: View {
     }
 
     private var monthYearTitle: String {
-        let f = DateFormatter()
-        f.locale = Locale.app
-        f.dateFormat = "MMMM yyyy"
-        return f.string(from: selectedDay)
+        selectedDay.formatted(.dateTime.locale(Locale.app).month(.wide).year())
     }
 }
 

@@ -120,8 +120,7 @@ struct CleanerUpcomingView: View {
     }
 
     private var monthTitle: String {
-        let f = DateFormatter(); f.dateFormat = "MMMM yyyy"
-        return f.string(from: selectedDay)
+        selectedDay.formatted(.dateTime.locale(Locale.app).month(.wide).year())
     }
 
     // MARK: - Body
@@ -1173,7 +1172,6 @@ private struct CleanerMonthPicker: View {
     }
 
     private var monthYearTitle: String {
-        let f = DateFormatter(); f.dateFormat = "MMMM yyyy"
-        return f.string(from: selectedDay)
+        selectedDay.formatted(.dateTime.locale(Locale.app).month(.wide).year())
     }
 }

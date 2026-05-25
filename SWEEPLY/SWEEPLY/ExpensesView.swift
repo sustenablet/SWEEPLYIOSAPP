@@ -38,23 +38,17 @@ struct ExpensesView: View {
     }
     
     private var weekLabel: String {
-        let f = DateFormatter()
-        f.dateFormat = "MMM d"
         let start = weekStartDate
         let end = Calendar.current.date(byAdding: .day, value: 6, to: start) ?? start
-        return "\(f.string(from: start)) - \(f.string(from: end))"
+        return "\(start.formatted(.dateTime.locale(Locale.app).month(.abbreviated).day())) - \(end.formatted(.dateTime.locale(Locale.app).month(.abbreviated).day()))"
     }
 
     private var monthLabel: String {
-        let f = DateFormatter()
-        f.dateFormat = "MMMM yyyy"
-        return f.string(from: selectedMonth)
+        selectedMonth.formatted(.dateTime.locale(Locale.app).month(.wide).year())
     }
 
     private var shortMonthLabel: String {
-        let f = DateFormatter()
-        f.dateFormat = "MMM yyyy"
-        return f.string(from: selectedMonth)
+        selectedMonth.formatted(.dateTime.locale(Locale.app).month(.abbreviated).year())
     }
 
     private var monthInterval: DateInterval {
@@ -198,9 +192,7 @@ struct ExpensesView: View {
     }
 
     private func dayName(_ date: Date) -> String {
-        let f = DateFormatter()
-        f.dateFormat = "EEEE, MMM d"
-        return f.string(from: date)
+        date.formatted(.dateTime.locale(Locale.app).weekday(.wide).month(.abbreviated).day())
     }
 
     var body: some View {

@@ -137,10 +137,7 @@ struct FinancesView: View {
         
         guard let nextPayday = calendar.date(byAdding: .day, value: daysUntilPayday, to: today) else { return nil }
         
-        let formatter = DateFormatter()
-        formatter.locale = Locale.app
-        formatter.dateFormat = "EEEE, MMM d"
-        return formatter.string(from: nextPayday)
+        return nextPayday.formatted(.dateTime.locale(Locale.app).weekday(.wide).month(.abbreviated).day())
     }
     
     enum PaymentStatus: Equatable {
@@ -202,9 +199,6 @@ struct FinancesView: View {
     private var weeklyChartData: [WeeklyRevenue] {
         let calendar = Calendar.current
         let interval = calendar.dateInterval(of: .weekOfYear, for: Date()) ?? DateInterval(start: Date(), end: Date())
-        let formatter = DateFormatter()
-        formatter.locale = Locale.app
-        formatter.dateFormat = "EEE"
 
         return (0..<7).compactMap { offset in
             guard let date = calendar.date(byAdding: .day, value: offset, to: interval.start) else { return nil }
@@ -213,7 +207,7 @@ struct FinancesView: View {
                     calendar.isDate(invoice.createdAt, inSameDayAs: date) && invoice.status == .paid
                 }
                 .reduce(0) { $0 + $1.total }
-            return WeeklyRevenue(day: formatter.string(from: date), amount: amount)
+            return WeeklyRevenue(day: date.formatted(.dateTime.locale(Locale.app).weekday(.abbreviated)), amount: amount)
         }
     }
 
@@ -990,10 +984,7 @@ private func payButton(for member: TeamMember, status: PaymentStatus, rateAmount
     }
 
     private func formatLastPaid(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.locale = Locale.app
-        formatter.dateFormat = "Last paid MMM d"
-        return formatter.string(from: date)
+        return "Last paid %@".translated(with: date.formatted(date: .abbreviated, time: .omitted))
     }
 
     private func completedJobsThisMonth(for member: TeamMember) -> [Job] {
@@ -1117,10 +1108,7 @@ struct MinimalInvoiceRow: View {
     var onTap: (() -> Void)? = nil
 
     private var shortDate: String {
-        let f = DateFormatter()
-        f.locale = Locale.app
-        f.dateFormat = "MMM d"
-        return f.string(from: invoice.paidAt ?? invoice.dueDate)
+        (invoice.paidAt ?? invoice.dueDate).formatted(date: .abbreviated, time: .omitted)
     }
 
     private var overdueDays: Int {

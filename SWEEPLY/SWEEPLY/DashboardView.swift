@@ -76,10 +76,7 @@ struct DashboardView: View {
     }
 
     private var longDate: String {
-        let f = DateFormatter()
-        f.locale = Locale.app
-        f.dateFormat = "EEEE, MMMM d"
-        return f.string(from: Date())
+        Date().formatted(.dateTime.locale(Locale.app).weekday(.wide).month(.wide).day())
     }
 
     // Only jobs belonging to this user's own business
@@ -694,16 +691,7 @@ struct DashJobRow: View {
         .opacity(isCancelled ? 0.7 : 1.0)
     }
     private var timeStr: String {
-        let f = DateFormatter()
-        f.locale = Locale.app
-        f.dateFormat = "h:mm"
-        return f.string(from: job.date)
-    }
-    private var amPm: String {
-        let f = DateFormatter()
-        f.locale = Locale.app
-        f.dateFormat = "a"
-        return f.string(from: job.date).uppercased()
+        job.date.formatted(.dateTime.locale(Locale.app).hour().minute())
     }
     private var statusColor: Color {
         switch job.status {

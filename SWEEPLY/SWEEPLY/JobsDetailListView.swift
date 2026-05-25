@@ -199,15 +199,11 @@ private struct JobDetailRow: View {
     let accentColor: Color
 
     private var dateStr: String {
-        let f = DateFormatter()
-        f.dateFormat = "MMM d"
-        return f.string(from: job.date)
+        job.date.formatted(.dateTime.locale(Locale.app).month(.abbreviated).day())
     }
 
     private var timeStr: String {
-        let f = DateFormatter()
-        f.dateFormat = "h:mm a"
-        return f.string(from: job.date)
+        job.date.formatted(.dateTime.locale(Locale.app).hour().minute())
     }
 
     private var serviceIcon: String {
