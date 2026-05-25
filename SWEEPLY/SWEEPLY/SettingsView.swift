@@ -12,6 +12,7 @@ struct SettingsView: View {
     @State private var baselineProfile: UserProfile = MockData.profile
     @State private var feedbackMessage: String?
     @State private var feedbackStyle: SettingsFeedbackStyle = .info
+    @State private var goalSaveSuccess = false
     @State private var showServiceCatalog = false
     @State private var showJobExtras = false
     @State private var showOnboarding = false
@@ -81,6 +82,11 @@ struct SettingsView: View {
                                 UIApplication.shared.open(url)
                             }
                         }
+                        rowDivider()
+                        NavigationLink(destination: aboutPage) {
+                            menuRowLabel(icon: "info.circle", title: "About".translated())
+                        }
+                        .buttonStyle(.plain)
                     }
 
                     groupDivider()
@@ -272,6 +278,7 @@ struct SettingsView: View {
                 preferencesNotificationsCard
                 preferencesLanguageCard
                 preferencesSecurityCard
+                preferencesGoalCard
             }
             .padding(.horizontal, 20)
             .padding(.top, 20)
@@ -681,6 +688,98 @@ struct SettingsView: View {
                         CalendarToggle()
                     }
                 )
+            }
+        }
+    }
+
+    private var preferencesGoalCard: some View {
+        SectionCard {
+            VStack(alignment: .leading, spacing: 0) {
+                settingsCardHeader(
+                    icon: "target",
+                    iconColor: Color.sweeplyAccent,
+                    title: "Monthly Goal",
+                    subtitle: "Track your revenue against a monthly target on the Dashboard."
+                )
+
+                Divider().padding(.leading, 52)
+
+                HStack(spacing: 14) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 9, style: .continuous)
+                            .fill(Color.sweeplyAccent.opacity(0.10))
+                            .frame(width: 36, height: 36)
+                        Image(systemName: "dollarsign")
+                            .font(.system(size: 14, weight: .bold))
+                            .foregroundStyle(Color.sweeplyAccent)
+                    }
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Revenue Goal".translated())
+                            .font(.system(size: 15, weight: .medium))
+                            .foregroundStyle(Color.primary)
+                        Text("Set to 0 to hide the goal tracker.".translated())
+                            .font(.system(size: 12))
+                            .foregroundStyle(Color.sweeplyTextSub)
+                    }
+
+                    Spacer()
+
+                    HStack(spacing: 2) {
+                        Text("$")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(Color.sweeplyTextSub)
+                        TextField("0", value: $localProfile.settings.monthlyRevenueGoal, format: .number)
+                            .font(.system(size: 16, weight: .bold, design: .monospaced))
+                            .foregroundStyle(Color.sweeplyNavy)
+                            .keyboardType(.decimalPad)
+                            .multilineTextAlignment(.trailing)
+                            .frame(width: 80)
+                            .onChange(of: localProfile.settings.monthlyRevenueGoal) { _, _ in
+                                goalSaveSuccess = false
+                            }
+                    }
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 14)
+
+                Divider().padding(.leading, 52)
+
+                Button {
+                    UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                    Task {
+                        guard let uid = session.userId else { return }
+                        isSaving = true
+                        let ok = await profileStore.save(localProfile, userId: uid)
+                        isSaving = false
+                        if ok {
+                            goalSaveSuccess = true
+                            baselineProfile = localProfile
+                            UINotificationFeedbackGenerator().notificationOccurred(.success)
+                        }
+                    }
+                } label: {
+                    HStack(spacing: 6) {
+                        if isSaving {
+                            ProgressView().tint(Color.sweeplyAccent).scaleEffect(0.75)
+                        } else if goalSaveSuccess {
+                            Image(systemName: "checkmark")
+                                .font(.system(size: 12, weight: .bold))
+                                .foregroundStyle(Color.sweeplySuccess)
+                            Text("Goal Saved".translated())
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundStyle(Color.sweeplySuccess)
+                        } else {
+                            Text("Save Goal".translated())
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundStyle(Color.sweeplyAccent)
+                        }
+                    }
+                }
+                .buttonStyle(.plain)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+                .frame(maxWidth: .infinity, alignment: .trailing)
             }
         }
     }

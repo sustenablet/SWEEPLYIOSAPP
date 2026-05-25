@@ -69,6 +69,7 @@ struct SWEEPLYApp: App {
     @State private var teamStore     = TeamStore()
     @State private var expenseStore  = ExpenseStore()
     @State private var subscriptionManager = SubscriptionManager()
+    @State private var networkMonitor = NetworkMonitor()
 
     @AppStorage("pendingShortcut") private var pendingShortcut: String = ""
     @AppStorage("appLanguage") private var appLanguage: String = AppLanguage.english.rawValue
@@ -87,6 +88,7 @@ struct SWEEPLYApp: App {
                 .environment(teamStore)
                 .environment(expenseStore)
                 .environment(subscriptionManager)
+                .environment(networkMonitor)
                 .onAppear {
                     notificationManager.checkAuthorizationStatus()
                     registerQuickActions()

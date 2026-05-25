@@ -11,6 +11,7 @@ struct RootView: View {
     @Environment(NotificationsStore.self)   private var notificationsStore
     @Environment(TeamStore.self)            private var teamStore
     @Environment(ExpenseStore.self)         private var expenseStore
+    @Environment(NetworkMonitor.self)       private var networkMonitor
 
     @State private var selectedTab: Tab = .dashboard
     @State private var showNewJob = false
@@ -276,6 +277,28 @@ struct RootView: View {
         .transition(.opacity)
     }
 
+    private var offlineBanner: some View {
+        VStack {
+            if !networkMonitor.isConnected {
+                HStack(spacing: 8) {
+                    Image(systemName: "wifi.slash")
+                        .font(.system(size: 13, weight: .semibold))
+                    Text("No internet connection".translated())
+                        .font(.system(size: 13, weight: .semibold))
+                }
+                .foregroundStyle(.white)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 10)
+                .background(Color(red: 0.2, green: 0.2, blue: 0.22))
+                .transition(.move(edge: .top).combined(with: .opacity))
+            }
+            Spacer()
+        }
+        .animation(.easeInOut(duration: 0.25), value: networkMonitor.isConnected)
+        .ignoresSafeArea(edges: .top)
+        .allowsHitTesting(false)
+    }
+
     private var mainTabs: some View {
         ZStack(alignment: .bottomTrailing) {
             TabView(selection: $selectedTab) {
@@ -449,6 +472,7 @@ struct RootView: View {
         .onAppear {
             applyTabBarAppearance()
         }
+        .overlay(offlineBanner)
     }
 
     private func applyTabBarAppearance() {

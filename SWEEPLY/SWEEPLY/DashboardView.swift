@@ -237,6 +237,13 @@ private var healthCards: [DashboardHealthCardModel] {
                         withAnimation(.easeInOut(duration: 0.2)) { dotRevenueBar = false }
                     }
 
+                // ── Monthly Goal Progress (only when goal is set) ─
+                if monthlyGoal > 0 {
+                    monthlyGoalProgressBar
+                        .padding(.horizontal, 20)
+                        .padding(.bottom, 8)
+                }
+
                 // ── Sub-sections with spacing ────────────────────
                 VStack(spacing: 12) {
                     // ── Getting Started checklist ────────────────
@@ -500,6 +507,86 @@ private var healthCards: [DashboardHealthCardModel] {
                         .fill(Color.sweeplyNavy.opacity(0.18))
                         .frame(width: 6, height: 6)
                     Text("%@ estimated".translated(with: weekEstimated.currency))
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(Color.sweeplyNavy.opacity(0.4))
+                }
+            }
+        }
+    }
+
+    // MARK: - Monthly Goal
+
+    private var monthlyGoal: Double {
+        profileStore.profile?.settings.monthlyRevenueGoal ?? 0
+    }
+
+    private var monthCollected: Double {
+        let cal = Calendar.current
+        guard let interval = cal.dateInterval(of: .month, for: Date()) else { return 0 }
+        return invoicesStore.invoices
+            .filter { $0.status == .paid && interval.contains($0.createdAt) }
+            .reduce(0) { $0 + $1.total }
+    }
+
+    private var monthGoalProgress: Double {
+        guard monthlyGoal > 0 else { return 0 }
+        return min(monthCollected / monthlyGoal, 1.0)
+    }
+
+    private var monthlyGoalProgressBar: some View {
+        let reached = monthGoalProgress >= 1.0
+        let progressColor: Color = reached ? Color.sweeplySuccess : Color.sweeplyAccent
+
+        return VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                HStack(spacing: 6) {
+                    Text("Monthly Goal".translated())
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(Color.sweeplyNavy.opacity(0.5))
+                        .textCase(.uppercase)
+                        .tracking(0.4)
+                    if reached {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(Color.sweeplySuccess)
+                    }
+                }
+                Spacer()
+                Text("\(Int(monthGoalProgress * 100))%")
+                    .font(.system(size: 12, weight: .bold, design: .monospaced))
+                    .foregroundStyle(progressColor)
+            }
+
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    Capsule()
+                        .fill(Color.sweeplyNavy.opacity(0.08))
+                        .frame(height: 7)
+                    Capsule()
+                        .fill(
+                            LinearGradient(
+                                colors: [progressColor, progressColor.opacity(0.7)],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
+                        .frame(width: max(0, geo.size.width * monthGoalProgress), height: 7)
+                        .animation(.spring(response: 0.5, dampingFraction: 0.8), value: monthGoalProgress)
+                }
+            }
+            .frame(height: 7)
+
+            HStack {
+                HStack(spacing: 4) {
+                    Circle().fill(progressColor).frame(width: 6, height: 6)
+                    Text("%@ collected".translated(with: monthCollected.currency))
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(Color.sweeplyNavy.opacity(0.6))
+                }
+                Spacer()
+                HStack(spacing: 4) {
+                    Circle().fill(Color.sweeplyNavy.opacity(0.18)).frame(width: 6, height: 6)
+                    Text("%@ goal".translated(with: monthlyGoal.currency))
                         .font(.system(size: 12, weight: .medium))
                         .foregroundStyle(Color.sweeplyNavy.opacity(0.4))
                 }
