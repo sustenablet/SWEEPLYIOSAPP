@@ -560,7 +560,7 @@ struct BusinessView: View {
                                     .lineLimit(2)
 
                                 HStack(spacing: 12) {
-                                    overviewChip(title: "Value", value: nextJob.price.currency)
+                                    overviewChip(title: "Value".translated(), value: nextJob.price.currency)
                                     overviewChip(title: "Duration".translated(), value: durationLabel(for: nextJob.duration))
                                 }
                             }

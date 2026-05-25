@@ -273,13 +273,13 @@ struct JobDetailView: View {
             SectionCard {
                 VStack(alignment: .leading, spacing: 12) {
                     if !client.entryInstructions.isEmpty {
-                        JobInfoRow(icon: "key.fill", title: "Entry", value: client.entryInstructions)
+                        JobInfoRow(icon: "key.fill", title: "Entry".translated(), value: client.entryInstructions)
                     }
                     if !client.entryInstructions.isEmpty && !client.notes.isEmpty {
                         Divider()
                     }
                     if !client.notes.isEmpty {
-                        JobInfoRow(icon: "doc.text.fill", title: "Internal Notes", value: client.notes)
+                        JobInfoRow(icon: "doc.text.fill", title: "Internal Notes".translated(), value: client.notes)
                     }
                 }
             }
@@ -296,19 +296,19 @@ struct JobDetailView: View {
             
             SectionCard {
                 VStack(alignment: .leading, spacing: 14) {
-                    JobInfoRow(icon: "mappin.and.ellipse", title: "Location", value: job.address.isEmpty ? "No address provided".translated() : job.address)
+                    JobInfoRow(icon: "mappin.and.ellipse", title: "Location".translated(), value: job.address.isEmpty ? "No address provided".translated() : job.address)
                     if job.isRecurring {
                         Divider()
                         JobInfoRow(
                             icon: "arrow.triangle.2.circlepath",
-                            title: "Recurring",
+                            title: "Recurring".translated(),
                             value: job.recurrenceFrequency?.displayName.translated() ?? "Recurring".translated()
                         )
                     }
                     Divider()
                     JobInfoRow(icon: "clock.fill", title: "Est. Duration", value: "%d hours".translated(with: Int(job.duration)))
                     Divider()
-                    JobInfoRow(icon: "tag.fill", title: "Price", value: job.price.currency)
+                    JobInfoRow(icon: "tag.fill", title: "Price".translated(), value: job.price.currency)
                     Divider()
 
                     // Assigned cleaner row

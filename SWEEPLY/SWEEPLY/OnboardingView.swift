@@ -567,8 +567,8 @@ struct OnboardingView: View {
 
     private var stepName: some View {
         accountCreationPage(
-            title: "What's your\nname?",
-            subtitle: "This appears on your invoices and client messages.",
+            title: "What's your\nname?".translated(),
+            subtitle: "This appears on your invoices and client messages.".translated(),
             content: {
                 AnyView(VStack(spacing: 12) {
                     OnboardingField(
@@ -602,8 +602,8 @@ struct OnboardingView: View {
 
     private var stepBusinessName: some View {
         accountCreationPage(
-            title: "Name your\nbusiness",
-            subtitle: "You can change this anytime in Settings.",
+            title: "Name your\nbusiness".translated(),
+            subtitle: "You can change this anytime in Settings.".translated(),
             content: {
                 AnyView(OnboardingField(
                     placeholder: "e.g. Sunrise Cleaning".translated(),
@@ -627,7 +627,7 @@ struct OnboardingView: View {
 
     private var stepEmail: some View {
         accountCreationPage(
-            title: "What's your\nemail?",
+            title: "What's your\nemail?".translated(),
             subtitle: nil,
             content: {
                 AnyView(VStack(alignment: .leading, spacing: 20) {
@@ -759,7 +759,7 @@ struct OnboardingView: View {
 
     private var stepPassword: some View {
         accountCreationPage(
-            title: "Create a\npassword",
+            title: "Create a\npassword".translated(),
             subtitle: nil,
             content: {
                 AnyView(VStack(alignment: .leading, spacing: 20) {

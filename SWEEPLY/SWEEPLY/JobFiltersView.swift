@@ -38,7 +38,7 @@ struct JobFiltersView: View {
                 VStack(alignment: .leading, spacing: 32) {
                     // Status Group
                     VStack(alignment: .leading, spacing: 16) {
-                        FilterHeader(title: "JOB STATUS", subtitle: "Filter by current job progress".translated())
+                        FilterHeader(title: "JOB STATUS".translated(), subtitle: "Filter by current job progress".translated())
                         
                         ChipGroup(spacing: 8) {
                             FilterChip(label: "All Statuses".translated(), isSelected: localStatus == nil) {
@@ -59,7 +59,7 @@ struct JobFiltersView: View {
                     
                     // Job Type Group
                     VStack(alignment: .leading, spacing: 16) {
-                        FilterHeader(title: "SCHEDULE TYPE", subtitle: "One-time or recurring jobs".translated())
+                        FilterHeader(title: "SCHEDULE TYPE".translated(), subtitle: "One-time or recurring jobs".translated())
                         
                         HStack(spacing: 12) {
                             TypeCard(label: "All".translated(), icon: "square.grid.2x2.fill", isSelected: localType == "All") {

@@ -201,7 +201,7 @@ struct NewInvoiceView: View {
                     }
                 } label: {
                     InvoicePickerButton(
-                        title: "Bill to",
+                        title: "Bill to".translated(),
                         value: selectedClient?.name ?? "Select client".translated(),
                         icon: "person.fill",
                         isValueEmpty: selectedClientId == nil
