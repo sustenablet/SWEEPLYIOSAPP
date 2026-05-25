@@ -586,6 +586,8 @@ struct BusinessView: View {
                     }
                 }
 
+                serviceCatalogPreviewSection
+
                 // 4. Service Distribution
                 SectionCard {
                     VStack(alignment: .leading, spacing: 16) {
@@ -652,8 +654,6 @@ struct BusinessView: View {
                         }
                     }
                 }
-
-                serviceCatalogPreviewSection
             }
             .padding(.horizontal, 20)
             .padding(.bottom, 40)
