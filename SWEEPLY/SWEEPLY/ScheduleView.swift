@@ -118,6 +118,12 @@ struct ScheduleView: View {
                     changeViewMode(to: .day)
                 }
             }
+            .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("NavigateToJob"))) { notification in
+                if let jobId = notification.userInfo?["jobId"] as? UUID {
+                    selectedJobId = jobId
+                    showJobDetail = true
+                }
+            }
             .onChange(of: viewMode) { _, newMode in
                 guard newMode == .map else { return }
                 mapCenteredOnUser = false

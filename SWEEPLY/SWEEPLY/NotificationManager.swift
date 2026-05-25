@@ -5,6 +5,8 @@ import Observation
 enum DeepLink: Equatable {
     case job(UUID)
     case invoice(UUID)
+    case schedule
+    case finances
 }
 
 @Observable
@@ -150,6 +152,31 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
         }
     }
 
+    /// Rebuilds the grouped invoice reminder banner for each due day.
+    /// This mirrors the job digest pattern so multiple invoices due the same day
+    /// produce one banner instead of a separate notification per invoice.
+    func refreshInvoiceDigests(invoices: [Invoice]) {
+        let center = UNUserNotificationCenter.current()
+        center.getPendingNotificationRequests { requests in
+            let digestIds = requests
+                .filter { $0.identifier.hasPrefix("invoice-today-") }
+                .map(\.identifier)
+            center.removePendingNotificationRequests(withIdentifiers: digestIds)
+
+            let today = Calendar.current.startOfDay(for: Date())
+            let upcoming = invoices.filter {
+                $0.status == .unpaid &&
+                Calendar.current.startOfDay(for: $0.dueDate) >= today
+            }
+
+            let grouped = Dictionary(grouping: upcoming) { Calendar.current.startOfDay(for: $0.dueDate) }
+            for (day, dayInvoices) in grouped {
+                let sorted = dayInvoices.sorted { $0.dueDate < $1.dueDate }
+                self.scheduleInvoiceDayDigest(for: day, invoices: sorted)
+            }
+        }
+    }
+
     func cancelJobReminders(for jobId: UUID) {
         UNUserNotificationCenter.current().removePendingNotificationRequests(
             withIdentifiers: ["\(jobId)-hour"]
@@ -237,10 +264,12 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
         case 2:
             content.title = "2 Jobs Today".translated()
             content.body = "%@ at %@, then %@ at %@".translated(with: jobs[0].clientName, shortTime(jobs[0].date), jobs[1].clientName, shortTime(jobs[1].date))
+            content.userInfo = ["openTab": "schedule", "digestDate": dateId]
         default:
             let first = jobs[0]
             content.title = "%d Jobs Today".translated(with: jobs.count)
             content.body = "Starting at %@ with %@ — tap to see your full schedule".translated(with: shortTime(first.date), first.clientName)
+            content.userInfo = ["openTab": "schedule", "digestDate": dateId]
         }
 
         var comp = Calendar.current.dateComponents([.year, .month, .day], from: day)
@@ -273,11 +302,13 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
         case 2:
             content.title = "Tomorrow: 2 Jobs".translated()
             content.body = "%@ at %@ and %@ at %@".translated(with: jobs[0].clientName, shortTime(jobs[0].date), jobs[1].clientName, shortTime(jobs[1].date))
+            content.userInfo = ["openTab": "schedule", "digestDate": dateId]
         default:
             let first = jobs[0]
             let last = jobs[jobs.count - 1]
             content.title = "Tomorrow: %d Jobs".translated(with: jobs.count)
             content.body = "%@–%@ — starting with %@".translated(with: shortTime(first.date), shortTime(last.date), first.clientName)
+            content.userInfo = ["openTab": "schedule", "digestDate": dateId]
         }
 
         var comp = Calendar.current.dateComponents([.year, .month, .day], from: dayBefore)
@@ -455,38 +486,6 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
             }
         }
 
-        // Day of due at 9am
-        if Calendar.current.startOfDay(for: invoice.dueDate) >= Calendar.current.startOfDay(for: Date()) {
-            let content = UNMutableNotificationContent()
-            content.title = "Invoice due today".translated()
-            content.body = "%@ for %@ — %@ due today".translated(
-                with: invoice.invoiceNumber,
-                invoice.clientName,
-                invoice.subtotal.currency
-            )
-            content.sound = .default
-            content.userInfo = ["invoiceId": invoice.id.uuidString]
-            content.categoryIdentifier = "INVOICE_REMINDER"
-
-            var comp = Calendar.current.dateComponents([.year, .month, .day], from: invoice.dueDate)
-            comp.hour = 9; comp.minute = 0
-            let trigger = UNCalendarNotificationTrigger(dateMatching: comp, repeats: false)
-            let req = UNNotificationRequest(identifier: "\(invoice.id)-dueToday", content: content, trigger: trigger)
-            UNUserNotificationCenter.current().add(req, withCompletionHandler: nil)
-
-            Task {
-                await NotificationHelper.insert(
-                    title: "Invoice due today".translated(),
-                    message: "%@ for %@ — %@ due today".translated(
-                        with: invoice.invoiceNumber,
-                        invoice.clientName,
-                        invoice.subtotal.currency
-                    ),
-                    kind: "billing"
-                )
-            }
-        }
-
         // 1 day overdue at 9am — first escalation
         if let dayAfterDue = Calendar.current.date(byAdding: .day, value: 1, to: invoice.dueDate),
            dayAfterDue > Date() {
@@ -565,6 +564,46 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
     private func cityFromAddress(_ address: String) -> String {
         let parts = address.components(separatedBy: ",").map { $0.trimmingCharacters(in: .whitespaces) }
         return parts.count >= 2 ? parts[1] : (parts.first ?? address)
+    }
+
+    private func scheduleInvoiceDayDigest(for day: Date, invoices: [Invoice]) {
+        guard !invoices.isEmpty else { return }
+        let dateId = dayIdentifier(for: day)
+
+        let content = UNMutableNotificationContent()
+        content.sound = .default
+        content.categoryIdentifier = "INVOICE_REMINDER"
+
+        switch invoices.count {
+        case 1:
+            let invoice = invoices[0]
+            content.title = "Invoice Due Today".translated()
+            content.body = "%@ for %@ — due today".translated(with: invoice.invoiceNumber, invoice.clientName)
+            content.userInfo = ["invoiceId": invoice.id.uuidString]
+        case 2:
+            content.title = "2 Invoices Due Today".translated()
+            content.body = "%@ for %@ and %@ for %@ — due today".translated(
+                with: invoices[0].invoiceNumber,
+                invoices[0].clientName,
+                invoices[1].invoiceNumber,
+                invoices[1].clientName
+            )
+            content.userInfo = ["openTab": "finances", "digestDate": dateId]
+        default:
+            let first = invoices[0]
+            content.title = "%d Invoices Due Today".translated(with: invoices.count)
+            content.body = "%d invoices due today — starting with %@".translated(
+                with: invoices.count,
+                first.clientName
+            )
+            content.userInfo = ["openTab": "finances", "digestDate": dateId]
+        }
+
+        var comp = Calendar.current.dateComponents([.year, .month, .day], from: day)
+        comp.hour = 9; comp.minute = 0
+        let trigger = UNCalendarNotificationTrigger(dateMatching: comp, repeats: false)
+        let request = UNNotificationRequest(identifier: "invoice-today-\(dateId)", content: content, trigger: trigger)
+        UNUserNotificationCenter.current().add(request, withCompletionHandler: nil)
     }
 
     private func dayIdentifier(for date: Date) -> String {
@@ -658,6 +697,17 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
             } else if let invoiceIdString = userInfo["invoiceId"] as? String,
                       let invoiceId = UUID(uuidString: invoiceIdString) {
                 DispatchQueue.main.async { self.pendingDeepLink = .invoice(invoiceId) }
+            } else if let openTab = userInfo["openTab"] as? String {
+                DispatchQueue.main.async {
+                    switch openTab {
+                    case "schedule":
+                        self.pendingDeepLink = .schedule
+                    case "finances":
+                        self.pendingDeepLink = .finances
+                    default:
+                        break
+                    }
+                }
             }
         }
 

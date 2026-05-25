@@ -37,6 +37,7 @@ final class InvoicesStore {
                 .execute()
                 .value
             invoices = rows.map { $0.toInvoice() }
+            NotificationManager.shared.refreshInvoiceDigests(invoices: invoices)
             // Refresh Monday summary push with real last-week revenue
             let cal = Calendar.current
             if let lastWeek = cal.dateInterval(of: .weekOfYear, for: Date().addingTimeInterval(-7*24*3600)) {
@@ -80,6 +81,7 @@ final class InvoicesStore {
                 .value
             let finalInvoice = inserted.toInvoice()
             invoices.insert(finalInvoice, at: 0)
+            NotificationManager.shared.refreshInvoiceDigests(invoices: invoices)
             NotificationManager.shared.scheduleInvoiceReminder(for: finalInvoice)
             return true
         } catch {
@@ -116,6 +118,7 @@ final class InvoicesStore {
             if let idx = invoices.firstIndex(where: { $0.id == invoice.id }) {
                 invoices[idx] = updated
             }
+            NotificationManager.shared.refreshInvoiceDigests(invoices: invoices)
             // Reschedule reminders in case due date changed
             NotificationManager.shared.cancelInvoiceReminders(for: invoice.id)
             NotificationManager.shared.scheduleInvoiceReminder(for: updated)
@@ -136,6 +139,15 @@ final class InvoicesStore {
                 invoices[idx].paymentMethod = method
                 invoices[idx].paidAt = paidAt
             }
+            let cal = Calendar.current
+            if let lastWeek = cal.dateInterval(of: .weekOfYear, for: Date().addingTimeInterval(-7*24*3600)) {
+                let lastWeekRevenue = invoices
+                    .filter { $0.status == .paid }
+                    .filter { inv in lastWeek.contains(inv.paidAt ?? inv.createdAt) }
+                    .reduce(0) { $0 + $1.total }
+                NotificationManager.shared.refreshWeeklyEarningsSummary(weeklyRevenue: lastWeekRevenue)
+            }
+            NotificationManager.shared.refreshInvoiceDigests(invoices: invoices)
             return true
         }
         
@@ -159,6 +171,7 @@ final class InvoicesStore {
                 let paid = refreshed.toInvoice()
                 invoices[idx] = paid
                 NotificationManager.shared.cancelInvoiceReminders(for: id)
+                NotificationManager.shared.refreshInvoiceDigests(invoices: invoices)
                 // Revenue milestone check
                 let totalNow = invoices.filter { $0.status == .paid }.reduce(0) { $0 + $1.total }
                 let totalBefore = totalNow - amount
@@ -181,6 +194,14 @@ final class InvoicesStore {
                     }
                 }
             }
+            let cal = Calendar.current
+            if let lastWeek = cal.dateInterval(of: .weekOfYear, for: Date().addingTimeInterval(-7*24*3600)) {
+                let lastWeekRevenue = invoices
+                    .filter { $0.status == .paid }
+                    .filter { inv in lastWeek.contains(inv.paidAt ?? inv.createdAt) }
+                    .reduce(0) { $0 + $1.total }
+                NotificationManager.shared.refreshWeeklyEarningsSummary(weeklyRevenue: lastWeekRevenue)
+            }
             return true
         } catch {
             lastError = error.localizedDescription
@@ -202,6 +223,7 @@ final class InvoicesStore {
                 .eq("id", value: id)
                 .execute()
             invoices.removeAll { $0.id == id }
+            NotificationManager.shared.refreshInvoiceDigests(invoices: invoices)
             return true
         } catch {
             lastError = error.localizedDescription
@@ -243,6 +265,7 @@ final class InvoicesStore {
                         invoices[idx].status = .overdue
                     }
                 }
+                NotificationManager.shared.refreshInvoiceDigests(invoices: invoices)
             }
         } catch { /* silent — background task, not user-facing */ }
     }

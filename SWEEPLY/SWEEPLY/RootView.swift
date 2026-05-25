@@ -13,8 +13,6 @@ struct RootView: View {
     @Environment(ExpenseStore.self)         private var expenseStore
 
     @State private var selectedTab: Tab = .dashboard
-    @State private var deepLinkedJobId: UUID? = nil
-    @State private var deepLinkedInvoiceId: UUID? = nil
     @State private var showNewJob = false
     @State private var showNewClient = false
     @State private var showNewInvoice = false
@@ -398,10 +396,26 @@ struct RootView: View {
             switch link {
             case .job(let id):
                 selectedTab = .schedule
-                deepLinkedJobId = id
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                    NotificationCenter.default.post(
+                        name: NSNotification.Name("NavigateToJob"),
+                        object: nil,
+                        userInfo: ["jobId": id]
+                    )
+                }
             case .invoice(let id):
                 selectedTab = .finances
-                deepLinkedInvoiceId = id
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                    NotificationCenter.default.post(
+                        name: NSNotification.Name("NavigateToInvoice"),
+                        object: nil,
+                        userInfo: ["invoiceId": id]
+                    )
+                }
+            case .schedule:
+                selectedTab = .schedule
+            case .finances:
+                selectedTab = .finances
             }
             notificationManager.pendingDeepLink = nil
         }

@@ -299,6 +299,12 @@ struct FinancesView: View {
                 .environment(session)
             }
         }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("NavigateToInvoice"))) { notification in
+            if let invoiceId = notification.userInfo?["invoiceId"] as? UUID {
+                selectedInvoiceId = invoiceId
+                showInvoiceDetail = true
+            }
+        }
     }
 
     // MARK: - Summary
