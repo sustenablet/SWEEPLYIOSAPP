@@ -5,10 +5,14 @@ struct JobDetailView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(JobsStore.self) private var jobsStore
     @Environment(ClientsStore.self) private var clientsStore
+    @Environment(InvoicesStore.self) private var invoicesStore
+    @Environment(ProfileStore.self) private var profileStore
+    @Environment(AppSession.self) private var session
     @Environment(TeamStore.self) private var teamStore
 
     let jobId: UUID
     @State private var showInvoiceSheet   = false
+    @State private var showClientSheet    = false
     @State private var showReassignSheet  = false
 
     // Photo attachments
@@ -35,11 +39,11 @@ struct JobDetailView: View {
                         actionButtons(job: job)
                         
                         if let client {
-                            clientProfileCard(client: client)
+                            clientProfileCard(client: client, job: job)
                         }
 
                         if let client = client, !client.entryInstructions.isEmpty || !client.notes.isEmpty {
-                            propertyNotesCard(client: client)
+                            propertyNotesCard(client: client, job: job)
                         }
                         
                         jobDetailsCard(job: job)
@@ -218,14 +222,16 @@ struct JobDetailView: View {
     }
 
     // MARK: - Client Profile Card
-    private func clientProfileCard(client: Client) -> some View {
+    private func clientProfileCard(client: Client, job: Job) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("CLIENT PROFILE".translated())
                 .font(.system(size: 11, weight: .bold))
                 .foregroundStyle(Color.sweeplyTextSub)
                 .tracking(1.0)
             
-            NavigationLink(destination: ClientDetailView(clientId: client.id)) {
+            Button {
+                showClientSheet = true
+            } label: {
                 SectionCard {
                     HStack(spacing: 14) {
                         ZStack {
@@ -252,9 +258,9 @@ struct JobDetailView: View {
                         }
                         
                         Spacer()
-                        Image(systemName: "chevron.right")
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundStyle(Color.sweeplyBorder)
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundStyle(Color.sweeplyBorder)
                     }
                 }
             }
@@ -263,7 +269,7 @@ struct JobDetailView: View {
     }
 
     // MARK: - Property Notes
-    private func propertyNotesCard(client: Client) -> some View {
+    private func propertyNotesCard(client: Client, job: Job) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("PROPERTY INSTRUCTIONS".translated())
                 .font(.system(size: 11, weight: .bold))
@@ -272,6 +278,10 @@ struct JobDetailView: View {
             
             SectionCard {
                 VStack(alignment: .leading, spacing: 12) {
+                    JobInfoRow(icon: "mappin.and.ellipse", title: "Location".translated(), value: job.address.isEmpty ? "No address provided".translated() : job.address)
+                    if !client.entryInstructions.isEmpty || !client.notes.isEmpty {
+                        Divider()
+                    }
                     if !client.entryInstructions.isEmpty {
                         JobInfoRow(icon: "key.fill", title: "Entry".translated(), value: client.entryInstructions)
                     }
@@ -296,7 +306,6 @@ struct JobDetailView: View {
             
             SectionCard {
                 VStack(alignment: .leading, spacing: 14) {
-                    JobInfoRow(icon: "mappin.and.ellipse", title: "Location".translated(), value: job.address.isEmpty ? "No address provided".translated() : job.address)
                     if job.isRecurring {
                         Divider()
                         JobInfoRow(
@@ -354,6 +363,18 @@ struct JobDetailView: View {
                 ReassignCleanerSheet(job: currentJob)
                     .environment(teamStore)
                     .environment(jobsStore)
+            }
+        }
+        .sheet(isPresented: $showClientSheet) {
+            if let client {
+                NavigationStack {
+                    ClientDetailView(clientId: client.id)
+                }
+                .environment(clientsStore)
+                .environment(jobsStore)
+                .environment(invoicesStore)
+                .environment(profileStore)
+                .environment(session)
             }
         }
     }

@@ -554,9 +554,15 @@ struct BusinessView: View {
 
                         if let nextJob {
                             VStack(alignment: .leading, spacing: 10) {
-                                Text(nextJob.clientName)
-                                    .font(.system(size: 19, weight: .semibold))
-                                    .foregroundStyle(Color.sweeplyNavy)
+                                Button {
+                                    showNextJobDetail = true
+                                } label: {
+                                    Text(nextJob.clientName)
+                                        .font(.system(size: 19, weight: .semibold))
+                                        .foregroundStyle(Color.sweeplyNavy)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                }
+                                .buttonStyle(.plain)
 
                                 Text(nextJob.serviceType.rawValue.translated())
                                     .font(.system(size: 14, weight: .medium))
