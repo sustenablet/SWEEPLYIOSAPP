@@ -20,6 +20,8 @@ struct SettingsView: View {
     @State private var showDeleteConfirmation = false
     @State private var isDeletingAccount = false
     @State private var currentTestNotificationIndex = 0
+    @State private var supabaseDiagnostics = SupabaseDiagnosticsSnapshot()
+    @State private var isRunningSupabaseDiagnostics = false
     @AppStorage("hasSeenIntroOnboarding") private var hasSeenIntroOnboarding = true
 
     private var canSave: Bool { !isSaving && validationMessage == nil && hasUnsavedChanges }
@@ -108,6 +110,78 @@ struct SettingsView: View {
                         .buttonStyle(.plain)
                     }
 
+                    #if DEBUG
+                    groupDivider()
+
+                    sectionLabel("Supabase Diagnostics".translated())
+                        .padding(.top, 16)
+                    SectionCard {
+                        VStack(alignment: .leading, spacing: 12) {
+                            HStack(alignment: .top) {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text("Supabase Diagnostics".translated())
+                                        .font(.system(size: 16, weight: .bold))
+                                        .foregroundStyle(Color.primary)
+                                    Text("Runtime connection check".translated())
+                                        .font(.system(size: 12))
+                                        .foregroundStyle(Color.sweeplyTextSub)
+                                }
+                                Spacer()
+                                Button {
+                                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                    Task { await runSupabaseDiagnostics() }
+                                } label: {
+                                    Text(isRunningSupabaseDiagnostics ? "Running...".translated() : "Run Diagnostics".translated())
+                                        .font(.system(size: 12, weight: .semibold))
+                                        .foregroundStyle(.white)
+                                        .padding(.horizontal, 12)
+                                        .padding(.vertical, 7)
+                                        .background(Color.sweeplyNavy)
+                                        .clipShape(Capsule())
+                                }
+                                .buttonStyle(.plain)
+                                .disabled(isRunningSupabaseDiagnostics)
+                            }
+
+                            diagnosticsRow(
+                                label: "Configuration".translated(),
+                                value: supabaseDiagnostics.configReady == true ? "Configured".translated() : "Missing".translated(),
+                                valueColor: supabaseDiagnostics.configReady == true ? Color.sweeplySuccess : Color.sweeplyDestructive
+                            )
+                            diagnosticsRow(
+                                label: "Session User".translated(),
+                                value: supabaseDiagnostics.sessionUserId.isEmpty ? "Signed out".translated() : supabaseDiagnostics.sessionUserId,
+                                mono: true
+                            )
+                            diagnosticsRow(
+                                label: "Client User".translated(),
+                                value: supabaseDiagnostics.clientUserId.isEmpty ? "Signed out".translated() : supabaseDiagnostics.clientUserId,
+                                mono: true
+                            )
+                            diagnosticsRow(
+                                label: "Profile Fetch".translated(),
+                                value: supabaseDiagnostics.profileFetch.isEmpty ? "Not checked".translated() : supabaseDiagnostics.profileFetch,
+                                valueColor: supabaseDiagnostics.profileFetchColor
+                            )
+                            if let lastChecked = supabaseDiagnostics.lastChecked {
+                                diagnosticsRow(
+                                    label: "Last Checked".translated(),
+                                    value: lastChecked.formatted(date: .abbreviated, time: .shortened),
+                                    mono: true
+                                )
+                            }
+                            if let error = supabaseDiagnostics.error {
+                                Text(error)
+                                    .font(.system(size: 12, weight: .medium))
+                                    .foregroundStyle(Color.sweeplyDestructive)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .padding(.top, 2)
+                            }
+                        }
+                        .padding(16)
+                    }
+                    #endif
+
                     groupDivider()
 
                     // ── Logout ─────────────────────────────────────────
@@ -133,7 +207,12 @@ struct SettingsView: View {
                         .foregroundStyle(Color.sweeplyTextSub)
                 }
             }
-            .onAppear { hydrateLocalProfile() }
+            .onAppear {
+                hydrateLocalProfile()
+                #if DEBUG
+                Task { await runSupabaseDiagnostics() }
+                #endif
+            }
             .confirmationDialog("Log out of Sweeply?".translated(), isPresented: $showLogoutConfirmation) {
                 Button("Log out".translated(), role: .destructive) {
                     Task { await session.signOut() }
@@ -758,6 +837,80 @@ private var preferencesSection: some View {
         .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(style.accentColor.opacity(0.18), lineWidth: 1))
     }
 
+    #if DEBUG
+    private func diagnosticsRow(
+        label: String,
+        value: String,
+        valueColor: Color = Color.sweeplyNavy,
+        mono: Bool = false
+    ) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 12) {
+            Text(label)
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(Color.sweeplyTextSub)
+            Spacer()
+            Text(value)
+                .font(.system(size: 13, weight: .semibold, design: mono ? .monospaced : .default))
+                .foregroundStyle(valueColor)
+                .multilineTextAlignment(.trailing)
+        }
+    }
+
+    private func runSupabaseDiagnostics() async {
+        guard !isRunningSupabaseDiagnostics else { return }
+        isRunningSupabaseDiagnostics = true
+        defer { isRunningSupabaseDiagnostics = false }
+
+        let configReady = SupabaseManager.isConfigured
+        let sessionUserId = session.userId?.uuidString ?? ""
+        let clientUserId = SupabaseManager.shared?.auth.currentUser?.id.uuidString ?? ""
+        var profileFetch = "Not checked".translated()
+        var profileColor = Color.sweeplyTextSub
+        var error: String? = nil
+
+        if let uid = session.userId, let client = SupabaseManager.shared {
+            struct ProfileProbeRow: Decodable {
+                let id: UUID
+            }
+
+            do {
+                let rows: [ProfileProbeRow] = try await client
+                    .from("profiles")
+                    .select("id")
+                    .eq("id", value: uid.uuidString)
+                    .limit(1)
+                    .execute()
+                    .value
+
+                if rows.isEmpty {
+                    profileFetch = "No profile row yet".translated()
+                    profileColor = Color.sweeplyWarning
+                } else {
+                    profileFetch = "Profile row found".translated()
+                    profileColor = Color.sweeplySuccess
+                }
+            } catch let fetchError {
+                profileFetch = "Failed".translated()
+                profileColor = Color.sweeplyDestructive
+                error = fetchError.localizedDescription
+            }
+        } else if session.userId == nil {
+            profileFetch = "Signed out".translated()
+            profileColor = Color.sweeplyTextSub
+        }
+
+        supabaseDiagnostics = SupabaseDiagnosticsSnapshot(
+            configReady: configReady,
+            sessionUserId: sessionUserId,
+            clientUserId: clientUserId,
+            profileFetch: profileFetch,
+            profileFetchColor: profileColor,
+            lastChecked: Date(),
+            error: error
+        )
+    }
+    #endif
+
     // MARK: - Actions
 
     private func resetPassword() {
@@ -828,7 +981,7 @@ private var preferencesSection: some View {
         return n
     }
 
-    private func profilesMatch(_ lhs: UserProfile, _ rhs: UserProfile) -> Bool {
+private func profilesMatch(_ lhs: UserProfile, _ rhs: UserProfile) -> Bool {
         lhs.fullName == rhs.fullName && lhs.businessName == rhs.businessName &&
         lhs.email == rhs.email && lhs.phone == rhs.phone &&
         lhs.settings.street == rhs.settings.street && lhs.settings.city == rhs.settings.city &&
@@ -840,6 +993,18 @@ private var preferencesSection: some View {
             $0.id == $1.id && $0.name == $1.name && $0.price == $1.price
         }
     }
+}
+
+// MARK: - Supabase Diagnostics Snapshot
+
+private struct SupabaseDiagnosticsSnapshot {
+    var configReady: Bool? = nil
+    var sessionUserId: String = ""
+    var clientUserId: String = ""
+    var profileFetch: String = ""
+    var profileFetchColor: Color = .sweeplyTextSub
+    var lastChecked: Date? = nil
+    var error: String? = nil
 }
 
 // MARK: - SettingsFeedbackStyle
