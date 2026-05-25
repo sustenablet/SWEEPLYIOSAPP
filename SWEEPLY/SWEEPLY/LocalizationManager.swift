@@ -19,6 +19,13 @@ enum AppLanguage: String, CaseIterable, Identifiable {
         case .portuguese: return "🇧🇷"
         }
     }
+
+    var shortCode: String {
+        switch self {
+        case .english: return "EN"
+        case .portuguese: return "BR"
+        }
+    }
 }
 
 struct LanguagePicker: View {

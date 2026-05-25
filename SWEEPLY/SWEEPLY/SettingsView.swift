@@ -268,7 +268,7 @@ struct SettingsView: View {
     private var aboutPage: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 6) {
-                sectionLabel("APP INFO")
+                sectionLabel("APP INFO".translated())
                 settingsGroup {
                     HStack(spacing: 14) {
                         settingsIcon("info.circle.fill", color: Color(red: 0.5, green: 0.5, blue: 0.55))

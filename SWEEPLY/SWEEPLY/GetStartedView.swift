@@ -4,6 +4,7 @@ struct GetStartedView: View {
     let onSignUp: () -> Void
     let onLogIn: () -> Void
 
+    @AppStorage("appLanguage") private var appLanguage: String = AppLanguage.english.rawValue
     @State private var appeared = false
     @State private var displayedText = ""
     private var fullText: String { "Welcome to Sweeply".translated() }
@@ -40,10 +41,59 @@ struct GetStartedView: View {
             .padding(.horizontal, 24)
             .padding(.bottom, 64)
         }
+        .overlay(alignment: .topTrailing) {
+            languageMenu
+                .padding(.top, 12)
+                .padding(.trailing, 16)
+        }
         .onAppear {
             withAnimation(.easeOut(duration: 0.3).delay(0.05)) { appeared = true }
             startTypewriter()
         }
+    }
+
+    private var currentLanguage: AppLanguage {
+        AppLanguage(rawValue: appLanguage) ?? .english
+    }
+
+    private var languageMenu: some View {
+        Menu {
+            ForEach(AppLanguage.allCases) { lang in
+                Button {
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        appLanguage = lang.rawValue
+                    }
+                } label: {
+                    HStack(spacing: 8) {
+                        Text(lang.flag)
+                        Text(lang.shortCode)
+                            .font(.system(size: 13, weight: .bold))
+                        if currentLanguage == lang {
+                            Image(systemName: "checkmark")
+                        }
+                    }
+                }
+            }
+        } label: {
+            HStack(spacing: 8) {
+                Text(currentLanguage.flag)
+                    .font(.system(size: 14))
+                Text(currentLanguage.shortCode)
+                    .font(.system(size: 12, weight: .bold))
+                    .tracking(0.6)
+            }
+            .foregroundStyle(.white)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background(.white.opacity(0.18))
+            .clipShape(Capsule())
+            .overlay(
+                Capsule().stroke(.white.opacity(0.28), lineWidth: 1)
+            )
+            .shadow(color: .black.opacity(0.16), radius: 6, y: 2)
+        }
+        .buttonStyle(.plain)
     }
 
     private func startTypewriter() {
