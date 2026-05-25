@@ -67,7 +67,9 @@ struct PendingOperation: Codable, Identifiable {
 @Observable
 @MainActor
 final class SyncQueue {
-    nonisolated(unsafe) static let shared = SyncQueue()
+    nonisolated(unsafe) static let shared: SyncQueue = MainActor.assumeIsolated {
+        SyncQueue()
+    }
 
     private(set) var operations: [PendingOperation] = []
     var pendingCount: Int { operations.count }

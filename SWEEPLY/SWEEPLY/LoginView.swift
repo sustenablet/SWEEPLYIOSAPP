@@ -1,5 +1,6 @@
 import AuthenticationServices
 import CryptoKit
+import Supabase
 import SwiftUI
 
 struct LoginView: View {
@@ -234,7 +235,14 @@ struct LoginView: View {
                         HStack {
                             Spacer()
                             Button("Forgot password?".translated()) {
-                                // TODO: forgot password
+                                Task {
+                                    guard !email.trimmingCharacters(in: .whitespaces).isEmpty else { return }
+                                    if let client = SupabaseManager.shared {
+                                        try? await client.auth.resetPasswordForEmail(
+                                            email.trimmingCharacters(in: .whitespaces).lowercased()
+                                        )
+                                    }
+                                }
                             }
                             .font(.system(size: 13, weight: .medium))
                             .foregroundStyle(Color.sweeplyWordmarkBlue)

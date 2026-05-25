@@ -225,12 +225,12 @@ private var healthCards: [DashboardHealthCardModel] {
                 }
                 .padding(.horizontal, 20)
                 .padding(.vertical, 12)
-                .padding(.bottom, 24)
+                .padding(.bottom, 18)
 
                 // ── Pro: Weekly Revenue Progress ─────────────────
                 weeklyRevenueProgress
                     .padding(.horizontal, 20)
-                    .padding(.bottom, 8)
+                    .padding(.bottom, 14)
                     .contentShape(Rectangle())
                     .onTapGesture {
                         guard dotRevenueBar else { return }
