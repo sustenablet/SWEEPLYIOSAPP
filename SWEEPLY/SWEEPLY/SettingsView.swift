@@ -19,9 +19,7 @@ struct SettingsView: View {
     @State private var showLogoutConfirmation = false
     @State private var showDeleteConfirmation = false
     @State private var isDeletingAccount = false
-    @State private var currentTestNotificationIndex = 0
-    @State private var supabaseDiagnostics = SupabaseDiagnosticsSnapshot()
-    @State private var isRunningSupabaseDiagnostics = false
+    @AppStorage("appLanguage") private var appLanguage: String = AppLanguage.english.rawValue
     @AppStorage("hasSeenIntroOnboarding") private var hasSeenIntroOnboarding = true
 
     private var canSave: Bool { !isSaving && validationMessage == nil && hasUnsavedChanges }
@@ -110,78 +108,6 @@ struct SettingsView: View {
                         .buttonStyle(.plain)
                     }
 
-                    #if DEBUG
-                    groupDivider()
-
-                    sectionLabel("Supabase Diagnostics".translated())
-                        .padding(.top, 16)
-                    SectionCard {
-                        VStack(alignment: .leading, spacing: 12) {
-                            HStack(alignment: .top) {
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text("Supabase Diagnostics".translated())
-                                        .font(.system(size: 16, weight: .bold))
-                                        .foregroundStyle(Color.primary)
-                                    Text("Runtime connection check".translated())
-                                        .font(.system(size: 12))
-                                        .foregroundStyle(Color.sweeplyTextSub)
-                                }
-                                Spacer()
-                                Button {
-                                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                                    Task { await runSupabaseDiagnostics() }
-                                } label: {
-                                    Text(isRunningSupabaseDiagnostics ? "Running...".translated() : "Run Diagnostics".translated())
-                                        .font(.system(size: 12, weight: .semibold))
-                                        .foregroundStyle(.white)
-                                        .padding(.horizontal, 12)
-                                        .padding(.vertical, 7)
-                                        .background(Color.sweeplyNavy)
-                                        .clipShape(Capsule())
-                                }
-                                .buttonStyle(.plain)
-                                .disabled(isRunningSupabaseDiagnostics)
-                            }
-
-                            diagnosticsRow(
-                                label: "Configuration".translated(),
-                                value: supabaseDiagnostics.configReady == true ? "Configured".translated() : "Missing".translated(),
-                                valueColor: supabaseDiagnostics.configReady == true ? Color.sweeplySuccess : Color.sweeplyDestructive
-                            )
-                            diagnosticsRow(
-                                label: "Session User".translated(),
-                                value: supabaseDiagnostics.sessionUserId.isEmpty ? "Signed out".translated() : supabaseDiagnostics.sessionUserId,
-                                mono: true
-                            )
-                            diagnosticsRow(
-                                label: "Client User".translated(),
-                                value: supabaseDiagnostics.clientUserId.isEmpty ? "Signed out".translated() : supabaseDiagnostics.clientUserId,
-                                mono: true
-                            )
-                            diagnosticsRow(
-                                label: "Profile Fetch".translated(),
-                                value: supabaseDiagnostics.profileFetch.isEmpty ? "Not checked".translated() : supabaseDiagnostics.profileFetch,
-                                valueColor: supabaseDiagnostics.profileFetchColor
-                            )
-                            if let lastChecked = supabaseDiagnostics.lastChecked {
-                                diagnosticsRow(
-                                    label: "Last Checked".translated(),
-                                    value: lastChecked.formatted(date: .abbreviated, time: .shortened),
-                                    mono: true
-                                )
-                            }
-                            if let error = supabaseDiagnostics.error {
-                                Text(error)
-                                    .font(.system(size: 12, weight: .medium))
-                                    .foregroundStyle(Color.sweeplyDestructive)
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                    .padding(.top, 2)
-                            }
-                        }
-                        .padding(16)
-                    }
-                    #endif
-
                     groupDivider()
 
                     // ── Logout ─────────────────────────────────────────
@@ -209,9 +135,6 @@ struct SettingsView: View {
             }
             .onAppear {
                 hydrateLocalProfile()
-                #if DEBUG
-                Task { await runSupabaseDiagnostics() }
-                #endif
             }
             .confirmationDialog("Log out of Sweeply?".translated(), isPresented: $showLogoutConfirmation) {
                 Button("Log out".translated(), role: .destructive) {
@@ -320,10 +243,40 @@ struct SettingsView: View {
     @ViewBuilder
     private var preferencesPage: some View {
         ScrollView {
-            preferencesSection
-                .padding(.horizontal, 20)
-                .padding(.top, 20)
-                .padding(.bottom, 48)
+            VStack(spacing: 16) {
+                settingsPageHero(
+                    eyebrow: "DEVICE CONTROL",
+                    title: "Preferences",
+                    subtitle: "Tune how Sweeply behaves on this device.",
+                    icon: "slider.horizontal.3",
+                    accent: .sweeplyAccent
+                ) {
+                    HStack(spacing: 10) {
+                        settingsMetricPill(
+                            label: "Notifications",
+                            value: notificationManager.isAuthorized ? "On" : "Off",
+                            tint: notificationManager.isAuthorized ? .sweeplyAccent : .sweeplyDestructive
+                        )
+                        settingsMetricPill(
+                            label: "Language",
+                            value: currentLanguage.shortCode,
+                            tint: .sweeplyNavy
+                        )
+                        settingsMetricPill(
+                            label: "Calendar",
+                            value: calendarSyncEnabled ? "On" : "Off",
+                            tint: calendarSyncEnabled ? .sweeplyAccent : .sweeplyTextSub
+                        )
+                    }
+                }
+
+                preferencesNotificationsCard
+                preferencesLanguageCard
+                preferencesSecurityCard
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 20)
+            .padding(.bottom, 48)
         }
         .background(Color.sweeplyBackground.ignoresSafeArea())
         .navigationTitle("Preferences".translated())
@@ -333,10 +286,36 @@ struct SettingsView: View {
     @ViewBuilder
     private var accountPage: some View {
         ScrollView {
-            accountSection
-                .padding(.horizontal, 20)
-                .padding(.top, 20)
-                .padding(.bottom, 48)
+            VStack(spacing: 16) {
+                settingsPageHero(
+                    eyebrow: "ACCOUNT CENTER",
+                    title: "Account",
+                    subtitle: "Manage your workspace, recovery tools, and account actions.",
+                    icon: "gearshape",
+                    accent: .sweeplyNavy
+                ) {
+                    HStack(spacing: 10) {
+                        settingsMetricPill(
+                            label: "Workspace",
+                            value: currentWorkspaceLabel,
+                            tint: .sweeplyNavy
+                        )
+                        settingsMetricPill(
+                            label: "Mode",
+                            value: currentModeLabel,
+                            tint: .sweeplyAccent
+                        )
+                    }
+                }
+
+                accountIdentityCard
+                accountTeamsCard
+                accountRecoveryCard
+                accountDangerCard
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 20)
+            .padding(.bottom, 48)
         }
         .background(Color.sweeplyBackground.ignoresSafeArea())
         .navigationTitle("Account".translated())
@@ -588,189 +567,516 @@ struct SettingsView: View {
             : "%d extras configured".translated(with: count)
     }
 
-private var preferencesSection: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            sectionLabel("NOTIFICATIONS".translated())
-            settingsGroup {
+    private var preferencesNotificationsCard: some View {
+        SectionCard {
+            VStack(alignment: .leading, spacing: 0) {
+                settingsCardHeader(
+                    icon: "bell.badge.fill",
+                    iconColor: Color(red: 0.95, green: 0.45, blue: 0.2),
+                    title: "Notifications",
+                    subtitle: "Keep reminders and alerts visible when you need them."
+                )
+
+                Divider().padding(.leading, 52)
+
                 HStack(spacing: 14) {
-                    settingsIcon("bell.badge.fill", color: Color(red: 0.95, green: 0.45, blue: 0.2))
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Push Notifications".translated()).font(.system(size: 15)).foregroundStyle(Color.primary)
-                        Text(notificationManager.isAuthorized ? "Enabled — job reminders & alerts".translated() : "Tap to enable job reminders".translated())
-                            .font(.system(size: 12)).foregroundStyle(Color.sweeplyTextSub)
+                        Text("Push Notifications".translated())
+                            .font(.system(size: 15, weight: .medium))
+                            .foregroundStyle(Color.primary)
+                        Text(notificationManager.isAuthorized ? "Enabled for job reminders and alerts.".translated() : "Enable to receive job and invoice reminders.".translated())
+                            .font(.system(size: 12))
+                            .foregroundStyle(Color.sweeplyTextSub)
                     }
                     Spacer()
                     Toggle("", isOn: Binding(
                         get: { notificationManager.isAuthorized },
                         set: { newValue in if newValue { notificationManager.requestAuthorization() } }
-                    )).labelsHidden().tint(Color.sweeplyAccent)
+                    ))
+                    .labelsHidden()
+                    .tint(Color.sweeplyAccent)
                 }
-                .padding(.horizontal, 16).padding(.vertical, 14)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 14)
 
                 if notificationManager.isAuthorized {
-                    Divider().padding(.leading, 58)
+                    Divider().padding(.leading, 52)
                     Button {
                         UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                        let types = ["Job Reminder".translated(), "Invoice Due".translated(), "Test".translated()]
-                        switch types[currentTestNotificationIndex] {
-                        case "Job Reminder".translated():
-                            notificationManager.fireInstantBanner(title: "Job in 1 Hour".translated(), body: "%@ at %@ — %@".translated(with: "Standard Clean".translated(), "Sarah M.", "123 Main St"))
-                        case "Invoice Due".translated():
-                            notificationManager.fireInstantBanner(title: "Invoice Due Soon".translated(), body: "%@ for %@ is due in %d days — %@".translated(with: "INV-0042", "Sarah M.", 3, "$320.00"))
-                        default:
-                            notificationManager.sendTestNotification()
-                        }
-                        currentTestNotificationIndex = (currentTestNotificationIndex + 1) % types.count
+                        notificationManager.sendTestNotification()
                     } label: {
-                        HStack(spacing: 14) {
-                            settingsIcon("paperplane.fill", color: Color.sweeplyAccent)
-                            Text("Test Notification".translated()).font(.system(size: 15)).foregroundStyle(Color.primary)
-                            Spacer()
-                            let types = ["Job Reminder".translated(), "Invoice Due".translated(), "Test".translated()]
-                            Text(types[currentTestNotificationIndex]).font(.system(size: 12, design: .monospaced)).foregroundStyle(Color.sweeplyTextSub)
-                            Image(systemName: "chevron.right").font(.system(size: 11, weight: .semibold)).foregroundStyle(Color.sweeplyBorder)
-                        }
-                        .padding(.horizontal, 16).padding(.vertical, 14)
+                        settingsActionRow(
+                            icon: "paperplane.fill",
+                            iconColor: Color.sweeplyAccent,
+                            title: "Send Test Notification".translated(),
+                            subtitle: "Preview how reminders appear on the device.".translated(),
+                            trailingText: nil
+                        )
                     }
                     .buttonStyle(.plain)
                 }
             }
+        }
+    }
 
-            sectionLabel("LANGUAGE".translated()).padding(.top, 16)
-            settingsGroup {
+    private var preferencesLanguageCard: some View {
+        SectionCard {
+            VStack(alignment: .leading, spacing: 0) {
+                settingsCardHeader(
+                    icon: "globe",
+                    iconColor: Color(red: 0.2, green: 0.5, blue: 0.9),
+                    title: "Language",
+                    subtitle: "Switch the app language instantly."
+                )
+
+                Divider().padding(.leading, 52)
+
                 HStack(spacing: 14) {
-                    settingsIcon("globe", color: Color(red: 0.2, green: 0.5, blue: 0.9))
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("App Language".translated()).font(.system(size: 15)).foregroundStyle(Color.primary)
-                        Text("English · Português (Brasil)".translated()).font(.system(size: 12)).foregroundStyle(Color.sweeplyTextSub)
+                        Text("App Language".translated())
+                            .font(.system(size: 15, weight: .medium))
+                            .foregroundStyle(Color.primary)
+                        Text("Português and English are available across the app.".translated())
+                            .font(.system(size: 12))
+                            .foregroundStyle(Color.sweeplyTextSub)
                     }
                     Spacer()
                     LanguagePicker()
                 }
-                .padding(.horizontal, 16).padding(.vertical, 12)
-            }
-
-            sectionLabel("SECURITY & SYNC".translated()).padding(.top, 16)
-            settingsGroup {
-                HStack(spacing: 14) {
-                    settingsIcon("faceid", color: Color.sweeplyNavy)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Face ID Lock".translated()).font(.system(size: 15)).foregroundStyle(Color.primary)
-                        Text("Require Face ID when returning to app".translated()).font(.system(size: 12)).foregroundStyle(Color.sweeplyTextSub)
-                    }
-                    Spacer()
-                    BiometricToggle()
-                }
-                .padding(.horizontal, 16).padding(.vertical, 14)
-                Divider().padding(.leading, 58)
-                HStack(spacing: 14) {
-                    settingsIcon("calendar.badge.plus", color: Color(red: 0.2, green: 0.5, blue: 0.9))
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Sync to Calendar".translated()).font(.system(size: 15)).foregroundStyle(Color.primary)
-                        Text("Adds scheduled jobs to your Calendar app".translated()).font(.system(size: 12)).foregroundStyle(Color.sweeplyTextSub)
-                    }
-                    Spacer()
-                    CalendarToggle()
-                }
-                .padding(.horizontal, 16).padding(.vertical, 14)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 14)
             }
         }
     }
 
-    private var accountSection: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            if !session.activeMemberships.isEmpty {
-                sectionLabel("MY TEAMS".translated())
-                settingsGroup {
-                    VStack(spacing: 0) {
-                        ForEach(Array(session.activeMemberships.enumerated()), id: \.element.id) { idx, membership in
-                            Button {
-                                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-                                session.switchToMembership(membership)
-                            } label: {
-                                HStack(spacing: 14) {
-                                    settingsIcon("building.2.fill", color: Color.sweeplyAccent)
-                                    VStack(alignment: .leading, spacing: 2) {
-                                        Text(membership.businessName).font(.system(size: 15)).foregroundStyle(Color.primary)
-                                        Text(membership.role.capitalized).font(.system(size: 12)).foregroundStyle(Color.sweeplyTextSub)
-                                    }
-                                    Spacer()
-                                    Text("Switch".translated()).font(.system(size: 13, weight: .semibold)).foregroundStyle(Color.sweeplyAccent)
-                                }
-                                .padding(.horizontal, 16).padding(.vertical, 12)
-                            }
-                            .buttonStyle(.plain)
-                            if idx < session.activeMemberships.count - 1 { Divider().padding(.leading, 58) }
+    private var preferencesSecurityCard: some View {
+        SectionCard {
+            VStack(alignment: .leading, spacing: 0) {
+                settingsCardHeader(
+                    icon: "shield.lefthalf.filled",
+                    iconColor: Color.sweeplyNavy,
+                    title: "Security & Sync",
+                    subtitle: "Protect access and keep jobs flowing into Calendar."
+                )
+
+                Divider().padding(.leading, 52)
+
+                settingsToggleRow(
+                    icon: "faceid",
+                    iconColor: Color.sweeplyNavy,
+                    title: "Face ID Lock".translated(),
+                    subtitle: "Require Face ID when returning to the app.".translated(),
+                    trailing: {
+                        BiometricToggle()
+                    }
+                )
+
+                Divider().padding(.leading, 52)
+
+                settingsToggleRow(
+                    icon: "calendar.badge.plus",
+                    iconColor: Color(red: 0.2, green: 0.5, blue: 0.9),
+                    title: "Sync to Calendar".translated(),
+                    subtitle: "Adds scheduled jobs to your Calendar app.".translated(),
+                    trailing: {
+                        CalendarToggle()
+                    }
+                )
+            }
+        }
+    }
+
+    private var accountIdentityCard: some View {
+        SectionCard {
+            VStack(alignment: .leading, spacing: 16) {
+                HStack(alignment: .top, spacing: 14) {
+                    ZStack {
+                        Circle()
+                            .fill(Color.sweeplyNavy)
+                            .frame(width: 64, height: 64)
+                        Text(avatarInitials)
+                            .font(.system(size: 24, weight: .black, design: .rounded))
+                            .foregroundStyle(.white)
+                    }
+
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Account Identity".translated())
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundStyle(Color.sweeplyTextSub)
+                            .tracking(0.8)
+                        Text(localProfile.fullName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "Your account".translated() : localProfile.fullName)
+                            .font(.system(size: 22, weight: .black, design: .rounded))
+                            .foregroundStyle(Color.sweeplyNavy)
+                        Text(localProfile.businessName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "No business name yet".translated() : localProfile.businessName)
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundStyle(Color.sweeplyTextSub)
+                        Text(localProfile.email.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "No email saved".translated() : localProfile.email)
+                            .font(.system(size: 12))
+                            .foregroundStyle(Color.sweeplyTextSub)
+                            .lineLimit(1)
+                    }
+
+                    Spacer()
+                }
+
+                HStack(spacing: 10) {
+                    settingsMetricPill(
+                        label: "Teams",
+                        value: "\(session.activeMemberships.count)",
+                        tint: .sweeplyAccent
+                    )
+                    settingsMetricPill(
+                        label: "Mode",
+                        value: currentModeLabel,
+                        tint: .sweeplyNavy
+                    )
+                    settingsMetricPill(
+                        label: "Status",
+                        value: session.isAuthenticated ? "Active" : "Signed out",
+                        tint: session.isAuthenticated ? .sweeplyAccent : .sweeplyTextSub
+                    )
+                }
+            }
+        }
+    }
+
+    private var accountTeamsCard: some View {
+        SectionCard {
+            VStack(alignment: .leading, spacing: 0) {
+                settingsCardHeader(
+                    icon: "building.2.fill",
+                    iconColor: Color.sweeplyAccent,
+                    title: "Workspaces",
+                    subtitle: "Switch between your business and any active team memberships."
+                )
+
+                if session.activeMemberships.isEmpty {
+                    Divider().padding(.leading, 52)
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("No additional workspaces yet.".translated())
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundStyle(Color.primary)
+                        Text("When you join a team, it appears here for one-tap switching.".translated())
+                            .font(.system(size: 12))
+                            .foregroundStyle(Color.sweeplyTextSub)
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 14)
+                } else {
+                    ForEach(Array(session.activeMemberships.enumerated()), id: \.element.id) { index, membership in
+                        if index == 0 { Divider().padding(.leading, 52) }
+                        Button {
+                            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                            session.switchToMembership(membership)
+                        } label: {
+                            settingsActionRow(
+                                icon: "building.2",
+                                iconColor: Color.sweeplyAccent,
+                                title: membership.businessName,
+                                subtitle: TeamRole(rawValue: membership.role)?.displayName ?? membership.role.capitalized,
+                                trailingText: session.currentViewMode == .memberOf(membership) ? "Active".translated() : "Switch".translated()
+                            )
+                        }
+                        .buttonStyle(.plain)
+                        if index < session.activeMemberships.count - 1 {
+                            Divider().padding(.leading, 52)
                         }
                     }
                 }
-                .padding(.bottom, 10)
-            }
 
-            sectionLabel("ACCOUNT".translated())
-            settingsGroup {
+                if case .memberOf(_) = session.currentViewMode {
+                    Divider().padding(.leading, 52)
+                    Button {
+                        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                        session.switchToOwnBusiness()
+                    } label: {
+                        settingsActionRow(
+                            icon: "house.fill",
+                            iconColor: Color.sweeplyNavy,
+                            title: "Return to Own Business".translated(),
+                            subtitle: "Switch back to your main workspace.".translated(),
+                            trailingText: "Switch".translated()
+                        )
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+    }
+
+    private var accountRecoveryCard: some View {
+        SectionCard {
+            VStack(alignment: .leading, spacing: 0) {
+                settingsCardHeader(
+                    icon: "arrow.triangle.2.circlepath",
+                    iconColor: Color.sweeplyNavy,
+                    title: "Recovery & Setup",
+                    subtitle: "Revisit onboarding or reset your password when needed."
+                )
+
+                Divider().padding(.leading, 52)
+
                 Button {
                     UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                     showIntroOnboarding = true
                 } label: {
-                    HStack(spacing: 14) {
-                        settingsIcon("arrow.triangle.2.circlepath", color: Color.sweeplyAccent)
-                        Text("Re-run App Intro".translated()).font(.system(size: 15)).foregroundStyle(Color.primary)
-                        Spacer()
-                        Image(systemName: "chevron.right").font(.system(size: 13, weight: .semibold)).foregroundStyle(Color.sweeplyBorder)
-                    }
-                    .padding(.horizontal, 16).padding(.vertical, 12)
+                    settingsActionRow(
+                        icon: "sparkles",
+                        iconColor: Color.sweeplyAccent,
+                        title: "Replay App Intro".translated(),
+                        subtitle: "Review the onboarding experience again.".translated(),
+                        trailingText: "Open".translated()
+                    )
                 }
                 .buttonStyle(.plain)
-                Divider().padding(.leading, 58)
+
+                Divider().padding(.leading, 52)
+
                 Button {
                     UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                     showOnboarding = true
                 } label: {
-                    HStack(spacing: 14) {
-                        settingsIcon("sparkles", color: Color.sweeplyNavy)
-                        Text("Re-run Business Setup".translated()).font(.system(size: 15)).foregroundStyle(Color.primary)
-                        Spacer()
-                        Image(systemName: "chevron.right").font(.system(size: 13, weight: .semibold)).foregroundStyle(Color.sweeplyBorder)
-                    }
-                    .padding(.horizontal, 16).padding(.vertical, 12)
+                    settingsActionRow(
+                        icon: "list.bullet.clipboard",
+                        iconColor: Color.sweeplyNavy,
+                        title: "Replay Business Setup".translated(),
+                        subtitle: "Reopen the business setup flow.".translated(),
+                        trailingText: "Open".translated()
+                    )
                 }
                 .buttonStyle(.plain)
-                Divider().padding(.leading, 58)
-                Button { resetPassword() } label: {
-                    HStack(spacing: 14) {
-                        settingsIcon("lock.shield.fill", color: Color.sweeplyAccent)
-                        Text("Reset Password".translated()).font(.system(size: 15)).foregroundStyle(Color.primary)
-                        Spacer()
-                        Image(systemName: "chevron.right").font(.system(size: 13, weight: .semibold)).foregroundStyle(Color.sweeplyBorder)
-                    }
-                    .padding(.horizontal, 16).padding(.vertical, 12)
-                }
-                .buttonStyle(.plain)
-            }
 
-            Button {
-                UIImpactFeedbackGenerator(style: .heavy).impactOccurred()
-                showDeleteConfirmation = true
-            } label: {
-                HStack(spacing: 14) {
-                    settingsIcon("trash.fill", color: Color.sweeplyDestructive)
-                    if isDeletingAccount {
-                        ProgressView().tint(Color.sweeplyDestructive)
-                        Text("Deleting…".translated()).font(.system(size: 15, weight: .semibold)).foregroundStyle(Color.sweeplyDestructive)
-                    } else {
-                        Text("Delete Account".translated()).font(.system(size: 15, weight: .semibold)).foregroundStyle(Color.sweeplyDestructive)
-                    }
-                    Spacer()
+                Divider().padding(.leading, 52)
+
+                Button { resetPassword() } label: {
+                    settingsActionRow(
+                        icon: "lock.shield.fill",
+                        iconColor: Color.sweeplyAccent,
+                        title: "Reset Password".translated(),
+                        subtitle: "Send a reset email to your account inbox.".translated(),
+                        trailingText: "Email".translated()
+                    )
                 }
-                .padding(.horizontal, 16).padding(.vertical, 12)
-                .background(Color.sweeplyDestructive.opacity(0.06))
-                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(Color.sweeplyDestructive.opacity(0.2), lineWidth: 1))
+                .buttonStyle(.plain)
             }
-            .buttonStyle(.plain)
-            .disabled(isDeletingAccount)
-            .padding(.top, 16)
+        }
+    }
+
+    private var accountDangerCard: some View {
+        SectionCard {
+            VStack(alignment: .leading, spacing: 12) {
+                settingsCardHeader(
+                    icon: "trash.fill",
+                    iconColor: Color.sweeplyDestructive,
+                    title: "Danger Zone",
+                    subtitle: "Delete the account only when you are sure the data can go."
+                )
+
+                Text("This permanently removes your account and all business data from Sweeply.".translated())
+                    .font(.system(size: 13))
+                    .foregroundStyle(Color.sweeplyTextSub)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Button {
+                    UIImpactFeedbackGenerator(style: .heavy).impactOccurred()
+                    showDeleteConfirmation = true
+                } label: {
+                    HStack(spacing: 12) {
+                        settingsIcon("trash.fill", color: Color.sweeplyDestructive)
+                        if isDeletingAccount {
+                            ProgressView().tint(Color.sweeplyDestructive)
+                            Text("Deleting…".translated())
+                                .font(.system(size: 15, weight: .semibold))
+                                .foregroundStyle(Color.sweeplyDestructive)
+                        } else {
+                            Text("Delete Account".translated())
+                                .font(.system(size: 15, weight: .semibold))
+                                .foregroundStyle(Color.sweeplyDestructive)
+                        }
+                        Spacer()
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
+                    .background(Color.sweeplyDestructive.opacity(0.06))
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .stroke(Color.sweeplyDestructive.opacity(0.2), lineWidth: 1)
+                    )
+                }
+                .buttonStyle(.plain)
+                .disabled(isDeletingAccount)
+            }
+        }
+    }
+
+    private func settingsPageHero<Content: View>(
+        eyebrow: String,
+        title: String,
+        subtitle: String,
+        icon: String,
+        accent: Color,
+        @ViewBuilder content: () -> Content
+    ) -> some View {
+        SectionCard {
+            VStack(alignment: .leading, spacing: 16) {
+                HStack(alignment: .top, spacing: 14) {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text(eyebrow.translated())
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundStyle(Color.sweeplyTextSub)
+                            .tracking(0.8)
+                        Text(title.translated())
+                            .font(.system(size: 28, weight: .black, design: .rounded))
+                            .foregroundStyle(Color.sweeplyNavy)
+                            .tracking(-0.03)
+                        Text(subtitle.translated())
+                            .font(.system(size: 13))
+                            .foregroundStyle(Color.sweeplyTextSub)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+
+                    Spacer()
+
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                            .fill(accent.opacity(0.12))
+                            .frame(width: 54, height: 54)
+                        Image(systemName: icon)
+                            .font(.system(size: 24, weight: .medium))
+                            .foregroundStyle(accent)
+                    }
+                }
+
+                content()
+            }
+        }
+    }
+
+    private func settingsMetricPill(label: String, value: String, tint: Color) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(label.translated())
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(Color.sweeplyTextSub)
+                .tracking(0.4)
+            Text(value.translated())
+                .font(.system(size: 15, weight: .bold, design: .rounded))
+                .foregroundStyle(tint)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(12)
+        .background(Color.sweeplyBackground.opacity(0.85))
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .stroke(Color.sweeplyBorder.opacity(0.9), lineWidth: 1)
+        )
+    }
+
+    private func settingsCardHeader(
+        icon: String,
+        iconColor: Color,
+        title: String,
+        subtitle: String
+    ) -> some View {
+        HStack(alignment: .top, spacing: 14) {
+            settingsIcon(icon, color: iconColor)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title.translated())
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundStyle(Color.primary)
+                Text(subtitle.translated())
+                    .font(.system(size: 12))
+                    .foregroundStyle(Color.sweeplyTextSub)
+            }
+            Spacer()
+        }
+        .padding(.horizontal, 16)
+        .padding(.top, 16)
+        .padding(.bottom, 14)
+    }
+
+    private func settingsToggleRow<Trailing: View>(
+        icon: String,
+        iconColor: Color,
+        title: String,
+        subtitle: String,
+        @ViewBuilder trailing: () -> Trailing
+    ) -> some View {
+        HStack(spacing: 14) {
+            settingsIcon(icon, color: iconColor)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundStyle(Color.primary)
+                Text(subtitle)
+                    .font(.system(size: 12))
+                    .foregroundStyle(Color.sweeplyTextSub)
+            }
+            Spacer()
+            trailing()
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 14)
+    }
+
+    private func settingsActionRow(
+        icon: String,
+        iconColor: Color,
+        title: String,
+        subtitle: String,
+        trailingText: String?
+    ) -> some View {
+        HStack(spacing: 14) {
+            settingsIcon(icon, color: iconColor)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundStyle(Color.primary)
+                Text(subtitle)
+                    .font(.system(size: 12))
+                    .foregroundStyle(Color.sweeplyTextSub)
+            }
+            Spacer()
+            if let trailingText {
+                Text(trailingText)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(iconColor)
+            }
+            Image(systemName: "chevron.right")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(Color.sweeplyBorder)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .contentShape(Rectangle())
+    }
+
+    private var currentLanguage: AppLanguage {
+        AppLanguage(rawValue: appLanguage) ?? .english
+    }
+
+    private var calendarSyncEnabled: Bool {
+        UserDefaults.standard.bool(forKey: "calendarSyncEnabled")
+    }
+
+    private var currentWorkspaceLabel: String {
+        switch session.currentViewMode {
+        case .ownBusiness:
+            return localProfile.businessName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                ? "Own business".translated()
+                : localProfile.businessName
+        case .memberOf(let membership):
+            return membership.businessName
+        }
+    }
+
+    private var currentModeLabel: String {
+        switch session.currentViewMode {
+        case .ownBusiness:
+            return "Owner".translated()
+        case .memberOf(let membership):
+            return TeamRole(rawValue: membership.role)?.displayName ?? membership.role.capitalized
         }
     }
 
@@ -836,80 +1142,6 @@ private var preferencesSection: some View {
         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(style.accentColor.opacity(0.18), lineWidth: 1))
     }
-
-    #if DEBUG
-    private func diagnosticsRow(
-        label: String,
-        value: String,
-        valueColor: Color = Color.sweeplyNavy,
-        mono: Bool = false
-    ) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: 12) {
-            Text(label)
-                .font(.system(size: 13, weight: .medium))
-                .foregroundStyle(Color.sweeplyTextSub)
-            Spacer()
-            Text(value)
-                .font(.system(size: 13, weight: .semibold, design: mono ? .monospaced : .default))
-                .foregroundStyle(valueColor)
-                .multilineTextAlignment(.trailing)
-        }
-    }
-
-    private func runSupabaseDiagnostics() async {
-        guard !isRunningSupabaseDiagnostics else { return }
-        isRunningSupabaseDiagnostics = true
-        defer { isRunningSupabaseDiagnostics = false }
-
-        let configReady = SupabaseManager.isConfigured
-        let sessionUserId = session.userId?.uuidString ?? ""
-        let clientUserId = SupabaseManager.shared?.auth.currentUser?.id.uuidString ?? ""
-        var profileFetch = "Not checked".translated()
-        var profileColor = Color.sweeplyTextSub
-        var error: String? = nil
-
-        if let uid = session.userId, let client = SupabaseManager.shared {
-            struct ProfileProbeRow: Decodable {
-                let id: UUID
-            }
-
-            do {
-                let rows: [ProfileProbeRow] = try await client
-                    .from("profiles")
-                    .select("id")
-                    .eq("id", value: uid.uuidString)
-                    .limit(1)
-                    .execute()
-                    .value
-
-                if rows.isEmpty {
-                    profileFetch = "No profile row yet".translated()
-                    profileColor = Color.sweeplyWarning
-                } else {
-                    profileFetch = "Profile row found".translated()
-                    profileColor = Color.sweeplySuccess
-                }
-            } catch let fetchError {
-                profileFetch = "Failed".translated()
-                profileColor = Color.sweeplyDestructive
-                error = fetchError.localizedDescription
-            }
-        } else if session.userId == nil {
-            profileFetch = "Signed out".translated()
-            profileColor = Color.sweeplyTextSub
-        }
-
-        supabaseDiagnostics = SupabaseDiagnosticsSnapshot(
-            configReady: configReady,
-            sessionUserId: sessionUserId,
-            clientUserId: clientUserId,
-            profileFetch: profileFetch,
-            profileFetchColor: profileColor,
-            lastChecked: Date(),
-            error: error
-        )
-    }
-    #endif
 
     // MARK: - Actions
 
@@ -993,18 +1225,6 @@ private func profilesMatch(_ lhs: UserProfile, _ rhs: UserProfile) -> Bool {
             $0.id == $1.id && $0.name == $1.name && $0.price == $1.price
         }
     }
-}
-
-// MARK: - Supabase Diagnostics Snapshot
-
-private struct SupabaseDiagnosticsSnapshot {
-    var configReady: Bool? = nil
-    var sessionUserId: String = ""
-    var clientUserId: String = ""
-    var profileFetch: String = ""
-    var profileFetchColor: Color = .sweeplyTextSub
-    var lastChecked: Date? = nil
-    var error: String? = nil
 }
 
 // MARK: - SettingsFeedbackStyle
