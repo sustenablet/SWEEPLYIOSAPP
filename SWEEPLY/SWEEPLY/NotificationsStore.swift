@@ -10,8 +10,7 @@ final class NotificationsStore {
 
     func load(isAuthenticated: Bool, userId: UUID?) async {
         guard isAuthenticated, let userId = userId, let client = SupabaseManager.shared else {
-            // Load mock notifications if not authenticated/configured
-            notifications = MockData.notifications.sorted { $0.timestamp > $1.timestamp }
+            notifications = []
             return
         }
 
@@ -84,7 +83,7 @@ final class NotificationsStore {
             print("Failed to fetch notifications: \(error)")
             self.lastError = "Failed to synchronize notifications.".translated()
             if !isLoaded {
-                notifications = MockData.notifications
+                notifications = []
             }
         }
     }

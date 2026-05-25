@@ -150,9 +150,8 @@ struct SettingsView: View {
                         let success = await session.deleteAccount()
                         isDeletingAccount = false
                         if !success {
-                            if let url = URL(string: "mailto:sustenablet@gmail.com?subject=Account%20Deletion%20Request") {
-                                await UIApplication.shared.open(url)
-                            }
+                            feedbackMessage = "We couldn't delete your account. Please try again or contact support at support@sweeplyapp.online.".translated()
+                            feedbackStyle = .error
                         }
                     }
                 }

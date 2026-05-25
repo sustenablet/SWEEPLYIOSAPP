@@ -29,3 +29,4 @@ Carthage/Build/
 *.pem
 *.p12
 *.mobileprovision
+SupabaseConfig.plist
