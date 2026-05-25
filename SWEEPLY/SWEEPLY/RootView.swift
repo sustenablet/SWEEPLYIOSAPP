@@ -141,6 +141,24 @@ struct RootView: View {
         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("NewNotificationsArrived"))) { _ in
             notificationRefreshTrigger += 1
         }
+        .onChange(of: networkMonitor.isConnected) { wasConnected, isNowConnected in
+            // Reconnected — pull fresh data from Supabase so any optimistic
+            // local writes get reconciled and remote changes come in.
+            guard isNowConnected && !wasConnected && session.isAuthenticated else { return }
+            Task {
+                async let j: () = jobsStore.load(isAuthenticated: true)
+                async let i: () = invoicesStore.load(isAuthenticated: true)
+                async let c: () = clientsStore.load(isAuthenticated: true)
+                _ = await (j, i, c)
+                await invoicesStore.markOverdueInvoices()
+                if let uid = session.userId {
+                    async let p: () = profileStore.load(userId: uid)
+                    async let e: () = expenseStore.load(userId: uid)
+                    async let n: () = notificationsStore.load(isAuthenticated: true, userId: uid)
+                    _ = await (p, e, n)
+                }
+            }
+        }
     }
 
     private func scheduleDelayedLock() {
