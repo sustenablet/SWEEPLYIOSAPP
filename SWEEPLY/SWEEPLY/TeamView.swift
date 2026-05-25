@@ -541,22 +541,26 @@ struct TeamView: View {
                     Circle()
                         .fill(
                             member.status == .invited
-                                ? AnyShapeStyle(Color.sweeplyAccent.opacity(0.1))
-                                : AnyShapeStyle(Color.sweeplyAccent.gradient)
+                                ? AnyShapeStyle(member.avatarTone.backgroundColor.opacity(0.15))
+                                : AnyShapeStyle(member.avatarTone.backgroundColor)
                         )
                         .frame(width: 50, height: 50)
                         .overlay(
                             Circle()
                                 .strokeBorder(
                                     member.status == .invited
-                                        ? Color.sweeplyAccent.opacity(0.4)
+                                        ? member.avatarTone.backgroundColor.opacity(0.4)
                                         : Color.clear,
                                     style: StrokeStyle(lineWidth: 1.5, dash: [4, 3])
                                 )
                         )
                     Text(member.initials.isEmpty ? "?" : member.initials)
                         .font(.system(size: 16, weight: .bold))
-                        .foregroundStyle(member.status == .invited ? Color.sweeplyAccent : .white)
+                        .foregroundStyle(
+                            member.status == .invited
+                                ? member.avatarTone.backgroundColor
+                                : member.avatarTone.foregroundColor
+                        )
                 }
                 .padding(.leading, 14)
 
@@ -992,11 +996,11 @@ struct MemberDetailView: View {
             HStack(alignment: .top, spacing: 16) {
                 ZStack {
                     Circle()
-                        .fill(Color.sweeplyAccent.gradient)
+                        .fill(member.avatarTone.backgroundColor)
                         .frame(width: 72, height: 72)
                     Text(member.initials.isEmpty ? "?" : member.initials)
                         .font(.system(size: 25, weight: .bold))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(member.avatarTone.foregroundColor)
                 }
 
                 VStack(alignment: .leading, spacing: 10) {
@@ -2040,13 +2044,25 @@ struct InviteMemberSheet: View {
 
     let ownerId: UUID
 
-    @State private var name    = ""
-    @State private var email   = ""
-    @State private var phone   = ""
-    @State private var role    = TeamRole.member
-    @State private var isSaving = false
-    @State private var showShareSheet = false
-    @State private var inviteMessage  = ""
+    @State private var firstName = ""
+    @State private var lastName  = ""
+    @State private var email     = ""
+    @State private var phone     = ""
+    @State private var role      = TeamRole.member
+    @State private var isSaving  = false
+    @State private var showShareSheet    = false
+    @State private var inviteMessage     = ""
+    @State private var selectedAvatarTone: ClientAvatarTone = .slate
+    @State private var showAvatarTonePicker = false
+
+    // Pre-generate the UUID so we can save the avatar tone with the right key
+    private let newMemberId = UUID()
+
+    private var previewInitials: String {
+        let f = firstName.prefix(1).uppercased()
+        let l = lastName.prefix(1).uppercased()
+        return f + l
+    }
 
     var body: some View {
         NavigationStack {
@@ -2055,16 +2071,109 @@ struct InviteMemberSheet: View {
 
                 ScrollView {
                     VStack(spacing: 20) {
+
+                        // ── Avatar ───────────────────────────────────────────
+                        VStack(spacing: 8) {
+                            Button {
+                                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                withAnimation(.easeInOut(duration: 0.2)) {
+                                    showAvatarTonePicker.toggle()
+                                }
+                            } label: {
+                                ZStack {
+                                    Circle()
+                                        .fill(selectedAvatarTone.backgroundColor)
+                                        .frame(width: 72, height: 72)
+                                    if previewInitials.isEmpty {
+                                        Image(systemName: "person.fill")
+                                            .font(.system(size: 26, weight: .semibold))
+                                            .foregroundStyle(.white.opacity(0.6))
+                                    } else {
+                                        Text(previewInitials)
+                                            .font(.system(size: 26, weight: .bold))
+                                            .foregroundStyle(selectedAvatarTone.foregroundColor)
+                                    }
+                                }
+                                .overlay(alignment: .bottomTrailing) {
+                                    ZStack {
+                                        Circle().fill(Color.sweeplyBackground).frame(width: 22, height: 22)
+                                        Image(systemName: "paintpalette.fill")
+                                            .font(.system(size: 10, weight: .semibold))
+                                            .foregroundStyle(Color.sweeplyNavy)
+                                    }
+                                    .offset(x: 2, y: 2)
+                                }
+                            }
+                            .buttonStyle(.plain)
+
+                            Text("Tap to choose color".translated())
+                                .font(.system(size: 11, weight: .medium))
+                                .foregroundStyle(Color.sweeplyTextSub)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.top, 4)
+
+                        // ── Color picker (expands on avatar tap) ─────────────
+                        if showAvatarTonePicker {
+                            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 6), spacing: 10) {
+                                ForEach(ClientAvatarTone.allCases, id: \.rawValue) { tone in
+                                    Button {
+                                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                        withAnimation(.easeInOut(duration: 0.15)) {
+                                            selectedAvatarTone = tone
+                                            showAvatarTonePicker = false
+                                        }
+                                    } label: {
+                                        ZStack {
+                                            Circle()
+                                                .fill(tone.backgroundColor)
+                                                .frame(width: 44, height: 44)
+                                            if selectedAvatarTone == tone {
+                                                Image(systemName: "checkmark")
+                                                    .font(.system(size: 13, weight: .bold))
+                                                    .foregroundStyle(tone.foregroundColor)
+                                            }
+                                        }
+                                        .overlay(
+                                            Circle()
+                                                .strokeBorder(
+                                                    selectedAvatarTone == tone
+                                                        ? Color.sweeplyNavy : Color.clear,
+                                                    lineWidth: 2
+                                                )
+                                                .padding(-3)
+                                        )
+                                    }
+                                    .buttonStyle(.plain)
+                                }
+                            }
+                            .padding(.horizontal, 20)
+                            .padding(.vertical, 14)
+                            .background(Color.sweeplySurface, in: RoundedRectangle(cornerRadius: 14))
+                            .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.sweeplyBorder, lineWidth: 1))
+                            .transition(.opacity.combined(with: .scale(scale: 0.97, anchor: .top)))
+                        }
+
+                        // ── Fields ───────────────────────────────────────────
                         VStack(spacing: 0) {
-                            fieldRow(label: "Name".translated()) {
-                                TextField("Full name".translated(), text: $name)
+                            fieldRow(label: "First".translated()) {
+                                TextField("Jane".translated(), text: $firstName)
                                     .font(.system(size: 15))
+                                    .autocorrectionDisabled()
+                            }
+
+                            Divider().padding(.leading, 80)
+
+                            fieldRow(label: "Last".translated()) {
+                                TextField("Doe".translated(), text: $lastName)
+                                    .font(.system(size: 15))
+                                    .autocorrectionDisabled()
                             }
 
                             Divider().padding(.leading, 80)
 
                             fieldRow(label: "Email".translated()) {
-                                TextField("email@example.com".translated(), text: $email)
+                                TextField("email@example.com", text: $email)
                                     .font(.system(size: 15))
                                     .keyboardType(.emailAddress)
                                     .autocapitalization(.none)
@@ -2074,7 +2183,7 @@ struct InviteMemberSheet: View {
                             Divider().padding(.leading, 80)
 
                             fieldRow(label: "Phone".translated()) {
-                                TextField("(555) 000-0000".translated(), text: $phone)
+                                TextField("(555) 000-0000", text: $phone)
                                     .font(.system(size: 15))
                                     .keyboardType(.phonePad)
                             }
@@ -2094,6 +2203,7 @@ struct InviteMemberSheet: View {
                         .background(Color.sweeplySurface, in: RoundedRectangle(cornerRadius: 14))
                         .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.sweeplyBorder, lineWidth: 1))
 
+                        // ── Save button ──────────────────────────────────────
                         Button {
                             Task { await addAndInvite() }
                         } label: {
@@ -2118,7 +2228,8 @@ struct InviteMemberSheet: View {
                         .disabled(!canSave || isSaving)
                     }
                     .padding(.horizontal, 20)
-                    .padding(.top, 20)
+                    .padding(.top, 16)
+                    .padding(.bottom, 32)
                 }
             }
             .navigationTitle("Invite Cleaner".translated())
@@ -2132,11 +2243,12 @@ struct InviteMemberSheet: View {
             .sheet(isPresented: $showShareSheet) {
                 ShareSheet(activityItems: [inviteMessage])
             }
+            .animation(.easeInOut(duration: 0.2), value: showAvatarTonePicker)
         }
     }
 
     private var canSave: Bool {
-        !name.trimmingCharacters(in: .whitespaces).isEmpty && email.contains("@")
+        !firstName.trimmingCharacters(in: .whitespaces).isEmpty && email.contains("@")
     }
 
     @MainActor
@@ -2144,9 +2256,13 @@ struct InviteMemberSheet: View {
         isSaving = true
         defer { isSaving = false }
 
+        let fullName = "\(firstName.trimmingCharacters(in: .whitespaces)) \(lastName.trimmingCharacters(in: .whitespaces))"
+            .trimmingCharacters(in: .whitespaces)
+
         let member = TeamMember(
+            id: newMemberId,
             ownerId: ownerId,
-            name: name.trimmingCharacters(in: .whitespaces),
+            name: fullName,
             email: email.trimmingCharacters(in: .whitespaces).lowercased(),
             phone: phone.trimmingCharacters(in: .whitespaces),
             role: role,
@@ -2154,13 +2270,16 @@ struct InviteMemberSheet: View {
             addedAt: Date()
         )
 
+        // Persist avatar tone before network call so it's ready immediately
+        TeamMemberAvatarStyle.save(selectedAvatarTone, for: newMemberId)
+
         let success = await teamStore.add(member)
         if success {
             UINotificationFeedbackGenerator().notificationOccurred(.success)
             let biz = (profileStore.profile?.businessName ?? "").isEmpty
                 ? "Your team"
                 : (profileStore.profile?.businessName ?? "")
-            inviteMessage = "Hi \(member.name), \(biz) has invited you to join their Sweeply team as \(role.displayName). Download the Sweeply app and you're all set!"
+            inviteMessage = "Hi \(fullName), \(biz) has invited you to join their Sweeply team as \(role.displayName). Download the Sweeply app and you're all set!"
             showShareSheet = true
         }
     }

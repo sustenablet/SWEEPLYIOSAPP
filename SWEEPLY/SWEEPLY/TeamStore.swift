@@ -60,6 +60,7 @@ final class TeamStore {
         }
 
         let insert = TeamMemberInsert(
+            id: member.id,
             ownerId: member.ownerId,
             name: member.name,
             email: member.email,
@@ -393,6 +394,7 @@ private struct TeamMemberDTO: Decodable {
 }
 
 private struct TeamMemberInsert: Encodable {
+    let id: UUID
     let ownerId: UUID
     let name: String
     let email: String
@@ -402,7 +404,7 @@ private struct TeamMemberInsert: Encodable {
     let addedAt: Date
 
     enum CodingKeys: String, CodingKey {
-        case name, email, phone, role, status
+        case id, name, email, phone, role, status
         case ownerId = "owner_id"
         case addedAt = "added_at"
     }

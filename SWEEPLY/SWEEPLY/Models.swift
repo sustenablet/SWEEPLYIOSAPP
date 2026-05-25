@@ -478,7 +478,11 @@ struct TeamMember: Identifiable, Codable {
             .map { String($0).uppercased() }
             .joined()
     }
-    
+
+    var avatarTone: ClientAvatarTone {
+        TeamMemberAvatarStyle.tone(for: id)
+    }
+
     var payRateDescription: String {
         guard payRateEnabled else { return "Not set".translated() }
         if payRateType == .perJob {

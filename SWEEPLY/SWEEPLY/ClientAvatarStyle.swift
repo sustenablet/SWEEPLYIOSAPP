@@ -80,3 +80,21 @@ enum ClientAvatarStyle {
         return hashValue.isMultiple(of: 2) ? .slate : .blue
     }
 }
+
+// MARK: - Team Member Avatar Style
+
+enum TeamMemberAvatarStyle {
+    private static let storagePrefix = "teamMemberAvatarTone."
+
+    static func tone(for memberId: UUID) -> ClientAvatarTone {
+        guard let raw = UserDefaults.standard.string(forKey: storagePrefix + memberId.uuidString),
+              let tone = ClientAvatarTone(rawValue: raw) else {
+            return .slate   // default: dark navy (near-black)
+        }
+        return tone
+    }
+
+    static func save(_ tone: ClientAvatarTone, for memberId: UUID) {
+        UserDefaults.standard.set(tone.rawValue, forKey: storagePrefix + memberId.uuidString)
+    }
+}
