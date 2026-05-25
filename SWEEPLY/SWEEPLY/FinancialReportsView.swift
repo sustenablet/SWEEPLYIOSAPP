@@ -1734,8 +1734,13 @@ struct FinancialReportsView: View {
     private var paymentMethodsSection: some View {
         SectionCard {
             VStack(alignment: .leading, spacing: 16) {
-                HStack {
+                HStack(alignment: .firstTextBaseline) {
+                    Text("Payment Methods".translated())
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(Color.sweeplyNavy)
+
                     Spacer()
+
                     if !paymentMethodStats.isEmpty {
                         NavigationLink(destination: PaymentMethodsListView()) {
                             Text("View All".translated())

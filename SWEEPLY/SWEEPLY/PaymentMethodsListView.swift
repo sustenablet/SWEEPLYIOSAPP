@@ -57,7 +57,8 @@ struct PaymentMethodsListView: View {
         .background(Color.sweeplyBackground)
         .toolbar(.visible, for: .navigationBar)
         .navigationTitle("Payment Methods".translated())
-        .navigationBarTitleDisplayMode(.large)
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(.visible, for: .navigationBar)
     }
     
     private var summaryCard: some View {
