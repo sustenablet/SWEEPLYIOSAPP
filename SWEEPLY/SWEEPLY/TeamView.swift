@@ -197,19 +197,17 @@ struct TeamView: View {
     // MARK: - Team Header
 
     private var teamHeader: some View {
-        ZStack(alignment: .bottomTrailing) {
-            TabView(selection: $selectedTeamSlide) {
-                overviewSlide
-                    .tag(0)
-                statusSlide
-                    .tag(1)
-                operationsSlide
-                    .tag(2)
-            }
-            .tabViewStyle(.page(indexDisplayMode: .never))
-            .frame(height: teamCarouselHeight)
-            .animation(.easeInOut(duration: 0.2), value: selectedTeamSlide)
+        TabView(selection: $selectedTeamSlide) {
+            overviewSlide
+                .tag(0)
+            statusSlide
+                .tag(1)
+            operationsSlide
+                .tag(2)
         }
+        .tabViewStyle(.page(indexDisplayMode: .never))
+        .frame(height: teamCarouselHeight)
+        .animation(.easeInOut(duration: 0.2), value: selectedTeamSlide)
         .padding(.horizontal, 20)
         .padding(.vertical, 20)
         .background(Color.sweeplySurface, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
@@ -217,10 +215,10 @@ struct TeamView: View {
             RoundedRectangle(cornerRadius: 20, style: .continuous)
                 .stroke(Color.sweeplyBorder, lineWidth: 1)
         )
-        .overlay(alignment: .bottomTrailing) {
+        .overlay(alignment: .topTrailing) {
             teamCarouselIndicator
                 .padding(.trailing, 14)
-                .padding(.bottom, 12)
+                .padding(.top, 12)
         }
     }
 
