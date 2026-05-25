@@ -281,7 +281,7 @@ struct BusinessView: View {
                 // Header
                 PageHeader(
                     eyebrow: profile.businessName.isEmpty ? "Business" : profile.businessName.uppercased(),
-                    title: "Operational Overview",
+                    title: "Operational Overview".translated(),
                     subtitle: nil
                 ) {
                     HeaderIconButton(systemName: "person.3.fill") {
