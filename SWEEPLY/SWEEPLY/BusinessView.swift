@@ -535,17 +535,28 @@ struct BusinessView: View {
                 // 3. Next Job
                 SectionCard {
                     VStack(alignment: .leading, spacing: 16) {
-                        CardHeader(title: "Next Up".translated(), subtitle: "Your nearest scheduled visit".translated(), action: { showNextJobDetail = true })
+                        HStack(alignment: .firstTextBaseline) {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Next Up".translated())
+                                    .font(.system(size: 15, weight: .semibold))
+                                Text("Your nearest scheduled visit".translated())
+                                    .font(.system(size: 12))
+                                    .foregroundStyle(Color.sweeplyTextSub)
+                            }
+                            Spacer()
+                            Button { showNextJobDetail = true } label: {
+                                Image(systemName: "chevron.right")
+                                    .font(.system(size: 13, weight: .medium))
+                                    .foregroundStyle(Color.sweeplyTextSub)
+                            }
+                            .buttonStyle(.plain)
+                        }
 
                         if let nextJob {
                             VStack(alignment: .leading, spacing: 10) {
-                                HStack(alignment: .firstTextBaseline) {
-                                    Text(nextJob.clientName)
-                                        .font(.system(size: 19, weight: .semibold))
-                                        .foregroundStyle(Color.sweeplyNavy)
-                                    Spacer()
-                                    StatusBadge(status: nextJob.status)
-                                }
+                                Text(nextJob.clientName)
+                                    .font(.system(size: 19, weight: .semibold))
+                                    .foregroundStyle(Color.sweeplyNavy)
 
                                 Text(nextJob.serviceType.rawValue.translated())
                                     .font(.system(size: 14, weight: .medium))
