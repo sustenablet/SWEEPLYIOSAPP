@@ -1404,6 +1404,20 @@ enum Localization {
     "Search states": ["pt-BR": "Buscar estados"],
     "Repeat until": ["pt-BR": "Repetir até"],
     "Overdue since %@": ["pt-BR": "Vencido desde %@"],
+
+    // MARK: - Offline / Network
+    "No internet connection": ["pt-BR": "Sem conexão com a internet"],
+
+    // MARK: - Monthly Revenue Goal (SettingsView + DashboardView)
+    "Monthly Goal": ["pt-BR": "Meta Mensal"],
+    "Track your revenue against a monthly target on the Dashboard.": ["pt-BR": "Acompanhe sua receita em relação a uma meta mensal no Painel."],
+    "Revenue Goal": ["pt-BR": "Meta de Receita"],
+    "Set to 0 to hide the goal tracker.": ["pt-BR": "Defina como 0 para ocultar o rastreador de metas."],
+    "Save Goal": ["pt-BR": "Salvar Meta"],
+    "Goal reached": ["pt-BR": "Meta atingida"],
+
+    // MARK: - About page (SettingsView)
+    "Made with care for cleaning businesses.": ["pt-BR": "Feito com cuidado para empresas de limpeza."],
     ]
 
     static func translate(_ key: String) -> String {

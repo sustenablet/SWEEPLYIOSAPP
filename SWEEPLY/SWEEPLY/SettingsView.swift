@@ -698,8 +698,8 @@ struct SettingsView: View {
                 settingsCardHeader(
                     icon: "target",
                     iconColor: Color.sweeplyAccent,
-                    title: "Monthly Goal",
-                    subtitle: "Track your revenue against a monthly target on the Dashboard."
+                    title: "Monthly Goal".translated(),
+                    subtitle: "Track your revenue against a monthly target on the Dashboard.".translated()
                 )
 
                 Divider().padding(.leading, 52)
