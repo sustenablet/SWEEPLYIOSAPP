@@ -685,7 +685,10 @@ struct DashJobRow: View {
                         Button("Cancel Job".translated(), systemImage: "xmark", role: .destructive) { Task { await jobsStore.updateStatus(id: job.id, status: .cancelled) } }
                     } label: { Image(systemName: "ellipsis").font(.system(size: 14)).foregroundStyle(Color.sweeplyTextSub).padding(.leading, 8) }
                 }
-                Text("\(job.serviceType.rawValue) · \(durationStr) · \(clientCity)").font(.system(size: 12)).foregroundStyle(Color.sweeplyTextSub).lineLimit(1)
+                Text("\(job.serviceType.rawValue.translated()) · \(durationStr) · \(clientCity)")
+                    .font(.system(size: 12))
+                    .foregroundStyle(Color.sweeplyTextSub)
+                    .lineLimit(1)
             }
         }.padding(.vertical, 10)
         .opacity(isCancelled ? 0.7 : 1.0)
