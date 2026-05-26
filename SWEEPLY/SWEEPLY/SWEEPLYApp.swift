@@ -94,10 +94,17 @@ struct SWEEPLYApp: App {
                     registerQuickActions()
                     syncAppLanguageToWidgets()
                     AppDelegate.scheduleBackgroundRefresh()
+                    // RevenueCat — configure once before any view needs subscription state
+                    subscriptionManager.configure()
                     Task {
+                        await subscriptionManager.loadOfferings()
                         if appSession.isAuthenticated, let uid = appSession.userId {
                             subscriptionManager.setUserId(uid)
+                            await subscriptionManager.identify(userId: uid.uuidString)
+                            await subscriptionManager.loadCustomerInfo()
                             await teamStore.load(ownerId: uid)
+                        } else {
+                            await subscriptionManager.loadCustomerInfo()
                         }
                     }
                 }
@@ -126,6 +133,10 @@ struct SWEEPLYApp: App {
                     Task {
                         if isAuth, let uid = appSession.userId {
                             subscriptionManager.setUserId(uid)
+                            await subscriptionManager.identify(userId: uid.uuidString)
+                            await subscriptionManager.loadCustomerInfo()
+                        } else {
+                            await subscriptionManager.reset()
                         }
                     }
                 }

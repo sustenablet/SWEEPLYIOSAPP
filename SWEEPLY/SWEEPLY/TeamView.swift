@@ -7,8 +7,10 @@ struct TeamView: View {
     @Environment(JobsStore.self)    private var jobsStore
     @Environment(ProfileStore.self) private var profileStore
     @Environment(AppSession.self)   private var session
+    @Environment(SubscriptionManager.self) private var subscriptionManager
     @Environment(\.dismiss)         private var dismiss
 
+    @State private var showPaywall       = false
     @State private var showInvite        = false
     @State private var selectedMember:   TeamMember? = nil
     @State private var deleteTarget:     TeamMember? = nil
@@ -200,10 +202,15 @@ struct TeamView: View {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button {
                         UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                        showInvite = true
+                        let atLimit = !subscriptionManager.isPro && cleaners.count >= 2
+                        if atLimit {
+                            showPaywall = true
+                        } else {
+                            showInvite = true
+                        }
                     } label: {
                         HStack(spacing: 5) {
-                            Image(systemName: "person.badge.plus")
+                            Image(systemName: cleaners.count >= 2 && !subscriptionManager.isPro ? "lock.fill" : "person.badge.plus")
                                 .font(.system(size: 13, weight: .semibold))
                             Text("Invite".translated())
                                 .font(.system(size: 14, weight: .semibold))
@@ -221,6 +228,10 @@ struct TeamView: View {
                 InviteMemberSheet(ownerId: session.userId ?? UUID())
                     .environment(teamStore)
                     .environment(profileStore)
+            }
+            .sheet(isPresented: $showPaywall) {
+                SubscriptionPaywallView()
+                    .environment(subscriptionManager)
             }
             .fullScreenCover(item: $selectedMember) { member in
                 MemberDetailView(member: member)

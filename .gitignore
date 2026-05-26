@@ -30,3 +30,4 @@ Carthage/Build/
 *.p12
 *.mobileprovision
 SupabaseConfig.plist
+RevenueCatConfig.plist

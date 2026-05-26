@@ -9,6 +9,9 @@ struct FinancesView: View {
     @Environment(AppSession.self) private var session
     @Environment(ExpenseStore.self) private var expenseStore
     @Environment(TeamStore.self)    private var teamStore
+    @Environment(SubscriptionManager.self) private var subscriptionManager
+
+    @State private var showPaywall = false
 
     @AppStorage("financesChartPeriod")       private var selectedPeriodRaw: String = ChartPeriod.week.rawValue
     @AppStorage("financesInvoiceFilter")     private var selectedFilterRaw: String = InvoiceFilter.all.rawValue
@@ -279,6 +282,10 @@ struct FinancesView: View {
                 .environment(session)
                 .environment(teamStore)
         }
+        .sheet(isPresented: $showPaywall) {
+            SubscriptionPaywallView()
+                .environment(subscriptionManager)
+        }
         .sheet(isPresented: Binding(
             get: { markPaidInvoice != nil },
             set: { if !$0 { markPaidInvoice = nil } }
@@ -331,10 +338,14 @@ struct FinancesView: View {
                     }
                     Button {
                         UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                        withAnimation(.easeInOut(duration: 0.2)) { dotReports = false }
-                        showReports = true
+                        if subscriptionManager.isPro {
+                            withAnimation(.easeInOut(duration: 0.2)) { dotReports = false }
+                            showReports = true
+                        } else {
+                            showPaywall = true
+                        }
                     } label: {
-                    Label("Reports".translated(), systemImage: "chart.bar.doc.horizontal.fill")
+                        Label("Reports".translated(), systemImage: "chart.bar.doc.horizontal.fill")
                     }
                 } label: {
                     ZStack(alignment: .topTrailing) {
